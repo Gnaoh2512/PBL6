@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel Management - Trang Chủ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(90px);
+            z-index: 0;
+            opacity: 0.35;
+            pointer-events: none;
+        }
+        .orb-1 { width: 350px; height: 350px; background: #6366f1; top: -40px; left: -40px; }
+        .orb-2 { width: 400px; height: 400px; background: #a855f7; bottom: -60px; right: -60px; }
+
+        .dashboard-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 580px;
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            padding: 36px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1, #ec4899);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+        }
+
+        .user-title h2 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .badge-role {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 3px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+            color: #a5b4fc;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .info-item {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 12px 16px;
+        }
+
+        .info-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #f1f5f9;
+            word-break: break-all;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-logout {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.5);
+        }
+
+        .guest-view {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .guest-view h1 {
+            font-size: 26px;
+            margin-bottom: 12px;
+        }
+
+        .guest-view p {
+            color: #94a3b8;
+            margin-bottom: 28px;
+            font-size: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+
+    <div class="dashboard-card">
+        <!-- Khi chưa đăng nhập -->
+        <div id="guestSection" class="guest-view" style="display: none;">
+            <h1>Hotel Management System</h1>
+            <p>Hệ thống Quản lý Khách sạn PBL6. Vui lòng đăng nhập để sử dụng hệ thống.</p>
+            <div class="actions">
+                <a href="login.html" class="btn btn-primary">Đăng nhập</a>
+                <a href="register.html" class="btn btn-logout" style="border-color: rgba(99,102,241,0.4); color: #a5b4fc; background: rgba(99,102,241,0.15);">Đăng ký tài khoản</a>
+            </div>
+        </div>
+
+        <!-- Khi đã đăng nhập -->
+        <div id="userSection" style="display: none;">
+            <div class="user-header">
+                <div class="avatar" id="userAvatar">U</div>
+                <div class="user-title">
+                    <h2 id="userFullName">User Name</h2>
+                    <span class="badge-role" id="userRole">CUSTOMER</span>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Tên đăng nhập</div>
+                    <div class="info-value" id="userUsername">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Trạng thái</div>
+                    <div class="info-value" id="userStatus" style="color: #4ade80;">ACTIVE</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Email</div>
+                    <div class="info-value" id="userEmail">---</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Số điện thoại</div>
+                    <div class="info-value" id="userPhone">---</div>
+                </div>
+                <div class="info-item" style="grid-column: span 2;">
+                    <div class="info-label">Ngày tạo tài khoản</div>
+                    <div class="info-value" id="userCreated">---</div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button onclick="handleLogout()" class="btn btn-logout">Đăng xuất</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function checkAuth() {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                document.getElementById('guestSection').style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                const result = await response.json();
+                if (response.ok && result.success) {
+                    const user = result.data;
+                    document.getElementById('userSection').style.display = 'block';
+                    document.getElementById('userFullName').textContent = user.fullName;
+                    document.getElementById('userAvatar').textContent = (user.fullName || 'U').charAt(0).toUpperCase();
+                    document.getElementById('userRole').textContent = user.role || 'CUSTOMER';
+                    document.getElementById('userUsername').textContent = user.username;
+                    document.getElementById('userStatus').textContent = user.status || 'ACTIVE';
+                    document.getElementById('userEmail').textContent = user.email || 'Chưa cập nhật';
+                    document.getElementById('userPhone').textContent = user.phone || 'Chưa cập nhật';
+                    document.getElementById('userCreated').textContent = user.createdAt ? new Date(user.createdAt).toLocaleString('vi-VN') : '---';
+                } else {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('user_info');
+                    document.getElementById('guestSection').style.display = 'block';
+                }
+            } catch (err) {
+                document.getElementById('guestSection').style.display = 'block';
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_info');
+            window.location.href = 'login.html';
+        }
+
+        checkAuth();
+    </script>
+</body>
+</html>
