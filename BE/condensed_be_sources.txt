@@ -1,0 +1,1334 @@
+// ===== FILE: com/example/pbl6/common\ApiResponse.java =====
+package com.example.pbl6.common;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class ApiResponse<T> {
+    private boolean success;
+    private String message;
+    private T data;
+    @Builder.Default
+    private LocalDateTime timestamp = LocalDateTime.now();
+    public static <T> ApiResponse<T> ok(T data) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .message("Success")
+                .data(data)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+    public static <T> ApiResponse<T> ok(String message, T data) {
+        return ApiResponse.<T>builder()
+                .success(true)
+                .message(message)
+                .data(data)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+    public static <T> ApiResponse<T> error(String message) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/common\enums\BookingStatus.java =====
+package com.example.pbl6.common.enums;
+public enum BookingStatus {
+    PENDING_DEPOSIT,
+    CONFIRMED,
+    CHECKED_IN,
+    CHECKED_OUT,
+    CANCELED,
+    EXPIRED
+}
+
+
+// ===== FILE: com/example/pbl6/common\enums\InvoiceStatus.java =====
+package com.example.pbl6.common.enums;
+public enum InvoiceStatus {
+    DRAFT,      // Hóa đơn mở / dự thảo (tạo khi nhận cọc thành công, cộng dồn chi phí khi ở)
+    ISSUED,     // Đã xuất hóa đơn chính thức khi check-out (chờ thanh toán nốt)
+    PAID,       // Đã hoàn tất thanh toán tất toán
+    CANCELED    // Hóa đơn bị hủy
+}
+
+
+// ===== FILE: com/example/pbl6/common\enums\PaymentMethod.java =====
+package com.example.pbl6.common.enums;
+public enum PaymentMethod {
+    BANK_TRANSFER,  // Chuyển khoản ngân hàng (quét VietQR)
+    CASH,           // Tiền mặt tại quầy lễ tân
+    CREDIT_CARD,    // Thẻ tín dụng / ghi nợ qua POS
+    EWALLET         // Ví điện tử (Momo, VNPay...)
+}
+
+
+// ===== FILE: com/example/pbl6/common\enums\PaymentType.java =====
+package com.example.pbl6.common.enums;
+public enum PaymentType {
+    DEPOSIT,     // Tiền đặt cọc giữ phòng
+    SETTLEMENT,  // Thanh toán tất toán số tiền còn lại khi check-out
+    REFUND       // Hoàn tiền cho khách (khi hủy phòng hợp lệ)
+}
+
+
+// ===== FILE: com/example/pbl6/common\enums\RoomStatus.java =====
+package com.example.pbl6.common.enums;
+public enum RoomStatus {
+    AVAILABLE,
+    OCCUPIED,
+    CLEANING,
+    MAINTENANCE
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Account.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "account")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Account {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "account_id")
+    private Integer accountId;
+    @Column(name = "username", nullable = false, unique = true, length = 50)
+    private String username;
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
+    @Column(name = "full_name", nullable = false, length = 100)
+    private String fullName;
+    @Column(name = "email", length = 100)
+    private String email;
+    @Column(name = "phone", length = 20)
+    private String phone;
+    @Column(name = "role", length = 50)
+    private String role;
+    @Column(name = "status", length = 50)
+    private String status;
+    @Column(name = "last_login")
+    private LocalDateTime lastLogin;
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\AuditLog.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "audit_log")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class AuditLog {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "log_id")
+    private Long logId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
+    @Column(name = "module_name", length = 100)
+    private String moduleName;
+    @Column(name = "action_type", length = 50)
+    private String actionType;
+    @Column(name = "target_table", length = 100)
+    private String targetTable;
+    @Column(name = "target_id")
+    private Long targetId;
+    @Column(name = "old_value", columnDefinition = "json")
+    private String oldValue;
+    @Column(name = "new_value", columnDefinition = "json")
+    private String newValue;
+    @Column(name = "ip_address", length = 45)
+    private String ipAddress;
+    @CreationTimestamp
+    @Column(name = "logged_at", updatable = false)
+    private LocalDateTime loggedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Booking.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "booking")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Booking {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_id")
+    private Integer bookingId;
+    @Column(name = "booking_code", unique = true, length = 50)
+    private String bookingCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private Account createdBy;
+    @Column(name = "check_in_date")
+    private LocalDate checkInDate;
+    @Column(name = "check_out_date")
+    private LocalDate checkOutDate;
+    @Column(name = "guest_count")
+    private Integer guestCount;
+    @Column(name = "status", length = 50)
+    private String status;
+    @Column(name = "deposit_required", precision = 15, scale = 2)
+    private BigDecimal depositRequired;
+    @Column(name = "source", length = 50)
+    private String source;
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+    @Column(name = "cancel_reason", columnDefinition = "TEXT")
+    private String cancelReason;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "canceled_by")
+    private Account canceledBy;
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\BookingRoom.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "booking_room")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BookingRoom {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "booking_room_id")
+    private Integer bookingRoomId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id")
+    private Room room;
+    @Column(name = "planned_checkin")
+    private LocalDate plannedCheckin;
+    @Column(name = "planned_checkout")
+    private LocalDate plannedCheckout;
+    @Column(name = "status", length = 50)
+    private String status;
+    @Column(name = "actual_checkin")
+    private LocalDateTime actualCheckin;
+    @Column(name = "actual_checkout")
+    private LocalDateTime actualCheckout;
+    @Column(name = "price_applied", precision = 15, scale = 2)
+    private BigDecimal priceApplied;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\CashierShift.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "cashier_shift")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class CashierShift {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "cashier_shift_id")
+    private Integer cashierShiftId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id")
+    private WorkSchedule workSchedule;
+    @Column(name = "start_time")
+    private LocalDateTime startTime;
+    @Column(name = "end_time")
+    private LocalDateTime endTime;
+    @Column(name = "opening_cash", precision = 15, scale = 2)
+    private BigDecimal openingCash;
+    @Column(name = "closing_cash_actual", precision = 15, scale = 2)
+    private BigDecimal closingCashActual;
+    @Column(name = "status", length = 50)
+    private String status;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "received_by")
+    private Account receivedBy;
+    @Column(name = "handover_note", columnDefinition = "TEXT")
+    private String handoverNote;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Customer.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "customer")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Customer {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "customer_id")
+    private Integer customerId;
+    @Column(name = "full_name", nullable = false, length = 100)
+    private String fullName;
+    @Column(name = "id_type", length = 50)
+    private String idType;
+    @Column(name = "id_number", length = 50)
+    private String idNumber;
+    @Column(name = "id_issue_date")
+    private LocalDate idIssueDate;
+    @Column(name = "id_issue_place", length = 100)
+    private String idIssuePlace;
+    @Column(name = "phone", length = 20)
+    private String phone;
+    @Column(name = "email", length = 100)
+    private String email;
+    @Column(name = "nationality", length = 50)
+    private String nationality;
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Invoice.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "invoice")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Invoice {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "invoice_id")
+    private Integer invoiceId;
+    @Column(name = "invoice_number", unique = true, length = 50)
+    private String invoiceNumber;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+    @Column(name = "room_charge", precision = 15, scale = 2)
+    private BigDecimal roomCharge;
+    @Column(name = "service_charge", precision = 15, scale = 2)
+    private BigDecimal serviceCharge;
+    @Column(name = "tax_amount", precision = 15, scale = 2)
+    private BigDecimal taxAmount;
+    @Column(name = "discount_amount", precision = 15, scale = 2)
+    private BigDecimal discountAmount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "discount_approved_by")
+    private Account discountApprovedBy;
+    @Column(name = "deposit_applied", precision = 15, scale = 2)
+    private BigDecimal depositApplied;
+    @Column(name = "total_amount", precision = 15, scale = 2)
+    private BigDecimal totalAmount;
+    @Column(name = "status", length = 50)
+    private String status;
+    @Column(name = "cancel_reason", columnDefinition = "TEXT")
+    private String cancelReason;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "canceled_by")
+    private Account canceledBy;
+    @Column(name = "canceled_at")
+    private LocalDateTime canceledAt;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "issued_by")
+    private Account issuedBy;
+    @Column(name = "issued_at")
+    private LocalDateTime issuedAt;
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Payment.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "payment")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Payment {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "payment_id")
+    private Integer paymentId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invoice_id")
+    private Invoice invoice;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "cashier_shift_id")
+    private CashierShift cashierShift;
+    @Column(name = "type", length = 50)
+    private String type;
+    @Column(name = "method", length = 50)
+    private String method;
+    @Column(name = "amount", precision = 15, scale = 2)
+    private BigDecimal amount;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "received_by")
+    private Account receivedBy;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "approved_by")
+    private Account approvedBy;
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+    @CreationTimestamp
+    @Column(name = "paid_at", updatable = false)
+    private LocalDateTime paidAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Room.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "room")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Room {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "room_id")
+    private Integer roomId;
+    @Column(name = "room_number", nullable = false, unique = true, length = 20)
+    private String roomNumber;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_type_id")
+    private RoomType roomType;
+    @Column(name = "floor")
+    private Integer floor;
+    @Column(name = "status", length = 50)
+    private String status;
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\RoomType.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+@Entity
+@Table(name = "room_type")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class RoomType {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "room_type_id")
+    private Integer roomTypeId;
+    @Column(name = "type_name", nullable = false, length = 100)
+    private String typeName;
+    @Column(name = "capacity")
+    private Integer capacity;
+    @Column(name = "base_price", precision = 15, scale = 2)
+    private BigDecimal basePrice;
+    @Column(name = "amenities", columnDefinition = "TEXT")
+    private String amenities;
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Service.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+@Entity
+@Table(name = "service")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Service {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "service_id")
+    private Integer serviceId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private ServiceCategory category;
+    @Column(name = "service_name", nullable = false, length = 100)
+    private String serviceName;
+    @Column(name = "unit_price", precision = 15, scale = 2)
+    private BigDecimal unitPrice;
+    @Column(name = "unit", length = 50)
+    private String unit;
+    @Builder.Default
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\ServiceCategory.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+@Entity
+@Table(name = "service_category")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ServiceCategory {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "category_id")
+    private Integer categoryId;
+    @Column(name = "category_name", nullable = false, length = 100)
+    private String categoryName;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\ServiceUsage.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "service_usage")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class ServiceUsage {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "usage_id")
+    private Integer usageId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "booking_id")
+    private Booking booking;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_id")
+    private Service service;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "invoice_id")
+    private Invoice invoice;
+    @Column(name = "quantity")
+    private Integer quantity;
+    @Column(name = "unit_price_applied", precision = 15, scale = 2)
+    private BigDecimal unitPriceApplied;
+    @Column(name = "discount_amount", precision = 15, scale = 2)
+    private BigDecimal discountAmount;
+    @Column(name = "total_price", precision = 15, scale = 2)
+    private BigDecimal totalPrice;
+    @Column(name = "status", length = 50)
+    private String status;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recorded_by")
+    private Account recordedBy;
+    @CreationTimestamp
+    @Column(name = "used_at", updatable = false)
+    private LocalDateTime usedAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Shift.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalTime;
+@Entity
+@Table(name = "shift")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Shift {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "shift_id")
+    private Integer shiftId;
+    @Column(name = "start_time")
+    private LocalTime startTime;
+    @Column(name = "end_time")
+    private LocalTime endTime;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\Voucher.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+@Entity
+@Table(name = "voucher")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Voucher {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "voucher_id")
+    private Integer voucherId;
+    @Column(name = "code", unique = true, nullable = false, length = 50)
+    private String code;
+    @Column(name = "voucher_name", nullable = false, length = 150)
+    private String voucherName;
+    @Column(name = "discount_type", nullable = false, length = 20)
+    private String discountType;
+    @Column(name = "discount_value", precision = 15, scale = 2, nullable = false)
+    private BigDecimal discountValue;
+    @Column(name = "max_discount_amount", precision = 15, scale = 2)
+    private BigDecimal maxDiscountAmount;
+    @Column(name = "min_order_amount", precision = 15, scale = 2)
+    private BigDecimal minOrderAmount;
+    @Column(name = "start_date")
+    private LocalDate startDate;
+    @Column(name = "end_date")
+    private LocalDate endDate;
+    @Column(name = "usage_limit")
+    private Integer usageLimit;
+    @Builder.Default
+    @Column(name = "used_count")
+    private Integer usedCount = 0;
+    @Builder.Default
+    @Column(name = "is_active")
+    private Boolean isActive = true;
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+}
+
+
+// ===== FILE: com/example/pbl6/entity\WorkSchedule.java =====
+package com.example.pbl6.entity;
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDate;
+@Entity
+@Table(name = "work_schedule")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class WorkSchedule {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "schedule_id")
+    private Integer scheduleId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id")
+    private Account account;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shift_id")
+    private Shift shift;
+    @Column(name = "work_date")
+    private LocalDate workDate;
+}
+
+
+// ===== FILE: com/example/pbl6/exception\GlobalExceptionHandler.java =====
+package com.example.pbl6.exception;
+import com.example.pbl6.common.ApiResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import java.util.HashMap;
+import java.util.Map;
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Map<String, String>>builder()
+                        .success(false)
+                        .message("Validation failed")
+                        .data(errors)
+                        .build());
+    }
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error("Xác thực không thành công: " + ex.getMessage()));
+    }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleGenericException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error("Internal Server Error: " + ex.getMessage()));
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/exception\ResourceNotFoundException.java =====
+package com.example.pbl6.exception;
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+    public ResourceNotFoundException(String resourceName, String fieldName, Object fieldValue) {
+        super(String.format("%s not found with %s: '%s'", resourceName, fieldName, fieldValue));
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/repository\AccountRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Account;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+@Repository
+public interface AccountRepository extends JpaRepository<Account, Integer> {
+    Optional<Account> findByUsername(String username);
+    boolean existsByUsername(String username);
+    Optional<Account> findByEmail(String email);
+    boolean existsByEmail(String email);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\AuditLogRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.AuditLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+@Repository
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+    List<AuditLog> findByTargetTableAndTargetId(String targetTable, Long targetId);
+    List<AuditLog> findByAccount_AccountId(Integer accountId);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\BookingRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Booking;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
+@Repository
+public interface BookingRepository extends JpaRepository<Booking, Integer> {
+    Optional<Booking> findByBookingCode(String bookingCode);
+    boolean existsByBookingCode(String bookingCode);
+    List<Booking> findByCustomer_CustomerId(Integer customerId);
+    List<Booking> findByCustomer_CustomerIdOrderByCreatedAtDesc(Integer customerId);
+    List<Booking> findByCustomer_CustomerIdAndStatusOrderByCreatedAtDesc(Integer customerId, String status);
+    List<Booking> findByCustomer_PhoneOrderByCreatedAtDesc(String phone);
+    List<Booking> findByCustomer_PhoneAndStatusOrderByCreatedAtDesc(String phone, String status);
+    List<Booking> findByStatus(String status);
+    List<Booking> findByStatusAndCreatedAtBefore(String status, java.time.LocalDateTime time);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\BookingRoomRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.BookingRoom;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+@Repository
+public interface BookingRoomRepository extends JpaRepository<BookingRoom, Integer> {
+    List<BookingRoom> findByBooking_BookingId(Integer bookingId);
+    List<BookingRoom> findByRoom_RoomId(Integer roomId);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\CashierShiftRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.CashierShift;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+@Repository
+public interface CashierShiftRepository extends JpaRepository<CashierShift, Integer> {
+    List<CashierShift> findByAccount_AccountId(Integer accountId);
+    List<CashierShift> findByStatus(String status);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\CustomerRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Customer;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+@Repository
+public interface CustomerRepository extends JpaRepository<Customer, Integer> {
+    Optional<Customer> findByIdNumber(String idNumber);
+    Optional<Customer> findByPhone(String phone);
+    Optional<Customer> findByEmail(String email);
+    boolean existsByPhone(String phone);
+    boolean existsByEmail(String email);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\InvoiceRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Invoice;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
+@Repository
+public interface InvoiceRepository extends JpaRepository<Invoice, Integer> {
+    Optional<Invoice> findByInvoiceNumber(String invoiceNumber);
+    boolean existsByInvoiceNumber(String invoiceNumber);
+    List<Invoice> findByBooking_BookingId(Integer bookingId);
+    List<Invoice> findByStatus(String status);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\PaymentRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Payment;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+@Repository
+public interface PaymentRepository extends JpaRepository<Payment, Integer> {
+    List<Payment> findByBooking_BookingId(Integer bookingId);
+    List<Payment> findByInvoice_InvoiceId(Integer invoiceId);
+    List<Payment> findByCashierShift_CashierShiftId(Integer cashierShiftId);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\RoomRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Room;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
+@Repository
+public interface RoomRepository extends JpaRepository<Room, Integer> {
+    Optional<Room> findByRoomNumber(String roomNumber);
+    boolean existsByRoomNumber(String roomNumber);
+    List<Room> findByStatus(String status);
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM Room r " +
+            "JOIN FETCH r.roomType rt " +
+            "WHERE r.status = 'AVAILABLE' " +
+            "AND (:roomTypeId IS NULL OR rt.roomTypeId = :roomTypeId) " +
+            "AND (:guestCount IS NULL OR rt.capacity >= :guestCount) " +
+            "AND (:minPrice IS NULL OR rt.basePrice >= :minPrice) " +
+            "AND (:maxPrice IS NULL OR rt.basePrice <= :maxPrice) " +
+            "AND r.roomId NOT IN (" +
+            "    SELECT br.room.roomId FROM BookingRoom br " +
+            "    JOIN br.booking b " +
+            "    WHERE (b.status IS NULL OR b.status NOT IN ('CANCELED', 'EXPIRED')) " +
+            "    AND br.plannedCheckin < :checkOutDate " +
+            "    AND br.plannedCheckout > :checkInDate" +
+            ") " +
+            "ORDER BY rt.basePrice ASC, r.roomNumber ASC")
+    List<Room> findAvailableRooms(
+            @org.springframework.data.repository.query.Param("checkInDate") java.time.LocalDate checkInDate,
+            @org.springframework.data.repository.query.Param("checkOutDate") java.time.LocalDate checkOutDate,
+            @org.springframework.data.repository.query.Param("roomTypeId") Integer roomTypeId,
+            @org.springframework.data.repository.query.Param("guestCount") Integer guestCount,
+            @org.springframework.data.repository.query.Param("minPrice") java.math.BigDecimal minPrice,
+            @org.springframework.data.repository.query.Param("maxPrice") java.math.BigDecimal maxPrice
+    );
+}
+
+
+// ===== FILE: com/example/pbl6/repository\RoomTypeRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.RoomType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+@Repository
+public interface RoomTypeRepository extends JpaRepository<RoomType, Integer> {
+    Optional<RoomType> findByTypeName(String typeName);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\ServiceCategoryRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.ServiceCategory;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+@Repository
+public interface ServiceCategoryRepository extends JpaRepository<ServiceCategory, Integer> {
+    Optional<ServiceCategory> findByCategoryName(String categoryName);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\ServiceRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Service;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+@Repository
+public interface ServiceRepository extends JpaRepository<Service, Integer> {
+    List<Service> findByIsActiveTrue();
+    List<Service> findByCategory_CategoryIdAndIsActiveTrue(Integer categoryId);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\ServiceUsageRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.ServiceUsage;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+@Repository
+public interface ServiceUsageRepository extends JpaRepository<ServiceUsage, Integer> {
+    List<ServiceUsage> findByBooking_BookingId(Integer bookingId);
+    List<ServiceUsage> findByInvoice_InvoiceId(Integer invoiceId);
+}
+
+
+// ===== FILE: com/example/pbl6/repository\ShiftRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Shift;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+@Repository
+public interface ShiftRepository extends JpaRepository<Shift, Integer> {
+}
+
+
+// ===== FILE: com/example/pbl6/repository\VoucherRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.Voucher;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.List;
+import java.util.Optional;
+@Repository
+public interface VoucherRepository extends JpaRepository<Voucher, Integer> {
+    Optional<Voucher> findByCodeIgnoreCase(String code);
+    boolean existsByCodeIgnoreCase(String code);
+    List<Voucher> findByIsActiveTrue();
+}
+
+
+// ===== FILE: com/example/pbl6/repository\WorkScheduleRepository.java =====
+package com.example.pbl6.repository;
+import com.example.pbl6.entity.WorkSchedule;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.time.LocalDate;
+import java.util.List;
+@Repository
+public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Integer> {
+    List<WorkSchedule> findByWorkDate(LocalDate workDate);
+    List<WorkSchedule> findByAccount_AccountId(Integer accountId);
+}
+
+
+// ===== FILE: com/example/pbl6/security\CustomUserDetails.java =====
+package com.example.pbl6.security;
+import com.example.pbl6.entity.Account;
+import lombok.Getter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import java.util.Collection;
+import java.util.Collections;
+@Getter
+public class CustomUserDetails implements UserDetails {
+    private final Account account;
+    public CustomUserDetails(Account account) {
+        this.account = account;
+    }
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        String role = account.getRole();
+        if (role == null || role.isBlank()) {
+            role = "CUSTOMER";
+        }
+        if (!role.startsWith("ROLE_")) {
+            role = "ROLE_" + role.toUpperCase();
+        }
+        return Collections.singletonList(new SimpleGrantedAuthority(role));
+    }
+    @Override
+    public String getPassword() {
+        return account.getPasswordHash();
+    }
+    @Override
+    public String getUsername() {
+        return account.getUsername();
+    }
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+    @Override
+    public boolean isAccountNonLocked() {
+        return !"LOCKED".equalsIgnoreCase(account.getStatus());
+    }
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+    @Override
+    public boolean isEnabled() {
+        return account.getStatus() == null || !"INACTIVE".equalsIgnoreCase(account.getStatus());
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/security\CustomUserDetailsService.java =====
+package com.example.pbl6.security;
+import com.example.pbl6.entity.Account;
+import com.example.pbl6.repository.AccountRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+@Service
+@RequiredArgsConstructor
+public class CustomUserDetailsService implements UserDetailsService {
+    private final AccountRepository accountRepository;
+    @Override
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        Account account = accountRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy tài khoản với tên đăng nhập: " + username));
+        return new CustomUserDetails(account);
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/security\JwtAuthenticationEntryPoint.java =====
+package com.example.pbl6.security;
+import com.example.pbl6.common.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.stereotype.Component;
+import java.io.IOException;
+@Component
+public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
+    private final ObjectMapper objectMapper =
+            new ObjectMapper().registerModule(new JavaTimeModule());
+    @Override
+    public void commence(HttpServletRequest request,
+                         HttpServletResponse response,
+                         AuthenticationException authException) throws IOException {
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        ApiResponse<Void> apiResponse = ApiResponse.error(
+                "Yêu cầu xác thực không hợp lệ hoặc token đã hết hạn: "
+                        + authException.getMessage()
+        );
+        response.getWriter().write(objectMapper.writeValueAsString(apiResponse));
+    }
+}
+
+// ===== FILE: com/example/pbl6/security\JwtAuthenticationFilter.java =====
+package com.example.pbl6.security;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+import java.io.IOException;
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private final JwtTokenProvider jwtTokenProvider;
+    private final CustomUserDetailsService customUserDetailsService;
+    @Override
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain) throws ServletException, IOException {
+        try {
+            String jwt = getJwtFromRequest(request);
+            if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
+                String username = jwtTokenProvider.getUsernameFromToken(jwt);
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        } catch (Exception ex) {
+            log.error("Could not set user authentication in security context", ex);
+        }
+        filterChain.doFilter(request, response);
+    }
+    private String getJwtFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/security\JwtTokenProvider.java =====
+package com.example.pbl6.security;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+@Slf4j
+@Component
+public class JwtTokenProvider {
+    private final SecretKey key;
+    private final long expirationMs;
+    public JwtTokenProvider(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.expiration-ms:86400000}") long expirationMs) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = expirationMs;
+    }
+    public String generateToken(String username, String role, Integer accountId) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + expirationMs);
+        return Jwts.builder()
+                .subject(username)
+                .claim("role", role)
+                .claim("accountId", accountId)
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+    public String getUsernameFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+        return claims.getSubject();
+    }
+    public boolean validateToken(String authToken) {
+        try {
+            Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(authToken);
+            return true;
+        } catch (SecurityException | MalformedJwtException e) {
+            log.error("Invalid JWT token: {}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.error("JWT token is expired: {}", e.getMessage());
+        } catch (UnsupportedJwtException e) {
+            log.error("JWT token is unsupported: {}", e.getMessage());
+        } catch (IllegalArgumentException e) {
+            log.error("JWT claims string is empty: {}", e.getMessage());
+        }
+        return false;
+    }
+    public long getExpirationMs() {
+        return expirationMs;
+    }
+}
+
+
+// ===== FILE: com/example/pbl6/security\SecurityConfig.java =====
+package com.example.pbl6.security;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import java.util.List;
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
+    }
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/api/public/**",
+                                "/",
+                                "/login.html",
+                                "/register.html",
+                                "/favicon.ico",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/error"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                );
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin"));
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+}
+
+

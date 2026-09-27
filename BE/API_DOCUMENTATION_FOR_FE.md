@@ -1,11 +1,13 @@
 # TÀI LIỆU HƯỚNG DẪN TÍCH HỢP API DÀNH CHO FRONTEND TEAM
+
 **Dự án:** Hệ thống Quản lý Khách sạn & Đặt phòng Trực tuyến (PBL6)  
 **Phiên bản:** 1.0 - Backend Spring Boot RESTful API  
-**Cập nhật lần cuối:** 21/09/2026  
+**Cập nhật lần cuối:** 21/09/2026
 
 ---
 
 ## MỤC LỤC
+
 1. [Quy chuẩn Kết nối Chung](#1-quy-chuẩn-kết-nối-chung)
 2. [Tài khoản Thử nghiệm Mẫu](#2-tài-khoản-thử-nghiệm-mẫu)
 3. [Sơ đồ Luồng Tích hợp Giao diện (UI Flows)](#3-sơ-đồ-luồng-tích-hợp-giao-diện-ui-flows)
@@ -47,14 +49,14 @@
 
 Mật khẩu mặc định cho tất cả tài khoản mẫu là: `123456`
 
-| Username | Role (Vai trò) | Mục đích sử dụng |
-| :--- | :--- | :--- |
-| `admin` | `ADMIN` | Quản trị hệ thống toàn quyền, quản lý voucher, cài đặt giá |
-| `manager` | `MANAGER` | Quản lý khách sạn, thống kê báo cáo doanh thu |
-| `receptionist` | `RECEPTIONIST` | Lễ tân: Check-in, Duyệt cọc tay, Hủy phòng hoàn cọc |
-| `cashier` | `CASHIER` | Thu ngân: Xem Folio, Thu tiền tất toán khi Checkout |
-| `housekeeper` | `HOUSEKEEPING` | Buồng phòng: Nhận phòng dọn dẹp, đổi trạng thái phòng |
-| `customer1` | `CUSTOMER` | Khách hàng thành viên đã có tài khoản (SĐT: `0901234567`) |
+| Username       | Role (Vai trò) | Mục đích sử dụng                                           |
+| :------------- | :------------- | :--------------------------------------------------------- |
+| `admin`        | `ADMIN`        | Quản trị hệ thống toàn quyền, quản lý voucher, cài đặt giá |
+| `manager`      | `MANAGER`      | Quản lý khách sạn, thống kê báo cáo doanh thu              |
+| `receptionist` | `RECEPTIONIST` | Lễ tân: Check-in, Duyệt cọc tay, Hủy phòng hoàn cọc        |
+| `cashier`      | `CASHIER`      | Thu ngân: Xem Folio, Thu tiền tất toán khi Checkout        |
+| `housekeeper`  | `HOUSEKEEPING` | Buồng phòng: Nhận phòng dọn dẹp, đổi trạng thái phòng      |
+| `customer1`    | `CUSTOMER`     | Khách hàng thành viên đã có tài khoản (SĐT: `0901234567`)  |
 
 ---
 
@@ -92,7 +94,7 @@ sequenceDiagram
 
     Khach->>Khach: Dùng App Ngân hàng (MB, VCB...) quét mã VietQR chuyển tiền
     Note over BE: Ngân hàng gửi Webhook xác nhận tiền về (Hoặc Lễ tân duyệt tay)
-    
+
     FE->>BE: GET /api/public/bookings/{bookingCode}/payment-status
     BE-->>FE: isPaid: true (Đã nhận được tiền cọc!)
     FE-->>Khach: Dừng đếm ngược, hiện Popup chúc mừng "Đặt phòng thành công!"
@@ -136,6 +138,7 @@ sequenceDiagram
 ### 4.1. Xác thực & Tài khoản
 
 #### [POST] `/api/auth/login`
+
 - **Mục đích:** Đăng nhập lấy JWT Token.
 - **Quyền:** Public.
 - **Request Body:**
@@ -164,6 +167,7 @@ sequenceDiagram
   ```
 
 #### [POST] `/api/auth/register`
+
 - **Mục đích:** Đăng ký tài khoản khách hàng mới (`role = CUSTOMER`).
 - **Quyền:** Public.
 - **Request Body:**
@@ -182,10 +186,12 @@ sequenceDiagram
 ### 4.2. Tìm kiếm & Xem Phòng
 
 #### [GET] `/api/public/rooms/room-types`
+
 - **Mục đích:** Lấy danh sách các loại phòng và giá tiêu chuẩn để hiển thị trang chủ.
 - **Quyền:** Public.
 
 #### [GET] `/api/public/rooms/available`
+
 - **Mục đích:** Tìm phòng trống theo khoảng thời gian và bộ lọc giá.
 - **Quyền:** Public.
 - **Query Parameters:**
@@ -225,6 +231,7 @@ sequenceDiagram
 ### 4.3. Khuyến mãi & Voucher
 
 #### [GET] `/api/public/vouchers`
+
 - **Mục đích:** Lấy danh sách các mã ưu đãi đang chạy để hiển thị cho khách chọn nhanh.
 - **Quyền:** Public.
 - **Response Thành công:**
@@ -256,6 +263,7 @@ sequenceDiagram
   ```
 
 #### [POST] `/api/public/vouchers/apply`
+
 - **Mục đích:** Khách nhập mã voucher để kiểm tra và xem trước số tiền giảm trước khi bấm đặt.
 - **Quyền:** Public.
 - **Request Body:**
@@ -287,6 +295,7 @@ sequenceDiagram
 ### 4.4. Đặt phòng & Chuyển khoản VietQR
 
 #### [POST] `/api/public/bookings`
+
 - **Mục đích:** Tạo đơn đặt phòng, tự động sinh mã VietQR Napas ngân hàng thực tế.
 - **Quyền:** Public (Nếu khách đã đăng nhập, FE có thể truyền kèm `Authorization: Bearer <token>` để tự động gắn vào tài khoản khách).
 - **Request Body:**
@@ -338,6 +347,7 @@ sequenceDiagram
   ```
 
 #### [GET] `/api/public/bookings/{bookingCode}/payment-status`
+
 - **Mục đích:** FE gọi Polling mỗi 3 giây để kiểm tra tiền cọc đã về chưa.
 - **Quyền:** Public.
 - **Response khi ĐÃ NHẬN ĐƯỢC TIỀN CỌC:**
@@ -356,6 +366,7 @@ sequenceDiagram
   ```
 
 #### [POST] `/api/public/bookings/{bookingCode}/simulate-deposit`
+
 - **Mục đích:** API giả lập chuyển tiền cọc thành công (Dành cho FE test hoặc demo khi thuyết trình).
 - **Quyền:** Public.
 
@@ -364,11 +375,13 @@ sequenceDiagram
 ### 4.5. Gọi Dịch vụ Lưu trú & Live Folio
 
 #### [GET] `/api/public/services`
+
 - **Mục đích:** Xem menu dịch vụ ăn uống, giặt ủi, minibar.
 - **Quyền:** Public.
 - **Query Parameter:** `categoryId` (tùy chọn: lọc theo danh mục).
 
 #### [POST] `/api/public/services/order`
+
 - **Mục đích:** Khách đang ở phòng gọi dịch vụ phát sinh.
 - **Quyền:** Public.
 - **Request Body:**
@@ -382,6 +395,7 @@ sequenceDiagram
   ```
 
 #### [GET] `/api/public/bookings/{bookingCode}/folio`
+
 - **Mục đích:** Tra cứu hóa đơn chi tiết trực tiếp theo thời gian thực (Live Folio).
 - **Quyền:** Public.
 - **Response:**
@@ -426,15 +440,18 @@ sequenceDiagram
 ### 4.6. Tra cứu Lịch sử Đặt phòng
 
 #### [GET] `/api/public/history/lookup?phone=0901234567`
+
 - **Mục đích:** Khách vãng lai (không cần tài khoản) nhập Số điện thoại để tra cứu toàn bộ các lần lưu trú của mình.
 - **Quyền:** Public.
 - **Query Parameter:** `phone` (Bắt buộc), `status` (Tùy chọn: `ALL`, `CONFIRMED`, `CHECKED_IN`, `CHECKED_OUT`, `CANCELED`).
 
 #### [GET] `/api/public/history/lookup/{bookingCode}?phone=0901234567`
+
 - **Mục đích:** Xem chi tiết 1 đơn lưu trú của khách vãng lai (Bảo mật: bắt buộc SĐT phải khớp).
 - **Quyền:** Public.
 
 #### [GET] `/api/customer/bookings/history`
+
 - **Mục đích:** Khách thành viên (đã đăng nhập) xem lịch sử tất cả các chuyến đi của mình.
 - **Quyền:** Yêu cầu đăng nhập (`Authorization: Bearer <token>`).
 - **Query Parameter:** `status` (Tùy chọn).
@@ -448,30 +465,31 @@ sequenceDiagram
 
 ### 5.1. Nghiệp vụ Lễ tân & Thu ngân
 
-| Method | Endpoint | Vai trò cho phép | Mục đích |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/staff/bookings/{bookingCode}/confirm-deposit` | Lễ tân, Thu ngân, Admin | Duyệt cọc thủ công khi khách chuyển khoản trực tiếp hoặc lỗi webhook |
-| `POST` | `/api/staff/billing/bookings/{bookingCode}/check-in` | Lễ tân, Manager, Admin | Check-in đón khách vào phòng (Phòng đổi sang `OCCUPIED`) |
-| `POST` | `/api/staff/billing/bookings/{bookingCode}/order-service` | Lễ tân, Thu ngân, Buồng phòng | Ghi nhận dịch vụ phát sinh vào phòng khách |
-| `GET` | `/api/staff/billing/bookings/{bookingCode}/folio` | Thu ngân, Lễ tân, Admin | Xem chi tiết bảng kê hóa đơn phòng |
-| `POST` | `/api/staff/billing/bookings/{bookingCode}/settle-and-checkout` | Thu ngân, Lễ tân, Admin | Tất toán (Tiền mặt/Chuyển khoản) và Check-out (Phòng sang `CLEANING`) |
-| `POST` | `/api/staff/billing/bookings/{bookingCode}/cancel-with-refund` | Lễ tân, Manager, Admin | Hủy đơn và tự động hoàn tiền cọc (>=3 ngày: 100%, 1-2 ngày: 50%) |
+| Method | Endpoint                                                        | Vai trò cho phép              | Mục đích                                                              |
+| :----- | :-------------------------------------------------------------- | :---------------------------- | :-------------------------------------------------------------------- |
+| `POST` | `/api/staff/bookings/{bookingCode}/confirm-deposit`             | Lễ tân, Thu ngân, Admin       | Duyệt cọc thủ công khi khách chuyển khoản trực tiếp hoặc lỗi webhook  |
+| `POST` | `/api/staff/billing/bookings/{bookingCode}/check-in`            | Lễ tân, Manager, Admin        | Check-in đón khách vào phòng (Phòng đổi sang `OCCUPIED`)              |
+| `POST` | `/api/staff/billing/bookings/{bookingCode}/order-service`       | Lễ tân, Thu ngân, Buồng phòng | Ghi nhận dịch vụ phát sinh vào phòng khách                            |
+| `GET`  | `/api/staff/billing/bookings/{bookingCode}/folio`               | Thu ngân, Lễ tân, Admin       | Xem chi tiết bảng kê hóa đơn phòng                                    |
+| `POST` | `/api/staff/billing/bookings/{bookingCode}/settle-and-checkout` | Thu ngân, Lễ tân, Admin       | Tất toán (Tiền mặt/Chuyển khoản) và Check-out (Phòng sang `CLEANING`) |
+| `POST` | `/api/staff/billing/bookings/{bookingCode}/cancel-with-refund`  | Lễ tân, Manager, Admin        | Hủy đơn và tự động hoàn tiền cọc (>=3 ngày: 100%, 1-2 ngày: 50%)      |
 
 ---
 
 ### 5.2. Quản lý Voucher (Admin)
 
-| Method | Endpoint | Request Body | Mục đích |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/admin/vouchers` | Không | Xem tất cả voucher và thống kê số lượt đã dùng |
-| `POST` | `/api/admin/vouchers` | `{ code, voucherName, discountType, discountValue, maxDiscountAmount, minOrderAmount, startDate, endDate, usageLimit }` | Tạo voucher ưu đãi mới |
-| `PATCH`| `/api/admin/vouchers/{id}/toggle` | Không | Bật / Tắt trạng thái hoạt động của voucher |
+| Method  | Endpoint                          | Request Body                                                                                                            | Mục đích                                       |
+| :------ | :-------------------------------- | :---------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------- |
+| `GET`   | `/api/admin/vouchers`             | Không                                                                                                                   | Xem tất cả voucher và thống kê số lượt đã dùng |
+| `POST`  | `/api/admin/vouchers`             | `{ code, voucherName, discountType, discountValue, maxDiscountAmount, minOrderAmount, startDate, endDate, usageLimit }` | Tạo voucher ưu đãi mới                         |
+| `PATCH` | `/api/admin/vouchers/{id}/toggle` | Không                                                                                                                   | Bật / Tắt trạng thái hoạt động của voucher     |
 
 ---
 
 ## 6. QUY ƯỚC MÃ LỖI HTTP & XỬ LÝ TRÊN GIAO DIỆN
 
 Khi Backend trả về lỗi, HTTP Status Code sẽ khác `200`, và body trả về luôn có định dạng:
+
 ```json
 {
   "success": false,
@@ -482,14 +500,14 @@ Khi Backend trả về lỗi, HTTP Status Code sẽ khác `200`, và body trả 
 
 FE chỉ cần lấy `response.data.message` để hiển thị Toast thông báo / Alert cho người dùng:
 
-| Mã HTTP | Tên lỗi | Trường hợp xảy ra & Cách xử lý ở FE |
-| :--- | :--- | :--- |
-| `400` | **BAD REQUEST** | Dữ liệu gửi lên không hợp lệ (Ví dụ: Ngày trả phòng trước ngày nhận phòng, phòng đã có người đặt, voucher hết hạn hoặc chưa đạt giá trị tối thiểu). FE hiển thị Toast lỗi đỏ với thông điệp từ `message`. |
-| `401` | **UNAUTHORIZED** | Chưa truyền Token hoặc Token đã hết hạn. FE xóa Token cũ trong `localStorage` và chuyển hướng về màn hình Đăng nhập. |
-| `403` | **FORBIDDEN** | Tài khoản không có quyền truy cập (Ví dụ: Khách hàng cố gọi API của Lễ tân). FE hiển thị thông báo "Bạn không có quyền thực hiện chức năng này". |
-| `404` | **NOT FOUND** | Không tìm thấy mã phòng hoặc mã đơn đặt phòng. FE hiển thị trang "Không tìm thấy dữ liệu". |
-| `500` | **INTERNAL ERROR**| Lỗi hệ thống Backend. FE hiển thị "Hệ thống đang bận, vui lòng thử lại sau". |
+| Mã HTTP | Tên lỗi            | Trường hợp xảy ra & Cách xử lý ở FE                                                                                                                                                                       |
+| :------ | :----------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400`   | **BAD REQUEST**    | Dữ liệu gửi lên không hợp lệ (Ví dụ: Ngày trả phòng trước ngày nhận phòng, phòng đã có người đặt, voucher hết hạn hoặc chưa đạt giá trị tối thiểu). FE hiển thị Toast lỗi đỏ với thông điệp từ `message`. |
+| `401`   | **UNAUTHORIZED**   | Chưa truyền Token hoặc Token đã hết hạn. FE xóa Token cũ trong `localStorage` và chuyển hướng về màn hình Đăng nhập.                                                                                      |
+| `403`   | **FORBIDDEN**      | Tài khoản không có quyền truy cập (Ví dụ: Khách hàng cố gọi API của Lễ tân). FE hiển thị thông báo "Bạn không có quyền thực hiện chức năng này".                                                          |
+| `404`   | **NOT FOUND**      | Không tìm thấy mã phòng hoặc mã đơn đặt phòng. FE hiển thị trang "Không tìm thấy dữ liệu".                                                                                                                |
+| `500`   | **INTERNAL ERROR** | Lỗi hệ thống Backend. FE hiển thị "Hệ thống đang bận, vui lòng thử lại sau".                                                                                                                              |
 
 ---
 
-*Chúc các bạn Frontend Team tích hợp giao diện nhanh chóng và thành công!*
+_Chúc các bạn Frontend Team tích hợp giao diện nhanh chóng và thành công!_

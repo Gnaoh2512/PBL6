@@ -21,7 +21,6 @@ public class AvailableRoomResponse {
     private String note;
     private RoomTypeResponse roomType;
 
-    // Thông tin tài chính & thời gian tính trước cho khách
     private LocalDate checkInDate;
     private LocalDate checkOutDate;
     private long nights;
