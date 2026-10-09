@@ -1,0 +1,29 @@
+{
+  "success": true,
+  "message": "Success",
+  "data": [
+    {
+      "roomId": 101,
+      "roomNumber": "SYN-101",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": null,
+      "roomType": {
+        "roomTypeId": 2,
+        "typeName": "Synthetic Deluxe",
+        "capacity": 2,
+        "basePrice": 1250000.50,
+        "amenities": "minibar, balcony",
+        "description": "Synthetic fixture only"
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": 1250000.50,
+      "totalRoomCharge": 2500001.00,
+      "depositPercentage": 30,
+      "estimatedDeposit": 750000.30
+    }
+  ],
+  "timestamp": "2026-10-09T10:00:00"
+}
