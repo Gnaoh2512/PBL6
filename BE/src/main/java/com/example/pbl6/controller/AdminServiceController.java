@@ -17,6 +17,11 @@ public class AdminServiceController {
 
     private final ServiceAdminService serviceAdminService;
 
+    @GetMapping
+    public ApiResponse<java.util.List<Service>> getAllServices() {
+        return ApiResponse.ok(serviceAdminService.getAllServices());
+    }
+
     @PostMapping
     public ApiResponse<Service> createService(@Valid @RequestBody ServiceRequest request) {
         return ApiResponse.ok("Service created successfully", serviceAdminService.createService(request));

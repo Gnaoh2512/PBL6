@@ -58,4 +58,10 @@ public class ServiceAdminServiceImpl implements ServiceAdminService {
 
         return serviceRepository.save(service);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<Service> getAllServices() {
+        return serviceRepository.findAll();
+    }
 }

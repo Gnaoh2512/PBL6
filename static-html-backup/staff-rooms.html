@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ Đồ Phòng & Quyết Toán - Hotel California</title>
+    <!-- Zero-Flash Synchronous Route Guard -->
+    <style>body { display: none; }</style>
+    <script src="js/api.js"></script>
+    <script>
+        guardPageAccess(['RECEPTIONIST', 'CASHIER', 'HOUSEKEEPING', 'MANAGER', 'ADMIN']);
+    </script>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .legend-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <header id="top-navbar"></header>
+
+    <div class="app-wrapper">
+        <aside id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h2 class="fw-bold fs-4 text-dark mb-1">
+                        <i class="bi bi-grid-3x3-gap text-primary"></i> Sơ Đồ Phòng & Quản Lý Lưu Trú
+                    </h2>
+                    <p class="text-secondary small mb-0">Ma trận trạng thái phòng trực quan, check-in, order dịch vụ và tất toán trả phòng</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="staff-walkin.html" class="btn btn-primary btn-sm shadow-sm">
+                        <i class="bi bi-person-plus"></i> Đặt phòng tại quầy (Walk-in)
+                    </a>
+                    <button onclick="loadAllRoomsAndBookings()" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-clockwise"></i> Tải lại sơ đồ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bảng chú thích màu sắc & Bộ lọc phòng -->
+            <div class="card border shadow-sm mb-4">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                        <div class="d-flex align-items-center gap-3 small flex-wrap">
+                            <span class="fw-bold text-secondary">Trạng thái:</span>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="legend-indicator bg-success"></span>
+                                <span class="fw-semibold">AVAILABLE (Trống)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="legend-indicator bg-danger"></span>
+                                <span class="fw-semibold">OCCUPIED (Có khách)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="legend-indicator bg-warning"></span>
+                                <span class="fw-semibold">CLEANING (Dọn phòng)</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="legend-indicator bg-secondary"></span>
+                                <span class="fw-semibold">MAINTENANCE (Bảo trì)</span>
+                            </div>
+                        </div>
+
+                        <!-- Lọc tầng & trạng thái -->
+                        <div class="d-flex align-items-center gap-2">
+                            <select id="filterFloor" class="form-select form-select-sm" style="width: 140px;" onchange="filterRoomsDisplay()">
+                                <option value="">-- Tất cả tầng --</option>
+                            </select>
+                            <select id="filterStatus" class="form-select form-select-sm" style="width: 160px;" onchange="filterRoomsDisplay()">
+                                <option value="">-- Tất cả trạng thái --</option>
+                                <option value="AVAILABLE">AVAILABLE (Trống)</option>
+                                <option value="OCCUPIED">OCCUPIED (Có khách)</option>
+                                <option value="CLEANING">CLEANING (Dọn dẹp)</option>
+                                <option value="MAINTENANCE">MAINTENANCE (Bảo trì)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lưới Ma Trận Phòng (Room Grid) -->
+            <div id="roomsGridContainer" class="row g-3 mb-5">
+                <div class="col-12 text-center py-5 text-secondary">
+                    <span class="spinner-border spinner-border-sm me-2"></span> Đang nạp sơ đồ phòng...
+                </div>
+            </div>
+
+            <!-- Danh Sách Đơn Đặt Phòng -->
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-card-checklist text-primary"></i> Danh Sách Đơn Đặt Phòng Hệ Thống
+                    </h6>
+                    <div class="input-group input-group-sm" style="width: 260px;">
+                        <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                        <input type="text" id="searchBookingInput" class="form-control" placeholder="Tìm theo mã đơn..." oninput="filterBookingsTable()">
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã Booking</th>
+                                    <th>Khách hàng</th>
+                                    <th>Phòng</th>
+                                    <th>Thời gian lưu trú</th>
+                                    <th>Trạng thái</th>
+                                    <th>Tiền cọc</th>
+                                    <th>Nguồn</th>
+                                    <th class="text-end">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bookingsTableBody">
+                                <tr><td colspan="8" class="text-center text-secondary py-4">Đang tải dữ liệu...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thao Tác Nghiệp Vụ Phòng -->
+    <div class="modal fade" id="roomActionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fs-6 fw-bold" id="roomModalTitle">Thao Tác Nghiệp Vụ Phòng</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="roomModalBody"></div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ghi Nhận Dịch Vụ Phòng -->
+    <div class="modal fade" id="staffOrderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light py-2">
+                    <h6 class="modal-title fw-bold">Ghi Nhận Dịch Vụ Phòng</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Chọn dịch vụ:</label>
+                        <select id="staffServiceSelect" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Số lượng:</label>
+                        <input type="number" id="staffServiceQty" class="form-control" value="1" min="1" max="50">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Ghi chú (Tùy chọn):</label>
+                        <input type="text" id="staffServiceNote" class="form-control" placeholder="Giao lên phòng lúc 20h...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" id="confirmStaffOrderBtn" onclick="submitStaffOrderService()" class="btn btn-primary btn-sm">
+                        Xác nhận ghi nhận
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle & App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allRooms = [];
+        let allBookings = [];
+        let allServices = [];
+        let selectedRoomForAction = null;
+        let selectedBookingCodeForAction = '';
+
+        async function initPage() {
+            renderTopNav('staff');
+            renderSidebar('staff-rooms');
+            await loadAllRoomsAndBookings();
+            loadServicesList();
+        }
+
+        async function loadAllRoomsAndBookings() {
+            try {
+                const roomsRes = await apiCall('/api/admin/rooms');
+                if (roomsRes && roomsRes.success) {
+                    allRooms = roomsRes.data || [];
+                    populateFloorOptions();
+                    filterRoomsDisplay();
+                }
+
+                const bookingsRes = await apiCall('/api/staff/bookings');
+                if (bookingsRes && bookingsRes.success) {
+                    allBookings = bookingsRes.data || [];
+                    renderBookingsTable(allBookings);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadServicesList() {
+            try {
+                const res = await apiCall('/api/public/services');
+                if (res && res.success) {
+                    allServices = res.data || [];
+                    const select = document.getElementById('staffServiceSelect');
+                    select.innerHTML = '';
+                    allServices.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.serviceId;
+                        opt.textContent = `${s.serviceName} (${formatVND(s.unitPrice)}/${s.unit || 'lần'})`;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function populateFloorOptions() {
+            const select = document.getElementById('filterFloor');
+            const floors = [...new Set(allRooms.map(r => r.floor))].sort((a,b) => a - b);
+            select.innerHTML = '<option value="">-- Tất cả tầng --</option>';
+            floors.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = `Tầng ${f}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function filterRoomsDisplay() {
+            const floor = document.getElementById('filterFloor').value;
+            const status = document.getElementById('filterStatus').value;
+
+            let filtered = allRooms;
+            if (floor) filtered = filtered.filter(r => String(r.floor) === String(floor));
+            if (status) filtered = filtered.filter(r => (r.status || '').toUpperCase() === status.toUpperCase());
+
+            renderRoomsGrid(filtered);
+        }
+
+        function renderRoomsGrid(rooms) {
+            const container = document.getElementById('roomsGridContainer');
+            if (rooms.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center text-secondary py-5">Không có phòng nào phù hợp bộ lọc.</div>';
+                return;
+            }
+
+            container.innerHTML = rooms.map(r => {
+                const st = (r.status || 'AVAILABLE').toUpperCase();
+                let statusClass = 'status-available';
+                let badgeClass = 'bg-success';
+
+                if (st === 'OCCUPIED') { statusClass = 'status-occupied'; badgeClass = 'bg-danger'; }
+                else if (st === 'CLEANING') { statusClass = 'status-cleaning'; badgeClass = 'bg-warning text-dark'; }
+                else if (st === 'MAINTENANCE') { statusClass = 'status-maintenance'; badgeClass = 'bg-secondary'; }
+
+                const typeName = r.roomType ? r.roomType.typeName : 'Phòng';
+
+                return `
+                    <div class="col-md-3 col-sm-6">
+                        <div class="room-matrix-card ${statusClass}" onclick="openRoomActionModal(${r.roomId})">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0">Phòng ${r.roomNumber}</h5>
+                                    <div class="small text-secondary">${typeName}</div>
+                                </div>
+                                <span class="badge ${badgeClass}">${st}</span>
+                            </div>
+                            <div class="small text-secondary mb-2">
+                                <i class="bi bi-building"></i> Tầng ${r.floor} ${r.note ? `| 📝 ${r.note}` : ''}
+                            </div>
+                            <div class="d-flex justify-content-end mt-2 pt-2 border-top">
+                                <span class="small text-primary fw-semibold">Nghiệp vụ phòng →</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openRoomActionModal(roomId) {
+            const room = allRooms.find(r => r.roomId === roomId);
+            if (!room) return;
+            selectedRoomForAction = room;
+
+            document.getElementById('roomModalTitle').textContent = `Nghiệp Vụ Phòng ${room.roomNumber} (Tầng ${room.floor})`;
+
+            const activeBooking = allBookings.find(b => {
+                return b.roomNumber === room.roomNumber || (b.status === 'CHECKED_IN' || b.status === 'CONFIRMED');
+            });
+
+            selectedBookingCodeForAction = activeBooking ? activeBooking.bookingCode : '';
+            const status = (room.status || 'AVAILABLE').toUpperCase();
+
+            let bookingSectionHtml = '';
+            if (activeBooking) {
+                bookingSectionHtml = `
+                    <div class="bg-light p-3 rounded mb-3 border">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold text-primary">${activeBooking.bookingCode}</span>
+                            <span class="badge ${activeBooking.status === 'CHECKED_IN' ? 'bg-danger' : 'bg-success'}">${activeBooking.status}</span>
+                        </div>
+                        <div class="small text-secondary">
+                            Khách: <strong class="text-dark">${activeBooking.customer ? activeBooking.customer.fullName : 'Khách vãng lai'}</strong> | 
+                            SĐT: <strong class="text-dark">${activeBooking.customer ? activeBooking.customer.phone : '---'}</strong>
+                        </div>
+                    </div>
+                `;
+            } else {
+                bookingSectionHtml = `
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Mã đơn đặt phòng (Nếu có):</label>
+                        <input type="text" id="manualBookingCodeInput" class="form-control form-control-sm text-uppercase" placeholder="Nhập mã đơn, ví dụ: BK-20261012-XXXX" onchange="selectedBookingCodeForAction = this.value.trim();">
+                    </div>
+                `;
+            }
+
+            document.getElementById('roomModalBody').innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                    <div>
+                        <div class="fw-bold text-dark fs-6">Hạng: ${room.roomType ? room.roomType.typeName : 'Standard'}</div>
+                        <div class="small text-secondary">Đơn giá: ${formatVND(room.roomType ? room.roomType.basePrice : 500000)}/đêm</div>
+                    </div>
+                    <div>
+                        <span class="badge ${status === 'AVAILABLE' ? 'bg-success' : (status === 'OCCUPIED' ? 'bg-danger' : 'bg-warning')} px-3 py-2">
+                            ${status}
+                        </span>
+                    </div>
+                </div>
+
+                ${bookingSectionHtml}
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold d-block">Đổi nhanh trạng thái buồng phòng:</label>
+                    <div class="btn-group btn-group-sm w-100">
+                        <button type="button" onclick="quickUpdateRoomStatus(${room.roomId}, 'AVAILABLE')" class="btn btn-outline-success">
+                            AVAILABLE (Sạch & Trống)
+                        </button>
+                        <button type="button" onclick="quickUpdateRoomStatus(${room.roomId}, 'CLEANING')" class="btn btn-outline-warning">
+                            CLEANING (Dọn dẹp)
+                        </button>
+                        <button type="button" onclick="quickUpdateRoomStatus(${room.roomId}, 'MAINTENANCE')" class="btn btn-outline-secondary">
+                            MAINTENANCE (Bảo trì)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-top pt-3">
+                    <label class="form-label small fw-semibold d-block mb-2">Thao tác lễ tân & thu ngân:</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button type="button" onclick="handleStaffCheckIn()" class="btn btn-success btn-sm w-100 shadow-sm">
+                                <i class="bi bi-key"></i> Check-in Đón Khách
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" onclick="handleStaffConfirmDeposit()" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="bi bi-check2-circle"></i> Xác Nhận Duyệt Cọc
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" onclick="openStaffOrderServiceModal()" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="bi bi-plus-lg"></i> Thêm Dịch Vụ Vào Phòng
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button type="button" onclick="handleStaffViewFolio()" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="bi bi-receipt"></i> Xem Live Folio
+                            </button>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <button type="button" onclick="handleStaffCheckout()" class="btn btn-danger btn-sm w-100 shadow-sm">
+                                <i class="bi bi-cash-stack"></i> Tất Toán Hóa Đơn & Check-out
+                            </button>
+                        </div>
+                        <div class="col-12">
+                            <button type="button" onclick="handleStaffCancelRefund()" class="btn btn-outline-danger btn-sm w-100">
+                                <i class="bi bi-x-circle"></i> Hủy Đơn & Tính Hoàn Cọc Tự Động
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            openModal('roomActionModal');
+        }
+
+        async function quickUpdateRoomStatus(roomId, newStatus) {
+            try {
+                const res = await apiCall(`/api/admin/rooms/${roomId}/status?status=${newStatus}`, { method: 'PATCH' });
+                if (res && res.success) {
+                    showToast(`Đã cập nhật trạng thái phòng sang ${newStatus}!`, 'success');
+                    closeModal('roomActionModal');
+                    loadAllRoomsAndBookings();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function getActiveCode() {
+            const manual = document.getElementById('manualBookingCodeInput');
+            if (manual && manual.value.trim()) return manual.value.trim().toUpperCase();
+            return selectedBookingCodeForAction;
+        }
+
+        async function handleStaffCheckIn() {
+            const code = getActiveCode();
+            if (!code) {
+                showToast('Vui lòng nhập Mã đặt phòng cần Check-in!', 'warning');
+                return;
+            }
+
+            try {
+                const res = await apiCall(`/api/staff/billing/bookings/${code}/check-in`, { method: 'POST' });
+                if (res && res.success) {
+                    showToast('Check-in thành công! Phòng đã chuyển sang OCCUPIED.', 'success');
+                    closeModal('roomActionModal');
+                    loadAllRoomsAndBookings();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function handleStaffConfirmDeposit() {
+            const code = getActiveCode();
+            if (!code) {
+                showToast('Vui lòng nhập Mã đặt phòng cần duyệt cọc!', 'warning');
+                return;
+            }
+
+            try {
+                const res = await apiCall(`/api/staff/bookings/${code}/confirm-deposit`, { method: 'POST' });
+                if (res && res.success) {
+                    showToast('Đã xác nhận tiền cọc thành công!', 'success');
+                    closeModal('roomActionModal');
+                    loadAllRoomsAndBookings();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function openStaffOrderServiceModal() {
+            const code = getActiveCode();
+            if (!code) {
+                showToast('Vui lòng nhập Mã đặt phòng để thêm dịch vụ!', 'warning');
+                return;
+            }
+            openModal('staffOrderModal');
+        }
+
+        async function submitStaffOrderService() {
+            const code = getActiveCode();
+            const serviceId = document.getElementById('staffServiceSelect').value;
+            const quantity = parseInt(document.getElementById('staffServiceQty').value) || 1;
+            const note = document.getElementById('staffServiceNote').value.trim();
+            const btn = document.getElementById('confirmStaffOrderBtn');
+
+            btn.disabled = true;
+            try {
+                const res = await apiCall(`/api/staff/billing/bookings/${code}/order-service`, {
+                    method: 'POST',
+                    body: {
+                        bookingCode: code,
+                        serviceId: parseInt(serviceId),
+                        quantity,
+                        note: note || null
+                    }
+                });
+
+                btn.disabled = false;
+                if (res && res.success) {
+                    showToast('Đã ghi nhận dịch vụ vào hóa đơn phòng thành công!', 'success');
+                    closeModal('staffOrderModal');
+                }
+            } catch (err) {
+                btn.disabled = false;
+            }
+        }
+
+        function handleStaffViewFolio() {
+            const code = getActiveCode();
+            if (!code) {
+                showToast('Vui lòng nhập Mã đặt phòng để xem Folio!', 'warning');
+                return;
+            }
+            window.location.href = `services.html?bookingCode=${code}`;
+        }
+
+        async function handleStaffCheckout() {
+            const code = getActiveCode();
+            if (!code) {
+                showToast('Vui lòng nhập Mã đặt phòng cần Check-out!', 'warning');
+                return;
+            }
+
+            if (!confirm(`Xác nhận tất toán hóa đơn và hoàn tất Check-out cho đơn ${code}? Phòng sẽ tự động chuyển sang CLEANING.`)) {
+                return;
+            }
+
+            try {
+                const res = await apiCall(`/api/staff/billing/bookings/${code}/settle-and-checkout`, {
+                    method: 'POST',
+                    body: {
+                        paymentMethod: 'CASH',
+                        note: 'Check-out tại quầy lễ tân'
+                    }
+                });
+
+                if (res && res.success) {
+                    showToast('Tất toán hóa đơn và Check-out thành công! Phòng đã chuyển sang trạng thái CLEANING.', 'success', 4500);
+                    closeModal('roomActionModal');
+                    loadAllRoomsAndBookings();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function handleStaffCancelRefund() {
+            const code = getActiveCode();
+            if (!code) {
+                showToast('Vui lòng nhập Mã đặt phòng cần hủy!', 'warning');
+                return;
+            }
+
+            const reason = prompt('Nhập lý do hủy đơn:', 'Khách yêu cầu hủy phòng');
+            if (!reason) return;
+
+            try {
+                const res = await apiCall(`/api/staff/billing/bookings/${code}/cancel-with-refund?reason=${encodeURIComponent(reason)}`, {
+                    method: 'POST'
+                });
+
+                if (res && res.success) {
+                    showToast(res.message || 'Hủy đơn thành công!', 'success');
+                    closeModal('roomActionModal');
+                    loadAllRoomsAndBookings();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function renderBookingsTable(bookings) {
+            const tbody = document.getElementById('bookingsTableBody');
+            if (bookings.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-secondary py-4">Chưa có đơn đặt phòng nào.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = bookings.map(b => `
+                <tr>
+                    <td><strong>${b.bookingCode}</strong></td>
+                    <td>
+                        ${b.customer ? b.customer.fullName : 'Khách vãng lai'}
+                        <div class="text-secondary small">${b.customer ? b.customer.phone : ''}</div>
+                    </td>
+                    <td>${b.roomNumber ? `P.${b.roomNumber}` : '---'}</td>
+                    <td>${formatDate(b.checkInDate)} → ${formatDate(b.checkOutDate)}</td>
+                    <td>
+                        <span class="badge ${b.status === 'CHECKED_IN' ? 'bg-primary' : (b.status === 'CONFIRMED' ? 'bg-success' : 'bg-warning text-dark')}">
+                            ${b.status}
+                        </span>
+                    </td>
+                    <td>${formatVND(b.depositRequired)}</td>
+                    <td><span class="badge bg-light text-dark border">${b.source || 'ONLINE'}</span></td>
+                    <td class="text-end">
+                        <button onclick="selectedBookingCodeForAction='${b.bookingCode}'; handleStaffViewFolio();" class="btn btn-outline-primary btn-sm">
+                            Folio
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterBookingsTable() {
+            const q = document.getElementById('searchBookingInput').value.trim().toLowerCase();
+            if (!q) {
+                renderBookingsTable(allBookings);
+                return;
+            }
+            const filtered = allBookings.filter(b => (b.bookingCode || '').toLowerCase().includes(q));
+            renderBookingsTable(filtered);
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

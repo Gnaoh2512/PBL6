@@ -6,4 +6,5 @@ import com.example.pbl6.entity.Service;
 public interface ServiceAdminService {
     Service createService(ServiceRequest request);
     Service updateService(Integer id, ServiceRequest request);
+    java.util.List<Service> getAllServices();
 }

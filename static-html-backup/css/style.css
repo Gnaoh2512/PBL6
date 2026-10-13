@@ -1,0 +1,157 @@
+/* Hotel California - Custom Styles enhancing Bootstrap 5 */
+:root {
+    --hotel-primary: #1e3a8a;
+    --hotel-primary-hover: #172554;
+    --hotel-accent: #d97706;
+    --hotel-bg: #f8fafc;
+}
+
+body {
+    background-color: var(--hotel-bg);
+    color: #1e293b;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navbar */
+.navbar-hotel {
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+}
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+    color: var(--hotel-primary) !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Sidebar Layout for Staff / Admin */
+.app-wrapper {
+    display: flex;
+    flex: 1;
+    min-height: calc(100vh - 58px);
+}
+
+.app-sidebar {
+    width: 260px;
+    background-color: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.sidebar-heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    padding: 0 20px 8px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    color: #334155;
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
+}
+.sidebar-link:hover {
+    background-color: #f1f5f9;
+    color: var(--hotel-primary);
+}
+.sidebar-link.active {
+    background-color: #eff6ff;
+    color: #2563eb;
+    font-weight: 600;
+    border-left-color: #2563eb;
+}
+
+.app-main {
+    flex: 1;
+    padding: 28px;
+    overflow-y: auto;
+}
+
+/* Room Matrix Grid Cards */
+.room-matrix-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.room-matrix-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
+}
+
+.room-matrix-card.status-available {
+    border-color: #22c55e;
+}
+.room-matrix-card.status-available:hover {
+    border-color: #16a34a;
+    background-color: #f0fdf4;
+}
+
+.room-matrix-card.status-occupied {
+    border-color: #ef4444;
+    background-color: #fffafb;
+}
+.room-matrix-card.status-occupied:hover {
+    border-color: #dc2626;
+    background-color: #fef2f2;
+}
+
+.room-matrix-card.status-cleaning {
+    border-color: #f59e0b;
+    background-color: #fffdfa;
+}
+.room-matrix-card.status-cleaning:hover {
+    border-color: #d97706;
+    background-color: #fffbeb;
+}
+
+.room-matrix-card.status-maintenance {
+    border-color: #94a3b8;
+    background-color: #f8fafc;
+}
+
+/* Toast Container */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* QR Code Display */
+.qr-container {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+.qr-container img {
+    max-width: 250px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}

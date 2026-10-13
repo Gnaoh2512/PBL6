@@ -100,4 +100,10 @@ public class RoomAdminServiceImpl implements RoomAdminService {
         room.setStatus(status);
         return roomRepository.save(room);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<Room> getAllRooms() {
+        return roomRepository.findAll();
+    }
 }

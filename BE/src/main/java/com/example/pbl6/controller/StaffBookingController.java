@@ -12,6 +12,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.pbl6.entity.Booking;
+import com.example.pbl6.repository.BookingRepository;
+import com.example.pbl6.service.CustomerBookingService;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,6 +25,23 @@ import java.util.Map;
 public class StaffBookingController {
 
     private final StaffBookingService staffBookingService;
+    private final CustomerBookingService customerBookingService;
+    private final BookingRepository bookingRepository;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Booking>>> getAllBookings(
+            @RequestParam(required = false) String status) {
+        List<Booking> bookings = (status != null && !status.trim().isEmpty())
+                ? bookingRepository.findByStatus(status.trim().toUpperCase())
+                : bookingRepository.findAll();
+        return ResponseEntity.ok(ApiResponse.ok(bookings));
+    }
+
+    @GetMapping("/{bookingCode}")
+    public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingDetail(@PathVariable String bookingCode) {
+        BookingDetailResponse response = customerBookingService.getBookingByCode(bookingCode);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
 
     /**
      * Nhân viên Lễ tân tạo đơn đặt phòng trực tiếp tại quầy cho khách vãng lai (Walk-in Booking)
