@@ -1,5 +1,8 @@
 HELP.md
 target/
+.localdb/
+backend-local.stdout.log
+backend-local.stderr.log
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
