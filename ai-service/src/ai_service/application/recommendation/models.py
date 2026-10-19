@@ -57,11 +57,15 @@ class RecommendationPreferences(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    amenities: list[str] = Field(default_factory=list)
+    amenities: list[Annotated[str, Field(max_length=100)]] = Field(
+        default_factory=list, max_length=20
+    )
 
 
 class RecommendationRequest(AvailabilitySearchRequest):
-    """Draft V1 recommendation request before endpoint implementation."""
+    """V1 recommendation request with only documented JSON field names."""
+
+    model_config = ConfigDict(populate_by_name=False, validate_by_name=False, extra="forbid")
 
     preferences: RecommendationPreferences = Field(default_factory=RecommendationPreferences)
     top_k: TopK = Field(default=5, alias="topK")
@@ -114,7 +118,7 @@ class RecommendedRoom(BaseModel):
 
 
 class RecommendationResult(BaseModel):
-    """Internal result model; HTTP wrapping remains REC-05 work."""
+    """Internal result model and HTTP success contract."""
 
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 

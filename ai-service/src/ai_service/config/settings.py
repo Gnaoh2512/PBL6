@@ -16,9 +16,10 @@ class Settings(BaseSettings):
     app_port: int = Field(default=8006, ge=1, le=65535)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
-    backend_api_url: HttpUrl = HttpUrl("http://localhost:8080")
+    backend_api_url: HttpUrl = HttpUrl("http://localhost:9090")
     backend_request_timeout_seconds: float = Field(default=5.0, gt=0)
     backend_internal_api_key: SecretStr | None = None
+    ai_service_auth_token: SecretStr | None = None
 
     model_config = SettingsConfigDict(
         env_file=".env",

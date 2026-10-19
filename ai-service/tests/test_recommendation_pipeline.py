@@ -259,6 +259,23 @@ def test_conflicting_duplicate_is_an_invalid_backend_response() -> None:
         run_pipeline(backend)
 
 
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"status": "BLOCKED"},
+        {"check_in_date": date(2026, 11, 11)},
+        {"check_out_date": date(2026, 11, 13)},
+        {"nights": 3},
+        {"price_per_night": Decimal("-1")},
+    ],
+)
+def test_inconsistent_backend_room_is_an_integration_failure(changes: dict[str, object]) -> None:
+    inconsistent = candidate(1).model_copy(update=changes)
+
+    with pytest.raises(BackendInvalidResponseError, match="inconsistent"):
+        run_pipeline(StubBackendClient([inconsistent]))
+
+
 def test_money_and_score_serialize_as_precise_json_numbers() -> None:
     precise = candidate(1, price="999999.99", amenities="Wifi")
     result = run_pipeline(StubBackendClient([precise]))

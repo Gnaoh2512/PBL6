@@ -46,6 +46,8 @@ def test_recommendation_request_maps_contract_and_preserves_decimal() -> None:
         ({"topK": 21}, "topK"),
         ({"topK": 1.5}, "topK"),
         ({"city": "Da Nang"}, "city"),
+        ({"preferences": {"amenities": ["x"] * 21}}, "amenities"),
+        ({"preferences": {"amenities": ["x" * 101]}}, "amenities"),
     ],
 )
 def test_recommendation_request_rejects_invalid_values(
@@ -57,6 +59,17 @@ def test_recommendation_request_rejects_invalid_values(
         RecommendationRequest.model_validate(payload)
 
     assert error_fragment in str(exc_info.value)
+
+
+def test_recommendation_request_rejects_python_field_names_on_the_json_boundary() -> None:
+    payload = {
+        "check_in_date": "2026-11-10",
+        "check_out_date": "2026-11-12",
+        "guest_count": 2,
+    }
+
+    with pytest.raises(ValidationError):
+        RecommendationRequest.model_validate(payload)
 
 
 def test_past_dates_are_not_rejected_without_an_agreed_timezone_rule() -> None:

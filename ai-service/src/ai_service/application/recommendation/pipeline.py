@@ -72,6 +72,8 @@ class RecommendationPipeline:
         )
 
         unique_candidates = self._deduplicate(candidates)
+        for candidate in unique_candidates:
+            self._validate_candidate(candidate, request)
         eligible = [
             candidate
             for candidate in unique_candidates
@@ -100,6 +102,24 @@ class RecommendationPipeline:
                     f"backend returned conflicting records for roomId={candidate.room_id}"
                 )
         return list(by_room_id.values())
+
+    @staticmethod
+    def _validate_candidate(
+        candidate: AvailableRoomCandidate,
+        request: RecommendationRequest,
+    ) -> None:
+        if (
+            candidate.status != "AVAILABLE"
+            or candidate.check_in_date != request.check_in_date
+            or candidate.check_out_date != request.check_out_date
+            or candidate.nights != (request.check_out_date - request.check_in_date).days
+            or candidate.price_per_night < 0
+            or candidate.total_room_charge < 0
+            or candidate.estimated_deposit < 0
+        ):
+            raise BackendInvalidResponseError(
+                "backend returned a room inconsistent with the availability search"
+            )
 
     @staticmethod
     def _meets_hard_constraints(

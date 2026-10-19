@@ -22,7 +22,7 @@ def test_health_returns_service_status_without_external_dependencies() -> None:
     }
 
 
-def test_business_endpoints_are_not_stubbed() -> None:
+def test_chat_is_not_stubbed_and_recommendations_require_authorization() -> None:
     chat_response = asyncio.run(request("POST", "/api/v1/ai/chat", json={"message": "hello"}))
     recommendation_response = asyncio.run(
         request(
@@ -37,7 +37,8 @@ def test_business_endpoints_are_not_stubbed() -> None:
     )
 
     assert chat_response.status_code == 404
-    assert recommendation_response.status_code == 404
+    assert recommendation_response.status_code == 401
+    assert recommendation_response.json()["error"]["code"] == "SERVICE_UNAUTHORIZED"
 
 
 def test_application_lifespan_owns_backend_client_without_connecting() -> None:
