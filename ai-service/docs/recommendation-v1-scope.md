@@ -17,9 +17,9 @@ This is not a multi-hotel recommender and not merely a room-type catalogue ranke
 
 The schema has `room_type` and `room`, but no `hotel`/`property` table, hotel ID, city, location,
 rating, images, or property-to-room relationship
-(`pbl6/src/main/resources/hotel_management.sql:36-68`; entities at
-`pbl6/src/main/java/com/example/pbl6/entity/RoomType.java:8-34` and
-`pbl6/src/main/java/com/example/pbl6/entity/Room.java:9-40`). Therefore a multi-hotel result would
+(`BE/src/main/resources/hotel_management.sql:36-68`; entities at
+`BE/src/main/java/com/example/pbl6/entity/RoomType.java:8-34` and
+`BE/src/main/java/com/example/pbl6/entity/Room.java:9-40`). Therefore a multi-hotel result would
 require invented IDs and features.
 
 ### Why not only room types
@@ -27,13 +27,13 @@ require invented IDs and features.
 `GET /api/public/rooms/room-types` provides capacity, base price, amenities, and description, but
 does not prove that a physical room is available. The availability API returns concrete rooms,
 and booking creation requires an integer `roomId`
-(`pbl6/src/main/java/com/example/pbl6/dto/booking/BookingCreateRequest.java:16-24`).
+(`BE/src/main/java/com/example/pbl6/dto/booking/BookingCreateRequest.java:16-24`).
 
 ### Why concrete rooms are feasible
 
 `GET`/`POST /api/public/rooms/available` returns each available room with an integer `roomId`,
 room number, floor, nested room type, dates, nights, price per night, total charge, and estimated
-deposit (`pbl6/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java:16-31`). These are
+deposit (`BE/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java:16-31`). These are
 the candidates that can be ranked without fabricating availability.
 
 ## 2. V1 request boundary
@@ -88,7 +88,7 @@ constraint.
   (`RoomSearchRequest.java:11-26`; `BookingRoom.java:31-35`).
 - Check-out must be after check-in.
 - Nights are calendar days between the two dates, minimum one
-  (`pbl6/src/main/java/com/example/pbl6/service/financial/FinancialCalculator.java:19-35`).
+  (`BE/src/main/java/com/example/pbl6/service/financial/FinancialCalculator.java:19-35`).
 
 ### Proposed rule
 
@@ -171,6 +171,9 @@ creation succeeds.
 
 V1 soft input is limited to `preferences.amenities: string[]`.
 
+The current API accepts at most 20 amenity strings, each at most 100 characters. These are
+operational input limits; requests beyond them return 422.
+
 - Amenities come from `RoomType.amenities`, currently free-form `TEXT`
   (`RoomType.java:30-34`).
 - Amenity matching may change ordering but may not restore a room removed by hard filtering.
@@ -229,15 +232,15 @@ Short source references in this document resolve to these repository paths:
 
 | Source | Repository path |
 |---|---|
-| `hotel_management.sql` | `pbl6/src/main/resources/hotel_management.sql` |
-| `Room.java` | `pbl6/src/main/java/com/example/pbl6/entity/Room.java` |
-| `RoomType.java` | `pbl6/src/main/java/com/example/pbl6/entity/RoomType.java` |
-| `BookingRoom.java` | `pbl6/src/main/java/com/example/pbl6/entity/BookingRoom.java` |
-| `RoomSearchRequest.java` | `pbl6/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java` |
-| `AvailableRoomResponse.java` | `pbl6/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java` |
-| `BookingCreateRequest.java` | `pbl6/src/main/java/com/example/pbl6/dto/booking/BookingCreateRequest.java` |
-| `PublicRoomController.java` | `pbl6/src/main/java/com/example/pbl6/controller/PublicRoomController.java` |
-| `RoomRepository.java` | `pbl6/src/main/java/com/example/pbl6/repository/RoomRepository.java` |
-| `RoomCatalogServiceImpl.java` | `pbl6/src/main/java/com/example/pbl6/service/RoomCatalogServiceImpl.java` |
-| `CustomerBookingServiceImpl.java` | `pbl6/src/main/java/com/example/pbl6/service/CustomerBookingServiceImpl.java` |
-| `FinancialCalculator.java` | `pbl6/src/main/java/com/example/pbl6/service/financial/FinancialCalculator.java` |
+| `hotel_management.sql` | `BE/src/main/resources/hotel_management.sql` |
+| `Room.java` | `BE/src/main/java/com/example/pbl6/entity/Room.java` |
+| `RoomType.java` | `BE/src/main/java/com/example/pbl6/entity/RoomType.java` |
+| `BookingRoom.java` | `BE/src/main/java/com/example/pbl6/entity/BookingRoom.java` |
+| `RoomSearchRequest.java` | `BE/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java` |
+| `AvailableRoomResponse.java` | `BE/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java` |
+| `BookingCreateRequest.java` | `BE/src/main/java/com/example/pbl6/dto/booking/BookingCreateRequest.java` |
+| `PublicRoomController.java` | `BE/src/main/java/com/example/pbl6/controller/PublicRoomController.java` |
+| `RoomRepository.java` | `BE/src/main/java/com/example/pbl6/repository/RoomRepository.java` |
+| `RoomCatalogServiceImpl.java` | `BE/src/main/java/com/example/pbl6/service/RoomCatalogServiceImpl.java` |
+| `CustomerBookingServiceImpl.java` | `BE/src/main/java/com/example/pbl6/service/CustomerBookingServiceImpl.java` |
+| `FinancialCalculator.java` | `BE/src/main/java/com/example/pbl6/service/financial/FinancialCalculator.java` |

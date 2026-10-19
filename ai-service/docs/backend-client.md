@@ -1,7 +1,7 @@
 # Backend availability client
 
-Status: implemented foundation for the `1.0.0-draft` recommendation contract. This does not make
-the product proposal final and does not implement the recommendation endpoint or pipeline.
+Status: implemented backend client for the `1.0.0-draft` recommendation contract. The FastAPI
+recommendation endpoint and pipeline are also implemented; the Spring AI facade remains pending.
 
 ## Implemented boundary
 
@@ -24,13 +24,13 @@ the current `RoomTypeResponse` required by V1.
 
 | Implemented assumption | Authoritative source |
 |---|---|
-| POST path, request DTO, response envelope | `pbl6/src/main/java/com/example/pbl6/controller/PublicRoomController.java:73-77` |
-| Search fields and Java `BigDecimal` prices | `pbl6/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java:17-39` |
-| Concrete room and calculated monetary fields | `pbl6/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java:16-31` |
-| Nested room-type fields | `pbl6/src/main/java/com/example/pbl6/dto/room/RoomTypeResponse.java:15-21` |
-| Envelope fields | `pbl6/src/main/java/com/example/pbl6/common/ApiResponse.java:16-47` |
-| Eligibility predicates for status, type, capacity, price, and overlap | `pbl6/src/main/java/com/example/pbl6/repository/RoomRepository.java:16-38` |
-| Date order, sorting, nights, price, and deposit response mapping | `pbl6/src/main/java/com/example/pbl6/service/RoomCatalogServiceImpl.java:52-110` |
+| POST path, request DTO, response envelope | `BE/src/main/java/com/example/pbl6/controller/PublicRoomController.java:73-77` |
+| Search fields and Java `BigDecimal` prices | `BE/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java:17-39` |
+| Concrete room and calculated monetary fields | `BE/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java:16-31` |
+| Nested room-type fields | `BE/src/main/java/com/example/pbl6/dto/room/RoomTypeResponse.java:15-21` |
+| Envelope fields | `BE/src/main/java/com/example/pbl6/common/ApiResponse.java:16-47` |
+| Eligibility predicates for status, type, capacity, price, and overlap | `BE/src/main/java/com/example/pbl6/repository/RoomRepository.java:16-38` |
+| Date order, sorting, nights, price, and deposit response mapping | `BE/src/main/java/com/example/pbl6/service/RoomCatalogServiceImpl.java:52-110` |
 
 ## Known contract differences and open decisions
 

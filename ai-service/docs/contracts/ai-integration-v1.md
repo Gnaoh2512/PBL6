@@ -5,31 +5,31 @@
 | Contract ID | `AI-INTEGRATION` |
 | Version | `1.0.0-draft` |
 | Date | `2026-10-09` |
-| Status | Proposed contract; documentation only |
-| Implemented AI routes | `GET /health` only |
+| Status | Proposed cross-service contract; FastAPI recommendation implemented |
+| Implemented AI routes | `GET /health`, `POST /api/v1/ai/recommendations` |
 
-This document freezes the proposed boundary for implementing chat and recommendation next. It
-does not claim that the Spring BFF routes, service authentication, request-ID propagation, chat,
-or recommendation handlers already exist.
+This document records the proposed cross-service boundary. The FastAPI recommendation handler,
+inbound service-token check, and outbound request-ID header are implemented. The Spring BFF routes,
+cross-service request-ID tracing, and chat handler are still pending.
 
 ## 1. Verified repository facts
 
-- The frontend currently calls the Spring Boot backend at `http://localhost:8080`, using JSON and
+- The frontend calls the Spring Boot backend using JSON and
   `Authorization: Bearer <jwt>` for protected routes
-  (`pbl6/API_DOCUMENTATION_FOR_FE.md:26-41`).
+  (`BE/API_DOCUMENTATION_FOR_FE.md`). The `BE` project defaults to `http://localhost:9090`.
 - Spring Security is stateless. `/api/auth/**` and `/api/public/**` are public; every other route
-  requires an authenticated account (`pbl6/src/main/java/com/example/pbl6/security/SecurityConfig.java:43-65`).
+  requires an authenticated account (`BE/src/main/java/com/example/pbl6/security/SecurityConfig.java:43-65`).
 - The JWT filter reads a Bearer token, validates it, reloads the user from the database, and
   creates the Spring Security context
-  (`pbl6/src/main/java/com/example/pbl6/security/JwtAuthenticationFilter.java:28-58`).
+  (`BE/src/main/java/com/example/pbl6/security/JwtAuthenticationFilter.java:28-58`).
 - JWTs contain username as subject plus `role` and integer `accountId` claims
-  (`pbl6/src/main/java/com/example/pbl6/security/JwtTokenProvider.java:27-38`).
+  (`BE/src/main/java/com/example/pbl6/security/JwtTokenProvider.java:27-38`).
 - Successful backend APIs normally use `ApiResponse<T>` with `success`, `message`, `data`, and
-  `timestamp` (`pbl6/src/main/java/com/example/pbl6/common/ApiResponse.java:15-47`).
+  `timestamp` (`BE/src/main/java/com/example/pbl6/common/ApiResponse.java:15-47`).
 - There is no Spring AI controller, BFF/proxy class, outbound HTTP client, request-ID filter, or
   service-to-service authentication implementation in the current backend.
-- The FastAPI bootstrap currently registers only `GET /health`
-  (`ai-service/src/ai_service/main.py:26-32`). Chat and recommendation are not implemented.
+- FastAPI registers `GET /health` and `POST /api/v1/ai/recommendations`.
+  Chat and the Spring AI facade are not implemented.
 
 ## 2. Integration topology
 
@@ -38,7 +38,7 @@ or recommendation handlers already exist.
 ```text
 Frontend -> Spring Boot APIs -> MySQL
 
-FastAPI -> GET /health only
+FastAPI -> GET /health; POST /api/v1/ai/recommendations -> Spring availability API
 ```
 
 ### Proposed v1
@@ -329,7 +329,7 @@ data in `data` while keeping a safe user-facing `message`:
 
 The current backend maps validation/illegal arguments to 400, missing resources to 404,
 authentication errors to 401, and other exceptions to 500
-(`pbl6/src/main/java/com/example/pbl6/exception/GlobalExceptionHandler.java:17-54`). New BFF
+(`BE/src/main/java/com/example/pbl6/exception/GlobalExceptionHandler.java:17-54`). New BFF
 handlers should preserve the `ApiResponse` shape but must not copy raw upstream error bodies.
 
 ## 8. Request ID rules (proposed)
@@ -407,14 +407,14 @@ Short source references in this contract resolve to these repository paths:
 
 | Source | Repository path |
 |---|---|
-| `SecurityConfig.java` | `pbl6/src/main/java/com/example/pbl6/security/SecurityConfig.java` |
-| `JwtAuthenticationFilter.java` | `pbl6/src/main/java/com/example/pbl6/security/JwtAuthenticationFilter.java` |
-| `JwtTokenProvider.java` | `pbl6/src/main/java/com/example/pbl6/security/JwtTokenProvider.java` |
-| `ApiResponse.java` | `pbl6/src/main/java/com/example/pbl6/common/ApiResponse.java` |
-| `GlobalExceptionHandler.java` | `pbl6/src/main/java/com/example/pbl6/exception/GlobalExceptionHandler.java` |
-| `PublicRoomController.java` | `pbl6/src/main/java/com/example/pbl6/controller/PublicRoomController.java` |
-| `RoomSearchRequest.java` | `pbl6/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java` |
-| `AvailableRoomResponse.java` | `pbl6/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java` |
+| `SecurityConfig.java` | `BE/src/main/java/com/example/pbl6/security/SecurityConfig.java` |
+| `JwtAuthenticationFilter.java` | `BE/src/main/java/com/example/pbl6/security/JwtAuthenticationFilter.java` |
+| `JwtTokenProvider.java` | `BE/src/main/java/com/example/pbl6/security/JwtTokenProvider.java` |
+| `ApiResponse.java` | `BE/src/main/java/com/example/pbl6/common/ApiResponse.java` |
+| `GlobalExceptionHandler.java` | `BE/src/main/java/com/example/pbl6/exception/GlobalExceptionHandler.java` |
+| `PublicRoomController.java` | `BE/src/main/java/com/example/pbl6/controller/PublicRoomController.java` |
+| `RoomSearchRequest.java` | `BE/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java` |
+| `AvailableRoomResponse.java` | `BE/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java` |
 
 ## 13. Open decisions
 

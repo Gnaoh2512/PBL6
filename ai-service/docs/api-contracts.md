@@ -6,9 +6,9 @@ hard-constraint rules are in
 [`recommendation-v1-scope.md`](recommendation-v1-scope.md). This file is retained only as the
 original bootstrap draft and must not be treated as the current contract.
 
-These contracts are design targets only. The bootstrap implements only `GET /health`.
-`POST /api/v1/ai/chat` and `POST /api/v1/ai/recommendations` must return `404` until their
-application use cases are implemented; the service must not return fabricated AI responses.
+This is a historical draft. The current service implements `GET /health` and
+`POST /api/v1/ai/recommendations`; `POST /api/v1/ai/chat` still returns `404`. Use the versioned
+contract for current request and response shapes.
 
 ## Common integration rules
 

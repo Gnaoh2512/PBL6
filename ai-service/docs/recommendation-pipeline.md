@@ -1,7 +1,7 @@
 # Internal recommendation pipeline
 
-Status: implemented against the `1.0.0-draft` contract for internal development. This does not
-approve REC-01 product choices or expose an HTTP endpoint.
+Status: implemented against the `1.0.0-draft` contract and exposed through the authenticated
+FastAPI recommendation endpoint. This does not approve REC-01 product choices.
 
 ## Pipeline
 
@@ -10,13 +10,14 @@ approve REC-01 product choices or expose an HTTP endpoint.
    type, optional per-night price bounds, and backend `sortBy`.
 3. Use only candidates from that response. Collapse model-equivalent duplicate
    `roomId` records; conflicting records for one `roomId` make the response invalid.
-4. Defensively recheck capacity, optional room type, and inclusive per-night price bounds.
+4. Reject candidates with a non-available status, mismatched dates/night count, or negative
+   amounts. Defensively recheck capacity, optional room type, and inclusive per-night price bounds.
 5. Rank the remaining candidates by exact amenity-token score, then per-night price ascending,
    then integer `roomId` ascending.
 6. Apply `topK` after filtering, deduplication, and ranking.
 
 An empty availability response or an empty eligible set returns `NO_MATCH`. Timeout, connection,
-HTTP, invalid-envelope, and conflicting-duplicate failures keep their backend error category and
+HTTP, invalid-envelope, inconsistent-candidate, and conflicting-duplicate failures keep their backend error category and
 never become `NO_MATCH`.
 
 The pipeline does not query a room catalogue, cache, vector store, LLM, or database. Soft scoring
@@ -26,7 +27,7 @@ cannot restore a candidate rejected by hard filtering.
 
 The schema stores amenities as free-form `TEXT`, while current seed data and the synthetic test
 fixture use comma-separated items
-(`pbl6/src/main/resources/hotel_management.sql:250-253` and
+(`BE/src/main/resources/hotel_management.sql:250-253` and
 `ai-service/tests/fixtures/available_rooms_success.json`). The implementation therefore:
 
 - splits backend amenity text only on commas;
@@ -70,6 +71,5 @@ underlying bookings, so the AI does not claim to independently verify overlap. R
 hold; booking creation must revalidate availability in Spring
 (`CustomerBookingServiceImpl.java:65-84`).
 
-Remaining work before exposure: REC-05 HTTP mapping, finalized request-ID behavior, inbound
-service authentication, Spring BFF integration, and approved product decisions for timezone,
-currency, and `topK`.
+Remaining work before frontend exposure: Spring BFF integration, cross-service request-ID tracing,
+and approved product decisions for timezone, currency, and `topK`.

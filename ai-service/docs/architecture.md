@@ -20,14 +20,15 @@ The Spring Boot backend remains authoritative for authentication, room inventory
 availability, prices, bookings, payments, and user history. The AI service must not write to
 the backend database and must not treat embeddings as evidence of live price or availability.
 
-The bootstrap has no LLM, embedding, vector database, or backend HTTP dependency. Therefore
-process startup and `GET /health` remain available when every external system is unavailable.
+The service has no LLM, embedding, or vector database dependency. Process startup and
+`GET /health` remain available when the Spring backend is unavailable; recommendations then
+return a backend-unavailable error.
 
 ## Package responsibilities
 
 - `domain`: framework-independent RAG and recommendation rules when those features are added.
 - `application`: use cases that coordinate domain interfaces.
-- `infrastructure`: backend HTTP, vector store, and provider adapters; only logging exists now.
+- `infrastructure`: backend HTTP client and logging; vector store and provider adapters are future work.
 - `presentation`: FastAPI routers and HTTP schemas.
 - `config`: validated environment-backed settings.
 
