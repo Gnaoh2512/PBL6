@@ -18,6 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
+    private final RoleRepository roleRepository;
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
     private final RoomTypeRepository roomTypeRepository;
@@ -30,6 +31,7 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        initRoles();
         if (accountRepository.count() == 0) {
             log.info("Bắt đầu khởi tạo dữ liệu mẫu cho hệ thống...");
             initAccounts();
@@ -44,8 +46,29 @@ public class DataInitializer implements CommandLineRunner {
         }
     }
 
+    private void initRoles() {
+        if (roleRepository.count() > 0) return;
+        List<Role> roles = List.of(
+                Role.builder().roleCode("ROLE_ADMIN").roleName("Quản trị viên hệ thống").description("Toàn quyền hệ thống").build(),
+                Role.builder().roleCode("ROLE_MANAGER").roleName("Quản lý khách sạn").description("Quản lý vận hành").build(),
+                Role.builder().roleCode("ROLE_RECEPTIONIST").roleName("Nhân viên lễ tân").description("Tiếp tân và đặt phòng").build(),
+                Role.builder().roleCode("ROLE_HOUSEKEEPING").roleName("Nhân viên buồng phòng").description("Dọn phòng và kiểm tra phòng").build(),
+                Role.builder().roleCode("ROLE_MAINTENANCE").roleName("Nhân viên bảo trì").description("Sửa chữa cơ sở vật chất").build(),
+                Role.builder().roleCode("ROLE_SERVICE_STAFF").roleName("Nhân viên dịch vụ").description("Phục vụ đồ ăn và dịch vụ buồng").build(),
+                Role.builder().roleCode("ROLE_CUSTOMER").roleName("Khách hàng").description("Tài khoản khách hàng trực tuyến").build()
+        );
+        roleRepository.saveAll(roles);
+        log.info("Đã khởi tạo 7 vai trò hệ thống mẫu (RBAC)");
+    }
+
     private void initAccounts() {
         String defaultPasswordHash = passwordEncoder.encode("123456");
+
+        Role adminRole = roleRepository.findByRoleCode("ROLE_ADMIN").orElse(null);
+        Role managerRole = roleRepository.findByRoleCode("ROLE_MANAGER").orElse(null);
+        Role receptionistRole = roleRepository.findByRoleCode("ROLE_RECEPTIONIST").orElse(null);
+        Role housekeeperRole = roleRepository.findByRoleCode("ROLE_HOUSEKEEPING").orElse(null);
+        Role customerRole = roleRepository.findByRoleCode("ROLE_CUSTOMER").orElse(null);
 
         List<Account> accounts = List.of(
                 Account.builder()
@@ -54,7 +77,7 @@ public class DataInitializer implements CommandLineRunner {
                         .fullName("Quản trị viên Hệ thống")
                         .email("admin@hotel.com")
                         .phone("0900000001")
-                        .role("ADMIN")
+                        .role(adminRole)
                         .status("ACTIVE")
                         .build(),
                 Account.builder()
@@ -63,7 +86,7 @@ public class DataInitializer implements CommandLineRunner {
                         .fullName("Nguyễn Văn Quản Lý")
                         .email("manager@hotel.com")
                         .phone("0900000002")
-                        .role("MANAGER")
+                        .role(managerRole)
                         .status("ACTIVE")
                         .build(),
                 Account.builder()
@@ -72,7 +95,7 @@ public class DataInitializer implements CommandLineRunner {
                         .fullName("Trần Thị Lễ Tân")
                         .email("receptionist@hotel.com")
                         .phone("0900000003")
-                        .role("RECEPTIONIST")
+                        .role(receptionistRole)
                         .status("ACTIVE")
                         .build(),
                 Account.builder()
@@ -81,7 +104,7 @@ public class DataInitializer implements CommandLineRunner {
                         .fullName("Lê Văn Thu Ngân")
                         .email("cashier@hotel.com")
                         .phone("0900000004")
-                        .role("CASHIER")
+                        .role(receptionistRole)
                         .status("ACTIVE")
                         .build(),
                 Account.builder()
@@ -90,7 +113,7 @@ public class DataInitializer implements CommandLineRunner {
                         .fullName("Phạm Thị Buồng Phòng")
                         .email("housekeeper@hotel.com")
                         .phone("0900000005")
-                        .role("HOUSEKEEPING")
+                        .role(housekeeperRole)
                         .status("ACTIVE")
                         .build(),
                 Account.builder()
@@ -99,7 +122,7 @@ public class DataInitializer implements CommandLineRunner {
                         .fullName("Nguyễn Văn Khách")
                         .email("customer1@gmail.com")
                         .phone("0901234567")
-                        .role("CUSTOMER")
+                        .role(customerRole)
                         .status("ACTIVE")
                         .build()
         );

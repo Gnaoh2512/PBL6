@@ -220,6 +220,41 @@ public class StaffBookingServiceImpl implements StaffBookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<BookingDetailResponse> getAllBookings(String status, String keyword) {
+        List<Booking> bookings;
+        if (StringUtils.hasText(status)) {
+            bookings = bookingRepository.findByStatus(status.trim().toUpperCase());
+        } else {
+            bookings = bookingRepository.findAll();
+        }
+
+        bookings.sort((a, b) -> {
+            if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
+            return b.getCreatedAt().compareTo(a.getCreatedAt());
+        });
+
+        if (StringUtils.hasText(keyword)) {
+            String kw = keyword.trim().toLowerCase();
+            bookings = bookings.stream()
+                    .filter(b -> (b.getBookingCode() != null && b.getBookingCode().toLowerCase().contains(kw))
+                            || (b.getCustomer() != null && b.getCustomer().getFullName() != null && b.getCustomer().getFullName().toLowerCase().contains(kw))
+                            || (b.getCustomer() != null && b.getCustomer().getPhone() != null && b.getCustomer().getPhone().contains(kw)))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        return bookings.stream()
+                .map(b -> customerBookingService.getBookingByCode(b.getBookingCode()))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingDetailResponse getBookingByCode(String bookingCode) {
+        return customerBookingService.getBookingByCode(bookingCode);
+    }
+
+    @Override
     @Transactional
     public BookingDetailResponse confirmDepositManual(String bookingCode, String staffUsername) {
         return customerBookingService.confirmDepositManual(bookingCode, staffUsername);

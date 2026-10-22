@@ -5,8 +5,10 @@ import com.example.pbl6.dto.auth.AuthResponse;
 import com.example.pbl6.dto.auth.LoginRequest;
 import com.example.pbl6.dto.auth.RegisterRequest;
 import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.Role;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
+import com.example.pbl6.repository.RoleRepository;
 import com.example.pbl6.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +25,7 @@ import java.time.LocalDateTime;
 public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -41,7 +44,12 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-        String role = StringUtils.hasText(request.getRole()) ? request.getRole().trim().toUpperCase() : "CUSTOMER";
+        String roleCode = StringUtils.hasText(request.getRole()) ? request.getRole().trim().toUpperCase() : "ROLE_CUSTOMER";
+        if (!roleCode.startsWith("ROLE_")) {
+            roleCode = "ROLE_" + roleCode;
+        }
+        Role role = roleRepository.findByRoleCode(roleCode)
+                .orElseGet(() -> roleRepository.findByRoleCode("ROLE_CUSTOMER").orElse(null));
 
         Account account = Account.builder()
                 .username(username)
@@ -80,7 +88,8 @@ public class AuthServiceImpl implements AuthService {
         account.setLastLogin(LocalDateTime.now());
         accountRepository.save(account);
 
-        String token = jwtTokenProvider.generateToken(account.getUsername(), account.getRole(), account.getAccountId());
+        String roleStr = account.getRole() != null ? account.getRole().getRoleCode() : "ROLE_CUSTOMER";
+        String token = jwtTokenProvider.generateToken(account.getUsername(), roleStr, account.getAccountId());
 
         return AuthResponse.builder()
                 .accessToken(token)

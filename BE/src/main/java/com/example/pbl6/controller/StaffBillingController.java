@@ -1,6 +1,7 @@
 package com.example.pbl6.controller;
 
 import com.example.pbl6.common.ApiResponse;
+import com.example.pbl6.dto.billing.CancelBookingRequest;
 import com.example.pbl6.dto.billing.CancellationRefundResponse;
 import com.example.pbl6.dto.billing.LiveFolioResponse;
 import com.example.pbl6.dto.billing.SettlementRequest;
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -80,16 +82,25 @@ public class StaffBillingController {
     }
 
     /**
-     * Hủy đơn đặt phòng và áp dụng chính sách hoàn cọc tự động
+     * Hủy đơn đặt phòng và áp dụng chính sách hoàn cọc tự động hoặc bảo lưu linh hoạt (Voucher / Điểm thưởng)
      */
     @PostMapping("/bookings/{bookingCode}/cancel-with-refund")
     public ResponseEntity<ApiResponse<CancellationRefundResponse>> cancelWithRefund(
             @PathVariable String bookingCode,
-            @RequestParam(defaultValue = "Khách yêu cầu hủy phòng") String reason,
+            @RequestParam(required = false) String reason,
+            @RequestBody(required = false) CancelBookingRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         String staffUsername = userDetails != null ? userDetails.getUsername() : "staff";
-        CancellationRefundResponse response = billingService.cancelWithRefundPolicy(bookingCode, reason, staffUsername);
+        if (request == null) {
+            request = CancelBookingRequest.builder()
+                    .reason(StringUtils.hasText(reason) ? reason : "Khách yêu cầu hủy phòng")
+                    .refundOption("CASH_REFUND")
+                    .build();
+        } else if (StringUtils.hasText(reason) && !StringUtils.hasText(request.getReason())) {
+            request.setReason(reason);
+        }
+        CancellationRefundResponse response = billingService.cancelWithFlexibleOptions(bookingCode, request, staffUsername);
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
     }
 }

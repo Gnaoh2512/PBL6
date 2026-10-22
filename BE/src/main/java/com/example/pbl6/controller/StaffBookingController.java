@@ -12,9 +12,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import com.example.pbl6.entity.Booking;
-import com.example.pbl6.repository.BookingRepository;
-import com.example.pbl6.service.CustomerBookingService;
 import java.util.List;
 import java.util.Map;
 
@@ -25,22 +22,25 @@ import java.util.Map;
 public class StaffBookingController {
 
     private final StaffBookingService staffBookingService;
-    private final CustomerBookingService customerBookingService;
-    private final BookingRepository bookingRepository;
 
+    /**
+     * Danh sách đơn đặt phòng dành cho nhân viên (lọc theo trạng thái PENDING_DEPOSIT, CONFIRMED... hoặc từ khóa)
+     */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Booking>>> getAllBookings(
-            @RequestParam(required = false) String status) {
-        List<Booking> bookings = (status != null && !status.trim().isEmpty())
-                ? bookingRepository.findByStatus(status.trim().toUpperCase())
-                : bookingRepository.findAll();
-        return ResponseEntity.ok(ApiResponse.ok(bookings));
+    public ResponseEntity<ApiResponse<List<BookingDetailResponse>>> getAllBookings(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword) {
+        List<BookingDetailResponse> bookings = staffBookingService.getAllBookings(status, keyword);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách đơn đặt phòng thành công", bookings));
     }
 
+    /**
+     * Lễ tân xem chi tiết đơn đặt phòng theo mã
+     */
     @GetMapping("/{bookingCode}")
-    public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingDetail(@PathVariable String bookingCode) {
-        BookingDetailResponse response = customerBookingService.getBookingByCode(bookingCode);
-        return ResponseEntity.ok(ApiResponse.ok(response));
+    public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingByCode(@PathVariable String bookingCode) {
+        BookingDetailResponse booking = staffBookingService.getBookingByCode(bookingCode);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết đơn đặt phòng thành công", booking));
     }
 
     /**

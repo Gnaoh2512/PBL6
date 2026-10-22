@@ -1,6 +1,7 @@
 package com.example.pbl6.service;
 
 import com.example.pbl6.common.enums.*;
+import com.example.pbl6.dto.billing.CancelBookingRequest;
 import com.example.pbl6.dto.billing.CancellationRefundResponse;
 import com.example.pbl6.dto.billing.LiveFolioResponse;
 import com.example.pbl6.dto.billing.SettlementRequest;
@@ -15,6 +16,7 @@ import com.example.pbl6.service.financial.FinancialCalculator;
 import com.example.pbl6.service.financial.VietQrService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -44,6 +46,11 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     private final AccountRepository accountRepository;
     private final FinancialCalculator financialCalculator;
     private final VietQrService vietQrService;
+    private final LoyaltyService loyaltyService;
+    private final VoucherRepository voucherRepository;
+    private final CustomerLoyaltyRepository customerLoyaltyRepository;
+    private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+    private final LoyaltyTierRepository loyaltyTierRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -361,6 +368,14 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         }
 
         log.info("Đã tất toán hóa đơn và Check-out thành công cho đơn {}. Phòng chuyển sang CLEANING để dọn dẹp.", bookingCode);
+
+        // Tự động tích điểm và nâng hạng hội viên Coastal Bay Club
+        try {
+            loyaltyService.recordStayAndEarnPoints(invoice);
+        } catch (Exception e) {
+            log.error("Lỗi khi tích điểm khách hàng thân thiết cho hóa đơn #{}: {}", invoice.getInvoiceId(), e.getMessage());
+        }
+
         return getLiveFolio(bookingCode);
     }
 
@@ -388,6 +403,22 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     @Override
     @Transactional
     public CancellationRefundResponse cancelWithRefundPolicy(String bookingCode, String reason, String username) {
+        CancelBookingRequest request = CancelBookingRequest.builder()
+                .reason(reason)
+                .refundOption("CASH_REFUND")
+                .build();
+        return cancelWithFlexibleOptions(bookingCode, request, username);
+    }
+
+    @Override
+    @Transactional
+    public CancellationRefundResponse cancelWithFlexibleOptions(String bookingCode, CancelBookingRequest request, String username) {
+        if (request == null) {
+            request = CancelBookingRequest.builder().build();
+        }
+        String reason = StringUtils.hasText(request.getReason()) ? request.getReason() : "Khách hàng yêu cầu hủy phòng";
+        String option = StringUtils.hasText(request.getRefundOption()) ? request.getRefundOption().trim().toUpperCase() : "CASH_REFUND";
+
         Booking booking = bookingRepository.findByBookingCode(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
 
@@ -402,41 +433,168 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             userAccount = accountRepository.findByUsername(username).orElse(null);
         }
 
-        // Tính tiền cọc đã nộp
+        // Kiểm tra phân quyền: Nếu là Khách hàng thì chỉ được hủy đơn của chính mình
+        if (userAccount != null) {
+            String roleCode = userAccount.getRole() != null ? userAccount.getRole().getRoleCode() : "";
+            boolean isStaffOrAdmin = roleCode.toUpperCase().contains("ADMIN")
+                    || roleCode.toUpperCase().contains("STAFF")
+                    || roleCode.toUpperCase().contains("RECEPTIONIST")
+                    || roleCode.toUpperCase().contains("MANAGER")
+                    || roleCode.toUpperCase().contains("CASHIER");
+            if (!isStaffOrAdmin) {
+                Customer bookingCustomer = booking.getCustomer();
+                boolean isOwner = false;
+                if (bookingCustomer != null) {
+                    if (bookingCustomer.getAccount() != null && bookingCustomer.getAccount().getUsername().equalsIgnoreCase(username)) {
+                        isOwner = true;
+                    } else if (bookingCustomer.getEmail() != null && bookingCustomer.getEmail().equalsIgnoreCase(userAccount.getEmail())) {
+                        isOwner = true;
+                    }
+                }
+                if (!isOwner) {
+                    throw new AccessDeniedException("Bạn không có quyền thao tác hủy đơn đặt phòng này");
+                }
+            }
+        }
+
+        // Tính tổng tiền cọc đã nộp
         List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
         BigDecimal depositPaid = payments.stream()
                 .filter(p -> PaymentType.DEPOSIT.name().equalsIgnoreCase(p.getType()))
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        int refundPercentage = financialCalculator.calculateRefundPercentage(booking.getCheckInDate(), LocalDate.now());
-        BigDecimal refundAmount = depositPaid.multiply(BigDecimal.valueOf(refundPercentage))
-                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
-        BigDecimal penaltyFee = depositPaid.subtract(refundAmount);
+        int refundPercentage = 0;
+        BigDecimal refundAmount = BigDecimal.ZERO;
+        BigDecimal penaltyFee = BigDecimal.ZERO;
+        String creditVoucherCode = null;
+        BigDecimal loyaltyPointsCredited = BigDecimal.ZERO;
+        String messageDetail;
 
-        // Tạo Payment REFUND nếu có hoàn tiền
-        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-            Payment refundPayment = Payment.builder()
-                    .booking(booking)
-                    .type(PaymentType.REFUND.name())
-                    .method(PaymentMethod.BANK_TRANSFER.name())
-                    .amount(refundAmount)
-                    .receivedBy(userAccount)
-                    .approvedBy(userAccount)
-                    .note("Hoàn cọc hủy phòng (" + refundPercentage + "%) do: " + reason)
-                    .paidAt(LocalDateTime.now())
+        if (depositPaid.compareTo(BigDecimal.ZERO) <= 0) {
+            messageDetail = "Đơn chưa thanh toán tiền cọc, hủy phòng thành công mà không phát sinh hoàn tiền/bảo lưu.";
+        } else if ("CREDIT_VOUCHER".equalsIgnoreCase(option)) {
+            // Tùy chọn 1: Bảo lưu 100% cọc thành Voucher nghỉ dưỡng 6 tháng
+            refundPercentage = 100;
+            refundAmount = depositPaid;
+            penaltyFee = BigDecimal.ZERO;
+
+            creditVoucherCode = "VCH-RF-" + booking.getBookingCode().toUpperCase();
+            if (voucherRepository.existsByCodeIgnoreCase(creditVoucherCode)) {
+                creditVoucherCode = "VCH-RF-" + booking.getBookingCode().toUpperCase() + "-" + (System.currentTimeMillis() % 10000);
+            }
+
+            Voucher creditVoucher = Voucher.builder()
+                    .voucherCode(creditVoucherCode)
+                    .voucherName("Voucher bảo lưu cọc đơn " + booking.getBookingCode())
+                    .description("Bảo lưu 100% cọc (" + depositPaid + "đ) từ đơn hủy " + booking.getBookingCode() + ". Có giá trị trong 6 tháng.")
+                    .discountType("FIXED_AMOUNT")
+                    .discountValue(depositPaid)
+                    .minOrderAmount(BigDecimal.ZERO)
+                    .maxDiscountAmount(depositPaid)
+                    .validFrom(LocalDateTime.now())
+                    .validTo(LocalDateTime.now().plusMonths(6))
+                    .usageLimit(1)
+                    .usageLimitPerCustomer(1)
+                    .isActive(true)
+                    .createdBy(userAccount)
                     .build();
-            paymentRepository.save(refundPayment);
+            voucherRepository.save(creditVoucher);
+
+            messageDetail = String.format("Đã bảo lưu 100%% tiền cọc (%sđ) thành Voucher ưu đãi mã [%s] có thời hạn sử dụng 6 tháng.",
+                    depositPaid, creditVoucherCode);
+
+        } else if ("LOYALTY_POINTS".equalsIgnoreCase(option)) {
+            // Tùy chọn 2: Quy đổi 100% cọc sang Điểm thưởng Coastal Bay Club (Tỷ lệ: 100.000đ = 1.0 điểm)
+            refundPercentage = 100;
+            refundAmount = depositPaid;
+            penaltyFee = BigDecimal.ZERO;
+
+            Customer customer = booking.getCustomer();
+            if (customer == null) {
+                throw new IllegalArgumentException("Đơn đặt phòng này không liên kết với hồ sơ hội viên để quy đổi điểm thưởng");
+            }
+
+            // Quy đổi: 100.000 VNĐ cọc = 1.00 điểm Loyalty
+            loyaltyPointsCredited = depositPaid.divide(BigDecimal.valueOf(100_000), 2, RoundingMode.HALF_UP);
+
+            CustomerLoyalty loyalty = customerLoyaltyRepository.findByCustomer_CustomerId(customer.getCustomerId())
+                    .orElseGet(() -> {
+                        LoyaltyTier defaultTier = loyaltyTierRepository.findByTierCode("SEASHELL")
+                                .orElseGet(() -> loyaltyTierRepository.findAll().get(0));
+                        return customerLoyaltyRepository.save(CustomerLoyalty.builder()
+                                .customer(customer)
+                                .tier(defaultTier)
+                                .totalStayDays(0)
+                                .totalSpent(BigDecimal.ZERO)
+                                .totalScore(BigDecimal.ZERO)
+                                .build());
+                    });
+
+            LoyaltyTransaction txn = LoyaltyTransaction.builder()
+                    .customer(customer)
+                    .createdBy(userAccount)
+                    .txnType("ADJUST")
+                    .amountSpent(depositPaid)
+                    .scoreEarned(loyaltyPointsCredited)
+                    .note("Bảo lưu 100% cọc đơn " + booking.getBookingCode() + " quy đổi thành điểm thưởng hội viên Coastal Bay Club")
+                    .build();
+            loyaltyTransactionRepository.save(txn);
+
+            loyalty.setTotalScore(loyalty.getTotalScore().add(loyaltyPointsCredited));
+
+            // Tự động thăng hạng nếu đủ điểm
+            List<LoyaltyTier> tiers = loyaltyTierRepository.findAll();
+            tiers.sort((a, b) -> b.getTierLevel().compareTo(a.getTierLevel()));
+            for (LoyaltyTier tier : tiers) {
+                if (loyalty.getTotalScore().compareTo(tier.getMinScore()) >= 0) {
+                    if (!tier.getTierId().equals(loyalty.getTier().getTierId()) && tier.getTierLevel() > loyalty.getTier().getTierLevel()) {
+                        loyalty.setTier(tier);
+                        loyalty.setTierUpdatedAt(LocalDateTime.now());
+                        log.info("Khách hàng {} được nâng hạng lên {} khi quy đổi cọc hủy phòng", customer.getCustomerId(), tier.getTierName());
+                    }
+                    break;
+                }
+            }
+            customerLoyaltyRepository.save(loyalty);
+
+            messageDetail = String.format("Đã quy đổi 100%% tiền cọc (%sđ) thành %s điểm thưởng Coastal Bay Club cộng trực tiếp vào tài khoản hội viên.",
+                    depositPaid, loyaltyPointsCredited);
+
+        } else {
+            // Tùy chọn 3: Hoàn tiền mặt/chuyển khoản theo chính sách thời gian (>=3 ngày: 100%, 1-2 ngày: 50%, 0 ngày: 0%)
+            option = "CASH_REFUND";
+            refundPercentage = financialCalculator.calculateRefundPercentage(booking.getCheckInDate(), LocalDate.now());
+            refundAmount = depositPaid.multiply(BigDecimal.valueOf(refundPercentage))
+                    .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP);
+            penaltyFee = depositPaid.subtract(refundAmount);
+
+            if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                Payment refundPayment = Payment.builder()
+                        .booking(booking)
+                        .type(PaymentType.REFUND.name())
+                        .method(PaymentMethod.BANK_TRANSFER.name())
+                        .amount(refundAmount)
+                        .receivedBy(userAccount)
+                        .approvedBy(userAccount)
+                        .note("Hoàn cọc hủy phòng (" + refundPercentage + "%) do: " + reason)
+                        .paidAt(LocalDateTime.now())
+                        .build();
+                paymentRepository.save(refundPayment);
+            }
+
+            messageDetail = String.format("Tỷ lệ hoàn tiền: %d%% (Hoàn lại: %sđ, Phí phạt hủy muộn: %sđ).",
+                    refundPercentage, refundAmount, penaltyFee);
         }
 
-        // Cập nhật Booking sang CANCELED
+        // Cập nhật trạng thái Booking sang CANCELED
         booking.setStatus(BookingStatus.CANCELED.name());
-        booking.setCancelReason(reason);
+        booking.setCancelReason(reason + " [Chính sách: " + option + "]");
         booking.setCanceledBy(userAccount);
         booking.setCanceledAt(LocalDateTime.now());
         bookingRepository.save(booking);
 
-        // Cập nhật BookingRoom và trả lại Room AVAILABLE
+        // Cập nhật trạng thái BookingRoom sang CANCELED và giải phóng phòng thành AVAILABLE
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
         for (BookingRoom br : bookingRooms) {
             br.setStatus(BookingStatus.CANCELED.name());
@@ -449,7 +607,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             }
         }
 
-        // Cập nhật hóa đơn nếu có
+        // Hủy các hóa đơn liên quan nếu có
         List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
         for (Invoice inv : invoices) {
             inv.setStatus(InvoiceStatus.CANCELED.name());
@@ -459,9 +617,8 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             invoiceRepository.save(inv);
         }
 
-        String msg = String.format("Hủy đơn thành công. Tỷ lệ hoàn cọc: %d%% (Hoàn lại: %sđ, Phí phạt: %sđ)",
-                refundPercentage, refundAmount, penaltyFee);
-        log.info("Đơn {}: {}", bookingCode, msg);
+        String finalMessage = "Hủy đơn đặt phòng thành công. " + messageDetail;
+        log.info("Đơn {}: {}", bookingCode, finalMessage);
 
         return CancellationRefundResponse.builder()
                 .bookingCode(bookingCode)
@@ -469,8 +626,11 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .refundPercentage(refundPercentage)
                 .refundAmount(refundAmount)
                 .penaltyFee(penaltyFee)
+                .refundOption(option)
+                .creditVoucherCode(creditVoucherCode)
+                .loyaltyPointsCredited(loyaltyPointsCredited)
                 .status("CANCELED")
-                .message(msg)
+                .message(finalMessage)
                 .build();
     }
 

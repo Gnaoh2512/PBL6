@@ -3,6 +3,7 @@ target/
 .localdb/
 backend-local.stdout.log
 backend-local.stderr.log
+.env
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

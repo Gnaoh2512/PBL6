@@ -20,9 +20,12 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        String role = account.getRole();
+        String role = null;
+        if (account.getRole() != null) {
+            role = account.getRole().getRoleCode();
+        }
         if (role == null || role.isBlank()) {
-            role = "CUSTOMER";
+            role = "ROLE_CUSTOMER";
         }
         if (!role.startsWith("ROLE_")) {
             role = "ROLE_" + role.toUpperCase();
