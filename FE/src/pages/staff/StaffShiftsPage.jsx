@@ -47,8 +47,8 @@ export default function StaffShiftsPage() {
       const res = await apiCall('/api/staff/cashier-shifts/open', {
         method: 'POST',
         body: {
-          initialFloatCash: parseFloat(initialFloat) || 0,
-          notes: openNotes
+          openingCash: parseFloat(initialFloat) || 0,
+          scheduleId: null
         }
       });
       if (res && res.success) {
@@ -72,8 +72,8 @@ export default function StaffShiftsPage() {
       const res = await apiCall(`/api/staff/cashier-shifts/${shiftId}/close`, {
         method: 'POST',
         body: {
-          actualCashBalance: parseFloat(actualBalance) || 0,
-          notes: closeNotes
+          closingCashActual: parseFloat(actualBalance) || 0,
+          handoverNote: closeNotes
         }
       });
       if (res && res.success) {
@@ -91,7 +91,7 @@ export default function StaffShiftsPage() {
   const isShiftOpen = currentShift && currentShift.status === 'OPEN';
 
   return (
-    <div>
+    <div className="ops-page">
       <div className="hc-page-title" style={{ marginBottom: '24px' }}>
         <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
           <i className="bi bi-cash-stack"></i> NGHIỆP VỤ THU NGÂN
@@ -111,7 +111,7 @@ export default function StaffShiftsPage() {
             <StatCard
               icon="bi-cash-coin"
               label="Tiền Đầu Ca (Float)"
-              value={formatVND(currentShift.initialFloatCash || 0)}
+              value={formatVND(currentShift.openingCash || 0)}
               color="var(--hc-primary)"
               bg="var(--hc-primary-subtle)"
             />
@@ -125,7 +125,7 @@ export default function StaffShiftsPage() {
             <StatCard
               icon="bi-wallet2"
               label="Tổng Quỹ Hiện Tại"
-              value={formatVND((currentShift.initialFloatCash || 0) + (currentShift.totalRevenue || 0))}
+              value={formatVND((currentShift.openingCash || 0) + (currentShift.totalRevenue || 0))}
               color="var(--hc-secondary-dark)"
               bg="var(--hc-warning-bg)"
             />
@@ -182,7 +182,7 @@ export default function StaffShiftsPage() {
                   type="button"
                   className="hc-btn hc-btn-danger"
                   onClick={() => {
-                    setActualBalance((currentShift.initialFloatCash || 0) + (currentShift.totalRevenue || 0));
+                    setActualBalance((currentShift.openingCash || 0) + (currentShift.totalRevenue || 0));
                     setCloseModalOpen(true);
                   }}
                 >
@@ -278,7 +278,7 @@ export default function StaffShiftsPage() {
           <div style={{ background: 'var(--hc-bg)', padding: '14px', borderRadius: 'var(--hc-radius-md)', marginBottom: '16px', border: '1px solid var(--hc-border)', fontSize: '13px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ color: 'var(--hc-text-secondary)' }}>Tiền đầu ca:</span>
-              <strong>{formatVND(currentShift?.initialFloatCash || 0)}</strong>
+              <strong>{formatVND(currentShift?.openingCash || 0)}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
               <span style={{ color: 'var(--hc-text-secondary)' }}>Doanh thu thu được:</span>
@@ -288,7 +288,7 @@ export default function StaffShiftsPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
               <span>Tổng tiền lý thuyết trong két:</span>
               <span style={{ color: 'var(--hc-primary)' }}>
-                {formatVND((currentShift?.initialFloatCash || 0) + (currentShift?.totalRevenue || 0))}
+                {formatVND((currentShift?.openingCash || 0) + (currentShift?.totalRevenue || 0))}
               </span>
             </div>
           </div>

@@ -1,4 +1,4 @@
-# PBL6 Backend Core Reference & API Registry (V2 - 26 Tables Complete)
+# PBL6 Backend Core Reference & API Registry (V3 - Schema and Routes Audited)
 
 ## System Tech Stack & Conventions
 
@@ -42,7 +42,9 @@
 
 ---
 
-## Complete API Registry Matrix (76 Endpoints)
+## Complete API Registry Matrix (84 API Mappings)
+
+Routes and access roles below are audited from Spring controller mappings and `@PreAuthorize`. All routes require a bearer token unless marked public. Customer booking routes also enforce booking ownership in the service layer. Use the role string returned by the API, including its `ROLE_` prefix.
 
 ### 1. Authentication & Profile (`/api/auth`)
 - **POST** `/api/auth/register` -> Register customer account
@@ -148,7 +150,7 @@ Hệ thống hỗ trợ 3 hình thức xử lý khi khách hàng hoặc nhân vi
 
 ### 6.2. Endpoint Lễ Tân / Quản Lý Hủy Phòng
 - **URL**: `POST /api/staff/billing/bookings/{bookingCode}/cancel-with-refund`
-- **Quyền hạn**: `ROLE_RECEPTIONIST`, `ROLE_CASHIER`, `ROLE_MANAGER`, `ROLE_ADMIN`
+- **Quyền hạn**: `ROLE_RECEPTIONIST`, `ROLE_MANAGER`, `ROLE_ADMIN`
 
 ### 6.3. Request Body (`CancelBookingRequest`)
 ```json
@@ -176,3 +178,28 @@ Hệ thống hỗ trợ 3 hình thức xử lý khi khách hàng hoặc nhân vi
   }
 }
 ```
+
+### Controller route audit and access summary (22/10/2026)
+
+The inventory below reflects the 84 API mappings currently declared by the controllers (the SPA forwarding route is excluded). Method-level role rules are enforced in addition to the global authenticated-by-default policy.
+
+| Group | Route coverage | Access |
+| :--- | :--- | :--- |
+| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` | register/login public; `/me` authenticated |
+| Public rooms | `GET /api/public/rooms/room-types`, `GET /room-types/{id}`, `GET/POST /available` | Public |
+| Public vouchers | `GET /api/public/vouchers`, `POST /apply` | Public |
+| Public bookings/history | `POST /api/public/bookings`, `GET /{bookingCode}`, `GET /{bookingCode}/payment-status`, `POST /sepay-webhook`, `POST /{bookingCode}/simulate-deposit`, `GET /api/public/history/lookup[/{bookingCode}]` | Public; webhook has service-level validation |
+| Public service/folio | `GET /api/public/services`, `POST /services/order`, `GET /bookings/{bookingCode}/folio`, `POST /bookings/{bookingCode}/simulate-settlement` | Public; simulation endpoints are demo helpers |
+| Customer bookings | `GET /api/customer/bookings/my-bookings`, `GET /history`, `GET /history/{bookingCode}`, `POST /{bookingCode}/cancel` | Authenticated; service checks ownership |
+| Customer billing | `GET /api/customer/billing/services`, `POST /services/order`, `GET /bookings/{bookingCode}/folio` | CUSTOMER |
+| Customer loyalty/requests | loyalty `GET /profile`, `/transactions`, `/benefits`; requests `POST /api/customer/service-requests`, `GET /my-requests`, `POST /{id}/cancel` | CUSTOMER or ADMIN |
+| Staff bookings | `GET /api/staff/bookings[/{bookingCode}]`, `POST /walk-in`, `POST /{bookingCode}/confirm-deposit`, `POST /{bookingCode}/cancel` | RECEPTIONIST, MANAGER, ADMIN |
+| Staff billing | `POST /api/staff/billing/bookings/{bookingCode}/check-in`, `/order-service`, `/settle-and-checkout`, `/cancel-with-refund`; `GET .../folio` | RECEPTIONIST, MANAGER, ADMIN |
+| Cashier shifts | `POST /api/staff/cashier-shifts/open`, `POST /{id}/close`, `GET /me` | ADMIN, MANAGER, RECEPTIONIST |
+| Service requests | `GET /api/staff/service-requests`, `POST /{id}/assign`, `POST /{id}/complete` | SERVICE_STAFF, RECEPTIONIST, MANAGER, ADMIN |
+| Maintenance | `GET /api/staff/maintenance/equipment`, `POST /report`, `GET /requests`, `POST /requests/{id}/assign`, `/complete`, `/confirm` | Per-operation rules: reporting HOUSEKEEPING/RECEPTIONIST/MANAGER/ADMIN; list MAINTENANCE/HOUSEKEEPING/RECEPTIONIST/MANAGER/ADMIN; assign MAINTENANCE/MANAGER/ADMIN; complete MAINTENANCE/MANAGER/ADMIN; confirm RECEPTIONIST/MANAGER/ADMIN |
+| Admin accounts/audit | `GET/POST /api/admin/accounts`, `GET /api/admin/audit-logs` | ADMIN |
+| Admin rooms | `GET /api/admin/rooms`, `POST/PUT /room-types[/{id}]`, `POST/PUT /rooms[/{id}]`, `PATCH /rooms/{id}/status` | List/status also RECEPTIONIST/HOUSEKEEPING; mutations ADMIN/MANAGER |
+| Admin services/shifts/schedules/vouchers/equipment/loyalty | services `GET/POST/PUT`; shifts `GET/POST/PUT/DELETE`; schedules `GET/POST/DELETE`; vouchers `GET/POST/PATCH /{id}/toggle`; equipment `GET/GET{id}/POST/PUT/DELETE`; loyalty tiers `GET`, adjust-points `POST` | ADMIN/MANAGER, except accounts/audit as above |
+
+Legacy `ROLE_CASHIER` accounts are reassigned to `ROLE_RECEPTIONIST` at startup, and the retired role is removed. Treat simulated deposit/settlement routes as development/demo flows, not payment provider confirmation.

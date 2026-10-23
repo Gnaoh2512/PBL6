@@ -4,6 +4,8 @@ import com.example.pbl6.common.ApiResponse;
 import com.example.pbl6.dto.maintenance.CompleteMaintenanceDto;
 import com.example.pbl6.dto.maintenance.MaintenanceRequestResponse;
 import com.example.pbl6.dto.maintenance.ReportMaintenanceDto;
+import com.example.pbl6.dto.equipment.EquipmentResponse;
+import com.example.pbl6.service.EquipmentService;
 import com.example.pbl6.service.MaintenanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,15 @@ import java.util.List;
 public class StaffMaintenanceController {
 
     private final MaintenanceService maintenanceService;
+    private final EquipmentService equipmentService;
+
+    @GetMapping("/equipment")
+    @PreAuthorize("hasAnyRole('HOUSEKEEPING', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<List<EquipmentResponse>>> getEquipmentForReport(
+            @RequestParam(required = false) Integer roomId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(equipmentService.getAllEquipment(roomId, null)));
+    }
 
     @PostMapping("/report")
     @PreAuthorize("hasAnyRole('HOUSEKEEPING', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")

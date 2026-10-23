@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiCall, setAuthSession } from '../services/api';
+import { apiCall, getPrimaryRole } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 
@@ -38,16 +38,16 @@ export default function LoginPage() {
         login(token, user);
         addToast('Đăng nhập thành công! Đang chuyển hướng...', 'success');
 
-        const role = (user.role || '').toUpperCase();
-        setTimeout(() => {
-          if (role.includes('ADMIN') || role.includes('MANAGER')) {
-            navigate('/admin/accounts');
-          } else if (role.includes('RECEPTIONIST') || role.includes('CASHIER') || role.includes('HOUSEKEEPING')) {
-            navigate('/staff/rooms');
-          } else {
-            navigate('/');
-          }
-        }, 400);
+        const role = getPrimaryRole(user);
+        if (role === 'ROLE_ADMIN' || role === 'ROLE_MANAGER') {
+          navigate('/admin/overview', { replace: true });
+        } else if (['ROLE_RECEPTIONIST', 'ROLE_HOUSEKEEPING', 'ROLE_SERVICE_STAFF', 'ROLE_MAINTENANCE'].includes(role)) {
+          navigate('/staff', { replace: true });
+        } else if (role === 'ROLE_CUSTOMER') {
+          navigate('/guest', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
       } else {
         addToast(res ? res.message : 'Tài khoản hoặc mật khẩu không đúng', 'error');
       }
@@ -60,9 +60,8 @@ export default function LoginPage() {
 
 
   return (
-    <div style={{
+    <div className="hc-auth-page" style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #091929 0%, #102a45 50%, #1e3a5f 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -83,10 +82,10 @@ export default function LoginPage() {
             marginBottom: '16px',
             boxShadow: 'var(--hc-shadow-sm)'
           }}>
-            <i className="bi bi-buildings"></i>
+            <img className="login-brand-logo" src="/logo.svg" alt="" />
           </div>
           <h1 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--hc-primary-dark)', marginBottom: '6px' }}>
-            Hotel California
+            Azure Bay
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--hc-text-secondary)', margin: 0 }}>
             Hệ thống Quản lý Lưu trú & Khách sạn Cao Cấp

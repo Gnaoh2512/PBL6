@@ -27,15 +27,28 @@ export function clearAuthSession() {
   localStorage.removeItem('user_info');
 }
 
-export function hasRole(roles = []) {
-  const user = getAuthUser();
-  if (!user || !user.role) return false;
-  const userRole = user.role.toUpperCase();
-  const normalizedRole = userRole.startsWith('ROLE_') ? userRole : 'ROLE_' + userRole;
-  return roles.some(r => {
-    const normR = r.toUpperCase().startsWith('ROLE_') ? r.toUpperCase() : 'ROLE_' + r.toUpperCase();
-    return normR === normalizedRole;
-  });
+function normalizeRole(role) {
+  if (typeof role === 'string') {
+    const normalized = role.trim().toUpperCase();
+    return normalized.startsWith('ROLE_') ? normalized : `ROLE_${normalized}`;
+  }
+  if (role && typeof role === 'object') {
+    return normalizeRole(role.roleCode || role.authority || role.name || role.code);
+  }
+  return '';
+}
+
+export function getPrimaryRole(user) {
+  const role = user?.role ?? user?.roleCode ?? user?.authorities?.[0];
+  return normalizeRole(Array.isArray(role) ? role[0] : role);
+}
+
+export function hasRole(roles = [], candidateUser = getAuthUser()) {
+  const userRole = getPrimaryRole(candidateUser);
+  if (!userRole) return false;
+  const availableRoles = Array.isArray(candidateUser?.roles) ? candidateUser.roles : [];
+  const userRoles = [userRole, ...availableRoles.map(normalizeRole)];
+  return roles.some((role) => userRoles.includes(normalizeRole(role)));
 }
 
 export async function apiCall(endpoint, options = {}) {

@@ -107,7 +107,7 @@ export default function StaffWalkInPage() {
   };
 
   return (
-    <div>
+    <div className="ops-page">
       <div className="hc-page-title">
         <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
           <i className="bi bi-person-walking"></i> TIẾP ĐÓN TẠI QUẦY

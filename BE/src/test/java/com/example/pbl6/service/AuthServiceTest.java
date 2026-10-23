@@ -7,6 +7,8 @@ import com.example.pbl6.dto.auth.RegisterRequest;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.repository.AccountRepository;
 import com.example.pbl6.security.JwtTokenProvider;
+import com.example.pbl6.entity.Role;
+import com.example.pbl6.repository.RoleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +37,9 @@ class AuthServiceTest {
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
+    @Mock
+    private RoleRepository roleRepository;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -48,7 +53,10 @@ class AuthServiceTest {
                 .passwordHash("encoded_secret_hash")
                 .fullName("Test User")
                 .email("test@example.com")
-                .role("CUSTOMER")
+                .role(Role.builder()
+                    .roleCode("CUSTOMER")
+                    .roleName("Customer")
+                    .build())
                 .status("ACTIVE")
                 .createdAt(LocalDateTime.now())
                 .build();
@@ -72,11 +80,18 @@ class AuthServiceTest {
             return acc;
         });
 
+        when(roleRepository.findByRoleCode("ROLE_CUSTOMER"))
+        .thenReturn(Optional.of(Role.builder()
+                .roleId(1)
+                .roleCode("ROLE_CUSTOMER")
+                .roleName("Customer")
+                .build()));
+
         AccountResponse response = authService.register(request);
 
         assertNotNull(response);
         assertEquals("newuser", response.getUsername());
-        assertEquals("CUSTOMER", response.getRole());
+        assertEquals("ROLE_CUSTOMER", response.getRole());
         assertEquals("ACTIVE", response.getStatus());
         verify(accountRepository, times(1)).save(any(Account.class));
     }

@@ -1,0 +1,482 @@
+---
+title: Hotel Management - Booking, Invoice & Payment Workflow
+---
+erDiagram
+    %% ==========================================================
+    %% 1. IDENTITY & ACCESS
+    %% ==========================================================
+
+    role {
+        INT     role_id     PK
+        VARCHAR role_code   UK "ROLE_ADMIN | ROLE_MANAGER | ROLE_RECEPTIONIST | ROLE_HOUSEKEEPING | ROLE_MAINTENANCE | ROLE_SERVICE_STAFF | ROLE_CUSTOMER"
+        VARCHAR role_name
+        TEXT    description
+    }
+
+    account {
+        INT         account_id    PK
+        VARCHAR     username      UK
+        VARCHAR     password_hash
+        VARCHAR     full_name
+        VARCHAR     email
+        VARCHAR     phone
+        INT         role_id       FK
+        VARCHAR     status
+        TIMESTAMPTZ last_login
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    customer {
+        INT         customer_id    PK
+        INT         account_id     FK "nullable, unique, login account (ROLE_CUSTOMER)"
+        VARCHAR     full_name
+        VARCHAR     id_type
+        VARCHAR     id_number
+        DATE        id_issue_date
+        VARCHAR     id_issue_place
+        VARCHAR     phone
+        VARCHAR     email
+        VARCHAR     nationality
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    %% ==========================================================
+    %% 2. ROOM CATALOG
+    %% ==========================================================
+
+    room_type {
+        INT     room_type_id PK
+        VARCHAR type_name
+        INT     capacity
+        NUMERIC base_price
+        TEXT    amenities
+        TEXT    description
+    }
+
+    room {
+        INT         room_id      PK
+        VARCHAR     room_number  UK
+        INT         room_type_id FK
+        INT         floor
+        VARCHAR     status
+        TEXT        note
+        TIMESTAMPTZ updated_at
+    }
+
+    %% ==========================================================
+    %% 3. SERVICE CATALOG
+    %% ==========================================================
+
+    service_category {
+        INT     category_id   PK
+        VARCHAR category_name
+    }
+
+    service {
+        INT     service_id   PK
+        INT     category_id  FK
+        VARCHAR service_name
+        NUMERIC unit_price
+        VARCHAR unit
+        BOOLEAN is_active
+    }
+
+    %% ==========================================================
+    %% 4. BOOKING
+    %% ==========================================================
+
+    booking {
+        INT         booking_id       PK
+        VARCHAR     booking_code     UK
+        INT         customer_id      FK
+        INT         created_by       FK "account"
+        DATE        check_in_date
+        DATE        check_out_date
+        INT         guest_count
+        VARCHAR     status
+        NUMERIC     deposit_required
+        VARCHAR     source
+        TEXT        note
+        TEXT        cancel_reason
+        INT         canceled_by      FK "account"
+        TIMESTAMPTZ canceled_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    booking_room {
+        INT         booking_room_id  PK
+        INT         booking_id       FK
+        INT         room_id          FK
+        DATE        planned_checkin
+        DATE        planned_checkout
+        VARCHAR     status
+        TIMESTAMPTZ actual_checkin
+        TIMESTAMPTZ actual_checkout
+        NUMERIC     price_applied
+    }
+
+    service_usage {
+        INT         usage_id           PK
+        INT         booking_id         FK
+        INT         service_id         FK
+        INT         invoice_id         FK "nullable until invoiced"
+        INT         quantity
+        NUMERIC     unit_price_applied
+        NUMERIC     discount_amount
+        NUMERIC     total_price
+        VARCHAR     status
+        INT         recorded_by        FK "account"
+        TIMESTAMPTZ used_at
+    }
+
+    %% ==========================================================
+    %% 5. STAFF SCHEDULING & CASHIER SHIFT
+    %% ==========================================================
+
+    shift {
+        INT  shift_id   PK
+        TIME start_time
+        TIME end_time
+    }
+
+    work_schedule {
+        INT  schedule_id PK
+        INT  account_id  FK
+        INT  shift_id    FK
+        DATE work_date
+    }
+
+    cashier_shift {
+        INT         cashier_shift_id    PK
+        INT         account_id          FK "operator"
+        INT         schedule_id         FK
+        INT         received_by         FK "account taking handover"
+        TIMESTAMPTZ start_time
+        TIMESTAMPTZ end_time
+        NUMERIC     opening_cash
+        NUMERIC     closing_cash_actual
+        VARCHAR     status
+        TEXT        handover_note
+    }
+
+    %% ==========================================================
+    %% 6. BILLING & PAYMENT
+    %% ==========================================================
+
+    invoice {
+        INT         invoice_id            PK
+        VARCHAR     invoice_number        UK
+        INT         booking_id            FK
+        INT         issued_by             FK "account"
+        INT         discount_approved_by  FK "account"
+        INT         canceled_by           FK "account"
+        NUMERIC     room_charge
+        NUMERIC     service_charge
+        NUMERIC     tax_amount
+        NUMERIC     discount_amount
+        NUMERIC     deposit_applied
+        NUMERIC     total_amount
+        VARCHAR     status
+        TEXT        cancel_reason
+        TIMESTAMPTZ canceled_at
+        TIMESTAMPTZ issued_at
+        TIMESTAMPTZ updated_at
+    }
+
+    payment {
+        INT         payment_id        PK
+        INT         booking_id        FK
+        INT         invoice_id        FK "nullable for deposits"
+        INT         cashier_shift_id  FK
+        INT         received_by       FK "account"
+        INT         approved_by       FK "account"
+        VARCHAR     type              "DEPOSIT | PAYMENT | REFUND"
+        VARCHAR     method
+        NUMERIC     amount
+        TEXT        note
+        TIMESTAMPTZ paid_at
+    }
+
+    %% ==========================================================
+    %% 7. SERVICE REQUESTS
+    %%    Guest (logged-in customer) makes a request for any service.
+    %%    The fee is stored on the request itself (fee_amount).
+    %%    service_usage stays for charges staff record directly.
+    %% ==========================================================
+
+    service_request {
+        INT         service_request_id PK
+        INT         booking_id         FK
+        INT         room_id            FK
+        INT         service_id         FK
+        INT         customer_id        FK "guest who made the request"
+        INT         assigned_to        FK "account, service staff handling it"
+        INT         invoice_id         FK "nullable until invoiced"
+        INT         quantity
+        NUMERIC     fee_amount         "fee charged for this request, VND"
+        VARCHAR     status             "PENDING | IN_PROGRESS | COMPLETED | CANCELED"
+        TEXT        note
+        TIMESTAMPTZ requested_at
+        TIMESTAMPTZ completed_at
+    }
+
+    %% ==========================================================
+    %% 8. MAINTENANCE (ROLE_MAINTENANCE)
+    %%    Housekeeping damage reports also create maintenance_request.
+    %% ==========================================================
+
+    equipment {
+        INT     equipment_id   PK
+        INT     room_id        FK "nullable, null = common area"
+        VARCHAR equipment_name
+        VARCHAR serial_number
+        VARCHAR status         "WORKING | BROKEN | UNDER_REPAIR | RETIRED"
+        TEXT    note
+    }
+
+    maintenance_request {
+        INT         request_id       PK
+        INT         room_id          FK
+        INT         equipment_id     FK "nullable"
+        INT         reported_by      FK "account"
+        INT         assigned_to      FK "account, maintenance staff"
+        INT         confirmed_by     FK "account confirming completion"
+        VARCHAR     title
+        TEXT        description
+        VARCHAR     priority         "LOW | MEDIUM | HIGH | URGENT"
+        VARCHAR     status           "OPEN | IN_PROGRESS | DONE | CONFIRMED | CANCELED"
+        TEXT        resolution_note
+        TIMESTAMPTZ reported_at
+        TIMESTAMPTZ started_at
+        TIMESTAMPTZ completed_at
+        TIMESTAMPTZ confirmed_at
+    }
+
+    %% ==========================================================
+    %% 9. VOUCHERS (managed by ROLE_ADMIN, used by guests)
+    %%    discount_type PERCENT: value is 0-100, optional max cap
+    %%    discount_type FIXED  : value is an amount in VND
+    %% ==========================================================
+
+    voucher {
+        INT         voucher_id                PK
+        INT         created_by                FK "account, admin"
+        VARCHAR     voucher_code              UK
+        VARCHAR     voucher_name
+        TEXT        description
+        VARCHAR     discount_type             "PERCENT | FIXED"
+        NUMERIC     discount_value
+        NUMERIC     max_discount_amount       "cap for PERCENT, nullable"
+        NUMERIC     min_order_amount
+        INT         usage_limit               "total uses, null = unlimited"
+        INT         usage_limit_per_customer
+        TIMESTAMPTZ valid_from
+        TIMESTAMPTZ valid_to
+        BOOLEAN     is_active
+        TIMESTAMPTZ created_at
+    }
+
+    voucher_redemption {
+        INT         redemption_id    PK
+        INT         voucher_id       FK
+        INT         customer_id      FK
+        INT         booking_id       FK
+        INT         invoice_id       FK "nullable until invoiced"
+        NUMERIC     discount_applied "VND"
+        TIMESTAMPTZ redeemed_at
+    }
+
+    %% ==========================================================
+    %% 10. LOYALTY - "COASTAL BAY CLUB" (guest membership)
+    %%
+    %%  SCORE (per paid invoice, added to customer_loyalty.total_score)
+    %%    score = stay_days * 0.4 + (amount_spent / 1,000,000 VND) * 0.6
+    %%    stay_days    = FLOOR(actual_checkout - actual_checkin) in days,
+    %%                   counted once per booking (not per room)
+    %%    amount_spent = invoice.total_amount of a PAID invoice
+    %%                   (after discounts, so a discounted stay earns less)
+    %%
+    %%  TIER = highest loyalty_tier with min_score <= total_score
+    %%         (cumulative, never downgraded; benefit quotas reset
+    %%          every MONTH / YEAR, see tier_benefit.period_type)
+    %%
+    %%  Level   Tier (VN)              min_score  Benefits (quota)
+    %%  1       Seashell (Vo So)        0         member (no perks yet)
+    %%  2       Starfish (Sao Bien)     10        5% room discount,
+    %%                                            free laundry 1/month
+    %%  3       Coral (San Ho)          30        8% room discount,
+    %%                                            free laundry 2/month,
+    %%                                            1 free night/year (Standard)
+    %%  4       Pearl (Ngoc Trai)       80        12% room discount,
+    %%                                            free spa 1/month,
+    %%                                            airport transfer 2/year,
+    %%                                            2 free nights/year (up to Deluxe)
+    %%
+    %%  Example: 10 nights + 20M VND  ->  10*0.4 + 20*0.6 = 16  -> Starfish
+    %% ==========================================================
+
+    loyalty_tier {
+        INT     tier_id     PK
+        VARCHAR tier_code   UK "SEASHELL | STARFISH | CORAL | PEARL"
+        VARCHAR tier_name
+        INT     tier_level  UK "1 to 4"
+        NUMERIC min_score
+        TEXT    description
+    }
+
+    customer_loyalty {
+        INT         customer_id      PK, FK "1:1 with customer"
+        INT         tier_id          FK
+        INT         total_stay_days
+        NUMERIC     total_spent
+        NUMERIC     total_score
+        TIMESTAMPTZ tier_updated_at
+        TIMESTAMPTZ joined_at
+        TIMESTAMPTZ updated_at
+    }
+
+    loyalty_transaction {
+        INT         txn_id        PK
+        INT         customer_id   FK
+        INT         invoice_id    FK "nullable, unique, null for manual ADJUST"
+        INT         created_by    FK "account, nullable for system"
+        VARCHAR     txn_type      "EARN | ADJUST"
+        INT         stay_days
+        NUMERIC     amount_spent
+        NUMERIC     score_earned
+        TEXT        note
+        TIMESTAMPTZ created_at
+    }
+
+    tier_benefit {
+        INT     tier_benefit_id   PK
+        INT     tier_id           FK
+        INT     service_id        FK "nullable, for FREE_SERVICE"
+        INT     room_type_id      FK "nullable, FREE_NIGHT up to this room type"
+        VARCHAR benefit_type      "ROOM_DISCOUNT | FREE_SERVICE | FREE_NIGHT"
+        VARCHAR benefit_name
+        NUMERIC discount_percent  "for ROOM_DISCOUNT"
+        INT     quota             "uses per period, null = unlimited"
+        VARCHAR period_type       "MONTH | YEAR"
+        BOOLEAN is_active
+        TEXT    description
+    }
+
+    benefit_redemption {
+        INT         redemption_id     PK
+        INT         customer_id       FK
+        INT         tier_benefit_id   FK
+        INT         booking_id        FK "nullable"
+        INT         invoice_id        FK "nullable"
+        INT         service_usage_id  FK "nullable, for FREE_SERVICE"
+        INT         approved_by       FK "account, nullable"
+        NUMERIC     value_amount      "VND discounted or waived"
+        TEXT        note
+        TIMESTAMPTZ redeemed_at
+    }
+
+    %% ==========================================================
+    %% 11. AUDIT
+    %% ==========================================================
+
+    audit_log {
+        BIGINT      log_id        PK
+        INT         account_id    FK
+        VARCHAR     module_name
+        VARCHAR     action_type
+        VARCHAR     target_table
+        BIGINT      target_id
+        JSONB       old_value
+        JSONB       new_value
+        INET        ip_address
+        TIMESTAMPTZ logged_at
+    }
+
+    %% ==========================================================
+    %% RELATIONSHIPS
+    %% One line per foreign key, labelled with the FK column.
+    %% ==========================================================
+
+    %% --- Identity ---
+    role             ||--o{ account          : "role_id"
+    account          |o--o| customer         : "account_id"
+
+    %% --- Catalogs ---
+    room_type        ||--o{ room             : "room_type_id"
+    service_category ||--o{ service          : "category_id"
+
+    %% --- Booking ---
+    customer         ||--o{ booking          : "customer_id"
+    booking          ||--|{ booking_room     : "booking_id"
+    room             ||--o{ booking_room     : "room_id"
+    booking          ||--o{ service_usage    : "booking_id"
+    service          ||--o{ service_usage    : "service_id"
+
+    account          ||--o{ booking          : "created_by"
+    account          |o--o{ booking          : "canceled_by"
+    account          ||--o{ service_usage    : "recorded_by"
+
+    %% --- Scheduling & cashier shift ---
+    shift            ||--o{ work_schedule    : "shift_id"
+    account          ||--o{ work_schedule    : "account_id"
+    work_schedule    ||--o| cashier_shift    : "schedule_id"
+    account          ||--o{ cashier_shift    : "account_id"
+    account          |o--o{ cashier_shift    : "received_by"
+
+    %% --- Billing & payment ---
+    booking          ||--o{ invoice          : "booking_id"
+    invoice          |o--o{ service_usage    : "invoice_id"
+    booking          ||--o{ payment          : "booking_id"
+    invoice          |o--o{ payment          : "invoice_id"
+    cashier_shift    ||--o{ payment          : "cashier_shift_id"
+
+    account          ||--o{ invoice          : "issued_by"
+    account          |o--o{ invoice          : "discount_approved_by"
+    account          |o--o{ invoice          : "canceled_by"
+    account          ||--o{ payment          : "received_by"
+    account          |o--o{ payment          : "approved_by"
+
+    %% --- Service requests ---
+    booking          ||--o{ service_request  : "booking_id"
+    room             ||--o{ service_request  : "room_id"
+    service          ||--o{ service_request  : "service_id"
+    invoice          |o--o{ service_request  : "invoice_id"
+    customer         ||--o{ service_request  : "customer_id"
+    account          |o--o{ service_request  : "assigned_to"
+
+    %% --- Maintenance ---
+    room             |o--o{ equipment            : "room_id"
+    room             ||--o{ maintenance_request  : "room_id"
+    equipment        |o--o{ maintenance_request  : "equipment_id"
+    account          ||--o{ maintenance_request  : "reported_by"
+    account          |o--o{ maintenance_request  : "assigned_to"
+    account          |o--o{ maintenance_request  : "confirmed_by"
+
+    %% --- Vouchers ---
+    account          ||--o{ voucher              : "created_by"
+    voucher          ||--o{ voucher_redemption   : "voucher_id"
+    customer         ||--o{ voucher_redemption   : "customer_id"
+    booking          ||--o{ voucher_redemption   : "booking_id"
+    invoice          |o--o{ voucher_redemption   : "invoice_id"
+
+    %% --- Loyalty ---
+    customer         ||--o| customer_loyalty     : "customer_id"
+    loyalty_tier     ||--o{ customer_loyalty     : "tier_id"
+    customer         ||--o{ loyalty_transaction  : "customer_id"
+    invoice          |o--o| loyalty_transaction  : "invoice_id"
+    account          |o--o{ loyalty_transaction  : "created_by"
+    loyalty_tier     ||--o{ tier_benefit         : "tier_id"
+    service          |o--o{ tier_benefit         : "service_id"
+    room_type        |o--o{ tier_benefit         : "room_type_id"
+    customer         ||--o{ benefit_redemption   : "customer_id"
+    tier_benefit     ||--o{ benefit_redemption   : "tier_benefit_id"
+    booking          |o--o{ benefit_redemption   : "booking_id"
+    invoice          |o--o{ benefit_redemption   : "invoice_id"
+    service_usage    |o--o{ benefit_redemption   : "service_usage_id"
+    account          |o--o{ benefit_redemption   : "approved_by"
+
+    %% --- Audit ---
+    account          ||--o{ audit_log        : "account_id"

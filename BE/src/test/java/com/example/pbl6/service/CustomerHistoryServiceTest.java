@@ -70,7 +70,10 @@ class CustomerHistoryServiceTest {
                 .fullName("Nguyễn Văn Khách")
                 .email("customer1@gmail.com")
                 .phone("0901234567")
-                .role("CUSTOMER")
+                .role(Role.builder()
+                        .roleCode("CUSTOMER")
+                        .roleName("Customer")
+                        .build())
                 .build();
 
         mockCustomer = Customer.builder()

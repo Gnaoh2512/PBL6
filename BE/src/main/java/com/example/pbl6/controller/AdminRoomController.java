@@ -19,7 +19,7 @@ public class AdminRoomController {
     private final RoomAdminService roomAdminService;
 
     @GetMapping("/rooms")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'CASHIER', 'HOUSEKEEPING')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'HOUSEKEEPING')")
     public ApiResponse<java.util.List<Room>> getAllRooms() {
         return ApiResponse.ok(roomAdminService.getAllRooms());
     }
@@ -49,7 +49,7 @@ public class AdminRoomController {
     }
 
     @PatchMapping("/rooms/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'CASHIER', 'HOUSEKEEPING')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'HOUSEKEEPING')")
     public ApiResponse<Room> updateRoomStatus(@PathVariable Integer id, @RequestParam String status) {
         return ApiResponse.ok("Room status updated successfully", roomAdminService.updateRoomStatus(id, status));
     }

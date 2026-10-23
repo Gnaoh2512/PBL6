@@ -439,8 +439,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             boolean isStaffOrAdmin = roleCode.toUpperCase().contains("ADMIN")
                     || roleCode.toUpperCase().contains("STAFF")
                     || roleCode.toUpperCase().contains("RECEPTIONIST")
-                    || roleCode.toUpperCase().contains("MANAGER")
-                    || roleCode.toUpperCase().contains("CASHIER");
+                    || roleCode.toUpperCase().contains("MANAGER");
             if (!isStaffOrAdmin) {
                 Customer bookingCustomer = booking.getCustomer();
                 boolean isOwner = false;

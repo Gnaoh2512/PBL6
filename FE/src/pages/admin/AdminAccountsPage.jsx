@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
-import { apiCall, formatDateTime } from '../../services/api';
+import { apiCall } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
+
+const roleCodeOf = (role) => typeof role === 'string' ? role : role?.roleCode || role?.code || '';
 
 export default function AdminAccountsPage() {
   const { addToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('ACCOUNTS'); // ACCOUNTS | AUDIT
   const [accounts, setAccounts] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filter
@@ -29,18 +29,13 @@ export default function AdminAccountsPage() {
 
   useEffect(() => {
     loadData();
-  }, [activeTab]);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      if (activeTab === 'ACCOUNTS') {
-        const res = await apiCall('/api/admin/accounts', { silentError: true });
-        if (res && res.success) setAccounts(res.data || []);
-      } else {
-        const res = await apiCall('/api/admin/audit-logs', { silentError: true });
-        if (res && res.success) setAuditLogs(res.data || []);
-      }
+      const res = await apiCall('/api/admin/accounts', { silentError: true });
+      if (res && res.success) setAccounts(res.data || []);
     } catch {
       // silent
     } finally {
@@ -90,7 +85,7 @@ export default function AdminAccountsPage() {
   };
 
   const filteredAccounts = accounts.filter(a => {
-    const matchRole = roleFilter === 'ALL' || a.role === roleFilter;
+    const matchRole = roleFilter === 'ALL' || roleCodeOf(a.role) === roleFilter;
     const query = searchQuery.toLowerCase();
     const matchSearch = !query || 
       (a.username && a.username.toLowerCase().includes(query)) ||
@@ -100,14 +95,14 @@ export default function AdminAccountsPage() {
   });
 
   return (
-    <div>
+    <div className="ops-page">
       <div className="hc-page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
             <i className="bi bi-shield-lock-fill"></i> QUẢN TRỊ BẢO MẬT
           </div>
-          <h2>Tài Khoản Nhân Viên & Nhật Ký Hệ Thống</h2>
-          <p>Quản lý người dùng, phân quyền truy cập RBAC và theo dõi lịch sử thao tác (Audit Logs)</p>
+          <h2>Tài Khoản Người Dùng</h2>
+          <p>Quản lý tài khoản và vai trò truy cập hệ thống.</p>
         </div>
 
         <button
@@ -119,22 +114,7 @@ export default function AdminAccountsPage() {
         </button>
       </div>
 
-      <div className="hc-tab-group" style={{ marginBottom: '24px' }}>
-        <button
-          className={`hc-tab-btn ${activeTab === 'ACCOUNTS' ? 'active' : ''}`}
-          onClick={() => setActiveTab('ACCOUNTS')}
-        >
-          <i className="bi bi-people-fill"></i> Danh Sách Tài Khoản ({accounts.length})
-        </button>
-        <button
-          className={`hc-tab-btn ${activeTab === 'AUDIT' ? 'active' : ''}`}
-          onClick={() => setActiveTab('AUDIT')}
-        >
-          <i className="bi bi-journal-text"></i> Nhật Ký Hoạt Động (Audit Logs)
-        </button>
-      </div>
-
-      {activeTab === 'ACCOUNTS' ? (
+      {(
         <div className="hc-card">
           <div className="hc-card-header">
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', width: '100%', justifyContent: 'space-between' }}>
@@ -160,7 +140,6 @@ export default function AdminAccountsPage() {
                 <option value="ROLE_ADMIN">Quản trị viên (Admin)</option>
                 <option value="ROLE_MANAGER">Quản lý (Manager)</option>
                 <option value="ROLE_RECEPTIONIST">Lễ tân (Receptionist)</option>
-                <option value="ROLE_CASHIER">Thu ngân (Cashier)</option>
                 <option value="ROLE_HOUSEKEEPING">Buồng phòng (Housekeeping)</option>
                 <option value="ROLE_CUSTOMER">Khách hàng (Customer)</option>
               </select>
@@ -198,7 +177,7 @@ export default function AdminAccountsPage() {
                       <td>{a.fullName || '---'}</td>
                       <td>
                         <span className="hc-badge hc-badge-primary">
-                          {(a.role || '').replace('ROLE_', '')}
+                          {roleCodeOf(a.role).replace('ROLE_', '') || '—'}
                         </span>
                       </td>
                       <td>{a.phone || '---'}</td>
@@ -207,63 +186,6 @@ export default function AdminAccountsPage() {
                         <span className="hc-badge hc-badge-success">
                           <i className="bi bi-check-circle-fill"></i> Hoạt động
                         </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* Audit Logs Table */
-        <div className="hc-card">
-          <div className="hc-card-header">
-            <div className="hc-card-title">
-              <i className="bi bi-shield-check text-primary" style={{ marginRight: '8px' }}></i>
-              Lịch Sử Nhật Ký Audit Log ({auditLogs.length})
-            </div>
-            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={loadData}>
-              <i className="bi bi-arrow-clockwise"></i> Làm mới
-            </button>
-          </div>
-
-          <div className="hc-card-body flush">
-            {loading ? (
-              <div className="hc-loading-spinner">
-                <div className="hc-spinner"></div>
-              </div>
-            ) : auditLogs.length === 0 ? (
-              <div className="hc-empty-state">
-                <i className="bi bi-journal-x"></i>
-                <p>Chưa có ghi nhận nhật ký nào.</p>
-              </div>
-            ) : (
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Thời gian</th>
-                    <th>Tài khoản</th>
-                    <th>Hành động (Action)</th>
-                    <th>Chi tiết</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {auditLogs.map((log, idx) => (
-                    <tr key={log.logId || idx}>
-                      <td style={{ whiteSpace: 'nowrap', fontSize: '13px' }}>
-                        {formatDateTime(log.timestamp || log.createdAt)}
-                      </td>
-                      <td>
-                        <strong>{log.username || 'System'}</strong>
-                      </td>
-                      <td>
-                        <span className="hc-badge hc-badge-warning" style={{ fontSize: '11px' }}>
-                          {log.action}
-                        </span>
-                      </td>
-                      <td style={{ color: 'var(--hc-text-secondary)', fontSize: '13px' }}>
-                        {log.details || log.description || '---'}
                       </td>
                     </tr>
                   ))}
@@ -339,7 +261,6 @@ export default function AdminAccountsPage() {
               required
             >
               <option value="ROLE_RECEPTIONIST">Lễ tân (ROLE_RECEPTIONIST)</option>
-              <option value="ROLE_CASHIER">Thu ngân (ROLE_CASHIER)</option>
               <option value="ROLE_HOUSEKEEPING">Buồng phòng (ROLE_HOUSEKEEPING)</option>
               <option value="ROLE_MANAGER">Quản lý (ROLE_MANAGER)</option>
               <option value="ROLE_ADMIN">Quản trị viên (ROLE_ADMIN)</option>

@@ -3,6 +3,8 @@ import Modal from '../../components/Modal';
 import { apiCall, formatDate } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 
+const roleCodeOf = (role) => typeof role === 'string' ? role : role?.roleCode || role?.code || '';
+
 export default function AdminSchedulesPage() {
   const { addToast } = useToast();
 
@@ -48,7 +50,7 @@ export default function AdminSchedulesPage() {
 
       if (shiftsRes && shiftsRes.success) setShifts(shiftsRes.data || []);
       if (accountsRes && accountsRes.success) {
-        const staffList = (accountsRes.data || []).filter(a => a.role !== 'ROLE_CUSTOMER');
+        const staffList = (accountsRes.data || []).filter(a => roleCodeOf(a.role) !== 'ROLE_CUSTOMER');
         setAccounts(staffList);
       }
       if (schedulesRes && schedulesRes.success) setSchedules(schedulesRes.data || []);
@@ -152,7 +154,7 @@ export default function AdminSchedulesPage() {
   };
 
   return (
-    <div>
+    <div className="ops-page">
       <div className="hc-page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
@@ -257,7 +259,7 @@ export default function AdminSchedulesPage() {
                       </td>
                       <td>
                         <span className="hc-badge hc-badge-primary">
-                          {(sch.role || '').replace('ROLE_', '')}
+                          {roleCodeOf(sch.role).replace('ROLE_', '') || '—'}
                         </span>
                       </td>
                       <td>
@@ -401,7 +403,7 @@ export default function AdminSchedulesPage() {
               <option value="">-- Chọn nhân viên --</option>
               {accounts.map(a => (
                 <option key={a.accountId || a.id} value={a.accountId || a.id}>
-                  {a.fullName || a.username} ({(a.role || '').replace('ROLE_', '')})
+                  {a.fullName || a.username} ({roleCodeOf(a.role).replace('ROLE_', '') || '—'})
                 </option>
               ))}
             </select>

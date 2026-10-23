@@ -53,9 +53,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <div style={{
+    <div className="hc-auth-page" style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #091929 0%, #102a45 50%, #1e3a5f 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

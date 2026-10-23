@@ -21,6 +21,9 @@ public class DataInitializer implements CommandLineRunner {
     private final RoleRepository roleRepository;
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
+    private final LoyaltyTierRepository loyaltyTierRepository;
+    private final BookingRepository bookingRepository;
+    private final BookingRoomRepository bookingRoomRepository;
     private final RoomTypeRepository roomTypeRepository;
     private final RoomRepository roomRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
@@ -32,6 +35,8 @@ public class DataInitializer implements CommandLineRunner {
     @Override
     public void run(String... args) {
         initRoles();
+        ensureLoyaltyTiers();
+        mergeLegacyCashierRole();
         if (accountRepository.count() == 0) {
             log.info("Bắt đầu khởi tạo dữ liệu mẫu cho hệ thống...");
             initAccounts();
@@ -44,10 +49,12 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             initVouchers();
         }
+        repairSampleAccountRoles();
+        ensureDemoStaffAccounts();
+        ensureCustomerServiceDemoBooking();
     }
 
     private void initRoles() {
-        if (roleRepository.count() > 0) return;
         List<Role> roles = List.of(
                 Role.builder().roleCode("ROLE_ADMIN").roleName("Quản trị viên hệ thống").description("Toàn quyền hệ thống").build(),
                 Role.builder().roleCode("ROLE_MANAGER").roleName("Quản lý khách sạn").description("Quản lý vận hành").build(),
@@ -57,8 +64,135 @@ public class DataInitializer implements CommandLineRunner {
                 Role.builder().roleCode("ROLE_SERVICE_STAFF").roleName("Nhân viên dịch vụ").description("Phục vụ đồ ăn và dịch vụ buồng").build(),
                 Role.builder().roleCode("ROLE_CUSTOMER").roleName("Khách hàng").description("Tài khoản khách hàng trực tuyến").build()
         );
-        roleRepository.saveAll(roles);
-        log.info("Đã khởi tạo 7 vai trò hệ thống mẫu (RBAC)");
+        List<Role> missingRoles = roles.stream()
+                .filter(role -> roleRepository.findByRoleCode(role.getRoleCode()).isEmpty())
+                .toList();
+        if (!missingRoles.isEmpty()) {
+            roleRepository.saveAll(missingRoles);
+            log.info("Đã khởi tạo {} vai trò hệ thống còn thiếu (RBAC)", missingRoles.size());
+        }
+    }
+
+    private void ensureLoyaltyTiers() {
+        List<LoyaltyTier> tiers = List.of(
+                LoyaltyTier.builder().tierCode("SEASHELL").tierName("Hạng Sò Biển (Seashell)").tierLevel(1).minScore(BigDecimal.ZERO).description("Hạng khởi đầu cho khách hàng đăng ký mới.").build(),
+                LoyaltyTier.builder().tierCode("STARFISH").tierName("Hạng Sao Biển (Starfish)").tierLevel(2).minScore(BigDecimal.TEN).description("Đạt từ 10 điểm tích lũy.").build(),
+                LoyaltyTier.builder().tierCode("CORAL").tierName("Hạng San Hô (Coral)").tierLevel(3).minScore(BigDecimal.valueOf(30)).description("Đạt từ 30 điểm tích lũy.").build(),
+                LoyaltyTier.builder().tierCode("PEARL").tierName("Hạng Ngọc Trai (Pearl)").tierLevel(4).minScore(BigDecimal.valueOf(80)).description("Đạt từ 80 điểm tích lũy.").build()
+        );
+        List<LoyaltyTier> missing = tiers.stream()
+                .filter(tier -> loyaltyTierRepository.findByTierCode(tier.getTierCode()).isEmpty())
+                .toList();
+        if (!missing.isEmpty()) loyaltyTierRepository.saveAll(missing);
+    }
+
+    /** Move accounts from the retired cashier role to the unified receptionist role. */
+    private void mergeLegacyCashierRole() {
+        Role receptionistRole = roleRepository.findByRoleCode("ROLE_RECEPTIONIST").orElse(null);
+        Role cashierRole = roleRepository.findByRoleCode("ROLE_CASHIER").orElse(null);
+        if (receptionistRole == null) return;
+
+        List<Account> legacyCashiers = accountRepository.findAll().stream()
+                .filter(account -> (account.getRole() != null
+                        && "ROLE_CASHIER".equalsIgnoreCase(account.getRole().getRoleCode()))
+                        || "cashier".equalsIgnoreCase(account.getUsername()))
+                .toList();
+        legacyCashiers.forEach(account -> {
+            if (account.getRole() != null && "ROLE_CASHIER".equalsIgnoreCase(account.getRole().getRoleCode())) {
+                account.setRole(receptionistRole);
+            }
+            if ("cashier".equalsIgnoreCase(account.getUsername())) account.setStatus("INACTIVE");
+        });
+        accountRepository.saveAll(legacyCashiers);
+        if (cashierRole != null) roleRepository.delete(cashierRole);
+        if (!legacyCashiers.isEmpty()) log.info("Retired legacy cashier role and demo account");
+    }
+
+    /** Restores role links for the built-in demo accounts from older databases. */
+    private void repairSampleAccountRoles() {
+        List<String[]> sampleRoles = List.of(
+                new String[]{"admin", "ROLE_ADMIN"},
+                new String[]{"manager", "ROLE_MANAGER"},
+                new String[]{"receptionist", "ROLE_RECEPTIONIST"},
+                new String[]{"housekeeper", "ROLE_HOUSEKEEPING"},
+                new String[]{"technician", "ROLE_MAINTENANCE"},
+                new String[]{"servicestaff", "ROLE_SERVICE_STAFF"},
+                new String[]{"customer1", "ROLE_CUSTOMER"}
+        );
+        for (String[] sampleRole : sampleRoles) {
+            accountRepository.findByUsername(sampleRole[0]).ifPresent(account -> {
+                if (account.getRole() != null && sampleRole[1].equalsIgnoreCase(account.getRole().getRoleCode())) return;
+                roleRepository.findByRoleCode(sampleRole[1]).ifPresent(role -> {
+                    account.setRole(role);
+                    accountRepository.save(account);
+                    log.info("Restored missing role {} for sample account {}", sampleRole[1], sampleRole[0]);
+                });
+            });
+        }
+    }
+
+    /** Ensures staff demo logins exist even when the database was initialized before these roles were added. */
+    private void ensureDemoStaffAccounts() {
+        String passwordHash = passwordEncoder.encode("123456");
+        ensureDemoStaffAccount("technician", "Nhân viên kỹ thuật bảo trì", "tech@hotel.com", "0900000006", "ROLE_MAINTENANCE", passwordHash);
+        ensureDemoStaffAccount("servicestaff", "Nhân viên phục vụ dịch vụ", "service@hotel.com", "0900000007", "ROLE_SERVICE_STAFF", passwordHash);
+    }
+
+    private void ensureDemoStaffAccount(String username, String fullName, String email, String phone, String roleCode, String passwordHash) {
+        roleRepository.findByRoleCode(roleCode).ifPresent(role -> {
+            Account account = accountRepository.findByUsername(username).orElseGet(() -> Account.builder()
+                    .username(username)
+                    .build());
+            account.setPasswordHash(passwordHash);
+            account.setFullName(fullName);
+            account.setEmail(email);
+            account.setPhone(phone);
+            account.setRole(role);
+            account.setStatus("ACTIVE");
+            accountRepository.save(account);
+        });
+    }
+
+    /** Creates one checked-in customer booking so the guest service-order flow has a test stay. */
+    private void ensureCustomerServiceDemoBooking() {
+        if (bookingRepository.existsByBookingCode("BK-CUSTOMER1-DEMO")) return;
+
+        Account customerAccount = accountRepository.findByUsername("customer1").orElse(null);
+        if (customerAccount == null) return;
+        Customer customer = customerRepository.findByAccount_Username("customer1")
+                .orElseGet(() -> customerRepository.findByEmail(customerAccount.getEmail()).orElse(null));
+        Room room = roomRepository.findFirstByStatusIgnoreCaseOrderByRoomNumberAsc("AVAILABLE").orElse(null);
+        if (customer == null || room == null) return;
+
+        LocalDate checkIn = LocalDate.now().minusDays(1);
+        LocalDate checkOut = LocalDate.now().plusDays(2);
+        Booking booking = bookingRepository.save(Booking.builder()
+                .bookingCode("BK-CUSTOMER1-DEMO")
+                .customer(customer)
+                .createdBy(customerAccount)
+                .checkInDate(checkIn)
+                .checkOutDate(checkOut)
+                .guestCount(2)
+                .status("CHECKED_IN")
+                .depositRequired(BigDecimal.ZERO)
+                .source("DEMO")
+                .note("Demo stay for testing guest service orders")
+                .build());
+
+        BigDecimal nightlyRate = room.getRoomType() != null && room.getRoomType().getBasePrice() != null
+                ? room.getRoomType().getBasePrice() : BigDecimal.ZERO;
+        bookingRoomRepository.save(BookingRoom.builder()
+                .booking(booking)
+                .room(room)
+                .plannedCheckin(checkIn)
+                .plannedCheckout(checkOut)
+                .actualCheckin(java.time.LocalDateTime.now())
+                .status("CHECKED_IN")
+                .priceApplied(nightlyRate)
+                .build());
+        room.setStatus("OCCUPIED");
+        roomRepository.save(room);
+        log.info("Created demo in-house booking {} for customer1 in room {}", booking.getBookingCode(), room.getRoomNumber());
     }
 
     private void initAccounts() {
@@ -99,21 +233,30 @@ public class DataInitializer implements CommandLineRunner {
                         .status("ACTIVE")
                         .build(),
                 Account.builder()
-                        .username("cashier")
-                        .passwordHash(defaultPasswordHash)
-                        .fullName("Lê Văn Thu Ngân")
-                        .email("cashier@hotel.com")
-                        .phone("0900000004")
-                        .role(receptionistRole)
-                        .status("ACTIVE")
-                        .build(),
-                Account.builder()
                         .username("housekeeper")
                         .passwordHash(defaultPasswordHash)
                         .fullName("Phạm Thị Buồng Phòng")
                         .email("housekeeper@hotel.com")
                         .phone("0900000005")
                         .role(housekeeperRole)
+                        .status("ACTIVE")
+                        .build(),
+                Account.builder()
+                        .username("technician")
+                        .passwordHash(defaultPasswordHash)
+                        .fullName("Nhân viên kỹ thuật bảo trì")
+                        .email("tech@hotel.com")
+                        .phone("0900000006")
+                        .role(roleRepository.findByRoleCode("ROLE_MAINTENANCE").orElse(null))
+                        .status("ACTIVE")
+                        .build(),
+                Account.builder()
+                        .username("servicestaff")
+                        .passwordHash(defaultPasswordHash)
+                        .fullName("Nhân viên phục vụ dịch vụ")
+                        .email("service@hotel.com")
+                        .phone("0900000007")
+                        .role(roleRepository.findByRoleCode("ROLE_SERVICE_STAFF").orElse(null))
                         .status("ACTIVE")
                         .build(),
                 Account.builder()

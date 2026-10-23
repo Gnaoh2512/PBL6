@@ -1,412 +1,443 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import { apiCall, formatVND } from '../services/api';
-import { useToast } from '../contexts/ToastContext';
+import { useCallback, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import { useToast } from "../contexts/ToastContext";
+import "./HomePage.css";
 
-function getTodayStr() {
-  return new Date().toISOString().split('T')[0];
+const photos = {
+  hero: "https://images.unsplash.com/photo-1735770517146-e95c872226fc?auto=format&fit=crop&w=2200&q=88",
+  pool: "https://images.unsplash.com/photo-1713843841925-6af6ed0df472?auto=format&fit=crop&w=1200&q=85",
+  room: "https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=85",
+  suite: "https://images.unsplash.com/photo-1646974400439-321c4a9240b9?auto=format&fit=crop&w=1200&q=85",
+  retreat: "https://images.unsplash.com/photo-1588504633950-9dc518941e93?auto=format&fit=crop&w=1800&q=88",
+  loyalty: "https://images.unsplash.com/photo-1679069389827-a633b8905d95?auto=format&fit=crop&w=1800&q=88",
+};
+
+const featuredRooms = [
+  {
+    name: "Suite Sân Hiên Biển",
+    label: "SUITE ĐẶC TRƯNG",
+    image: photos.room,
+    alternate: "https://images.unsplash.com/photo-1597126729864-51740ac05236?auto=format&fit=crop&w=1200&q=85",
+    price: "5.850.000 ₫",
+    guests: "2 khách",
+    size: "58 m²",
+    copy: "Không gian nghỉ dưỡng thoáng đãng, nơi đường chân trời hòa vào căn phòng.",
+  },
+  {
+    name: "Biệt Thự Hướng Vịnh",
+    label: "DINH THỰ RIÊNG",
+    image: photos.suite,
+    alternate: "https://images.unsplash.com/photo-1666433638132-16f0185d2fdf?auto=format&fit=crop&w=1200&q=85",
+    price: "7.600.000 ₫",
+    guests: "4 khách",
+    size: "86 m²",
+    copy: "Không gian ngập nắng, sân hiên rộng rãi và tầm nhìn trọn vẹn ra vịnh.",
+  },
+  {
+    name: "Biệt Thự Hồ Bơi Sân Vườn",
+    label: "BIỆT THỰ BIỆT LẬP",
+    image: photos.pool,
+    alternate: "https://images.unsplash.com/photo-1739066500258-2c131cdf9852?auto=format&fit=crop&w=1200&q=85",
+    price: "9.200.000 ₫",
+    guests: "4 khách",
+    size: "112 m²",
+    copy: "Chốn nghỉ yên bình với hồ bơi riêng và khu vườn ven biển xanh mát.",
+  },
+];
+
+const moments = [
+  [
+    "Phòng nghỉ",
+    "Không gian tĩnh tại ôm trọn ánh sáng đổi thay trên mặt vịnh.",
+    "https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=86",
+    "https://images.unsplash.com/photo-1597126729864-51740ac05236?auto=format&fit=crop&w=1200&q=86",
+    "wide",
+  ],
+  [
+    "Ẩm thực",
+    "Nguyên liệu bản địa, bàn tiệc ngoài trời và những buổi tối thong thả.",
+    "https://images.unsplash.com/photo-1748052132432-c9ed80205de6?auto=format&fit=crop&w=900&q=86",
+    "https://images.unsplash.com/photo-1651697224183-1b25332e6967?auto=format&fit=crop&w=900&q=86",
+    "tall",
+  ],
+  [
+    "Chăm sóc sức khỏe",
+    "Những liệu trình phục hồi giữa không gian tĩnh lặng bên bờ biển.",
+    "https://images.unsplash.com/photo-1737352777897-e22953991a32?auto=format&fit=crop&w=900&q=86",
+    "https://images.unsplash.com/photo-1488345979593-09db0f85545f?auto=format&fit=crop&w=900&q=86",
+  ],
+  [
+    "Suite",
+    "Không gian riêng tư rộng rãi với tầm nhìn biển không giới hạn.",
+    "https://images.unsplash.com/photo-1666433638132-16f0185d2fdf?auto=format&fit=crop&w=900&q=86",
+    "https://images.unsplash.com/photo-1611920629515-3f76f8c36b37?auto=format&fit=crop&w=900&q=86",
+  ],
+  [
+    "Trải nghiệm ẩm thực",
+    "Thực đơn tinh tế từ nông sản địa phương và hải sản đánh bắt trong ngày.",
+    "https://images.unsplash.com/photo-1641924676093-42e61835bbe2?auto=format&fit=crop&w=1200&q=86",
+    "https://images.unsplash.com/photo-1651697219057-7b44d777dc87?auto=format&fit=crop&w=1200&q=86",
+    "wide",
+  ],
+  [
+    "Hồ bơi",
+    "Làn nước mát, nắng ấm và đường chân trời ngay trước mắt.",
+    "https://images.unsplash.com/photo-1615722440048-da4ccf6de048?auto=format&fit=crop&w=900&q=86",
+    "https://images.unsplash.com/photo-1739066500258-2c131cdf9852?auto=format&fit=crop&w=900&q=86",
+    "wide",
+  ],
+];
+
+const services = [
+  [
+    "Ẩm thực tại phòng",
+    "Món ăn theo mùa và hương vị thân quen được phục vụ riêng tại phòng.",
+    "Xem chi tiết ẩm thực",
+    "https://images.unsplash.com/photo-1621873495868-6c5774cf6012?auto=format&fit=crop&w=900&q=84",
+  ],
+  [
+    "Nhà hàng & lounge",
+    "Thực đơn ven biển, cocktail tinh tuyển và bàn tiệc hướng ra đại dương.",
+    "Khám phá ẩm thực",
+    "https://images.unsplash.com/photo-1741852197045-cc35920a3aa0?auto=format&fit=crop&w=900&q=84",
+  ],
+  [
+    "Spa",
+    "Bộ sưu tập liệu trình phục hồi lấy cảm hứng từ thảo mộc trên đảo.",
+    "Khám phá chăm sóc sức khỏe",
+    "https://images.unsplash.com/photo-1737352777897-e22953991a32?auto=format&fit=crop&w=900&q=84",
+  ],
+  [
+    "Hồ bơi & bãi biển",
+    "Ngày thư thái bên hồ bơi vô cực và bờ biển riêng kín đáo.",
+    "Khám phá bờ biển",
+    "https://images.unsplash.com/photo-1669542755430-be091cefbef8?auto=format&fit=crop&w=900&q=84",
+  ],
+  [
+    "Dịch vụ concierge",
+    "Gợi ý am hiểu địa phương và hỗ trợ tận tâm để bạn khám phá hòn đảo theo cách riêng.",
+    "Gặp đội ngũ concierge",
+    "https://images.unsplash.com/photo-1631352564777-fe9802f4924c?auto=format&fit=crop&w=900&q=84",
+  ],
+  [
+    "Dịp đặc biệt",
+    "Không gian riêng tư và dấu ấn cá nhân cho những khoảnh khắc đáng nhớ.",
+    "Lên kế hoạch sự kiện",
+    "https://images.unsplash.com/photo-1576343547429-1a9ac89d7013?auto=format&fit=crop&w=900&q=84",
+  ],
+];
+
+function Icon({ name, size = 18 }) {
+  const icons = {
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="2" />
+        <path d="M16 3v4M8 3v4M3 10h18" />
+      </>
+    ),
+    users: (
+      <>
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+      </>
+    ),
+    arrow: <path d="M5 12h14M13 6l6 6-6 6" />,
+    wifi: (
+      <>
+        <path d="M5 12.6a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0" />
+        <circle cx="12" cy="20" r=".5" fill="currentColor" />
+      </>
+    ),
+    bed: (
+      <>
+        <path d="M3 7v14M21 21V11a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v10M3 17h18" />
+        <path d="M7 9V7a2 2 0 0 0-2-2H3v8" />
+      </>
+    ),
+    waves: <path d="M2 8c3-3 5 3 8 0s5 3 8 0 4 0 4 0M2 14c3-3 5 3 8 0s5 3 8 0 4 0 4 0M2 20c3-3 5 3 8 0s5 3 8 0 4 0 4 0" />,
+    menu: <path d="M4 7h16M4 12h16M4 17h16" />,
+  };
+  return (
+    <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      {icons[name]}
+    </svg>
+  );
 }
 
-function getTomorrowStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split('T')[0];
+function getToday() {
+  const today = new Date();
+  return new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { addToast } = useToast();
-
-  const [checkInDate, setCheckInDate] = useState(() => getTodayStr());
-  const [checkOutDate, setCheckOutDate] = useState(() => getTomorrowStr());
+  const [checkInDate, setCheckInDate] = useState(getToday);
+  const [checkOutDate, setCheckOutDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  });
   const [guestCount, setGuestCount] = useState(2);
-  const [selectedRoomType, setSelectedRoomType] = useState('ALL');
-
-  const [roomTypes, setRoomTypes] = useState([]);
-  const [vouchers, setVouchers] = useState([]);
-  const [availableRooms, setAvailableRooms] = useState([]);
-  const [loadingRooms, setLoadingRooms] = useState(true);
-
-  // Ensure checkout date is always after check-in date
-  useEffect(() => {
-    const inDate = new Date(checkInDate);
-    const outDate = new Date(checkOutDate);
-    if (outDate <= inDate) {
-      const nextDay = new Date(inDate);
-      nextDay.setDate(inDate.getDate() + 1);
-      setCheckOutDate(nextDay.toISOString().split('T')[0]);
-    }
-  }, [checkInDate]);
-
-  const searchRooms = useCallback(async () => {
+  const searchRooms = useCallback(() => {
     if (new Date(checkOutDate) <= new Date(checkInDate)) {
-      addToast('Ngày trả phòng phải sau ngày nhận phòng!', 'error');
+      addToast("Ngày trả phòng phải sau ngày nhận phòng.", "error");
       return;
     }
+    const filters = new URLSearchParams({ checkIn: checkInDate, checkOut: checkOutDate, guests: String(guestCount) });
+    navigate(`/booking?${filters.toString()}`);
+  }, [addToast, checkInDate, checkOutDate, guestCount, navigate]);
 
-    setLoadingRooms(true);
-    try {
-      const res = await apiCall('/api/public/rooms/available', {
-        method: 'POST',
-        body: {
-          checkInDate,
-          checkOutDate
-        }
-      });
-
-      if (res && res.success) {
-        setAvailableRooms(res.data || []);
-      } else {
-        setAvailableRooms([]);
-      }
-    } catch {
-      setAvailableRooms([]);
-    } finally {
-      setLoadingRooms(false);
+  const updateCheckIn = (date) => {
+    setCheckInDate(date);
+    if (new Date(checkOutDate) <= new Date(date)) {
+      const nextDay = new Date(`${date}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      setCheckOutDate(new Date(nextDay.getTime() - nextDay.getTimezoneOffset() * 60000).toISOString().slice(0, 10));
     }
-  }, [checkInDate, checkOutDate, addToast]);
-
-  useEffect(() => {
-    async function initData() {
-      try {
-        const [typesRes, vouchersRes] = await Promise.all([
-          apiCall('/api/public/rooms/room-types', { silentError: true }),
-          apiCall('/api/public/vouchers', { silentError: true })
-        ]);
-
-        if (typesRes && typesRes.success) {
-          setRoomTypes(typesRes.data || []);
-        }
-        if (vouchersRes && vouchersRes.success) {
-          setVouchers(vouchersRes.data || []);
-        }
-      } catch (e) {
-        console.warn('Init error:', e);
-      }
-    }
-    initData();
-    searchRooms();
-  }, [searchRooms]);
-
-  const filteredRooms = availableRooms.filter(r => {
-    if (selectedRoomType === 'ALL') return true;
-    const typeId = r.roomType?.roomTypeId;
-    const typeName = r.roomType?.typeName;
-    return String(typeId) === String(selectedRoomType) || typeName === selectedRoomType;
-  });
-
-  const handleBookRoom = (roomId) => {
-    navigate(`/booking?roomId=${roomId}&checkIn=${checkInDate}&checkOut=${checkOutDate}&guests=${guestCount}`);
   };
 
-  const todayStr = getTodayStr();
+  const bookRoom = (roomId) => {
+    const filters = { checkIn: checkInDate, checkOut: checkOutDate, guests: String(guestCount) };
+    if (roomId) filters.roomId = String(roomId);
+    navigate(`/booking?${new URLSearchParams(filters)}`);
+  };
+  const rooms = featuredRooms;
 
   return (
-    <>
-      <Navbar />
+    <div className="resort-home">
+      <Navbar variant="resort" />
+      <section className="resort-hero">
+        <img src={photos.hero} alt="Hồ bơi vô cực tại khu nghỉ dưỡng Azure Bay hướng ra biển" />
+        <div className="resort-hero-shade" />
+        <div className="resort-hero-copy">
+          <h1>
+            <span>Nơi đường chân trời</span>
+            <br />
+            <em>khiến bạn sống chậm lại.</em>
+          </h1>
+        </div>
+        <a className="resort-scroll-cue" href="#discover">
+          <span /> KHÁM PHÁ AZURE BAY
+        </a>
+      </section>
 
-      {/* Hero Section */}
-      <section className="hc-hero">
-        <div className="hc-container">
-          <div className="hc-hero-content">
-            <div className="hc-hero-badge">
-              <i className="bi bi-star-fill"></i> HOTEL CALIFORNIA RESORT & SUITES
+      <section className="resort-booking" id="stay">
+        <div className="resort-booking-form">
+          <label className="resort-date-field">
+            <span>NHẬN PHÒNG</span>
+            <div>
+              <Icon name="calendar" />
+              <input aria-label="Ngày nhận phòng" type="date" min={getToday()} value={checkInDate} onChange={(event) => updateCheckIn(event.target.value)} />
             </div>
-            <h1>
-              Kỳ Nghỉ Thượng Lưu <br />
-              <span className="hc-gold-gradient">Đẳng Cấp & Đậm Chất Thơ</span>
-            </h1>
-            <p>
-              Tận hưởng không gian lưu trú sang trọng với tầm nhìn hướng biển tuyệt mỹ, dịch vụ ẩm thực tinh hoa và hệ thống phòng ốc hiện đại bậc nhất.
-            </p>
-          </div>
-
-          {/* Search Box */}
-          <div className="hc-search-box">
-            <div className="hc-form-group">
-              <label className="hc-label">
-                <i className="bi bi-calendar-event text-primary"></i> Nhận phòng
-              </label>
-              <input
-                type="date"
-                className="hc-input"
-                value={checkInDate}
-                min={todayStr}
-                onChange={(e) => setCheckInDate(e.target.value)}
-              />
+          </label>
+          <label className="resort-date-field">
+            <span>TRẢ PHÒNG</span>
+            <div>
+              <Icon name="calendar" />
+              <input aria-label="Ngày trả phòng" type="date" min={checkInDate} value={checkOutDate} onChange={(event) => setCheckOutDate(event.target.value)} />
             </div>
-
-            <div className="hc-form-group">
-              <label className="hc-label">
-                <i className="bi bi-calendar-check text-primary"></i> Trả phòng
-              </label>
-              <input
-                type="date"
-                className="hc-input"
-                value={checkOutDate}
-                min={checkInDate}
-                onChange={(e) => setCheckOutDate(e.target.value)}
-              />
-            </div>
-
-            <div className="hc-form-group" style={{ maxWidth: '140px' }}>
-              <label className="hc-label">
-                <i className="bi bi-people text-primary"></i> Số khách
-              </label>
-              <input
-                type="number"
-                className="hc-input"
-                min="1"
-                max="10"
-                value={guestCount}
-                onChange={(e) => setGuestCount(e.target.value)}
-              />
-            </div>
-
-            <div className="hc-form-group" style={{ minWidth: '180px' }}>
-              <label className="hc-label">
-                <i className="bi bi-door-open text-primary"></i> Hạng phòng
-              </label>
-              <select
-                className="hc-select"
-                value={selectedRoomType}
-                onChange={(e) => setSelectedRoomType(e.target.value)}
-              >
-                <option value="ALL">Tất cả các hạng</option>
-                {roomTypes.map(t => (
-                  <option key={t.roomTypeId} value={t.roomTypeId}>
-                    {t.typeName} ({formatVND(t.basePrice)}/đêm)
+          </label>
+          <label className="resort-date-field guests-field">
+            <span>KHÁCH</span>
+            <div>
+              <Icon name="users" />
+              <select aria-label="Số khách" value={guestCount} onChange={(event) => setGuestCount(Number(event.target.value))}>
+                {[1, 2, 3, 4, 5, 6].map((count) => (
+                  <option key={count} value={count}>
+                    {count} khách
                   </option>
                 ))}
               </select>
             </div>
-
-            <button
-              type="button"
-              className="hc-btn hc-btn-secondary hc-btn-lg"
-              onClick={searchRooms}
-              style={{ minHeight: '44px' }}
-            >
-              <i className="bi bi-search"></i> Tìm phòng trống
-            </button>
-          </div>
+          </label>
+          <button className="resort-button primary search-rooms" onClick={searchRooms}>
+            <span className="bi bi-search" /> Kiểm tra phòng trống
+          </button>
         </div>
       </section>
 
-      {/* Active Vouchers Marquee / Chips */}
-      {vouchers.length > 0 && (
-        <section style={{ background: 'var(--hc-bg-alt)', padding: '14px 0', borderBottom: '1px solid var(--hc-border)' }}>
-          <div className="hc-container" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--hc-secondary-dark)' }}>
-              <i className="bi bi-ticket-perforated-fill fs-5"></i> ƯU ĐÃI ĐANG MỞ:
-            </div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
-              {vouchers.filter(v => v.active !== false).map(v => (
-                <div key={v.voucherId} className="hc-badge hc-badge-warning" style={{ padding: '6px 14px', fontSize: '12px' }}>
-                  <strong style={{ letterSpacing: '0.04em' }}>{v.voucherCode}</strong> — {v.voucherName} ({v.discountType === 'PERCENT' ? `-${v.discountValue}%` : `-${formatVND(v.discountValue)}`})
-                </div>
-              ))}
-            </div>
-            <Link to="/booking" className="hc-btn hc-btn-outline hc-btn-sm">
-              Sử dụng mã ngay →
-            </Link>
+      <main>
+        <section className="resort-intro" id="about">
+          <div>
+            <span className="resort-eyebrow">NGHỆ THUẬT ĐÓN TIẾP</span>
+            <h2>Một vẻ đẹp sang trọng tĩnh tại</h2>
+          </div>
+          <div>
+            <p>Nằm nép mình bên đường cong kín gió của bờ tây Phú Quốc, Azure Bay là chốn nghỉ dưỡng boutique hòa mình vào cảnh sắc. Nơi đây, mỗi kỳ nghỉ đều chuyển động theo nhịp biển.</p>
+            <a href="#experiences">
+              Câu chuyện của chúng tôi <Icon name="arrow" size={17} />
+            </a>
           </div>
         </section>
-      )}
 
-      {/* Main Room Listings */}
-      <main className="hc-page">
-        <div className="hc-container">
-          <div className="hc-page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
+        <section className="resort-showcase resort-width" id="discover" aria-labelledby="showcase-title">
+          <div className="resort-section-heading">
             <div>
-              <h2>Danh Sách Phòng Trống</h2>
-              <p>
-                Tìm thấy <strong>{filteredRooms.length}</strong> phòng sẵn sàng đón tiếp quý khách từ {new Date(checkInDate).toLocaleDateString('vi-VN')} đến {new Date(checkOutDate).toLocaleDateString('vi-VN')}
-              </p>
+              <span className="resort-eyebrow">TRẢI NGHIỆM AZURE BAY</span>
+              <h2 id="showcase-title">Một kỳ nghỉ rộng mở để khám phá</h2>
             </div>
+            <p>Từ buổi sáng thong thả bên làn nước đến đêm quây quần bên bàn tiệc, hãy cảm nhận nhiều nhịp sống tại Azure Bay.</p>
+          </div>
+          <div className="resort-bento">
+            {moments.map(([title, copy, image, alternate, shape]) => (
+              <article className={`resort-bento-card ${shape || ""}`} key={title} tabIndex="0">
+                <img className="alternate" src={alternate} alt="" />
+                <img className="primary-image" src={image} alt={`${title} tại Azure Bay`} />
+                <div className="bento-shade" />
+                <div className="bento-caption">
+                  <span>KHÁM PHÁ</span>
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
 
-            {/* Room Type Pills Filter */}
-            <div className="hc-tab-group" style={{ marginBottom: 0 }}>
-              <button
-                className={`hc-tab-btn ${selectedRoomType === 'ALL' ? 'active' : ''}`}
-                onClick={() => setSelectedRoomType('ALL')}
-              >
-                Tất cả ({availableRooms.length})
-              </button>
-              {roomTypes.map(t => {
-                const count = availableRooms.filter(r => String(r.roomType?.roomTypeId) === String(t.roomTypeId)).length;
-                return (
-                  <button
-                    key={t.roomTypeId}
-                    className={`hc-tab-btn ${String(selectedRoomType) === String(t.roomTypeId) ? 'active' : ''}`}
-                    onClick={() => setSelectedRoomType(String(t.roomTypeId))}
-                  >
-                    {t.typeName} ({count})
-                  </button>
-                );
-              })}
+        <section className="resort-rooms resort-width" id="rooms">
+          <div className="resort-section-heading">
+            <div>
+              <span className="resort-eyebrow">NGHỈ DƯỠNG BÊN BIỂN</span>
+              <h2>Phòng nghỉ & biệt thự</h2>
+            </div>
+            <p>Mỗi không gian được kiến tạo cho buổi sáng thong thả, chiều ngập hương biển và đêm đảo dịu êm.</p>
+          </div>
+          <div className="resort-room-grid">
+            {rooms.map((room, index) => (
+              <article className="resort-room-card" key={room.id || room.name}>
+                <div className="resort-room-image">
+                  <img className="alternate" src={room.alternate || featuredRooms[index % featuredRooms.length].alternate} alt="" />
+                  <img className="primary-image" src={room.image} alt={room.name} />
+                  <span>{room.label}</span>
+                </div>
+                <div className="resort-room-content">
+                  <h3>{room.name}</h3>
+                  <p>{room.copy}</p>
+                  <div className="resort-room-meta">
+                    <span>
+                      <Icon name="users" size={16} />
+                      {room.guests}
+                    </span>
+                    <span>
+                      <Icon name="bed" size={16} />
+                      {room.size}
+                    </span>
+                    <span>
+                      <Icon name="wifi" size={16} />
+                      Wi-Fi
+                    </span>
+                  </div>
+                  <div className="resort-room-footer">
+                    <div>
+                      <small>GIÁ TỪ</small>
+                      <b>{room.price}</b>
+                      <span>/ đêm</span>
+                    </div>
+                    <button aria-label={`Đặt ${room.name}`} onClick={() => bookRoom(room.id)}>
+                      <Icon name="arrow" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <Link className="resort-button outline all-rooms" to="/booking">
+            Khám phá tất cả phòng nghỉ <Icon name="arrow" size={18} />
+          </Link>
+        </section>
+
+        <section className="resort-experience" id="experiences">
+          <div className="experience-photo">
+            <img src={photos.retreat} alt="Cầu tàu yên bình vươn ra biển" />
+          </div>
+          <div className="experience-copy">
+            <span className="resort-eyebrow light">HÒN ĐẢO CỦA BẠN, NHỊP ĐIỆU CỦA BẠN</span>
+            <h2>
+              Những ngày
+              <br />
+              theo nhịp biển
+            </h2>
+            <p>Theo con nước bằng thuyền kayak, quây quần bên bàn tiệc của bếp trưởng, hay để một buổi chiều trôi êm tại spa. Mỗi trải nghiệm đều đậm bản sắc địa phương, tinh tế và thong thả.</p>
+            <div className="experience-list">
+              <a href="#services">
+                <i>01</i> Hành trình riêng khám phá đảo <Icon name="arrow" />
+              </a>
+              <a href="#services">
+                <i>02</i> Bàn tiệc ven biển <Icon name="arrow" />
+              </a>
+              <a href="#services">
+                <i>03</i> Spa Sóng & Tĩnh Lặng <Icon name="arrow" />
+              </a>
             </div>
           </div>
+        </section>
 
-          {loadingRooms ? (
-            <div className="hc-loading-spinner">
-              <div className="hc-spinner"></div>
+        <section className="resort-services resort-width" id="services">
+          <div className="resort-section-heading">
+            <div>
+              <span className="resort-eyebrow">TẬN TÂM PHỤC VỤ</span>
+              <h2>Chăm chút trong từng chi tiết</h2>
             </div>
-          ) : filteredRooms.length === 0 ? (
-            <div className="hc-card">
-              <div className="hc-empty-state">
-                <i className="bi bi-calendar-x"></i>
-                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Không có phòng trống phù hợp</h3>
-                <p style={{ maxWidth: '400px', margin: '0 auto 16px' }}>
-                  Các phòng trong khoảng thời gian đã chọn hiện đang kín lịch. Quý khách vui lòng đổi ngày nhận/trả phòng hoặc liên hệ hotline để được hỗ trợ.
-                </p>
-                <button type="button" className="hc-btn hc-btn-outline" onClick={() => { setSelectedRoomType('ALL'); searchRooms(); }}>
-                  Thử lại tìm kiếm
-                </button>
-              </div>
+            <p>Tiện nghi tinh tế và trải nghiệm đảo được chăm chút theo phong cách riêng của bạn.</p>
+          </div>
+          <div className="resort-service-grid">
+            {services.map(([title, copy, link, image]) => (
+              <article className="resort-service-card" key={title}>
+                <div className="resort-service-image">
+                  <img src={image} alt={title} />
+                </div>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{copy}</p>
+                  <Link to="/services">
+                    {link} <Icon name="arrow" size={15} />
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="resort-loyalty resort-width" id="gallery">
+          <div className="loyalty-photo">
+            <img src={photos.loyalty} alt="Khoảnh khắc thư thái bên bờ biển tại Azure Bay" />
+          </div>
+          <div className="loyalty-copy">
+            <span className="resort-eyebrow">AZURE BAY PRIVILEGE</span>
+            <h2>Đặc quyền dành riêng cho bạn</h2>
+            <p>Trở thành một phần của Azure Bay và tận hưởng những ưu đãi được tạo nên cho mỗi hành trình quay trở lại.</p>
+            <div className="loyalty-benefits">
+              <span>Ưu đãi riêng cho thành viên</span>
+              <span>Ưu tiên nâng hạng phòng</span>
+              <span>Trải nghiệm được cá nhân hóa</span>
             </div>
-          ) : (
-            <div className="hc-room-grid">
-              {filteredRooms.map(room => (
-                <div key={room.roomId} className="hc-room-card">
-                  <div style={{ position: 'relative', overflow: 'hidden', height: '210px', background: 'var(--hc-bg-alt)' }}>
-                    <img
-                      src={room.imageUrl || `https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=700&q=80`}
-                      alt={`Phòng ${room.roomNumber}`}
-                      className="hc-room-card-image"
-                      onError={(e) => {
-                        e.target.src = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=700&q=80';
-                      }}
-                    />
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      left: '12px',
-                      background: 'rgba(15, 38, 64, 0.85)',
-                      backdropFilter: 'blur(4px)',
-                      color: '#fff',
-                      padding: '4px 10px',
-                      borderRadius: 'var(--hc-radius-sm)',
-                      fontSize: '12px',
-                      fontWeight: 700
-                    }}>
-                      Phòng #{room.roomNumber}
-                    </div>
-
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px'
-                    }}>
-                      <span className="hc-badge hc-badge-success">
-                        <i className="bi bi-check-circle-fill"></i> Còn trống
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="hc-room-card-body">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                      <h3 className="hc-room-card-name" style={{ margin: 0 }}>
-                        {room.roomType?.typeName || 'Hạng phòng cao cấp'}
-                      </h3>
-                      <span style={{ fontSize: '12px', color: 'var(--hc-text-muted)' }}>
-                        Tầng {room.floor || 1}
-                      </span>
-                    </div>
-
-                    <div className="hc-room-card-amenities">
-                      <span className="hc-badge hc-badge-primary">
-                        <i className="bi bi-people"></i> Tối đa {room.roomType?.capacity || 2} khách
-                      </span>
-                      <span className="hc-badge hc-badge-muted">
-                        <i className="bi bi-wifi"></i> Wifi 6
-                      </span>
-                      <span className="hc-badge hc-badge-muted">
-                        <i className="bi bi-tv"></i> Smart TV
-                      </span>
-                      <span className="hc-badge hc-badge-muted">
-                        <i className="bi bi-cup"></i> Mini Bar
-                      </span>
-                    </div>
-
-                    <hr className="hc-divider" style={{ margin: '14px 0' }} />
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div className="hc-room-card-price">
-                        {formatVND(room.pricePerNight || room.roomType?.basePrice)} <span>/ đêm</span>
-                      </div>
-                      <button
-                        type="button"
-                        className="hc-btn hc-btn-primary"
-                        onClick={() => handleBookRoom(room.roomId)}
-                      >
-                        Đặt phòng ngay <i className="bi bi-arrow-right"></i>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="loyalty-actions">
+              <Link className="resort-button primary" to="/register">
+                Khám phá đặc quyền <Icon name="arrow" size={16} />
+              </Link>
+              <Link className="resort-button outline" to="/login">
+                Đăng nhập thành viên
+              </Link>
             </div>
-          )}
+          </div>
+        </section>
 
-          {/* Luxury Facilities Feature Grid */}
-          <section style={{ marginTop: '64px', paddingTop: '48px', borderTop: '1px solid var(--hc-border)' }}>
-            <div style={{ textAlign: 'center', maxWidth: '600px', margin: '0 auto 40px' }}>
-              <div className="hc-hero-badge">DỊCH VỤ & TIỆN ÍCH TIÊU CHUẨN</div>
-              <h2 style={{ fontSize: '28px', marginBottom: '12px' }}>Trải Nghiệm Nghỉ Dưỡng Hoàn Hảo</h2>
-              <p style={{ color: 'var(--hc-text-secondary)', fontSize: '15px' }}>
-                Khách sạn sở hữu đầy đủ tiện nghi hàng đầu phục vụ mọi nhu cầu thư giãn, thưởng thức ẩm thực và hội nghị.
-              </p>
-            </div>
-
-            <div className="hc-grid-4">
-              <div className="hc-card" style={{ padding: '24px', textAlign: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--hc-primary-subtle)', color: 'var(--hc-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>
-                  <i className="bi bi-water"></i>
-                </div>
-                <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Hồ Bơi Vô Cực</h4>
-                <p style={{ fontSize: '13px', color: 'var(--hc-text-secondary)', margin: 0 }}>
-                  Thư giãn ngắm hoàng hôn với hồ bơi nước ấm tầng thượng mở cửa 24/7.
-                </p>
-              </div>
-
-              <div className="hc-card" style={{ padding: '24px', textAlign: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--hc-secondary-light)', color: 'var(--hc-primary-dark)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>
-                  <i className="bi bi-cup-hot"></i>
-                </div>
-                <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Ẩm Thực Michelin</h4>
-                <p style={{ fontSize: '13px', color: 'var(--hc-text-secondary)', margin: 0 }}>
-                  Thực đơn Á - Âu tinh tế được chế biến bởi các bếp trưởng trứ danh.
-                </p>
-              </div>
-
-              <div className="hc-card" style={{ padding: '24px', textAlign: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--hc-success-bg)', color: 'var(--hc-success)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>
-                  <i className="bi bi-flower1"></i>
-                </div>
-                <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Spa & Trị Liệu</h4>
-                <p style={{ fontSize: '13px', color: 'var(--hc-text-secondary)', margin: 0 }}>
-                  Phương pháp massage thảo mộc truyền thống phục hồi năng lượng tối đa.
-                </p>
-              </div>
-
-              <div className="hc-card" style={{ padding: '24px', textAlign: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'var(--hc-info-bg)', color: 'var(--hc-info)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', marginBottom: '16px' }}>
-                  <i className="bi bi-car-front"></i>
-                </div>
-                <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Đưa Đón Sân Bay</h4>
-                <p style={{ fontSize: '13px', color: 'var(--hc-text-secondary)', margin: 0 }}>
-                  Xe limousine đưa đón tận nơi chu đáo, chuyên nghiệp và đúng giờ.
-                </p>
-              </div>
-            </div>
-          </section>
-        </div>
+        <section className="resort-offers" id="offers">
+          <span className="resort-eyebrow">KỲ NGHỈ TIẾP THEO ĐANG CHỜ BẠN</span>
+          <h2>Một chốn riêng đang chờ bạn bên bờ biển.</h2>
+          <p>Để Azure Bay chăm chút cho kỳ nghỉ tiếp theo với những trải nghiệm tinh tế và ưu đãi riêng từ khu nghỉ dưỡng.</p>
+          <Link className="resort-button primary" to="/booking">
+            Khám phá ưu đãi <Icon name="arrow" size={17} />
+          </Link>
+        </section>
       </main>
-
-      <Footer />
-    </>
+      <div id="contact">
+        <Footer variant="resort" />
+      </div>
+    </div>
   );
 }

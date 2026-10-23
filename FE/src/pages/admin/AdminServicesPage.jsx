@@ -118,7 +118,7 @@ export default function AdminServicesPage() {
   });
 
   return (
-    <div>
+    <div className="ops-page">
       <div className="hc-page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>

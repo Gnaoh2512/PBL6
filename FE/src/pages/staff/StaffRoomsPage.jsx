@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
 import { apiCall, formatVND, formatDate, getRoomTypeName } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 
 export default function StaffRoomsPage() {
   const { addToast } = useToast();
+  const { hasRole } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -12,7 +16,7 @@ export default function StaffRoomsPage() {
   const [loading, setLoading] = useState(true);
 
   // Filters
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') || (hasRole(['HOUSEKEEPING']) ? 'CLEANING' : 'ALL'));
   const [floorFilter, setFloorFilter] = useState('ALL');
 
   // Selected Room Modal
@@ -221,7 +225,7 @@ export default function StaffRoomsPage() {
   const currentBooking = selectedRoom ? getRoomBooking(selectedRoom.roomId) : null;
 
   return (
-    <div>
+    <div className="ops-page">
       <div className="hc-page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
