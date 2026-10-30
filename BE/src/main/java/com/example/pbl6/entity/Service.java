@@ -1,5 +1,7 @@
 package com.example.pbl6.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,8 +20,9 @@ public class Service {
     @Column(name = "service_id")
     private Integer serviceId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "category_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private ServiceCategory category;
 
     @Column(name = "service_name", nullable = false, length = 100)
@@ -33,5 +36,11 @@ public class Service {
 
     @Builder.Default
     @Column(name = "is_active")
+    @JsonProperty("isActive")
     private Boolean isActive = true;
+
+    @JsonProperty("active")
+    public Boolean getActive() {
+        return isActive != null ? isActive : true;
+    }
 }

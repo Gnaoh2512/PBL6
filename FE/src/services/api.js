@@ -115,22 +115,32 @@ export function formatVND(amount) {
 export function formatDate(dateStr) {
   if (!dateStr) return '---';
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
+    let d;
+    if (Array.isArray(dateStr)) {
+      d = new Date(dateStr[0], (dateStr[1] || 1) - 1, dateStr[2] || 1, dateStr[3] || 0, dateStr[4] || 0, dateStr[5] || 0);
+    } else {
+      d = new Date(dateStr);
+    }
+    if (isNaN(d.getTime())) return String(dateStr);
     return d.toLocaleDateString('vi-VN');
   } catch {
-    return dateStr;
+    return String(dateStr);
   }
 }
 
 export function formatDateTime(dateTimeStr) {
   if (!dateTimeStr) return '---';
   try {
-    const d = new Date(dateTimeStr);
-    if (isNaN(d.getTime())) return dateTimeStr;
+    let d;
+    if (Array.isArray(dateTimeStr)) {
+      d = new Date(dateTimeStr[0], (dateTimeStr[1] || 1) - 1, dateTimeStr[2] || 1, dateTimeStr[3] || 0, dateTimeStr[4] || 0, dateTimeStr[5] || 0);
+    } else {
+      d = new Date(dateTimeStr);
+    }
+    if (isNaN(d.getTime())) return String(dateTimeStr);
     return d.toLocaleString('vi-VN');
   } catch {
-    return dateTimeStr;
+    return String(dateTimeStr);
   }
 }
 
