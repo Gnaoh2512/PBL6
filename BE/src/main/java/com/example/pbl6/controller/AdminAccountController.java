@@ -15,24 +15,22 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminAccountController {
 
     private final AccountAdminService accountAdminService;
 
     @GetMapping("/accounts")
-    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<List<Account>> getAllAccounts() {
         return ApiResponse.ok(accountAdminService.getAllAccounts());
     }
 
     @PostMapping("/accounts")
-    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Account> createAccount(@Valid @RequestBody AccountCreateRequest request) {
         return ApiResponse.ok("Account created successfully", accountAdminService.createAccount(request));
     }
 
     @GetMapping("/audit-logs")
-    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<AuditLog>> getAuditLogs() {
         return ApiResponse.ok(accountAdminService.getAuditLogs());
     }

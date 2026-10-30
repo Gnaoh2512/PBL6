@@ -30,12 +30,6 @@ export default function StaffRoomsPage() {
   const [serviceNote, setServiceNote] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  // Settle checkout form
-  const [settlePaymentMethod, setSettlePaymentMethod] = useState('CASH');
-  const [settleDiscount, setSettleDiscount] = useState(0);
-  // Folio data
-  const [folio, setFolio] = useState(null);
-  const [folioLoading, setFolioLoading] = useState(false);
 
   useEffect(() => {
     loadAllData();
@@ -78,7 +72,6 @@ export default function StaffRoomsPage() {
   const handleRoomClick = (room) => {
     setSelectedRoom(room);
     setActiveTab('INFO');
-    setFolio(null);
     setModalOpen(true);
   };
 
@@ -164,16 +157,6 @@ export default function StaffRoomsPage() {
     }
   };
 
-  // Load folio
-  const loadFolio = async (bookingCode) => {
-    setFolioLoading(true);
-    try {
-      const res = await apiCall(`/api/staff/billing/bookings/${bookingCode}/folio`, { silentError: true });
-      if (res && res.success) setFolio(res.data);
-    } catch { /* silent */ }
-    finally { setFolioLoading(false); }
-  };
-
   // Settle and checkout
   const handleSettleCheckout = async (bookingCode) => {
     if (!window.confirm(`Xác nhận thanh toán toàn bộ chi phí và làm thủ tục trả phòng cho đơn ${bookingCode}?`)) {
@@ -181,15 +164,8 @@ export default function StaffRoomsPage() {
     }
     setActionLoading(true);
     try {
-      // Gửi đầy đủ body theo API doc
       const res = await apiCall(`/api/staff/billing/bookings/${bookingCode}/settle-and-checkout`, {
-        method: 'POST',
-        body: {
-          paymentMethod: settlePaymentMethod,
-          cashierShiftId: null, // BE sẽ tự tìm ca đang mở của nhân viên
-          discountAmount: parseFloat(settleDiscount) || 0,
-          note: 'Quyết toán và check-out tại sơ đồ phòng.'
-        }
+        method: 'POST'
       });
       if (res && res.success) {
         addToast(`Quyết toán và check-out thành công cho đơn ${bookingCode}!`, 'success');
@@ -203,7 +179,7 @@ export default function StaffRoomsPage() {
     }
   };
 
-  // Cancel with refund — gửi reason trong request body
+  // Cancel with refund
   const handleCancelWithRefund = async (bookingCode) => {
     if (!cancelReason.trim()) {
       addToast('Vui lòng nhập lý do hủy phòng!', 'warning');
@@ -211,9 +187,8 @@ export default function StaffRoomsPage() {
     }
     setActionLoading(true);
     try {
-      const res = await apiCall(`/api/staff/billing/bookings/${bookingCode}/cancel-with-refund`, {
-        method: 'POST',
-        body: { note: cancelReason.trim() }
+      const res = await apiCall(`/api/staff/billing/bookings/${bookingCode}/cancel-with-refund?reason=${encodeURIComponent(cancelReason)}`, {
+        method: 'POST'
       });
       if (res && res.success) {
         addToast('Đã hủy đơn và hoàn tiền cọc thành công!', 'success');
@@ -422,7 +397,7 @@ export default function StaffRoomsPage() {
                   </button>
                   <button
                     className={`hc-tab-btn ${activeTab === 'CHECKOUT' ? 'active' : ''}`}
-                    onClick={() => { setActiveTab('CHECKOUT'); const booking = currentBooking; if (booking) loadFolio(booking.bookingCode); }}
+                    onClick={() => setActiveTab('CHECKOUT')}
                   >
                     <i className="bi bi-box-arrow-right"></i> Quyết toán / Check-out
                   </button>
@@ -528,43 +503,10 @@ export default function StaffRoomsPage() {
 
                 {activeTab === 'CHECKOUT' && (
                   <div>
-                    {/* Folio summary trước khi checkout */}
-                    {folioLoading ? (
-                      <div style={{ textAlign: 'center', padding: '16px', color: 'var(--hc-text-muted)', fontSize: 13 }}>Đang tải hóa đơn...</div>
-                    ) : folio ? (
-                      <div style={{ background: 'var(--hc-bg)', border: '1px solid var(--hc-border)', borderRadius: 'var(--hc-radius-md)', padding: '14px', marginBottom: '16px', fontSize: '13px' }}>
-                        <div style={{ fontWeight: 700, marginBottom: 8 }}>Hóa đơn phòng (Live Folio)</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span>Tiền phòng:</span><strong>{formatVND(folio.roomCharge || 0)}</strong></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span>Dịch vụ:</span><strong>{formatVND(folio.serviceCharge || 0)}</strong></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span>Thuế VAT:</span><strong>{formatVND(folio.taxAmount || 0)}</strong></div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}><span>Cọc đã nhận:</span><strong style={{color:'var(--hc-success)'}}>-{formatVND(folio.depositApplied || 0)}</strong></div>
-                        <hr style={{ margin: '8px 0', borderColor: 'var(--hc-border)' }}/>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 15 }}>
-                          <span>Số tiền còn lại:</span>
-                          <span style={{ color: 'var(--hc-error)' }}>{formatVND(folio.finalBalance ?? folio.remainingBalance ?? 0)}</span>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <div className="hc-alert hc-alert-warning" style={{ fontSize: '13px', marginBottom: 12 }}>
+                    <div className="hc-alert hc-alert-warning" style={{ fontSize: '13px' }}>
                       <i className="bi bi-exclamation-triangle-fill"></i>
                       <div>
-                        Thao tác này sẽ quyết toán toàn bộ số tiền còn lại vào doanh thu ca trực hiện tại, hoàn tất thủ tục và chuyển phòng sang trạng thái <strong>ĐANG DỌN (CLEANING)</strong>.
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: 12 }}>
-                      <div className="hc-form-group" style={{ margin: 0 }}>
-                        <label className="hc-label">Phương thức thanh toán</label>
-                        <select className="hc-select" value={settlePaymentMethod} onChange={(e) => setSettlePaymentMethod(e.target.value)}>
-                          <option value="CASH">Tiền mặt (CASH)</option>
-                          <option value="TRANSFER">Chuyển khoản (TRANSFER)</option>
-                          <option value="CARD">Thẻ ngân hàng (CARD)</option>
-                        </select>
-                      </div>
-                      <div className="hc-form-group" style={{ margin: 0 }}>
-                        <label className="hc-label">Giảm giá thêm (VNĐ)</label>
-                        <input type="number" className="hc-input" min="0" value={settleDiscount} onChange={(e) => setSettleDiscount(e.target.value)} placeholder="0" />
+                        Thao tác này sẽ quyết toán toàn bộ số tiền còn lại (Balance Due) vào doanh thu ca trực hiện tại, hoàn tất thủ tục và chuyển phòng sang trạng thái <strong>ĐANG DỌN (CLEANING)</strong>.
                       </div>
                     </div>
 

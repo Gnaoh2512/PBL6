@@ -18,17 +18,14 @@ public class WorkSchedule {
     @Column(name = "schedule_id")
     private Integer scheduleId;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shift_id")
     private Shift shift;
 
     @Column(name = "work_date")
     private LocalDate workDate;
-
-    @Column(name = "notes", columnDefinition = "text")
-    private String notes;
 }

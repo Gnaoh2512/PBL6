@@ -24,7 +24,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
     private final WorkScheduleRepository workScheduleRepository;
     private final AccountRepository accountRepository;
     private final ShiftRepository shiftRepository;
-    private final AuditLogService auditLogService;
 
     @Override
     public List<WorkScheduleResponse> getAllSchedules() {
@@ -53,28 +52,17 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
                 .account(account)
                 .shift(shift)
                 .workDate(request.getWorkDate())
-                .notes(request.getNotes())
                 .build();
 
-        WorkSchedule saved = workScheduleRepository.save(schedule);
-
-        auditLogService.log("LỊCH LÀM VIỆC", "ASSIGN", "work_schedule", Long.valueOf(saved.getScheduleId()),
-                "Phân ca " + shift.getShiftName() + " (" + shift.getStartTime() + " - " + shift.getEndTime() + ") cho nhân viên " +
-                        account.getFullName() + " (" + account.getUsername() + ") vào ngày " + request.getWorkDate());
-
-        return WorkScheduleResponse.fromEntity(saved);
+        return WorkScheduleResponse.fromEntity(workScheduleRepository.save(schedule));
     }
 
     @Override
     @Transactional
     public void deleteSchedule(Integer id) {
-        WorkSchedule ws = workScheduleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("WorkSchedule", "id", id));
-        String desc = "Hủy phân ca trực ID #" + id + " của " +
-                (ws.getAccount() != null ? ws.getAccount().getFullName() : "nhân viên") +
-                " (ngày " + ws.getWorkDate() + ")";
+        if (!workScheduleRepository.existsById(id)) {
+            throw new ResourceNotFoundException("WorkSchedule", "id", id);
+        }
         workScheduleRepository.deleteById(id);
-
-        auditLogService.log("LỊCH LÀM VIỆC", "DELETE", "work_schedule", Long.valueOf(id), desc);
     }
 }

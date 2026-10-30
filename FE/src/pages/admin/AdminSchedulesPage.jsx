@@ -3,20 +3,7 @@ import Modal from '../../components/Modal';
 import { apiCall, formatDate } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-const roleCodeOf = (role) => {
-  if (!role) return '';
-  if (typeof role === 'string') return role;
-  return role?.roleCode || role?.code || role?.roleName || '';
-};
-
-const formatTimeOnly = (t) => {
-  if (!t) return '';
-  if (Array.isArray(t)) {
-    return `${String(t[0]).padStart(2, '0')}:${String(t[1] || 0).padStart(2, '0')}`;
-  }
-  const s = String(t);
-  return s.length >= 5 ? s.slice(0, 5) : s;
-};
+const roleCodeOf = (role) => typeof role === 'string' ? role : role?.roleCode || role?.code || '';
 
 export default function AdminSchedulesPage() {
   const { addToast } = useToast();
@@ -55,27 +42,20 @@ export default function AdminSchedulesPage() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [shiftsRes, accountsRes, schedulesRes] = await Promise.allSettled([
+      const [shiftsRes, accountsRes, schedulesRes] = await Promise.all([
         apiCall('/api/admin/shifts', { silentError: true }),
         apiCall('/api/admin/accounts', { silentError: true }),
         apiCall('/api/admin/schedules', { silentError: true })
       ]);
 
-      if (shiftsRes.status === 'fulfilled' && shiftsRes.value) {
-        const d = shiftsRes.value.data ?? (Array.isArray(shiftsRes.value) ? shiftsRes.value : []);
-        setShifts(Array.isArray(d) ? d : []);
-      }
-      if (accountsRes.status === 'fulfilled' && accountsRes.value) {
-        const d = accountsRes.value.data ?? (Array.isArray(accountsRes.value) ? accountsRes.value : []);
-        const staffList = (Array.isArray(d) ? d : []).filter(a => roleCodeOf(a.role) !== 'ROLE_CUSTOMER');
+      if (shiftsRes && shiftsRes.success) setShifts(shiftsRes.data || []);
+      if (accountsRes && accountsRes.success) {
+        const staffList = (accountsRes.data || []).filter(a => roleCodeOf(a.role) !== 'ROLE_CUSTOMER');
         setAccounts(staffList);
       }
-      if (schedulesRes.status === 'fulfilled' && schedulesRes.value) {
-        const d = schedulesRes.value.data ?? (Array.isArray(schedulesRes.value) ? schedulesRes.value : []);
-        setSchedules(Array.isArray(d) ? d : []);
-      }
-    } catch (err) {
-      console.warn('Error loading schedules:', err);
+      if (schedulesRes && schedulesRes.success) setSchedules(schedulesRes.data || []);
+    } catch {
+      // silent
     } finally {
       setLoading(false);
     }
@@ -178,9 +158,9 @@ export default function AdminSchedulesPage() {
       <div className="hc-page-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
-            <i className="bi bi-calendar2-week-fill"></i> NHÂN SỰ &amp; CA TRỰC
+            <i className="bi bi-calendar2-week-fill"></i> NHÂN SỰ & CA TRỰC
           </div>
-          <h2>Quản Lý Phân Ca &amp; Lịch Làm Việc</h2>
+          <h2>Quản Lý Phân Ca & Lịch Làm Việc</h2>
           <p>Thiết lập khung giờ các ca làm việc và phân bổ lịch trực cho nhân viên khách sạn</p>
         </div>
 
@@ -269,61 +249,40 @@ export default function AdminSchedulesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {schedules.map(sch => {
-                    const empName = sch.fullName || sch.accountFullName || sch.username || sch.accountUsername || 'Nhân viên';
-                    const rawRole = sch.role || sch.roleCode || sch.roleName || sch.account?.role;
-                    const roleDisplay = roleCodeOf(rawRole).replace('ROLE_', '') || 'NHÂN VIÊN';
-                    const shiftName = sch.shiftName || sch.shift?.shiftName || (sch.shiftId ? `Ca #${sch.shiftId}` : 'Ca trực');
-                    const start = sch.startTime || sch.shift?.startTime;
-                    const end = sch.endTime || sch.shift?.endTime;
-                    const timeRange = (start && end) 
-                      ? `${formatTimeOnly(start)} - ${formatTimeOnly(end)}` 
-                      : (start ? formatTimeOnly(start) : '---');
-                    const notes = sch.notes || '---';
-
-                    return (
-                      <tr key={sch.scheduleId}>
-                        <td>
-                          <strong>{formatDate(sch.workDate)}</strong>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <i className="bi bi-person-circle text-primary"></i>
-                            <strong>{empName}</strong>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-primary">
-                            {roleDisplay}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-warning">
-                            {shiftName}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info" style={{ fontWeight: 500 }}>
-                            <i className="bi bi-clock" style={{ marginRight: '4px' }}></i>
-                            {timeRange}
-                          </span>
-                        </td>
-                        <td style={{ color: 'var(--hc-text-secondary)', fontSize: '13px' }}>
-                          {notes}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-ghost hc-btn-sm"
-                            style={{ color: 'var(--hc-error)' }}
-                            onClick={() => handleDeleteSchedule(sch.scheduleId)}
-                          >
-                            <i className="bi bi-trash"></i> Hủy
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {schedules.map(sch => (
+                    <tr key={sch.scheduleId}>
+                      <td>
+                        <strong>{formatDate(sch.workDate)}</strong>
+                      </td>
+                      <td>
+                        <strong>{sch.fullName || sch.username}</strong>
+                      </td>
+                      <td>
+                        <span className="hc-badge hc-badge-primary">
+                          {roleCodeOf(sch.role).replace('ROLE_', '') || '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="hc-badge hc-badge-warning">
+                          {sch.shiftName}
+                        </span>
+                      </td>
+                      <td>{sch.startTime} - {sch.endTime}</td>
+                      <td style={{ color: 'var(--hc-text-secondary)', fontSize: '13px' }}>
+                        {sch.notes || '---'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          className="hc-btn hc-btn-ghost hc-btn-sm"
+                          style={{ color: 'var(--hc-error)' }}
+                          onClick={() => handleDeleteSchedule(sch.scheduleId)}
+                        >
+                          <i className="bi bi-trash"></i> Hủy
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -361,53 +320,48 @@ export default function AdminSchedulesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {shifts.map(s => {
-                    const sName = s.shiftName || `Ca #${s.shiftId}`;
-                    const sStart = formatTimeOnly(s.startTime);
-                    const sEnd = formatTimeOnly(s.endTime);
-                    return (
-                      <tr key={s.shiftId}>
-                        <td>
-                          <strong>{sName}</strong>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info">{sStart}</span>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info">{sEnd}</span>
-                        </td>
-                        <td style={{ color: 'var(--hc-text-secondary)' }}>{s.description || '---'}</td>
-                        <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'inline-flex', gap: '6px' }}>
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              onClick={() => {
-                                setEditShiftId(s.shiftId);
-                                setShiftForm({
-                                  shiftName: s.shiftName || '',
-                                  startTime: sStart,
-                                  endTime: sEnd,
-                                  description: s.description || ''
-                                });
-                                setShiftModalOpen(true);
-                              }}
-                            >
-                              <i className="bi bi-pencil"></i> Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-ghost hc-btn-sm"
-                              style={{ color: 'var(--hc-error)' }}
-                              onClick={() => handleDeleteShift(s.shiftId)}
-                            >
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {shifts.map(s => (
+                    <tr key={s.shiftId}>
+                      <td>
+                        <strong>{s.shiftName}</strong>
+                      </td>
+                      <td>
+                        <span className="hc-badge hc-badge-info">{s.startTime}</span>
+                      </td>
+                      <td>
+                        <span className="hc-badge hc-badge-info">{s.endTime}</span>
+                      </td>
+                      <td style={{ color: 'var(--hc-text-secondary)' }}>{s.description || '---'}</td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            className="hc-btn hc-btn-outline hc-btn-sm"
+                            onClick={() => {
+                              setEditShiftId(s.shiftId);
+                              setShiftForm({
+                                shiftName: s.shiftName,
+                                startTime: s.startTime,
+                                endTime: s.endTime,
+                                description: s.description || ''
+                              });
+                              setShiftModalOpen(true);
+                            }}
+                          >
+                            <i className="bi bi-pencil"></i> Sửa
+                          </button>
+                          <button
+                            type="button"
+                            className="hc-btn hc-btn-ghost hc-btn-sm"
+                            style={{ color: 'var(--hc-error)' }}
+                            onClick={() => handleDeleteShift(s.shiftId)}
+                          >
+                            <i className="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             )}
@@ -464,16 +418,11 @@ export default function AdminSchedulesPage() {
               required
             >
               <option value="">-- Chọn ca trực --</option>
-              {shifts.map(s => {
-                const sName = s.shiftName || `Ca #${s.shiftId}`;
-                const sStart = formatTimeOnly(s.startTime);
-                const sEnd = formatTimeOnly(s.endTime);
-                return (
-                  <option key={s.shiftId} value={s.shiftId}>
-                    {sName} ({sStart} - {sEnd})
-                  </option>
-                );
-              })}
+              {shifts.map(s => (
+                <option key={s.shiftId} value={s.shiftId}>
+                  {s.shiftName} ({s.startTime} - {s.endTime})
+                </option>
+              ))}
             </select>
           </div>
 

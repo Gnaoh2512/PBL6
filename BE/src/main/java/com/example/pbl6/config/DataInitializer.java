@@ -30,7 +30,6 @@ public class DataInitializer implements CommandLineRunner {
     private final ServiceRepository serviceRepository;
     private final ShiftRepository shiftRepository;
     private final VoucherRepository voucherRepository;
-    private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -53,7 +52,6 @@ public class DataInitializer implements CommandLineRunner {
         repairSampleAccountRoles();
         ensureDemoStaffAccounts();
         ensureCustomerServiceDemoBooking();
-        ensureInitialAuditLogs();
     }
 
     private void initRoles() {
@@ -478,90 +476,5 @@ public class DataInitializer implements CommandLineRunner {
 
         voucherRepository.saveAll(vouchers);
         log.info("Đã khởi tạo {} voucher ưu đãi mẫu (SUMMER2026, WELCOME50K)", vouchers.size());
-    }
-
-    private void ensureInitialAuditLogs() {
-        Account adminUser = accountRepository.findByUsername("admin").orElse(null);
-        if (adminUser != null) {
-            java.util.List<AuditLog> unassignedLogs = auditLogRepository.findAll().stream()
-                    .filter(l -> l.getAccount() == null)
-                    .peek(l -> l.setAccount(adminUser))
-                    .collect(java.util.stream.Collectors.toList());
-            if (!unassignedLogs.isEmpty()) {
-                auditLogRepository.saveAll(unassignedLogs);
-                log.info("Đã đồng bộ {} bản ghi nhật ký hoạt động cũ sang quản trị viên (admin)", unassignedLogs.size());
-            }
-        }
-
-        if (auditLogRepository.count() > 0) return;
-
-        Account admin = accountRepository.findByUsername("admin").orElse(null);
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-
-        List<AuditLog> initialLogs = List.of(
-                AuditLog.builder()
-                        .account(admin)
-                        .moduleName("HỆ THỐNG")
-                        .actionType("KHỞI TẠO")
-                        .targetTable("system")
-                        .targetId(1L)
-                        .newValue("Khởi tạo hệ thống quản lý khách sạn Hotel California thành công")
-                        .ipAddress("127.0.0.1")
-                        .loggedAt(now.minusHours(48))
-                        .build(),
-                AuditLog.builder()
-                        .account(admin)
-                        .moduleName("PHÂN QUYỀN")
-                        .actionType("CẤU HÌNH")
-                        .targetTable("role")
-                        .targetId(7L)
-                        .newValue("Đồng bộ 7 vai trò chuẩn hóa hệ thống (ADMIN, MANAGER, RECEPTIONIST, HOUSEKEEPING...)")
-                        .ipAddress("127.0.0.1")
-                        .loggedAt(now.minusHours(36))
-                        .build(),
-                AuditLog.builder()
-                        .account(admin)
-                        .moduleName("PHÒNG NGHỈ")
-                        .actionType("CẤU HÌNH")
-                        .targetTable("room_type")
-                        .targetId(10L)
-                        .newValue("Cấu hình danh mục loại phòng nghỉ và định giá tiêu chuẩn")
-                        .ipAddress("127.0.0.1")
-                        .loggedAt(now.minusHours(24))
-                        .build(),
-                AuditLog.builder()
-                        .account(admin)
-                        .moduleName("MARKETING")
-                        .actionType("TẠO MỚI")
-                        .targetTable("voucher")
-                        .targetId(1L)
-                        .newValue("Tạo chiến dịch ưu đãi chào hè SUMMER2026 (Giảm 10% tối đa 200.000đ)")
-                        .ipAddress("127.0.0.1")
-                        .loggedAt(now.minusHours(12))
-                        .build(),
-                AuditLog.builder()
-                        .account(admin)
-                        .moduleName("THÀNH VIÊN")
-                        .actionType("CẤU HÌNH")
-                        .targetTable("loyalty_tier")
-                        .targetId(4L)
-                        .newValue("Thiết lập 4 hạng hội viên Coastal Bay Club (Seashell, Starfish, Coral, Ocean Pearl)")
-                        .ipAddress("127.0.0.1")
-                        .loggedAt(now.minusHours(6))
-                        .build(),
-                AuditLog.builder()
-                        .account(admin)
-                        .moduleName("BẢO MẬT")
-                        .actionType("ĐĂNG NHẬP")
-                        .targetTable("account")
-                        .targetId(1L)
-                        .newValue("Quản trị viên (admin) đăng nhập hệ thống thành công")
-                        .ipAddress("127.0.0.1")
-                        .loggedAt(now.minusMinutes(30))
-                        .build()
-        );
-
-        auditLogRepository.saveAll(initialLogs);
-        log.info("Đã khởi tạo {} bản ghi nhật ký hoạt động mẫu (Audit Logs)", initialLogs.size());
     }
 }

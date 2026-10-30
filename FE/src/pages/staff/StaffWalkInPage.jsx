@@ -27,9 +27,7 @@ export default function StaffWalkInPage() {
   const [idType, setIdType] = useState('CCCD');
   const [idNumber, setIdNumber] = useState('');
   const [checkInImmediately, setCheckInImmediately] = useState(true);
-  // Fix: đổi từ cashCollected/paidAmount → amountPaid (đúng tên BE)
-  const [amountPaid, setAmountPaid] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [cashCollected, setCashCollected] = useState('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -87,9 +85,7 @@ export default function StaffWalkInPage() {
       idType,
       idNumber: idNumber.trim() || null,
       checkInImmediately,
-      // Đúng tên field theo API doc: amountPaid + paymentMethod
-      amountPaid: amountPaid ? parseFloat(amountPaid) : 0,
-      paymentMethod: amountPaid && parseFloat(amountPaid) > 0 ? paymentMethod : 'CASH',
+      paidAmount: cashCollected ? parseFloat(cashCollected) : 0,
       note: note.trim() || null
     };
 
@@ -272,27 +268,16 @@ export default function StaffWalkInPage() {
                 </label>
               </div>
 
-              {/* Tiền nhận trước — đúng field name: amountPaid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="hc-form-group">
-                  <label className="hc-label">Số tiền khách đã trả / cọc tại quầy (VNĐ)</label>
-                  <input
-                    type="number"
-                    className="hc-input"
-                    placeholder="0"
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(e.target.value)}
-                  />
-                  <div className="hc-help-text">Được hạch toán vào ca thu ngân hiện tại.</div>
-                </div>
-                <div className="hc-form-group">
-                  <label className="hc-label">Phương thức thanh toán</label>
-                  <select className="hc-select" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
-                    <option value="CASH">Tiền mặt (CASH)</option>
-                    <option value="TRANSFER">Chuyển khoản (TRANSFER)</option>
-                    <option value="CARD">Thẻ ngân hàng (CARD)</option>
-                  </select>
-                </div>
+              <div className="hc-form-group">
+                <label className="hc-label">Số tiền khách đã trả trước / cọc tại quầy (VNĐ)</label>
+                <input
+                  type="number"
+                  className="hc-input"
+                  placeholder="0"
+                  value={cashCollected}
+                  onChange={(e) => setCashCollected(e.target.value)}
+                />
+                <div className="hc-help-text">Số tiền này sẽ được hạch toán trực tiếp vào ca thu ngân hiện tại.</div>
               </div>
 
               <div className="hc-form-group">
@@ -351,8 +336,8 @@ export default function StaffWalkInPage() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: 'var(--hc-success)' }}>
-                <span>Tiền nhận trước ({paymentMethod}):</span>
-                <strong style={{ fontSize: '16px' }}>{formatVND(amountPaid || 0)}</strong>
+                <span>Tiền nhận trước:</span>
+                <strong style={{ fontSize: '16px' }}>{formatVND(cashCollected || 0)}</strong>
               </div>
 
               <div style={{
@@ -366,7 +351,7 @@ export default function StaffWalkInPage() {
               }}>
                 <span style={{ fontWeight: 600 }}>Còn nợ lại (Balance):</span>
                 <strong style={{ color: 'var(--hc-error)', fontSize: '16px' }}>
-                  {formatVND(Math.max(0, totalAmount - (parseFloat(amountPaid) || 0)))}
+                  {formatVND(Math.max(0, totalAmount - (parseFloat(cashCollected) || 0)))}
                 </strong>
               </div>
             </div>

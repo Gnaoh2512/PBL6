@@ -37,7 +37,6 @@ public class AuthServiceImpl implements AuthService {
     private final LoyaltyTierRepository loyaltyTierRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -93,10 +92,6 @@ public class AuthServiceImpl implements AuthService {
             }
         }
         log.info("Registered new user with username: {}", saved.getUsername());
-
-        auditLogService.log(saved, "XÁC THỰC", "REGISTER", "account", Long.valueOf(saved.getAccountId()),
-                "Đăng ký tài khoản khách hàng mới: " + saved.getUsername() + " (Họ tên: " + saved.getFullName() + ")");
-
         return AccountResponse.fromEntity(saved);
     }
 
@@ -128,9 +123,6 @@ public class AuthServiceImpl implements AuthService {
         String roleStr = account.getRole().getRoleCode().trim().toUpperCase(java.util.Locale.ROOT);
         if (!roleStr.startsWith("ROLE_")) roleStr = "ROLE_" + roleStr;
         String token = jwtTokenProvider.generateToken(account.getUsername(), roleStr, account.getAccountId());
-
-        auditLogService.log(account, "XÁC THỰC", "LOGIN", "account", Long.valueOf(account.getAccountId()),
-                "Đăng nhập thành công vào hệ thống (Vai trò: " + (account.getRole() != null ? account.getRole().getRoleCode() : "N/A") + ")");
 
         return AuthResponse.builder()
                 .accessToken(token)

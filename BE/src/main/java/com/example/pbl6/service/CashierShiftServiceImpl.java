@@ -25,7 +25,6 @@ public class CashierShiftServiceImpl implements CashierShiftService {
     private final CashierShiftRepository cashierShiftRepository;
     private final AccountRepository accountRepository;
     private final WorkScheduleRepository workScheduleRepository;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -52,12 +51,7 @@ public class CashierShiftServiceImpl implements CashierShiftService {
                 .status("OPEN")
                 .build();
 
-        CashierShift saved = cashierShiftRepository.save(shift);
-
-        auditLogService.log(account, "THU NGÂN", "OPEN_SHIFT", "cashier_shift", Long.valueOf(saved.getCashierShiftId()),
-                "Mở ca thu ngân mới #" + saved.getCashierShiftId() + " - Tiền mặt đầu ca: " + request.getOpeningCash() + " VNĐ");
-
-        return CashierShiftResponse.fromEntity(saved);
+        return CashierShiftResponse.fromEntity(cashierShiftRepository.save(shift));
     }
 
     @Override
@@ -82,13 +76,7 @@ public class CashierShiftServiceImpl implements CashierShiftService {
         shift.setReceivedBy(receivedBy);
         shift.setHandoverNote(request.getHandoverNote());
 
-        CashierShift saved = cashierShiftRepository.save(shift);
-
-        auditLogService.log(userDetails.getAccount(), "THU NGÂN", "CLOSE_SHIFT", "cashier_shift", Long.valueOf(saved.getCashierShiftId()),
-                "Đóng ca thu ngân #" + saved.getCashierShiftId() + " - Tiền mặt thực tế kiểm đếm: " + request.getClosingCashActual() + " VNĐ" +
-                        (receivedBy != null ? " (Bàn giao cho: " + receivedBy.getFullName() + ")" : ""));
-
-        return CashierShiftResponse.fromEntity(saved);
+        return CashierShiftResponse.fromEntity(cashierShiftRepository.save(shift));
     }
 
     @Override

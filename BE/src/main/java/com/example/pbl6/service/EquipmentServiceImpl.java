@@ -20,7 +20,6 @@ public class EquipmentServiceImpl implements EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
     private final RoomRepository roomRepository;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -64,12 +63,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .note(request.getNote())
                 .build();
 
-        Equipment saved = equipmentRepository.save(equipment);
-
-        auditLogService.log("THIẾT BỊ", "CREATE", "equipment", Long.valueOf(saved.getEquipmentId()),
-                "Thêm mới thiết bị: " + saved.getEquipmentName() + " (Phòng: " + (room != null ? room.getRoomNumber() : "Kho") + ", Tình trạng: " + saved.getStatus() + ")");
-
-        return EquipmentResponse.fromEntity(saved);
+        return EquipmentResponse.fromEntity(equipmentRepository.save(equipment));
     }
 
     @Override
@@ -78,9 +72,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         Equipment equipment = equipmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị #" + id));
 
-        Room room = null;
         if (request.getRoomId() != null) {
-            room = roomRepository.findById(request.getRoomId())
+            Room room = roomRepository.findById(request.getRoomId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng #" + request.getRoomId()));
             equipment.setRoom(room);
         } else {
@@ -94,12 +87,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         }
         equipment.setNote(request.getNote());
 
-        Equipment updated = equipmentRepository.save(equipment);
-
-        auditLogService.log("THIẾT BỊ", "UPDATE", "equipment", Long.valueOf(updated.getEquipmentId()),
-                "Cập nhật thiết bị: " + updated.getEquipmentName() + " (Tình trạng: " + updated.getStatus() + ", Phòng: " + (room != null ? room.getRoomNumber() : "Kho") + ")");
-
-        return EquipmentResponse.fromEntity(updated);
+        return EquipmentResponse.fromEntity(equipmentRepository.save(equipment));
     }
 
     @Override
@@ -109,8 +97,5 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị #" + id));
         equipment.setStatus("RETIRED");
         equipmentRepository.save(equipment);
-
-        auditLogService.log("THIẾT BỊ", "DELETE", "equipment", Long.valueOf(id),
-                "Ngưng sử dụng (thanh lý) thiết bị: " + equipment.getEquipmentName() + " (ID: #" + id + ")");
     }
 }

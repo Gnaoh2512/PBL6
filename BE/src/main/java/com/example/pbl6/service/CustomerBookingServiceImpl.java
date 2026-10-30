@@ -47,7 +47,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     private final CustomerBillingService customerBillingService;
     @org.springframework.context.annotation.Lazy
     private final VoucherService voucherService;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -151,9 +150,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         BankTransferQrResponse qrInfo = vietQrService.generateDepositQr(bookingCode, depositRequired);
 
         log.info("Khởi tạo đơn đặt phòng thành công: Mã đơn: {}, Phòng: {}, Tiền cọc: {}", bookingCode, room.getRoomNumber(), depositRequired);
-        auditLogService.log("ĐẶT PHÒNG", "CREATE", "booking", Long.valueOf(savedBooking.getBookingId()),
-                "Đặt phòng trực tuyến: " + bookingCode + " (Phòng " + room.getRoomNumber() + ", " + checkInDate + " ➔ " + checkOutDate +
-                        ", Cọc: " + depositRequired + " VNĐ, Tiền phòng: " + discountedCharge + " VNĐ)");
 
         return mapToDetailResponse(savedBooking, bookingRoom, qrInfo);
     }
@@ -243,9 +239,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 "Duyệt cọc thủ công bởi: " + (staffAccount != null ? staffAccount.getFullName() : "Nhân viên"),
                 staffAccount
         );
-
-        auditLogService.log(staffAccount, "ĐẶT PHÒNG", "CONFIRM_DEPOSIT", "booking", Long.valueOf(booking.getBookingId()),
-                "Xác nhận cọc cho đơn đặt phòng " + bookingCode + " bởi " + (staffAccount != null ? staffAccount.getFullName() : staffUsername));
 
         return getBookingByCode(bookingCode);
     }
@@ -342,8 +335,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         booking.setCancelReason(cancelReason);
         booking.setCanceledBy(canceledByAccount);
         booking.setCanceledAt(LocalDateTime.now());
-        auditLogService.log(canceledByAccount, "ĐẶT PHÒNG", "CANCEL", "booking", Long.valueOf(booking.getBookingId()),
-                "Hủy đơn đặt phòng " + bookingCode + " (Lý do: " + cancelReason + ", Người hủy: " + (canceledByAccount != null ? canceledByAccount.getFullName() : canceledByUsername) + ")");
         bookingRepository.save(booking);
 
         List<BookingRoom> rooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());

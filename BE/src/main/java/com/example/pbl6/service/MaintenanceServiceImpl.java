@@ -30,7 +30,6 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     private final RoomRepository roomRepository;
     private final EquipmentRepository equipmentRepository;
     private final AccountRepository accountRepository;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -43,12 +42,20 @@ public class MaintenanceServiceImpl implements MaintenanceService {
 
         Equipment equipment = null;
         if (dto.getEquipmentId() != null) {
-            equipment = equipmentRepository.findById(dto.getEquipmentId()).orElse(null);
+            equipment = equipmentRepository.findById(dto.getEquipmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thiết bị #" + dto.getEquipmentId()));
+            equipment.setStatus("BROKEN");
+            equipmentRepository.save(equipment);
         }
 
-        String priority = (dto.getPriority() != null && !dto.getPriority().isBlank())
-                ? dto.getPriority().toUpperCase()
-                : "MEDIUM";
+        String priority = dto.getPriority() != null ? dto.getPriority().toUpperCase() : "MEDIUM";
+
+        // Tự động chuyển phòng sang MAINTENANCE nếu sự cố nghiêm trọng
+        if ("HIGH".equalsIgnoreCase(priority) || "URGENT".equalsIgnoreCase(priority)) {
+            room.setStatus("MAINTENANCE");
+            roomRepository.save(room);
+            log.warn("Room {} locked to MAINTENANCE due to {} issue: {}", room.getRoomNumber(), priority, dto.getTitle());
+        }
 
         MaintenanceRequest request = MaintenanceRequest.builder()
                 .room(room)
@@ -61,10 +68,6 @@ public class MaintenanceServiceImpl implements MaintenanceService {
                 .build();
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(request);
-
-        auditLogService.log(reporter, "BẢO TRÌ", "REPORT", "maintenance_request", Long.valueOf(saved.getRequestId()),
-                "Báo hỏng phòng " + room.getRoomNumber() + ": " + dto.getTitle() + " (Mức độ: " + priority + ")");
-
         return MaintenanceRequestResponse.fromEntity(saved);
     }
 
@@ -105,13 +108,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
             equipmentRepository.save(request.getEquipment());
         }
 
-        MaintenanceRequest saved = maintenanceRequestRepository.save(request);
-
-        auditLogService.log("BẢO TRÌ", "ASSIGN", "maintenance_request", Long.valueOf(saved.getRequestId()),
-                "Phân công kỹ thuật viên " + tech.getFullName() + " (" + tech.getUsername() + ") xử lý yêu cầu bảo trì phòng " +
-                        (saved.getRoom() != null ? saved.getRoom().getRoomNumber() : "N/A"));
-
-        return MaintenanceRequestResponse.fromEntity(saved);
+        return MaintenanceRequestResponse.fromEntity(maintenanceRequestRepository.save(request));
     }
 
     @Override
@@ -131,13 +128,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
             equipmentRepository.save(request.getEquipment());
         }
 
-        MaintenanceRequest saved = maintenanceRequestRepository.save(request);
-
-        auditLogService.log("BẢO TRÌ", "COMPLETE", "maintenance_request", Long.valueOf(saved.getRequestId()),
-                "Kỹ thuật viên " + technicianUsername + " hoàn tất xử lý bảo trì #" + requestId +
-                        (dto != null && dto.getResolutionNote() != null ? ": " + dto.getResolutionNote() : ""));
-
-        return MaintenanceRequestResponse.fromEntity(saved);
+        return MaintenanceRequestResponse.fromEntity(maintenanceRequestRepository.save(request));
     }
 
     @Override
@@ -166,11 +157,6 @@ public class MaintenanceServiceImpl implements MaintenanceService {
             }
         }
 
-        MaintenanceRequest saved = maintenanceRequestRepository.save(request);
-
-        auditLogService.log(confirmer, "BẢO TRÌ", "CONFIRM", "maintenance_request", Long.valueOf(saved.getRequestId()),
-                "Xác nhận nghiệm thu bảo trì #" + requestId + " bởi " + confirmer.getFullName() + " (" + confirmer.getUsername() + ")");
-
-        return MaintenanceRequestResponse.fromEntity(saved);
+        return MaintenanceRequestResponse.fromEntity(maintenanceRequestRepository.save(request));
     }
 }

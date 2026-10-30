@@ -51,7 +51,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final LoyaltyTierRepository loyaltyTierRepository;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -271,8 +270,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         }
 
         log.info("Check-in thành công cho khách đơn {}. Phòng chuyển sang OCCUPIED.", bookingCode);
-        auditLogService.log("ĐẶT PHÒNG", "CHECK_IN", "booking", Long.valueOf(booking.getBookingId()),
-                "Lễ tân " + staffUsername + " thực hiện Check-in nhận phòng cho đơn đặt phòng " + bookingCode);
     }
 
     @Override
@@ -371,9 +368,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         }
 
         log.info("Đã tất toán hóa đơn và Check-out thành công cho đơn {}. Phòng chuyển sang CLEANING để dọn dẹp.", bookingCode);
-        auditLogService.log(cashierAccount, "ĐẶT PHÒNG", "CHECK_OUT", "booking", Long.valueOf(booking.getBookingId()),
-                "Tất toán hóa đơn & Check-out phòng cho đơn " + bookingCode + " (Thu ngân: " + (cashierAccount != null ? cashierAccount.getUsername() : cashierUsername) +
-                        ", Phương thức: " + (request != null ? request.getPaymentMethod() : "CASH") + ", Tổng thanh toán: " + folio.getTotalAmount() + " VNĐ)");
 
         // Tự động tích điểm và nâng hạng hội viên Coastal Bay Club
         try {

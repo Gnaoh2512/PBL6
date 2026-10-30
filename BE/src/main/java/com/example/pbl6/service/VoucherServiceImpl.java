@@ -29,7 +29,6 @@ public class VoucherServiceImpl implements VoucherService {
     private final VoucherRepository voucherRepository;
     private final FinancialCalculator financialCalculator;
     private final BankConfig bankConfig;
-    private final AuditLogService auditLogService;
 
     @Override
     @Transactional(readOnly = true)
@@ -121,12 +120,7 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         voucher.setUsedCount(voucher.getUsedCount() + 1);
-        Voucher saved = voucherRepository.save(voucher);
-
-        auditLogService.log("ƯU ĐÃI & VOUCHER", "USE_VOUCHER", "voucher", Long.valueOf(saved.getVoucherId()),
-                "Sử dụng mã ưu đãi: " + saved.getCode() + " cho đơn hàng " + orderAmount + " VNĐ");
-
-        return saved;
+        return voucherRepository.save(voucher);
     }
 
     @Override
@@ -153,10 +147,6 @@ public class VoucherServiceImpl implements VoucherService {
 
         Voucher saved = voucherRepository.save(voucher);
         log.info("Đã tạo mới voucher khuyến mãi: {}", saved.getCode());
-
-        auditLogService.log("ƯU ĐÃI & VOUCHER", "CREATE", "voucher", Long.valueOf(saved.getVoucherId()),
-                "Tạo mới mã ưu đãi: " + saved.getCode() + " - " + saved.getVoucherName());
-
         return mapToResponse(saved);
     }
 
@@ -169,11 +159,6 @@ public class VoucherServiceImpl implements VoucherService {
         voucher.setIsActive(!Boolean.TRUE.equals(voucher.getIsActive()));
         Voucher updated = voucherRepository.save(voucher);
         log.info("Voucher {} đổi trạng thái sang: {}", voucher.getCode(), updated.getIsActive() ? "ACTIVE" : "INACTIVE");
-
-        auditLogService.log("ƯU ĐÃI & VOUCHER", Boolean.TRUE.equals(updated.getIsActive()) ? "ACTIVATE" : "DEACTIVATE",
-                "voucher", Long.valueOf(updated.getVoucherId()),
-                (Boolean.TRUE.equals(updated.getIsActive()) ? "Kích hoạt" : "Tạm ngưng") + " voucher " + updated.getCode());
-
         return mapToResponse(updated);
     }
 

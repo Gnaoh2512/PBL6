@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import { apiCall } from '../../services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -106,22 +105,13 @@ export default function AdminAccountsPage() {
           <p>Quản lý tài khoản và vai trò truy cập hệ thống.</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <Link
-            to="/admin/history"
-            className="hc-btn hc-btn-outline"
-          >
-            <i className="bi bi-clock-history"></i> Nhật Ký Hoạt Động
-          </Link>
-
-          <button
-            type="button"
-            className="hc-btn hc-btn-primary"
-            onClick={() => setModalOpen(true)}
-          >
-            <i className="bi bi-person-plus-fill"></i> Thêm Tài Khoản Mới
-          </button>
-        </div>
+        <button
+          type="button"
+          className="hc-btn hc-btn-primary"
+          onClick={() => setModalOpen(true)}
+        >
+          <i className="bi bi-person-plus-fill"></i> Thêm Tài Khoản Mới
+        </button>
       </div>
 
       {(
@@ -151,8 +141,6 @@ export default function AdminAccountsPage() {
                 <option value="ROLE_MANAGER">Quản lý (Manager)</option>
                 <option value="ROLE_RECEPTIONIST">Lễ tân (Receptionist)</option>
                 <option value="ROLE_HOUSEKEEPING">Buồng phòng (Housekeeping)</option>
-                <option value="ROLE_MAINTENANCE">Kỹ thuật (Maintenance)</option>
-                <option value="ROLE_SERVICE_STAFF">Nhân viên Dịch vụ (Service Staff)</option>
                 <option value="ROLE_CUSTOMER">Khách hàng (Customer)</option>
               </select>
             </div>
@@ -274,8 +262,6 @@ export default function AdminAccountsPage() {
             >
               <option value="ROLE_RECEPTIONIST">Lễ tân (ROLE_RECEPTIONIST)</option>
               <option value="ROLE_HOUSEKEEPING">Buồng phòng (ROLE_HOUSEKEEPING)</option>
-              <option value="ROLE_MAINTENANCE">Kỹ thuật & Bảo trì (ROLE_MAINTENANCE)</option>
-              <option value="ROLE_SERVICE_STAFF">Nhân viên Dịch vụ (ROLE_SERVICE_STAFF)</option>
               <option value="ROLE_MANAGER">Quản lý (ROLE_MANAGER)</option>
               <option value="ROLE_ADMIN">Quản trị viên (ROLE_ADMIN)</option>
               <option value="ROLE_CUSTOMER">Khách hàng (ROLE_CUSTOMER)</option>

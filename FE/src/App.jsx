@@ -35,8 +35,6 @@ import AdminRoomsPage from './pages/admin/AdminRoomsPage';
 import AdminServicesPage from './pages/admin/AdminServicesPage';
 import AdminSchedulesPage from './pages/admin/AdminSchedulesPage';
 import AdminVouchersPage from './pages/admin/AdminVouchersPage';
-import AdminEquipmentPage from './pages/admin/AdminEquipmentPage';
-import AdminLoyaltyPage from './pages/admin/AdminLoyaltyPage';
 
 function ProtectedRoute({ allowedRoles = [], children }) {
   const { isAuthenticated, authReady, hasRole } = useAuth();
@@ -141,8 +139,6 @@ export default function App() {
               <Route path="services" element={<AdminServicesPage />} />
               <Route path="schedules" element={<AdminSchedulesPage />} />
               <Route path="vouchers" element={<AdminVouchersPage />} />
-              <Route path="equipment" element={<AdminEquipmentPage />} />
-              <Route path="loyalty" element={<AdminLoyaltyPage />} />
             </Route>
 
             {/* Fallback */}

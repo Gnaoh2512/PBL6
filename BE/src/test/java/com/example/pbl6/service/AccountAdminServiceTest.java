@@ -119,7 +119,7 @@ class AccountAdminServiceTest {
     @Test
     void getAuditLogs_Success() {
         AuditLog log = AuditLog.builder().logId(100L).moduleName("ACCOUNT").build();
-        when(auditLogRepository.findAllByOrderByLoggedAtDesc()).thenReturn(List.of(log));
+        when(auditLogRepository.findAll()).thenReturn(List.of(log));
 
         List<AuditLog> logs = accountAdminService.getAuditLogs();
 
