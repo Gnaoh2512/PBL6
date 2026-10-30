@@ -12,8 +12,10 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
    `roomId` records; conflicting records for one `roomId` make the response invalid.
 4. Reject candidates with a non-available status, mismatched dates/night count, or negative
    amounts. Defensively recheck capacity, optional room type, and inclusive per-night price bounds.
-5. Rank the remaining candidates by exact amenity-token score, then per-night price ascending,
-   then integer `roomId` ascending.
+5. Rank the remaining candidates by exact amenity-token score descending. For equal scores,
+   use `sortBy` as a price tie-breaker: `PRICE_DESC` means per-night price descending;
+   `PRICE_ASC` or omitted `sortBy` means per-night price ascending. If price also ties,
+   use integer `roomId` ascending. Backend response order does not decide the final rank.
 6. Apply `topK` after filtering, deduplication, and ranking.
 
 An empty availability response or an empty eligible set returns `NO_MATCH`. Timeout, connection,
@@ -60,7 +62,7 @@ Request: two guests, room type 2, price from `500000.00` through `1500000.00`, p
 
 The price fields remain `Decimal`. `RecommendationResult.to_contract_json()` serializes them as
 JSON numbers without a binary floating-point conversion and writes dates/timestamps as ISO
-strings. REC-05 must reuse that path (or prove equivalent precision). The pipeline does not
+strings. The HTTP endpoint uses that serialization path. The pipeline does not
 attach a currency or reinterpret `pricePerNight` as a stay total.
 
 ## Responsibility boundary

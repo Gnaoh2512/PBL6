@@ -139,7 +139,7 @@ def test_hard_filter_is_inclusive_and_uses_only_current_response() -> None:
 
     result = run_pipeline(backend)
 
-    assert [room.room_id for room in result.recommendations] == [1, 2]
+    assert {room.room_id for room in result.recommendations} == {1, 2}
     assert {room.room_id for room in result.recommendations}.issubset(
         {room.room_id for room in current_response}
     )
@@ -227,19 +227,36 @@ def test_missing_candidate_amenities_cannot_create_a_match() -> None:
     assert result.recommendations[0].reasons == []
 
 
-def test_ranking_is_independent_of_backend_order_and_uses_tie_breakers() -> None:
+@pytest.mark.parametrize(
+    ("sort_by", "expected"),
+    [
+        ("PRICE_ASC", [10, 20, 25, 30]),
+        ("PRICE_DESC", [10, 25, 30, 20]),
+        (None, [10, 20, 25, 30]),
+    ],
+)
+def test_ranking_is_independent_of_backend_order_and_uses_tie_breakers(
+    sort_by: str | None, expected: list[int]
+) -> None:
     candidates = [
+        candidate(10, price="1400000.00", amenities="Wifi, Minibar"),
         candidate(30, price="800000.00", amenities="Wifi"),
-        candidate(20, price="700000.00", amenities="Wifi"),
-        candidate(10, price="700000.00", amenities="Wifi"),
-        candidate(5, price="600000.00", amenities="Balcony"),
+        candidate(20, price="600000.00", amenities="Wifi"),
+        candidate(25, price="800000.00", amenities="Wifi"),
+        candidate(5, price="500000.00", amenities="Balcony"),
     ]
-    first = run_pipeline(StubBackendClient(candidates))
-    reversed_result = run_pipeline(StubBackendClient(list(reversed(candidates))))
+    payload = recommendation_request(topK=4).model_dump(by_alias=True)
+    if sort_by is None:
+        payload.pop("sortBy")
+    else:
+        payload["sortBy"] = sort_by
+    request = RecommendationRequest.model_validate(payload)
+    first = run_pipeline(StubBackendClient(candidates), request)
+    reversed_result = run_pipeline(StubBackendClient(list(reversed(candidates))), request)
 
-    expected = [10, 20, 30, 5]
     assert [room.room_id for room in first.recommendations] == expected
     assert [room.room_id for room in reversed_result.recommendations] == expected
+    assert first.recommendations[0].score == Decimal("1")
 
 
 def test_identical_duplicate_is_collapsed_before_top_k() -> None:

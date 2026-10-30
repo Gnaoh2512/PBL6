@@ -204,6 +204,10 @@ The full scope and hard-constraint rules are defined in
 }
 ```
 
+The FastAPI implementation ranks by amenity score descending. `sortBy` affects only rooms with
+equal scores: `PRICE_DESC` uses `pricePerNight` descending; `PRICE_ASC` or omitted `sortBy` uses
+`pricePerNight` ascending. Equal prices then use `roomId` ascending. `topK` is applied last.
+
 Backend identifier types are preserved:
 
 - `roomTypeId`: JSON integer matching Java `Integer` in `RoomSearchRequest`.

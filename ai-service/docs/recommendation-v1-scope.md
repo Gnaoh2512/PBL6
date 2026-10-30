@@ -7,6 +7,9 @@
 | Date | `2026-10-09` |
 | Status | Technical proposal awaiting product approval |
 
+The FastAPI recommendation endpoint implements this draft scope locally. Product approval and
+Spring integration remain outstanding.
+
 ## 1. Proposed scope decision
 
 **Recommend concrete available rooms in the single property represented by the current backend.**
@@ -184,8 +187,10 @@ operational input limits; requests beyond them return 422.
 - LLMs may later parse natural language into a validated request, but the typed hard constraints
   and deterministic scorer remain authoritative.
 
-`sortBy` is passed to the backend only as `PRICE_ASC` or `PRICE_DESC`. Recommendation ranking may
-then reorder the valid set by its configured score with a documented deterministic tie-breaker.
+`sortBy` is passed to the backend as `PRICE_ASC` or `PRICE_DESC` when supplied. The AI service
+always ranks valid rooms by amenity score descending first. For equal scores, `PRICE_DESC` sorts
+`pricePerNight` descending; `PRICE_ASC` or omitted `sortBy` sorts it ascending. Equal score and
+price are resolved by `roomId` ascending. Backend response order does not override this rule.
 
 ## 9. `topK`
 
@@ -224,7 +229,7 @@ REC-01 documentation is complete when:
 - product-open decisions are labeled as proposals;
 - no LLM/vector data is authoritative for eligibility, price, or availability.
 
-Product acceptance is still required before implementation starts.
+Product acceptance is still required before this draft becomes an approved integration contract.
 
 ## 12. Backend source index
 

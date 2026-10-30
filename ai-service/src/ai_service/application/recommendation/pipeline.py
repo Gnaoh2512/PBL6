@@ -12,6 +12,7 @@ from ai_service.application.recommendation.models import (
     RecommendationRoomType,
     RecommendationStatus,
     RecommendedRoom,
+    SortBy,
 )
 from ai_service.application.request_id import validate_request_id
 from ai_service.infrastructure.backend.errors import BackendInvalidResponseError
@@ -147,7 +148,14 @@ class RecommendationPipeline:
             RecommendationPipeline._to_recommendation(candidate, requested)
             for candidate in candidates
         ]
-        ranked.sort(key=lambda room: (-room.score, room.price_per_night, room.room_id))
+        price_direction = -1 if request.sort_by is SortBy.PRICE_DESC else 1
+        ranked.sort(
+            key=lambda room: (
+                -room.score,
+                price_direction * room.price_per_night,
+                room.room_id,
+            )
+        )
         return ranked[: request.top_k]
 
     @staticmethod
