@@ -7,6 +7,9 @@ import java.time.LocalTime;
 
 @Data
 public class ShiftRequest {
+    private String shiftName;
+    private String description;
+
     @NotNull(message = "Start time is required")
     private LocalTime startTime;
 

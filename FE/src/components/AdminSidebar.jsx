@@ -11,7 +11,14 @@ export default function AdminSidebar() {
           className={({ isActive }) => `hc-sidebar-link ${isActive ? 'active' : ''}`}
         >
           <i className="bi bi-people"></i>
-          <span>Tài khoản & Audit Log</span>
+          <span>Tài khoản người dùng</span>
+        </NavLink>
+        <NavLink 
+          to="/admin/history" 
+          className={({ isActive }) => `hc-sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <i className="bi bi-clock-history"></i>
+          <span>Nhật ký hoạt động</span>
         </NavLink>
         <NavLink 
           to="/admin/rooms" 
@@ -40,6 +47,20 @@ export default function AdminSidebar() {
         >
           <i className="bi bi-ticket-perforated"></i>
           <span>Quản lý Voucher</span>
+        </NavLink>
+        <NavLink 
+          to="/admin/equipment" 
+          className={({ isActive }) => `hc-sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <i className="bi bi-cpu"></i>
+          <span>Thiết bị & Tài sản</span>
+        </NavLink>
+        <NavLink 
+          to="/admin/loyalty" 
+          className={({ isActive }) => `hc-sidebar-link ${isActive ? 'active' : ''}`}
+        >
+          <i className="bi bi-gem"></i>
+          <span>Hội viên & Loyalty</span>
         </NavLink>
       </nav>
 

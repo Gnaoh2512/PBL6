@@ -5,7 +5,6 @@ import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.AuditLog;
 import com.example.pbl6.entity.Role;
 import com.example.pbl6.repository.AccountRepository;
-import com.example.pbl6.repository.AuditLogRepository;
 import com.example.pbl6.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,7 +19,7 @@ public class AccountAdminServiceImpl implements AccountAdminService {
 
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogService auditLogService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -55,11 +54,16 @@ public class AccountAdminServiceImpl implements AccountAdminService {
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
                 .build();
 
-        return accountRepository.save(account);
+        Account saved = accountRepository.save(account);
+
+        auditLogService.log("QUẢN TRỊ TÀI KHOẢN", "CREATE", "account", Long.valueOf(saved.getAccountId()),
+                "Tạo tài khoản mới: " + saved.getUsername() + " (Họ tên: " + saved.getFullName() + ", Vai trò: " + (role != null ? role.getRoleName() : roleCode) + ")");
+
+        return saved;
     }
 
     @Override
     public List<AuditLog> getAuditLogs() {
-        return auditLogRepository.findAll();
+        return auditLogService.getAllAuditLogs();
     }
 }

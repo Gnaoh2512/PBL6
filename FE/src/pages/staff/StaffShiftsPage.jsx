@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import Modal from '../../components/Modal';
 import StatCard from '../../components/StatCard';
 import { apiCall, formatVND, formatDateTime } from '../../services/api';
+import { Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function StaffShiftsPage() {
   const { addToast } = useToast();
+  const { hasRole } = useAuth();
   const [currentShift, setCurrentShift] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,6 +21,7 @@ export default function StaffShiftsPage() {
   const [closeModalOpen, setCloseModalOpen] = useState(false);
   const [actualBalance, setActualBalance] = useState('');
   const [closeNotes, setCloseNotes] = useState('');
+  const [receivedBy, setReceivedBy] = useState('');
   const [closing, setClosing] = useState(false);
 
   useEffect(() => {
@@ -73,6 +77,7 @@ export default function StaffShiftsPage() {
         method: 'POST',
         body: {
           closingCashActual: parseFloat(actualBalance) || 0,
+          receivedBy: receivedBy ? parseInt(receivedBy) : null,
           handoverNote: closeNotes
         }
       });
@@ -96,9 +101,22 @@ export default function StaffShiftsPage() {
         <div className="hc-hero-badge" style={{ marginBottom: '8px' }}>
           <i className="bi bi-cash-stack"></i> NGHIỆP VỤ THU NGÂN
         </div>
-        <h2>Quản Lý Ca Làm Việc & Thu Ngân</h2>
+        <h2>Quản Lý Ca Thu Ngân &amp; Két Tiền</h2>
         <p>Bắt buộc mở ca trước khi tiếp nhận thanh toán phòng, cọc online hoặc check-in Walk-in</p>
       </div>
+
+      {hasRole(['ADMIN', 'MANAGER']) && (
+        <div className="hc-alert hc-alert-info" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <i className="bi bi-info-circle-fill" style={{ marginRight: '8px' }}></i>
+            <span>Bạn muốn xem hoặc phân công lịch trực nhân viên? Chuyển đến trang <strong>Ca &amp; Lịch làm việc</strong>.</span>
+          </div>
+          <Link to="/admin/schedules" className="hc-btn hc-btn-primary hc-btn-sm" style={{ whiteSpace: 'nowrap' }}>
+            <i className="bi bi-calendar-week"></i> Đến Lịch làm việc &rarr;
+          </Link>
+        </div>
+      )}
+
 
       {loading ? (
         <div className="hc-loading-spinner">
@@ -313,6 +331,19 @@ export default function StaffShiftsPage() {
               value={closeNotes}
               onChange={(e) => setCloseNotes(e.target.value)}
             ></textarea>
+          </div>
+
+          <div className="hc-form-group">
+            <label className="hc-label">ID Nhân viên tiếp nhận (Bàn giao cho)</label>
+            <input
+              type="number"
+              className="hc-input"
+              placeholder="Nhập accountId nhân viên ca tiếp theo (tùy chọn)"
+              value={receivedBy}
+              onChange={(e) => setReceivedBy(e.target.value)}
+              min="1"
+            />
+            <div className="hc-help-text">Nếu không nhập, hệ thống sẽ lưu trống.</div>
           </div>
         </form>
       </Modal>

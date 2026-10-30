@@ -32,8 +32,10 @@ CREATE TABLE IF NOT EXISTS service_category (
 
 CREATE TABLE IF NOT EXISTS shift (
     shift_id INT AUTO_INCREMENT PRIMARY KEY,
+    shift_name VARCHAR(100),
     start_time TIME,
-    end_time TIME
+    end_time TIME,
+    description TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS loyalty_tier (
@@ -106,6 +108,7 @@ CREATE TABLE IF NOT EXISTS work_schedule (
     account_id INT,
     shift_id INT,
     work_date DATE,
+    notes TEXT,
     FOREIGN KEY (account_id) REFERENCES account(account_id) ON DELETE CASCADE,
     FOREIGN KEY (shift_id) REFERENCES shift(shift_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -117,8 +120,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action_type VARCHAR(50),
     target_table VARCHAR(100),
     target_id BIGINT,
-    old_value JSON,
-    new_value JSON,
+    old_value TEXT,
+    new_value TEXT,
     ip_address VARCHAR(45),
     logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES account(account_id) ON DELETE SET NULL
@@ -481,11 +484,11 @@ INSERT INTO service (category_id, service_name, unit_price, unit, is_active) VAL
 ON DUPLICATE KEY UPDATE service_name = VALUES(service_name);
 
 -- 6.8. Shifts
-INSERT INTO shift (start_time, end_time) VALUES
-('06:00:00', '14:00:00'),
-('14:00:00', '22:00:00'),
-('22:00:00', '06:00:00')
-ON DUPLICATE KEY UPDATE start_time = VALUES(start_time);
+INSERT INTO shift (shift_name, start_time, end_time, description) VALUES
+('Ca Sáng (Morning)', '06:00:00', '14:00:00', 'Ca làm việc buổi sáng (06:00 - 14:00)'),
+('Ca Chiều (Afternoon)', '14:00:00', '22:00:00', 'Ca làm việc buổi chiều (14:00 - 22:00)'),
+('Ca Đêm (Night)', '22:00:00', '06:00:00', 'Ca làm việc ban đêm (22:00 - 06:00)')
+ON DUPLICATE KEY UPDATE shift_name = VALUES(shift_name), description = VALUES(description);
 
 -- 6.9. Vouchers
 INSERT INTO voucher (created_by, voucher_code, voucher_name, description, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, usage_limit_per_customer, valid_from, valid_to, is_active) VALUES

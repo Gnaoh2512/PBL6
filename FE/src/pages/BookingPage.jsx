@@ -97,7 +97,8 @@ export default function BookingPage() {
   const depositRequired = Math.round(finalTotal * 0.3);
 
   const handleApplyVoucher = async () => {
-    if (!voucherCodeInput.trim()) {
+    const cleanCode = voucherCodeInput.trim().toUpperCase();
+    if (!cleanCode) {
       addToast("Vui lòng nhập mã voucher", "warning");
       return;
     }
@@ -106,17 +107,22 @@ export default function BookingPage() {
       const res = await apiCall("/api/public/vouchers/apply", {
         method: "POST",
         body: {
-          voucherCode: voucherCodeInput.trim().toUpperCase(),
+          code: cleanCode,
+          voucherCode: cleanCode,
           orderAmount: subtotal,
         },
       });
-      if (res && res.success) {
+      if (res && res.success && res.data && res.data.isValid !== false) {
         setAppliedVoucher(res.data);
-        addToast(`Áp dụng thành công voucher ${res.data.voucherCode}! Giảm ${formatVND(res.data.discountAmount)}`, "success");
+        const codeDisplay = res.data.voucherCode || res.data.code || cleanCode;
+        addToast(`Áp dụng thành công voucher ${codeDisplay}! Giảm ${formatVND(res.data.discountAmount || 0)}`, "success");
+      } else {
+        setAppliedVoucher(null);
+        addToast(res?.data?.message || res?.message || "Mã voucher không hợp lệ hoặc không đủ điều kiện", "error");
       }
     } catch (err) {
       setAppliedVoucher(null);
-      addToast(err.message || "Mã voucher không hợp lệ", "error");
+      addToast(err.message || "Mã voucher không hợp lệ hoặc không đủ điều kiện áp dụng", "error");
     } finally {
       setVoucherLoading(false);
     }
@@ -165,7 +171,7 @@ export default function BookingPage() {
       nationality: nationality || "Việt Nam",
       idType,
       idNumber: idNumber.trim() || null,
-      voucherCode: appliedVoucher ? appliedVoucher.voucherCode : voucherCodeInput.trim() || null,
+      voucherCode: appliedVoucher ? (appliedVoucher.voucherCode || appliedVoucher.code) : (voucherCodeInput.trim().toUpperCase() || null),
       note: note.trim() || null,
     };
 
@@ -441,8 +447,19 @@ export default function BookingPage() {
                       </button>
                     </div>
                     {appliedVoucher && (
-                      <div style={{ marginTop: "10px", fontSize: "13px", color: "var(--hc-success)", fontWeight: 600 }}>
-                        <i className="bi bi-check-circle-fill"></i> {appliedVoucher.voucherName} (-{formatVND(appliedVoucher.discountAmount)})
+                      <div style={{ marginTop: "10px", fontSize: "13px", color: "var(--hc-success)", fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span>
+                          <i className="bi bi-check-circle-fill"></i> {appliedVoucher.voucherName} (-{formatVND(appliedVoucher.discountAmount)})
+                        </span>
+                        <button
+                          type="button"
+                          className="hc-btn hc-btn-outline hc-btn-sm"
+                          style={{ padding: "2px 8px", fontSize: "11px", color: "var(--hc-error)", borderColor: "var(--hc-error)" }}
+                          onClick={() => { setAppliedVoucher(null); setVoucherCodeInput(""); }}
+                          title="Hủy mã ưu đãi"
+                        >
+                          Hủy dùng
+                        </button>
                       </div>
                     )}
                   </div>

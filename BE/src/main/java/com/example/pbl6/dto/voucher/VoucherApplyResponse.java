@@ -18,10 +18,15 @@ public class VoucherApplyResponse {
     private boolean isValid;
 
     private String code;
+    private String voucherCode;
     private String voucherName;
     private BigDecimal originalAmount;
     private BigDecimal discountAmount;
     private BigDecimal finalAmount;
     private BigDecimal newDepositRequired;
     private String message;
+
+    public String getVoucherCode() {
+        return voucherCode != null ? voucherCode : code;
+    }
 }

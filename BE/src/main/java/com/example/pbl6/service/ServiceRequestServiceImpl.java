@@ -2,9 +2,19 @@ package com.example.pbl6.service;
 
 import com.example.pbl6.dto.servicerequest.CreateServiceRequestDto;
 import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
-import com.example.pbl6.entity.*;
+import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.Booking;
+import com.example.pbl6.entity.Customer;
+import com.example.pbl6.entity.Room;
+import com.example.pbl6.entity.ServiceRequest;
 import com.example.pbl6.exception.ResourceNotFoundException;
-import com.example.pbl6.repository.*;
+import com.example.pbl6.repository.AccountRepository;
+import com.example.pbl6.repository.BookingRepository;
+import com.example.pbl6.repository.CustomerRepository;
+import com.example.pbl6.repository.InvoiceRepository;
+import com.example.pbl6.repository.RoomRepository;
+import com.example.pbl6.repository.ServiceRepository;
+import com.example.pbl6.repository.ServiceRequestRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +37,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
     private final InvoiceRepository invoiceRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -67,6 +78,10 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
         ServiceRequest saved = serviceRequestRepository.save(request);
         log.info("Created service request #{} for room {}", saved.getServiceRequestId(), room.getRoomNumber());
+
+        auditLogService.log(account, "YÊU CẦU DỊCH VỤ", "ORDER", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Đặt dịch vụ: " + service.getServiceName() + " x" + qty + " cho phòng " + room.getRoomNumber() + " (Đơn đặt: " + booking.getBookingCode() + ")");
+
         return ServiceRequestResponse.fromEntity(saved);
     }
 
@@ -94,7 +109,12 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
 
         request.setStatus("CANCELED");
-        return ServiceRequestResponse.fromEntity(serviceRequestRepository.save(request));
+        ServiceRequest saved = serviceRequestRepository.save(request);
+
+        auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Hủy yêu cầu dịch vụ #" + requestId + " bởi " + username);
+
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -120,7 +140,12 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
         request.setAssignedTo(staff);
         request.setStatus("IN_PROGRESS");
-        return ServiceRequestResponse.fromEntity(serviceRequestRepository.save(request));
+        ServiceRequest saved = serviceRequestRepository.save(request);
+
+        auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Nhân viên " + staff.getFullName() + " (" + staffUsername + ") tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
+
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -139,6 +164,11 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                     .ifPresent(request::setInvoice);
         }
 
-        return ServiceRequestResponse.fromEntity(serviceRequestRepository.save(request));
+        ServiceRequest saved = serviceRequestRepository.save(request);
+
+        auditLogService.log("YÊU CẦU DỊCH VỤ", "COMPLETE", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " bởi nhân viên " + staffUsername);
+
+        return ServiceRequestResponse.fromEntity(saved);
     }
 }

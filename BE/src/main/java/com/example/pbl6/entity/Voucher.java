@@ -70,27 +70,33 @@ public class Voucher {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    // Helper methods for backward compatibility
+    // Helper methods for backward compatibility — @Transient prevents Hibernate from treating 'code' as a separate DB column
+    @Transient
     public String getCode() {
         return voucherCode;
     }
 
+    @Transient
     public void setCode(String code) {
         this.voucherCode = code;
     }
 
+    @Transient
     public LocalDate getStartDate() {
         return validFrom != null ? validFrom.toLocalDate() : null;
     }
 
+    @Transient
     public void setStartDate(LocalDate startDate) {
         this.validFrom = startDate != null ? startDate.atStartOfDay() : null;
     }
 
+    @Transient
     public LocalDate getEndDate() {
         return validTo != null ? validTo.toLocalDate() : null;
     }
 
+    @Transient
     public void setEndDate(LocalDate endDate) {
         this.validTo = endDate != null ? endDate.atTime(23, 59, 59) : null;
     }

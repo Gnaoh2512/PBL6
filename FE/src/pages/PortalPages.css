@@ -688,3 +688,83 @@
     padding: 25px;
   }
 }
+
+/* Warning action button */
+.portal-action.warning {
+  color: #92400e;
+  border-color: #f59e0b;
+  background: #fef3c7;
+}
+.portal-action.warning:hover {
+  background: #fde68a;
+}
+
+/* Portal Modal */
+.portal-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(2px);
+  padding: 20px;
+}
+.portal-modal {
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border-radius: 4px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+.portal-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #e3e9e7;
+}
+.portal-modal-header h2 {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: #233b40;
+}
+.portal-modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #687b80;
+  cursor: pointer;
+}
+.portal-modal-body {
+  padding: 20px 24px;
+  font-size: 13px;
+  color: #526268;
+  line-height: 1.6;
+}
+.portal-modal-body textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d7e0de;
+  border-radius: 3px;
+  font-size: 13px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.portal-label {
+  color: #63777d;
+  font-size: 11px;
+  font-weight: 600;
+}
+.portal-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 24px 20px;
+  border-top: 1px solid #e3e9e7;
+}
