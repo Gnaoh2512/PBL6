@@ -1,5 +1,9 @@
 # AI Service
 
+> Historical design draft. See [architecture.md](architecture.md) and
+> [ai-integration-v1.md](contracts/ai-integration-v1.md) for the current service.
+> The stack, layout, and environment examples below are not runtime instructions.
+
 AI Service for the PBL6 Hotel Booking System.
 
 The service is responsible for AI-related capabilities such as:

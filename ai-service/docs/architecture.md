@@ -26,8 +26,7 @@ return a backend-unavailable error.
 
 ## Package responsibilities
 
-- `domain`: framework-independent RAG and recommendation rules when those features are added.
-- `application`: use cases that coordinate domain interfaces.
+- `application`: recommendation models and the deterministic ranking pipeline.
 - `infrastructure`: backend HTTP client and logging; vector store and provider adapters are future work.
 - `presentation`: FastAPI routers and HTTP schemas.
 - `config`: validated environment-backed settings.

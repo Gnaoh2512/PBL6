@@ -42,7 +42,7 @@ Copy-Item .env.example .env
 Set `AI_SERVICE_AUTH_TOKEN` in `.env` to a long, random, private string before calling the
 recommendation endpoint. `BACKEND_API_URL` must point to the running Spring backend; this repository's
 `BE` project uses port `9090` by default. `.env` is ignored by Git. Do not place credentials in
-`.env.example`. `BACKEND_INTERNAL_API_KEY` remains unused because the availability route is public.
+`.env.example`. The availability route is public, so no outbound backend credential is needed.
 
 Available bootstrap settings:
 
@@ -50,19 +50,18 @@ Available bootstrap settings:
 |---|---|---|
 | `APP_NAME` | Service name | `ai-service` |
 | `APP_ENV` | `development`, `test`, `staging`, or `production` | `development` |
-| `APP_HOST` | Bind host | `127.0.0.1` |
-| `APP_PORT` | Bind port | `8006` |
 | `LOG_LEVEL` | Python logging level | `INFO` |
 | `BACKEND_API_URL` | Existing Spring Boot backend | `http://localhost:9090` |
 | `BACKEND_REQUEST_TIMEOUT_SECONDS` | Availability client timeout | `5` |
 | `AI_SERVICE_AUTH_TOKEN` | Required inbound Bearer token for recommendations | empty until set |
-| `BACKEND_INTERNAL_API_KEY` | Reserved for a future backend credential | empty |
 
 ## Run the service
 
 ```powershell
 python -m uvicorn ai_service.main:app --host 127.0.0.1 --port 8006
 ```
+
+Use Uvicorn's `--host` and `--port` options to change the bind address and port.
 
 `GET /health` does not contact the backend, a database, an LLM, or a vector store.
 
@@ -120,28 +119,7 @@ python -m pytest
 python -m ruff check .
 ```
 
-## Current layout
-
-```text
-ai-service/
-|-- docs/
-|   |-- api-contracts.md
-|   |-- architecture.md
-|   `-- design-blueprint.md
-|-- knowledge/
-|-- scripts/
-|-- src/ai_service/
-|   |-- application/
-|   |-- config/
-|   |-- domain/
-|   |-- infrastructure/
-|   |-- presentation/http/
-|   `-- main.py
-|-- tests/
-|-- .env.example
-|-- .gitignore
-`-- pyproject.toml
-```
+## Documentation
 
 - [Architecture and service boundaries](docs/architecture.md)
 - [Versioned AI integration contract](docs/contracts/ai-integration-v1.md)

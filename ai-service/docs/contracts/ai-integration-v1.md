@@ -371,7 +371,6 @@ Environment variable names for the implementation task:
 | FastAPI | `AI_SERVICE_AUTH_TOKEN` | Expected inbound opaque token |
 | FastAPI | `BACKEND_API_URL` | Existing Spring base URL; already present in bootstrap settings |
 | FastAPI | `BACKEND_REQUEST_TIMEOUT_SECONDS` | Backend read timeout; already present |
-| FastAPI | `BACKEND_INTERNAL_API_KEY` | Reserved; unused until backend defines an internal API contract |
 
 Secrets must be injected by the runtime/secret manager, never committed to `.env.example`, docs,
 logs, frontend bundles, or error bodies. The same literal token must not be reused for JWT signing.
@@ -397,9 +396,9 @@ V1 reuses existing public read APIs; no direct database access:
 The POST availability body is `RoomSearchRequest`; the response is
 `ApiResponse<List<AvailableRoomResponse>>`. FastAPI must unwrap `data` and validate the DTO shape.
 
-These routes are currently permitted by `/api/public/**`, so `BACKEND_INTERNAL_API_KEY` is not
-used by v1. If the backend later introduces an internal read endpoint, it must be documented and
-authorized separately; this contract does not invent one.
+These routes are currently permitted by `/api/public/**`, so v1 needs no outbound backend
+credential. If the backend later introduces an internal read endpoint, its credential must be
+documented and authorized separately.
 
 Direct MySQL access is not justified: it would duplicate availability, pricing, validation, and
 authorization rules. A future bulk knowledge export would require an approved read-only API or,
