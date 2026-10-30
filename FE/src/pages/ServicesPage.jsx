@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Modal from "../components/Modal";
 import { apiCall, formatVND, formatDateTime, getCategoryName } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
+import "./ServicesPage.css";
+
+// "Cà phê" -> "ca phe", so searching works with or without Vietnamese accents.
+const normalizeText = (value = "") =>
+  String(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .trim();
 
 export default function ServicesPage({ portal = false }) {
   const [searchParams] = useSearchParams();
@@ -14,6 +24,7 @@ export default function ServicesPage({ portal = false }) {
   const [bookingCode, setBookingCode] = useState(queryCode);
   const [services, setServices] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [searchTerm, setSearchTerm] = useState("");
   const [loadingServices, setLoadingServices] = useState(true);
 
   // Folio state
@@ -76,9 +87,11 @@ export default function ServicesPage({ portal = false }) {
 
   const categories = ["ALL", ...Array.from(new Set(services.map((s) => getCategoryName(s.category)).filter(Boolean)))];
 
+  const normalizedSearch = normalizeText(searchTerm);
   const filteredServices = services.filter((s) => {
-    if (selectedCategory === "ALL") return true;
-    return getCategoryName(s.category) === selectedCategory;
+    if (selectedCategory !== "ALL" && getCategoryName(s.category) !== selectedCategory) return false;
+    if (!normalizedSearch) return true;
+    return normalizeText(`${s.serviceName || ""} ${getCategoryName(s.category) || ""} ${s.unit || ""}`).includes(normalizedSearch);
   });
 
   const handleOpenOrder = (s) => {
@@ -126,9 +139,16 @@ export default function ServicesPage({ portal = false }) {
 
       <main className={`hc-page services-experience ${portal ? "portal-commerce" : ""}`}>
         <div className="hc-container">
-          <div className="hc-page-title">
-            <h2>Dịch Vụ Lưu Trú & Hóa Đơn Trực Tiếp (Live Folio)</h2>
-            <p>Gọi món ăn, nước uống, giặt ủi và theo dõi chi tiết hóa đơn phòng theo thời gian thực</p>
+          <div className={`hc-page-title ${portal ? "" : "svc-title-row"}`}>
+            <div>
+              <h2>Dịch Vụ Lưu Trú & Hóa Đơn Trực Tiếp</h2>
+              <p>Gọi món ăn, nước uống, giặt ủi và theo dõi chi tiết hóa đơn phòng theo thời gian thực</p>
+            </div>
+            {!portal && (
+              <Link to="/" className="hc-btn hc-btn-outline hc-btn-sm">
+                <i className="bi bi-house-door"></i> Trở về trang chủ
+              </Link>
+            )}
           </div>
 
           {/* Booking code input bar */}
@@ -172,16 +192,34 @@ export default function ServicesPage({ portal = false }) {
                 </div>
 
                 <div className="hc-card-body">
-                  {/* Category Filter Pills */}
-                  {categories.length > 1 && (
-                    <div className="hc-tab-group">
-                      {categories.map((c) => (
-                        <button key={c} className={`hc-tab-btn ${selectedCategory === c ? "active" : ""}`} onClick={() => setSelectedCategory(c)}>
-                          {c === "ALL" ? "Tất cả" : c}
+                  {/* Category filter pills (left) + menu search (right) */}
+                  <div className="svc-filter-bar">
+                    {categories.length > 1 && (
+                      <div className="hc-tab-group">
+                        {categories.map((c) => (
+                          <button key={c} className={`hc-tab-btn ${selectedCategory === c ? "active" : ""}`} onClick={() => setSelectedCategory(c)}>
+                            {c === "ALL" ? "Tất cả" : c}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="svc-search">
+                      <i className="bi bi-search svc-search-icon" aria-hidden="true"></i>
+                      <input
+                        type="search"
+                        className="hc-input svc-search-input"
+                        placeholder="Tìm món, dịch vụ..."
+                        aria-label="Tìm trong menu dịch vụ"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                      {searchTerm && (
+                        <button type="button" className="svc-search-clear" aria-label="Xóa tìm kiếm" onClick={() => setSearchTerm("")}>
+                          <i className="bi bi-x-lg"></i>
                         </button>
-                      ))}
+                      )}
                     </div>
-                  )}
+                  </div>
 
                   {loadingServices ? (
                     <div className="hc-loading-spinner">
@@ -190,7 +228,7 @@ export default function ServicesPage({ portal = false }) {
                   ) : filteredServices.length === 0 ? (
                     <div className="hc-empty-state">
                       <i className="bi bi-cup-hot"></i>
-                      <p>Chưa có dịch vụ nào trong danh mục này.</p>
+                      <p>{searchTerm.trim() ? `Không tìm thấy dịch vụ nào khớp với "${searchTerm.trim()}".` : "Chưa có dịch vụ nào trong danh mục này."}</p>
                     </div>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -226,13 +264,13 @@ export default function ServicesPage({ portal = false }) {
               </div>
             </div>
 
-            {/* Right: Live Folio Breakdown */}
+            {/* Right: Folio breakdown */}
             <div>
               <div className="hc-card">
                 <div className="hc-card-header">
                   <div className="hc-card-title">
                     <i className="bi bi-receipt text-primary" style={{ marginRight: "8px" }}></i>
-                    Bảng Kê Hóa Đơn (Live Folio)
+                    Bảng Kê Hóa Đơn
                   </div>
                   {folio && (
                     <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" onClick={() => loadFolio()} title="Làm mới hóa đơn">

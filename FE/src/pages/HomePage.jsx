@@ -1,7 +1,10 @@
-import { useCallback, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
+import DatePicker from "../components/DatePicker";
+import SelectMenu from "../components/SelectMenu";
+import { addDaysISO } from "../components/dateUtils";
 import { useToast } from "../contexts/ToastContext";
 import "./HomePage.css";
 
@@ -167,12 +170,88 @@ function Icon({ name, size = 18 }) {
   );
 }
 
+const GUEST_OPTIONS = [1, 2, 3, 4, 5, 6].map((count) => ({ value: String(count), label: `${count} khách` }));
+
 function getToday() {
   const today = new Date();
   return new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
+// [selector, extra class, stagger children?]
+const REVEAL_TARGETS = [
+  [".resort-booking-form", "reveal-zoom"],
+  [".resort-intro > div:first-child", "reveal-left"],
+  [".resort-intro > div:last-child", "reveal-right"],
+  [".resort-section-heading > div", "reveal-left"],
+  [".resort-section-heading > p", "reveal-right"],
+  [".resort-bento-card", "reveal-zoom"],
+  [".resort-room-card", ""],
+  [".all-rooms", ""],
+  [".experience-photo", "reveal-left"],
+  [".experience-copy > *", ""],
+  [".resort-service-card", ""],
+  [".loyalty-photo", "reveal-left"],
+  [".loyalty-copy > *", ""],
+  [".resort-offers > *", ""],
+];
+
+function useScrollReveal(rootRef) {
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const items = [];
+    REVEAL_TARGETS.forEach(([selector, variant]) => {
+      root.querySelectorAll(selector).forEach((el, i) => {
+        if (el.classList.contains("reveal")) return;
+        el.classList.add("reveal");
+        if (variant) el.classList.add(variant);
+        // stagger siblings that share a selector (cards, copy lines, ...)
+        el.style.setProperty("--reveal-delay", `${(i % 6) * 0.1}s`);
+        items.push(el);
+      });
+    });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -6% 0px" },
+    );
+    items.forEach((el) => observer.observe(el));
+    return () => {
+      observer.disconnect();
+      items.forEach((el) => {
+        el.classList.remove("reveal", "reveal-left", "reveal-right", "reveal-zoom", "is-visible");
+        el.style.removeProperty("--reveal-delay");
+      });
+    };
+  }, [rootRef]);
+}
+
 export default function HomePage() {
+  const rootRef = useRef(null);
+  const location = useLocation();
+  useScrollReveal(rootRef);
+
+  // Scroll to the section named in the URL hash (works from the navbar, from
+  // other pages, and when the same link is clicked twice).
+  useEffect(() => {
+    const id = decodeURIComponent(location.hash.replace("#", ""));
+    const timer = setTimeout(() => {
+      if (!id) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      // The booking bar is centred on screen; every other section starts under the navbar.
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: id === "stay" ? "center" : "start" });
+    }, 60);
+    return () => clearTimeout(timer);
+  }, [location.hash, location.key]);
+
   const navigate = useNavigate();
   const { addToast } = useToast();
   const [checkInDate, setCheckInDate] = useState(getToday);
@@ -208,7 +287,7 @@ export default function HomePage() {
   const rooms = featuredRooms;
 
   return (
-    <div className="resort-home">
+    <div className="resort-home" ref={rootRef}>
       <Navbar variant="resort" />
       <section className="resort-hero">
         <img src={photos.hero} alt="Hồ bơi vô cực tại khu nghỉ dưỡng Azure Bay hướng ra biển" />
@@ -220,40 +299,34 @@ export default function HomePage() {
             <em>khiến bạn sống chậm lại.</em>
           </h1>
         </div>
-        <a className="resort-scroll-cue" href="#discover">
+        <Link className="resort-scroll-cue" to={{ pathname: "/", hash: "#discover" }}>
           <span /> KHÁM PHÁ AZURE BAY
-        </a>
+        </Link>
       </section>
 
       <section className="resort-booking" id="stay">
         <div className="resort-booking-form">
-          <label className="resort-date-field">
+          <div className="resort-date-field" data-fp-anchor>
             <span>NHẬN PHÒNG</span>
             <div>
               <Icon name="calendar" />
-              <input aria-label="Ngày nhận phòng" type="date" min={getToday()} value={checkInDate} onChange={(event) => updateCheckIn(event.target.value)} />
+              <DatePicker ariaLabel="Ngày nhận phòng" min={getToday()} value={checkInDate} onChange={updateCheckIn} />
             </div>
-          </label>
-          <label className="resort-date-field">
+          </div>
+          <div className="resort-date-field" data-fp-anchor>
             <span>TRẢ PHÒNG</span>
             <div>
               <Icon name="calendar" />
-              <input aria-label="Ngày trả phòng" type="date" min={checkInDate} value={checkOutDate} onChange={(event) => setCheckOutDate(event.target.value)} />
+              <DatePicker ariaLabel="Ngày trả phòng" min={addDaysISO(checkInDate, 1)} value={checkOutDate} onChange={setCheckOutDate} />
             </div>
-          </label>
-          <label className="resort-date-field guests-field">
+          </div>
+          <div className="resort-date-field guests-field" data-fp-anchor>
             <span>KHÁCH</span>
             <div>
               <Icon name="users" />
-              <select aria-label="Số khách" value={guestCount} onChange={(event) => setGuestCount(Number(event.target.value))}>
-                {[1, 2, 3, 4, 5, 6].map((count) => (
-                  <option key={count} value={count}>
-                    {count} khách
-                  </option>
-                ))}
-              </select>
+              <SelectMenu ariaLabel="Số khách" icon="bi-people" value={String(guestCount)} onChange={(value) => setGuestCount(Number(value))} options={GUEST_OPTIONS} />
             </div>
-          </label>
+          </div>
           <button className="resort-button primary search-rooms" onClick={searchRooms}>
             <span className="bi bi-search" /> Kiểm tra phòng trống
           </button>
@@ -268,9 +341,9 @@ export default function HomePage() {
           </div>
           <div>
             <p>Nằm nép mình bên đường cong kín gió của bờ tây Phú Quốc, Azure Bay là chốn nghỉ dưỡng boutique hòa mình vào cảnh sắc. Nơi đây, mỗi kỳ nghỉ đều chuyển động theo nhịp biển.</p>
-            <a href="#experiences">
+            <Link to={{ pathname: "/", hash: "#experiences" }}>
               Câu chuyện của chúng tôi <Icon name="arrow" size={17} />
-            </a>
+            </Link>
           </div>
         </section>
 
@@ -363,15 +436,15 @@ export default function HomePage() {
             </h2>
             <p>Theo con nước bằng thuyền kayak, quây quần bên bàn tiệc của bếp trưởng, hay để một buổi chiều trôi êm tại spa. Mỗi trải nghiệm đều đậm bản sắc địa phương, tinh tế và thong thả.</p>
             <div className="experience-list">
-              <a href="#services">
+              <Link to={{ pathname: "/", hash: "#services" }}>
                 <i>01</i> Hành trình riêng khám phá đảo <Icon name="arrow" />
-              </a>
-              <a href="#services">
+              </Link>
+              <Link to={{ pathname: "/", hash: "#services" }}>
                 <i>02</i> Bàn tiệc ven biển <Icon name="arrow" />
-              </a>
-              <a href="#services">
+              </Link>
+              <Link to={{ pathname: "/", hash: "#services" }}>
                 <i>03</i> Spa Sóng & Tĩnh Lặng <Icon name="arrow" />
-              </a>
+              </Link>
             </div>
           </div>
         </section>
@@ -393,7 +466,7 @@ export default function HomePage() {
                 <div>
                   <h3>{title}</h3>
                   <p>{copy}</p>
-                  <Link to="/services">
+                  <Link to={{ pathname: "/", hash: "#experiences" }}>
                     {link} <Icon name="arrow" size={15} />
                   </Link>
                 </div>
