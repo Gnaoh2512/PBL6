@@ -1,20 +1,25 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Modal from "../components/Modal";
 import { apiCall, formatVND, getAuthUser } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
+import DatePicker from "../components/DatePicker";
+import SelectMenu from "../components/SelectMenu";
+import { addDaysISO, todayISO } from "../components/dateUtils";
+import "./BookingPage.css";
 
-function getTodayStr() {
-  return new Date().toISOString().split("T")[0];
-}
+const getTodayStr = todayISO;
+const getTomorrowStr = () => addDaysISO(todayISO(), 1);
 
-function getTomorrowStr() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().split("T")[0];
-}
+const ID_TYPE_OPTIONS = [
+  { value: "CCCD", label: "CCCD / Căn cước" },
+  { value: "PASSPORT", label: "Hộ chiếu (Passport)" },
+  { value: "OTHER", label: "Khác" },
+];
+
+const GUEST_OPTIONS = [1, 2, 3, 4, 5, 6].map((count) => ({ value: String(count), label: `${count} khách` }));
 
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
@@ -54,6 +59,31 @@ export default function BookingPage() {
   const [qrImageFailed, setQrImageFailed] = useState(false);
 
   const pollingRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Make the page content exactly as wide (and aligned) as the navbar content.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    const navInner = document.querySelector("header.hc-navbar .hc-container");
+    if (!el || !navInner) return undefined;
+    const sync = () => {
+      const style = getComputedStyle(navInner);
+      const rect = navInner.getBoundingClientRect();
+      const padLeft = parseFloat(style.paddingLeft) || 0;
+      const padRight = parseFloat(style.paddingRight) || 0;
+      const parentLeft = el.parentElement.getBoundingClientRect().left;
+      el.style.setProperty("--bk-content-width", `${rect.width - padLeft - padRight}px`);
+      el.style.setProperty("--bk-content-offset", `${rect.left + padLeft - parentLeft}px`);
+    };
+    sync();
+    window.addEventListener("resize", sync);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
+    observer?.observe(navInner);
+    return () => {
+      window.removeEventListener("resize", sync);
+      observer?.disconnect();
+    };
+  }, []);
 
   const loadRooms = useCallback(async () => {
     setRoomsLoading(true);
@@ -197,60 +227,57 @@ export default function BookingPage() {
 
   const todayStr = getTodayStr();
 
+  const handleCheckInChange = (value) => {
+    setSelectedRoomId("");
+    setCheckInDate(value);
+    if (!checkOutDate || checkOutDate <= value) setCheckOutDate(addDaysISO(value, 1));
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar hideLinks />
 
       <main className="hc-page booking-experience">
-        <div className="hc-container">
-          <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+        <div className="hc-container" ref={containerRef}>
+          <div className="hc-page-title bk-title-row">
             <div>
               <h2>Đặt Phòng Trực Tuyến</h2>
               <p>Điền thông tin lưu trú và quét mã QR thanh toán tiền cọc 30% để xác nhận giữ chỗ an toàn</p>
             </div>
-            <Link to="/" className="hc-btn hc-btn-outline hc-btn-sm">
-              <i className="bi bi-arrow-left"></i> Chọn phòng khác
-            </Link>
+            <div className="bk-title-actions">
+              {currentRoom && (
+                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setSelectedRoomId("")}>
+                  <i className="bi bi-arrow-left"></i> Chọn phòng khác
+                </button>
+              )}
+              <Link to="/" className="hc-btn hc-btn-outline hc-btn-sm">
+                <i className="bi bi-house-door"></i> Trở về trang chủ
+              </Link>
+            </div>
           </div>
 
           <section className="hc-card booking-search-card">
             <div className="hc-card-body booking-search-fields">
-              <label className="hc-form-group">
+              <div className="hc-form-group">
                 <span className="hc-label">Ngày nhận phòng</span>
-                <input
-                  className="hc-input"
-                  type="date"
-                  min={todayStr}
-                  value={checkInDate}
-                  onChange={(event) => {
-                    setSelectedRoomId("");
-                    setCheckInDate(event.target.value);
-                  }}
-                />
-              </label>
-              <label className="hc-form-group">
+                <DatePicker ariaLabel="Ngày nhận phòng" min={todayStr} value={checkInDate} onChange={handleCheckInChange} />
+              </div>
+              <div className="hc-form-group">
                 <span className="hc-label">Ngày trả phòng</span>
-                <input
-                  className="hc-input"
-                  type="date"
-                  min={checkInDate}
+                <DatePicker
+                  ariaLabel="Ngày trả phòng"
+                  min={addDaysISO(checkInDate, 1)}
                   value={checkOutDate}
-                  onChange={(event) => {
+                  onChange={(value) => {
                     setSelectedRoomId("");
-                    setCheckOutDate(event.target.value);
+                    setCheckOutDate(value);
                   }}
                 />
-              </label>
-              <label className="hc-form-group">
+              </div>
+              <div className="hc-form-group">
                 <span className="hc-label">Số khách</span>
-                <select className="hc-select" value={guestCount} onChange={(event) => setGuestCount(event.target.value)}>
-                  {[1, 2, 3, 4, 5, 6].map((count) => (
-                    <option key={count} value={count}>
-                      {count} khách
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <SelectMenu ariaLabel="Số khách" icon="bi-people" value={guestCount} onChange={setGuestCount} options={GUEST_OPTIONS} />
+              </div>
               <button type="button" className="hc-btn hc-btn-primary" onClick={loadRooms} disabled={roomsLoading || new Date(checkOutDate) <= new Date(checkInDate)}>
                 <i className="bi bi-search" /> Tìm phòng trống
               </button>
@@ -282,7 +309,13 @@ export default function BookingPage() {
                       <article className="booking-room-card" key={room.roomId}>
                         <img src={roomImage} alt={roomName} loading="lazy" />
                         <div className="booking-room-card-copy">
-                          <span className="hc-hero-badge">{room.roomNumber ? `PHÒNG ${room.roomNumber}` : "AZURE BAY"}</span>
+                          {room.roomNumber ? (
+                            <span className="bk-room-number">
+                              Phòng <b>{room.roomNumber}</b>
+                            </span>
+                          ) : (
+                            <span className="hc-hero-badge">AZURE BAY</span>
+                          )}
                           <h3>{roomName}</h3>
                           <p>{room.roomType?.description || room.description || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái."}</p>
                           <div className="booking-room-facts">
@@ -314,28 +347,28 @@ export default function BookingPage() {
               <div className="hc-card booking-customer-card">
                 <div className="hc-card-header">
                   <div className="hc-card-title">
-                    <i className="bi bi-person-lines-fill text-primary" style={{ marginRight: "8px" }}></i>
+                    <i className="bi bi-person-lines-fill text-primary bk-icon-gap"></i>
                     Thông Tin Khách Lưu Trú
                   </div>
                 </div>
                 <div className="hc-card-body">
                   <form onSubmit={handleSubmitBooking}>
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div className="bk-grid-2">
                       <div className="hc-form-group">
                         <label className="hc-label">
-                          Họ và tên khách <span style={{ color: "var(--hc-error)" }}>*</span>
+                          Họ và tên khách <span className="bk-required">*</span>
                         </label>
                         <input type="text" className="hc-input" placeholder="Nguyễn Văn A" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                       </div>
                       <div className="hc-form-group">
                         <label className="hc-label">
-                          Số điện thoại liên hệ <span style={{ color: "var(--hc-error)" }}>*</span>
+                          Số điện thoại liên hệ <span className="bk-required">*</span>
                         </label>
                         <input type="tel" className="hc-input" placeholder="0912345678" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                    <div className="bk-grid-2">
                       <div className="hc-form-group">
                         <label className="hc-label">Email nhận biên lai</label>
                         <input type="email" className="hc-input" placeholder="khachhang@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -346,14 +379,10 @@ export default function BookingPage() {
                       </div>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "16px" }}>
+                    <div className="bk-grid-1-2">
                       <div className="hc-form-group">
                         <label className="hc-label">Loại giấy tờ</label>
-                        <select className="hc-select" value={idType} onChange={(e) => setIdType(e.target.value)}>
-                          <option value="CCCD">CCCD / Căn cước</option>
-                          <option value="PASSPORT">Hộ chiếu (Passport)</option>
-                          <option value="OTHER">Khác</option>
-                        </select>
+                        <SelectMenu ariaLabel="Loại giấy tờ" icon="bi-person-vcard" value={idType} onChange={setIdType} options={ID_TYPE_OPTIONS} />
                       </div>
                       <div className="hc-form-group">
                         <label className="hc-label">Số CCCD / Hộ chiếu</label>
@@ -372,10 +401,10 @@ export default function BookingPage() {
                       ></textarea>
                     </div>
 
-                    <button type="submit" className="hc-btn hc-btn-primary hc-btn-lg" style={{ width: "100%", marginTop: "12px" }} disabled={submitting}>
+                    <button type="submit" className="hc-btn hc-btn-primary hc-btn-lg bk-submit-btn" disabled={submitting}>
                       {submitting ? (
                         <>
-                          <div className="hc-spinner" style={{ width: "18px", height: "18px", borderWidth: "2px", borderColor: "#fff", borderTopColor: "transparent" }}></div>
+                          <div className="hc-spinner bk-spinner-light"></div>
                           <span>Đang tạo đơn đặt phòng...</span>
                         </>
                       ) : (
@@ -397,16 +426,17 @@ export default function BookingPage() {
                     alt={currentRoom.roomType?.typeName || currentRoom.roomTypeName || "Phòng nghỉ Azure Bay"}
                   />
                   <div className="booking-selected-room-copy">
-                    <button type="button" className="booking-change-room" onClick={() => setSelectedRoomId("")}>
-                      <i className="bi bi-arrow-left" /> Đổi phòng
-                    </button>
-                    <span className="hc-hero-badge">LỰA CHỌN CỦA BẠN</span>
+                    <div className="bk-selected-tags">
+                      <span className="hc-hero-badge">LỰA CHỌN CỦA BẠN</span>
+                      {currentRoom.roomNumber && (
+                        <span className="bk-room-number">
+                          Phòng <b>{currentRoom.roomNumber}</b>
+                        </span>
+                      )}
+                    </div>
                     <h2>{currentRoom.roomType?.typeName || currentRoom.roomTypeName || `Phòng ${currentRoom.roomNumber}`}</h2>
                     <p>{currentRoom.roomType?.description || currentRoom.description || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái."}</p>
                     <div className="booking-room-facts">
-                      <span>
-                        <i className="bi bi-door-open" /> Phòng {currentRoom.roomNumber}
-                      </span>
                       <span>
                         <i className="bi bi-people" /> {guestCount} khách
                       </span>
@@ -420,15 +450,15 @@ export default function BookingPage() {
                   </div>
                 </article>
                 {/* Voucher Card */}
-                <div className="hc-card" style={{ marginBottom: "24px" }}>
+                <div className="hc-card bk-voucher-card">
                   <div className="hc-card-header">
                     <div className="hc-card-title">
-                      <i className="bi bi-ticket-perforated text-warning" style={{ marginRight: "8px" }}></i>
+                      <i className="bi bi-ticket-perforated text-primary bk-icon-gap"></i>
                       Mã Ưu Đãi (Voucher)
                     </div>
                   </div>
                   <div className="hc-card-body">
-                    <div style={{ display: "flex", gap: "8px" }}>
+                    <div className="bk-voucher-row">
                       <input
                         type="text"
                         className="hc-input"
@@ -441,7 +471,7 @@ export default function BookingPage() {
                       </button>
                     </div>
                     {appliedVoucher && (
-                      <div style={{ marginTop: "10px", fontSize: "13px", color: "var(--hc-success)", fontWeight: 600 }}>
+                      <div className="bk-voucher-applied">
                         <i className="bi bi-check-circle-fill"></i> {appliedVoucher.voucherName} (-{formatVND(appliedVoucher.discountAmount)})
                       </div>
                     )}
@@ -452,28 +482,28 @@ export default function BookingPage() {
                 <div className="hc-card">
                   <div className="hc-card-header">
                     <div className="hc-card-title">
-                      <i className="bi bi-receipt text-primary" style={{ marginRight: "8px" }}></i>
+                      <i className="bi bi-receipt text-primary bk-icon-gap"></i>
                       Tạm Tính Chi Phí
                     </div>
                   </div>
                   <div className="hc-card-body">
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                      <span style={{ color: "var(--hc-text-secondary)" }}>Đơn giá phòng:</span>
+                    <div className="bk-bill-row">
+                      <span className="bk-muted">Đơn giá phòng:</span>
                       <span>{formatVND(pricePerNight)} / đêm</span>
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                      <span style={{ color: "var(--hc-text-secondary)" }}>Thời gian lưu trú:</span>
+                    <div className="bk-bill-row">
+                      <span className="bk-muted">Thời gian lưu trú:</span>
                       <strong>{nights} đêm</strong>
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                      <span style={{ color: "var(--hc-text-secondary)" }}>Tiền phòng gốc:</span>
+                    <div className="bk-bill-row">
+                      <span className="bk-muted">Tiền phòng gốc:</span>
                       <strong>{formatVND(subtotal)}</strong>
                     </div>
 
                     {discountAmount > 0 && (
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px", color: "var(--hc-success)" }}>
+                      <div className="bk-bill-row bk-bill-row-discount">
                         <span>Giảm giá Voucher:</span>
                         <strong>- {formatVND(discountAmount)}</strong>
                       </div>
@@ -481,19 +511,17 @@ export default function BookingPage() {
 
                     <hr className="hc-divider" />
 
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                      <span style={{ fontWeight: 700, fontSize: "16px" }}>Tổng tiền phòng:</span>
-                      <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--hc-primary)" }}>{formatVND(finalTotal)}</span>
+                    <div className="bk-total-row">
+                      <span className="bk-total-label">Tổng tiền phòng:</span>
+                      <span className="bk-total-value">{formatVND(finalTotal)}</span>
                     </div>
 
-                    <div style={{ background: "var(--hc-warning-bg)", border: "1px solid #fde68a", borderRadius: "var(--hc-radius-md)", padding: "16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                        <span style={{ fontWeight: 700, color: "#92400e", fontSize: "14px" }}>Tiền cọc yêu cầu (30%):</span>
-                        <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--hc-error)" }}>{formatVND(depositRequired)}</span>
+                    <div className="bk-deposit-box">
+                      <div className="bk-deposit-head">
+                        <span className="bk-deposit-label">Tiền cọc yêu cầu (30%):</span>
+                        <span className="bk-deposit-value">{formatVND(depositRequired)}</span>
                       </div>
-                      <p style={{ fontSize: "12px", color: "var(--hc-text-secondary)", margin: 0, lineHeight: 1.5 }}>
-                        * Quý khách chỉ cần cọc trước 30%. Số tiền còn lại sẽ được thanh toán khi hoàn tất thủ tục check-out tại quầy lễ tân.
-                      </p>
+                      <p className="bk-deposit-note">* Quý khách chỉ cần cọc trước 30%. Số tiền còn lại sẽ được thanh toán khi hoàn tất thủ tục check-out tại quầy lễ tân.</p>
                     </div>
                   </div>
                 </div>
@@ -516,101 +544,64 @@ export default function BookingPage() {
         }
       >
         {bookingData && (
-          <div style={{ textAlign: "center" }}>
+          <div className="bk-center">
             {!paymentSuccess ? (
               <>
-                <div style={{ marginBottom: "16px" }}>
-                  <span className="hc-badge hc-badge-warning" style={{ padding: "8px 16px", fontSize: "13px" }}>
-                    <span className="hc-pulse-dot" style={{ marginRight: "8px" }}></span>
+                <div className="bk-mb-16">
+                  <span className="hc-badge hc-badge-warning bk-wait-badge">
+                    <span className="hc-pulse-dot bk-icon-gap"></span>
                     Đang chờ chuyển khoản (kiểm tra trạng thái mỗi 3 giây)...
                   </span>
                 </div>
 
-                <div className="hc-qr-box" style={{ marginBottom: "16px" }}>
+                <div className="hc-qr-box bk-mb-16">
                   {bookingData.qrInfo?.qrImageUrl && !qrImageFailed ? (
                     <img src={bookingData.qrInfo.qrImageUrl} alt="Mã VietQR thanh toán tiền cọc" onError={() => setQrImageFailed(true)} />
                   ) : (
-                    <div
-                      style={{
-                        width: "240px",
-                        minHeight: "180px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 8,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: 16,
-                        background: "#f5f5f5",
-                        borderRadius: "8px",
-                        color: "#6c757d",
-                      }}
-                    >
-                      <i className="bi bi-qr-code" style={{ fontSize: 36 }} />
+                    <div className="bk-qr-fallback">
+                      <i className="bi bi-qr-code bk-qr-fallback-icon" />
                       <span>{qrImageFailed ? "Không tải được ảnh QR. Vui lòng kiểm tra cấu hình VietQR." : "Đơn đặt phòng chưa có mã QR."}</span>
                     </div>
                   )}
                 </div>
 
-                <div
-                  style={{
-                    background: "var(--hc-bg)",
-                    padding: "16px",
-                    borderRadius: "var(--hc-radius-md)",
-                    textAlign: "left",
-                    fontSize: "13px",
-                    border: "1px solid var(--hc-border)",
-                    marginBottom: "16px",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                    <span style={{ color: "var(--hc-text-secondary)" }}>Mã đặt phòng:</span>
-                    <strong style={{ color: "var(--hc-primary)" }}>{bookingData.bookingCode}</strong>
+                <div className="bk-transfer-info">
+                  <div className="bk-info-row">
+                    <span className="bk-muted">Mã đặt phòng:</span>
+                    <strong className="bk-strong-primary">{bookingData.bookingCode}</strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                    <span style={{ color: "var(--hc-text-secondary)" }}>Ngân hàng thụ hưởng:</span>
+                  <div className="bk-info-row">
+                    <span className="bk-muted">Ngân hàng thụ hưởng:</span>
                     <strong>
                       {bookingData.qrInfo?.bankId || "MB Bank"} - {bookingData.qrInfo?.accountNo || "090123456789"}
                     </strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                    <span style={{ color: "var(--hc-text-secondary)" }}>Chủ tài khoản:</span>
+                  <div className="bk-info-row">
+                    <span className="bk-muted">Chủ tài khoản:</span>
                     <strong>{bookingData.qrInfo?.accountName || "HOTEL CALIFORNIA"}</strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                    <span style={{ color: "var(--hc-text-secondary)" }}>Số tiền cọc:</span>
-                    <strong style={{ color: "var(--hc-error)", fontSize: "16px" }}>{formatVND(bookingData.depositRequired)}</strong>
+                  <div className="bk-info-row">
+                    <span className="bk-muted">Số tiền cọc:</span>
+                    <strong className="bk-strong-error">{formatVND(bookingData.depositRequired)}</strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span style={{ color: "var(--hc-text-secondary)" }}>Nội dung chuyển khoản:</span>
-                    <strong style={{ color: "var(--hc-text)" }}>{bookingData.qrInfo?.transferContent || bookingData.bookingCode}</strong>
+                  <div className="bk-info-row bk-info-row-flush">
+                    <span className="bk-muted">Nội dung chuyển khoản:</span>
+                    <strong className="bk-strong-text">{bookingData.qrInfo?.transferContent || bookingData.bookingCode}</strong>
                   </div>
                 </div>
               </>
             ) : (
-              <div style={{ padding: "20px 0" }}>
-                <div
-                  style={{
-                    width: "64px",
-                    height: "64px",
-                    borderRadius: "50%",
-                    background: "var(--hc-success-bg)",
-                    color: "var(--hc-success)",
-                    fontSize: "32px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: "16px",
-                  }}
-                >
+              <div className="bk-success-wrap">
+                <div className="bk-success-icon">
                   <i className="bi bi-check-lg"></i>
                 </div>
-                <h3 style={{ fontSize: "20px", fontWeight: 700, color: "var(--hc-success)", marginBottom: "8px" }}>Thanh Toán Cọc Thành Công!</h3>
-                <p style={{ color: "var(--hc-text-secondary)", fontSize: "14px", marginBottom: "24px" }}>
+                <h3 className="bk-success-title">Thanh Toán Cọc Thành Công!</h3>
+                <p className="bk-success-text">
                   Đơn đặt phòng mã <strong>{bookingData.bookingCode}</strong> của quý khách đã được chuyển sang trạng thái <strong>XÁC NHẬN (CONFIRMED)</strong>.
                 </p>
 
-                <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                  <Link to={`/services?bookingCode=${bookingData.bookingCode}`} className="hc-btn hc-btn-primary" onClick={handleCloseQrModal}>
+                <div className="bk-success-actions">
+                  <Link to={authUser ? `/guest/services?bookingCode=${bookingData.bookingCode}` : "/login"} className="hc-btn hc-btn-primary" onClick={handleCloseQrModal}>
                     <i className="bi bi-receipt"></i> Xem Hóa Đơn & Gọi Dịch Vụ
                   </Link>
                   <Link to={authUser ? "/guest/bookings" : "/login"} className="hc-btn hc-btn-outline" onClick={handleCloseQrModal}>

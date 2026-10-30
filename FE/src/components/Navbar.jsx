@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 
-export default function Navbar({ variant }) {
+export default function Navbar({ variant, hideLinks = false }) {
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -32,21 +32,21 @@ export default function Navbar({ variant }) {
             </span>
           </Link>
           <nav className={`resort-nav-links ${mobileOpen ? "open" : ""}`}>
-            <a href="/#about" onClick={() => setMobileOpen(false)}>
+            <Link to={{ pathname: "/", hash: "#about" }} onClick={() => setMobileOpen(false)}>
               Về chúng tôi
-            </a>
-            <a href="/#discover" onClick={() => setMobileOpen(false)}>
+            </Link>
+            <Link to={{ pathname: "/", hash: "#discover" }} onClick={() => setMobileOpen(false)}>
               Khám phá
-            </a>
-            <a href="/#rooms" onClick={() => setMobileOpen(false)}>
+            </Link>
+            <Link to={{ pathname: "/", hash: "#rooms" }} onClick={() => setMobileOpen(false)}>
               Phòng nghỉ
-            </a>
-            <a href="/#experiences" onClick={() => setMobileOpen(false)}>
+            </Link>
+            <Link to={{ pathname: "/", hash: "#experiences" }} onClick={() => setMobileOpen(false)}>
               Trải nghiệm
-            </a>
-            <a href="/#offers" onClick={() => setMobileOpen(false)}>
+            </Link>
+            <Link to={{ pathname: "/", hash: "#offers" }} onClick={() => setMobileOpen(false)}>
               Ưu đãi
-            </a>
+            </Link>
           </nav>
           <div className="resort-nav-actions">
             {isAuthenticated ? (
@@ -58,9 +58,9 @@ export default function Navbar({ variant }) {
                 Đăng nhập
               </Link>
             )}
-            <a className="resort-nav-book" href="/#stay">
+            <Link className="resort-nav-book" to={{ pathname: "/", hash: "#stay" }} onClick={() => setMobileOpen(false)}>
               Đặt phòng
-            </a>
+            </Link>
             <button className="resort-menu-toggle" aria-label="Mở hoặc đóng trình đơn" onClick={() => setMobileOpen(!mobileOpen)}>
               <i className={`bi ${mobileOpen ? "bi-x-lg" : "bi-list"}`} />
             </button>
@@ -94,40 +94,46 @@ export default function Navbar({ variant }) {
           <span>Azure Bay</span>
         </Link>
 
-        <button className="hc-nav-toggle" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle navigation">
-          <i className={`bi ${mobileOpen ? "bi-x-lg" : "bi-list"}`}></i>
-        </button>
+        {!hideLinks && (
+          <button className="hc-nav-toggle" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Toggle navigation">
+            <i className={`bi ${mobileOpen ? "bi-x-lg" : "bi-list"}`}></i>
+          </button>
+        )}
 
-        <nav className={`hc-navbar-links ${mobileOpen ? "open" : ""}`}>
-          <NavLink to="/" end className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
-            <i className="bi bi-house-door"></i>
-            <span>Trang chủ</span>
-          </NavLink>
-
-          <NavLink to="/booking" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
-            <i className="bi bi-calendar-check"></i>
-            <span>Đặt phòng & QR</span>
-          </NavLink>
-
-          <NavLink to="/services" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
-            <i className="bi bi-cup-hot"></i>
-            <span>Dịch vụ & Folio</span>
-          </NavLink>
-
-          {isStaff && (
-            <NavLink to="/staff" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
-              <i className="bi bi-grid-3x3-gap"></i>
-              <span>Lễ tân & Thu ngân</span>
+        {!hideLinks && (
+          <nav className={`hc-navbar-links ${mobileOpen ? "open" : ""}`}>
+            <NavLink to="/" end className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+              <i className="bi bi-house-door"></i>
+              <span>Trang chủ</span>
             </NavLink>
-          )}
 
-          {isAdmin && (
-            <NavLink to="/admin/overview" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
-              <i className="bi bi-shield-check"></i>
-              <span>Quản trị Admin</span>
+            <NavLink to="/booking" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+              <i className="bi bi-calendar-check"></i>
+              <span>Đặt phòng & QR</span>
             </NavLink>
-          )}
-        </nav>
+
+            {isStaff && (
+              <NavLink to="/services" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+                <i className="bi bi-cup-hot"></i>
+                <span>Dịch vụ & Folio</span>
+              </NavLink>
+            )}
+
+            {isStaff && (
+              <NavLink to="/staff" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+                <i className="bi bi-grid-3x3-gap"></i>
+                <span>Lễ tân & Thu ngân</span>
+              </NavLink>
+            )}
+
+            {isAdmin && (
+              <NavLink to="/admin/overview" className={({ isActive }) => `hc-nav-link ${isActive ? "active" : ""}`} onClick={() => setMobileOpen(false)}>
+                <i className="bi bi-shield-check"></i>
+                <span>Quản trị Admin</span>
+              </NavLink>
+            )}
+          </nav>
+        )}
 
         <div className="hc-navbar-actions">
           {isAuthenticated && user ? (
