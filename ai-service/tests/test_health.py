@@ -1,7 +1,9 @@
 import asyncio
 
 import httpx
+import pytest
 
+from ai_service.config import Settings, get_settings
 from ai_service.main import app
 
 
@@ -9,6 +11,15 @@ async def request(method: str, path: str, **kwargs) -> httpx.Response:
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         return await client.request(method, path, **kwargs)
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(
+        app.dependency_overrides,
+        get_settings,
+        lambda: Settings(_env_file=None, app_name="ai-service", ai_service_auth_token="test-token"),
+    )
 
 
 def test_health_returns_service_status_without_external_dependencies() -> None:

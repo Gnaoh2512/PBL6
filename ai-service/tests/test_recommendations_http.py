@@ -32,7 +32,11 @@ async def call_endpoint(
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        return await client.post(PATH, json=BODY if body is None else body, headers=headers or HEADERS)
+        return await client.post(
+            PATH,
+            json=BODY if body is None else body,
+            headers=HEADERS if headers is None else headers,
+        )
 
 
 def exercise(
@@ -40,20 +44,26 @@ def exercise(
     *,
     body: dict[str, object] | None = None,
     headers: dict[str, str] | None = None,
-    token: str = "test-service-token",
+    token: str | None = "test-service-token",
 ) -> httpx.Response:
     async def run() -> httpx.Response:
         backend = BackendClient(
             base_url="http://spring.test", timeout_seconds=5, transport=httpx.MockTransport(handler)
         )
-        app.dependency_overrides[get_settings] = lambda: Settings(ai_service_auth_token=token)
+        previous_override = app.dependency_overrides.get(get_settings)
+        app.dependency_overrides[get_settings] = lambda: Settings(
+            _env_file=None, ai_service_auth_token=token
+        )
         app.state.backend_client = backend
         try:
             return await call_endpoint(body, headers=headers)
         finally:
             await backend.aclose()
             del app.state.backend_client
-            app.dependency_overrides.clear()
+            if previous_override is None:
+                app.dependency_overrides.pop(get_settings, None)
+            else:
+                app.dependency_overrides[get_settings] = previous_override
 
     return asyncio.run(run())
 
@@ -97,7 +107,9 @@ def test_no_available_rooms_is_a_successful_no_match() -> None:
     assert response.json()["recommendations"] == []
 
 
-def test_service_token_is_required_and_compared() -> None:
+def test_service_token_is_required_and_compared(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AI_SERVICE_AUTH_TOKEN", "unrelated-machine-token")
+
     def unused(_: httpx.Request) -> httpx.Response:
         raise AssertionError("backend must not be called")
 
@@ -107,12 +119,15 @@ def test_service_token_is_required_and_compared() -> None:
         headers={"X-Request-ID": "req-http-1", "Authorization": "Bearer wrong"},
     )
     missing_both = exercise(unused, headers={"unrelated": "value"})
-    unconfigured = exercise(unused, token="")
+    unconfigured = exercise(unused, token=None)
+    empty_token = exercise(unused, token="")
 
     assert missing.status_code == invalid.status_code == missing_both.status_code == 401
     assert missing.json()["error"]["code"] == "SERVICE_UNAUTHORIZED"
     assert invalid.json()["error"]["code"] == "SERVICE_UNAUTHORIZED"
     assert unconfigured.status_code == 503
+    assert unconfigured.json()["error"]["code"] == "SERVICE_UNAVAILABLE"
+    assert empty_token.status_code == 503
 
 
 @pytest.mark.parametrize(

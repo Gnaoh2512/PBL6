@@ -24,6 +24,10 @@ Statuses in this document reflect repository evidence, not backlog wording.
 | 17 | `RAG-04` Chat HTTP endpoint | RAG-03, SEC-01, TRACE-01 | Not implemented | Implements ANSWERED/NO_ANSWER/error contract; no fabricated response; contract tests pass. |
 | 18 | `RAG-EVAL-01` RAG evaluation | RAG-04 | Not implemented | Vietnamese answerable/no-answer/ambiguous set; retrieval and faithfulness thresholds agreed and measured. |
 
+`REC-04` now has local tests for score-first ranking, both price directions, omitted `sortBy`,
+`roomId` ties, backend-order independence, and post-ranking `topK`. These are mock-backed tests;
+Spring/MySQL integration and product approval remain pending.
+
 ## Critical dependency paths
 
 ```text
