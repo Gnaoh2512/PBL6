@@ -6,7 +6,9 @@ recommendation endpoint and pipeline are also implemented; the Spring AI facade 
 ## Implemented boundary
 
 - `BackendClient` owns and reuses one asynchronous HTTP connection pool for the FastAPI process.
-- It calls only `POST /api/public/rooms/available` and closes during application shutdown.
+- It calls `POST /api/public/rooms/available` for candidates and
+  `GET /api/public/rooms/room-types` when a conversation names a room type. It closes during
+  application shutdown.
 - Base URL and timeout come from `BACKEND_API_URL` and
   `BACKEND_REQUEST_TIMEOUT_SECONDS`.
 - The outbound body mirrors `RoomSearchRequest`; `preferences` and `topK` remain AI-only fields.
@@ -16,9 +18,12 @@ recommendation endpoint and pipeline are also implemented; the Spring AI facade 
   timeout, connection, HTTP, and invalid-envelope failures have distinct error categories.
 - Monetary request and response values remain `Decimal`; JSON encoding does not pass through a
   binary floating-point value.
+- Required response fields are validated. Additional envelope, room, or room-type fields are
+  ignored so additive Spring DTO changes do not break recommendations.
 
-The room-types endpoint is intentionally not called: each `AvailableRoomResponse` already embeds
-the current `RoomTypeResponse` required by V1.
+The structured recommendation route uses the room type embedded in each availability candidate.
+The conversation route queries the room-type catalogue only to resolve a user-provided name to
+the current backend ID; it never treats that catalogue as proof of availability.
 
 ## Backend evidence
 
@@ -34,9 +39,9 @@ the current `RoomTypeResponse` required by V1.
 
 ## Known contract differences and open decisions
 
-- Spring applies `@FutureOrPresent` to `checkInDate`. The AI model deliberately does not duplicate
-  a "today" check because no hotel timezone has been agreed. A past date can therefore pass local
-  AI validation and receive a backend HTTP 400; Spring remains authoritative.
+- Spring applies `@FutureOrPresent` to `checkInDate`. The conversation route checks past dates
+  using `HOTEL_TIMEZONE`; the structured route can still pass a past date to Spring and receive
+  HTTP 400. Spring remains authoritative.
 - The draft requires request-ID propagation, but the Spring repository has no request-ID
   filter/interceptor yet. The client sends the header; correlation/echo remains `TRACE-01` work.
 - `topK` default 5 and range 1-20 are temporary draft values, not approved product policy.

@@ -1,430 +1,52 @@
-# AI integration contract v1
+# Recommendation integration contract
 
-| Item | Value |
-|---|---|
-| Contract ID | `AI-INTEGRATION` |
-| Version | `1.0.0-draft` |
-| Date | `2026-10-09` |
-| Status | Proposed cross-service contract; FastAPI recommendation implemented |
-| Implemented AI routes | `GET /health`, `POST /api/v1/ai/recommendations` |
+The existing Spring facade remains unimplemented. The FastAPI routes below are private and
+require an opaque service Bearer token plus `X-Request-ID` (1–64 ASCII letters, digits, `.`, `_`,
+or `-`). The browser demo calls them directly for local testing only.
 
-This document records the proposed cross-service boundary. The FastAPI recommendation handler,
-inbound service-token check, and outbound request-ID header are implemented. The Spring BFF routes,
-cross-service request-ID tracing, and chat handler are still pending.
-
-## 1. Verified repository facts
-
-- The frontend calls the Spring Boot backend using JSON and
-  `Authorization: Bearer <jwt>` for protected routes
-  (`BE/API_DOCUMENTATION_FOR_FE.md`). The `BE` project defaults to `http://localhost:9090`.
-- Spring Security is stateless. `/api/auth/**` and `/api/public/**` are public; every other route
-  requires an authenticated account (`BE/src/main/java/com/example/pbl6/security/SecurityConfig.java:43-65`).
-- The JWT filter reads a Bearer token, validates it, reloads the user from the database, and
-  creates the Spring Security context
-  (`BE/src/main/java/com/example/pbl6/security/JwtAuthenticationFilter.java:28-58`).
-- JWTs contain username as subject plus `role` and integer `accountId` claims
-  (`BE/src/main/java/com/example/pbl6/security/JwtTokenProvider.java:27-38`).
-- Successful backend APIs normally use `ApiResponse<T>` with `success`, `message`, `data`, and
-  `timestamp` (`BE/src/main/java/com/example/pbl6/common/ApiResponse.java:15-47`).
-- There is no Spring AI controller, BFF/proxy class, outbound HTTP client, request-ID filter, or
-  service-to-service authentication implementation in the current backend.
-- FastAPI registers `GET /health` and `POST /api/v1/ai/recommendations`.
-  Chat and the Spring AI facade are not implemented.
-
-## 2. Integration topology
-
-### Confirmed today
-
-```text
-Frontend -> Spring Boot APIs -> MySQL
-
-FastAPI -> GET /health; POST /api/v1/ai/recommendations -> Spring availability API
-```
-
-### Proposed v1
-
-```text
-Frontend
-   |  end-user Bearer JWT + optional X-Request-ID
-   v
-Existing Spring Boot monolith (BFF endpoints added here)
-   |  opaque service Bearer token + required X-Request-ID
-   v
-Private FastAPI service
-   |  X-Request-ID; current catalogue/availability APIs are public
-   v
-Existing Spring Boot room APIs -> MySQL
-```
-
-No additional gateway service is proposed. “BFF” means two thin controllers/use cases added to
-the existing Spring Boot application when implementation is authorized.
-
-The end-user JWT terminates at Spring. It is not forwarded to FastAPI, and FastAPI must never
-receive `jwt.secret`. V1 chat and recommendation do not require user identity or booking history.
-
-## 3. External frontend-to-Spring contract (proposed)
-
-These routes do not exist yet.
-
-| Capability | Method/path | User auth |
+| Method and path | Input | Output |
 |---|---|---|
-| Chat | `POST /api/ai/chat` | Valid current Spring Bearer JWT required in v1 |
-| Recommendation | `POST /api/ai/recommendations` | Valid current Spring Bearer JWT required in v1 |
+| `GET /health` | None | Process status, service, version |
+| `POST /api/v1/ai/recommendations` | Structured `RecommendationRequest` | `RecommendationResult` |
+| `POST /api/v1/ai/recommendations/conversation` | `{message, state}` | `ConversationResponse` |
 
-Required/request headers:
+`message` is a nonblank Vietnamese search utterance, at most 2,000 characters. `state` is the
+previous `ConversationResponse.state` or `{}` on the first turn. Its optional fields are
+`checkInDate`, `checkOutDate`, `guestCount`, `roomCount`, `roomTypeId`, `roomTypeName`, `minPrice`,
+`maxPrice`, `totalBudget`, `sortBy`, `preferredAmenities`, and `requiredAmenities`. All fields are
+validated on every request. A missing field stays missing. A correction changes only named fields;
+a CLEAR operation removes a criterion. Caller state does not prove room availability or price.
 
-| Header | Rule |
-|---|---|
-| `Content-Type` | Required: `application/json`. |
-| `Authorization` | Required in proposed v1: `Bearer <end-user-jwt>`. Spring validates it using the existing filter. |
-| `X-Request-ID` | Optional from frontend. Spring validates and reuses it or generates a new UUID. |
+`ConversationResponse` contains `status`, Vietnamese `reply`, updated `state`,
+`clarificationFields`, `result` (a complete `RecommendationResult` or null), and `requestId`.
+The statuses are:
 
-Spring returns its normal `ApiResponse<T>` wrapper and always returns `X-Request-ID` as a response
-header. Anonymous AI access is a separate product decision; it is not part of this draft because
-it would require explicit rate limiting and abuse controls.
-
-## 4. Internal Spring-to-FastAPI contract (proposed)
-
-| Capability | Method/path | Caller |
+| Status | Meaning | Backend availability call |
 |---|---|---|
-| Chat | `POST /api/v1/ai/chat` | Spring backend only |
-| Recommendation | `POST /api/v1/ai/recommendations` | Spring backend only |
+| `NEEDS_CLARIFICATION` | Missing or ambiguous critical input | No |
+| `UNSUPPORTED` | Multiple rooms, total budget, mandatory amenity, or unrelated intent | No |
+| `RECOMMENDED` | One or more current backend rooms match | Yes |
+| `NO_MATCH` | Complete criteria but no eligible backend room | Yes |
 
-Required headers:
+The LLM returns only an extraction patch. It cannot provide room IDs, prices, capacity or
+availability. The server resolves exact room-type names against `GET /api/public/rooms/room-types`
+and sends hard criteria to `POST /api/public/rooms/available`. For each complete request, that
+availability API remains the only source of candidate rooms. Money uses `Decimal` and JSON number
+serialization. The response is a suggestion, not a room hold.
 
-| Header | Rule |
+| Failure | HTTP/code |
 |---|---|
-| `Content-Type` | `application/json` |
-| `Authorization` | `Bearer <opaque-service-token>`; never an end-user JWT |
-| `X-Request-ID` | Required; copied from/generated by Spring |
+| Invalid/missing service token | `401 SERVICE_UNAUTHORIZED` |
+| Missing provider configuration | `503 LLM_NOT_CONFIGURED` |
+| Body larger than 16 KiB | `413 REQUEST_TOO_LARGE` |
+| Invalid request/state | `422 VALIDATION_ERROR` |
+| Provider timeout | `504 LLM_TIMEOUT` |
+| Provider transport, status, or malformed structured output | `502 LLM_UNAVAILABLE` |
+| Spring rejects search criteria with 400/422 | `422 BACKEND_REJECTED_REQUEST` |
+| Spring timeout | `504 BACKEND_TIMEOUT` |
+| Spring connection/status/schema failure | `502 BACKEND_UNAVAILABLE` |
 
-Missing or invalid service credentials return `401` without revealing whether the token was
-missing or mismatched. The two business routes must not be exposed through public ingress.
-`GET /health` may remain unauthenticated for orchestrator probes but should be network-restricted.
-
-## 5. Chat contract
-
-### Request
-
-The same JSON body is used on the external and internal routes:
-
-```json
-{
-  "message": "Phòng Deluxe có những tiện nghi gì?",
-  "conversationId": "optional-opaque-id",
-  "locale": "vi"
-}
-```
-
-| Field | Type | Required | Rule |
-|---|---|---:|---|
-| `message` | string | yes | Non-blank. Maximum length remains to be fixed by the RAG task. |
-| `conversationId` | string or null | no | Correlation only; it is not authentication or a backend entity ID. |
-| `locale` | string | no | Proposed default `vi`; supported locales depend on approved knowledge. |
-
-No `hotelId` is accepted in v1 because the backend has no Hotel/Property entity or ID.
-
-### Internal success response
-
-```json
-{
-  "status": "ANSWERED",
-  "answer": "Phòng Deluxe có ban công và minibar.",
-  "sources": [
-    {
-      "documentId": "room-guide",
-      "section": "deluxe",
-      "title": "Hướng dẫn hạng phòng",
-      "version": "2026-10-09"
-    }
-  ],
-  "requestId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-### Internal no-answer response
-
-Insufficient approved knowledge is a successful, non-fabricated outcome:
-
-```json
-{
-  "status": "NO_ANSWER",
-  "answer": null,
-  "sources": [],
-  "requestId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-Spring places this object inside `ApiResponse.data` for the frontend. The external status remains
-HTTP 200 for `ANSWERED` and `NO_ANSWER`.
-
-### External Spring success example
-
-```json
-{
-  "success": true,
-  "message": "Success",
-  "data": {
-    "status": "ANSWERED",
-    "answer": "Phòng Deluxe có ban công và minibar.",
-    "sources": [
-      {
-        "documentId": "room-guide",
-        "section": "deluxe",
-        "title": "Hướng dẫn hạng phòng",
-        "version": "2026-10-09"
-      }
-    ],
-    "requestId": "550e8400-e29b-41d4-a716-446655440000"
-  },
-  "timestamp": "2026-10-09T15:00:00"
-}
-```
-
-## 6. Recommendation contract
-
-The full scope and hard-constraint rules are defined in
-[`../recommendation-v1-scope.md`](../recommendation-v1-scope.md).
-
-### Request
-
-```json
-{
-  "checkInDate": "2026-11-10",
-  "checkOutDate": "2026-11-12",
-  "guestCount": 2,
-  "roomTypeId": null,
-  "minPrice": 500000,
-  "maxPrice": 1500000,
-  "sortBy": "PRICE_ASC",
-  "preferences": {
-    "amenities": ["ban công", "minibar"]
-  },
-  "topK": 5
-}
-```
-
-The FastAPI implementation ranks by amenity score descending. `sortBy` affects only rooms with
-equal scores: `PRICE_DESC` uses `pricePerNight` descending; `PRICE_ASC` or omitted `sortBy` uses
-`pricePerNight` ascending. Equal prices then use `roomId` ascending. `topK` is applied last.
-
-Backend identifier types are preserved:
-
-- `roomTypeId`: JSON integer matching Java `Integer` in `RoomSearchRequest`.
-- Recommendation `roomId`: JSON integer matching Java `Integer` in `AvailableRoomResponse` and
-  `BookingCreateRequest`.
-- V1 has no `hotelId` and no `roomCount`.
-
-### Internal success response
-
-```json
-{
-  "status": "OK",
-  "recommendations": [
-    {
-      "roomId": 201,
-      "roomNumber": "201",
-      "floor": 2,
-      "roomType": {
-        "roomTypeId": 2,
-        "typeName": "Phòng Deluxe Hướng Biển",
-        "capacity": 2,
-        "amenities": "Wifi, TV 4K, ban công, minibar",
-        "description": "Phòng cao cấp hướng biển"
-      },
-      "checkInDate": "2026-11-10",
-      "checkOutDate": "2026-11-12",
-      "nights": 2,
-      "pricePerNight": 850000,
-      "totalRoomCharge": 1700000,
-      "depositPercentage": 30,
-      "estimatedDeposit": 510000,
-      "score": 0.85,
-      "reasons": ["Có ban công", "Có minibar"]
-    }
-  ],
-  "availabilityCheckedAt": "2026-10-09T15:00:00+07:00",
-  "requestId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-The example illustrates shape only; its room data and score are not fixtures or guaranteed
-business values.
-
-### Internal no-result response
-
-No available room is not an error:
-
-```json
-{
-  "status": "NO_MATCH",
-  "recommendations": [],
-  "availabilityCheckedAt": "2026-10-09T15:00:00+07:00",
-  "requestId": "550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-Spring returns HTTP 200 and wraps this object in `ApiResponse.data`.
-
-### External Spring no-result example
-
-```json
-{
-  "success": true,
-  "message": "No available room matched the requested constraints",
-  "data": {
-    "status": "NO_MATCH",
-    "recommendations": [],
-    "availabilityCheckedAt": "2026-10-09T15:00:00+07:00",
-    "requestId": "550e8400-e29b-41d4-a716-446655440000"
-  },
-  "timestamp": "2026-10-09T15:00:00"
-}
-```
-
-## 7. Error contract and mapping
-
-### Internal FastAPI error envelope
-
-```json
-{
-  "error": {
-    "code": "BACKEND_TIMEOUT",
-    "message": "Current room availability could not be retrieved",
-    "requestId": "550e8400-e29b-41d4-a716-446655440000",
-    "details": null
-  }
-}
-```
-
-`details` may contain field-validation information but never tokens, credentials, provider
-responses, stack traces, or personal data.
-
-### External Spring error example
-
-The existing wrapper has no first-class `code` field, so the proposed BFF places structured error
-data in `data` while keeping a safe user-facing `message`:
-
-```json
-{
-  "success": false,
-  "message": "The recommendation service is temporarily unavailable",
-  "data": {
-    "code": "AI_TIMEOUT",
-    "requestId": "550e8400-e29b-41d4-a716-446655440000",
-    "details": null
-  },
-  "timestamp": "2026-10-09T15:00:00"
-}
-```
-
-| Condition | Internal AI status/code | External Spring mapping |
-|---|---|---|
-| Missing/invalid user JWT | Not sent to AI | `401`, existing Spring auth response |
-| Missing/invalid service token | `401 SERVICE_UNAUTHORIZED` | `502 AI_AUTH_FAILURE`; log only request ID |
-| Invalid request fields/dates | `422 VALIDATION_ERROR` | `400` using `ApiResponse.error` conventions |
-| No knowledge / no rooms | `200 NO_ANSWER` / `200 NO_MATCH` | `200`, not an error |
-| Existing backend rejects criteria with 4xx | `422 BACKEND_REJECTED_REQUEST` | `400` |
-| AI-to-backend timeout | `504 BACKEND_TIMEOUT` | `504` |
-| Backend network error or 5xx | `502 BACKEND_UNAVAILABLE` | `502` |
-| AI service timeout seen by Spring | No response | `504 AI_TIMEOUT` |
-| AI service unavailable/5xx | `5xx` | `502 AI_UNAVAILABLE` with generic message |
-| Unexpected Spring error | N/A | `500`; do not expose exception messages |
-
-The current backend maps validation/illegal arguments to 400, missing resources to 404,
-authentication errors to 401, and other exceptions to 500
-(`BE/src/main/java/com/example/pbl6/exception/GlobalExceptionHandler.java:17-54`). New BFF
-handlers should preserve the `ApiResponse` shape but must not copy raw upstream error bodies.
-
-## 8. Request ID rules (proposed)
-
-1. Frontend may send `X-Request-ID` as an opaque ASCII value up to 64 characters.
-2. Spring accepts only `[A-Za-z0-9._-]`; otherwise it generates a UUID.
-3. Spring returns that value in the response header and forwards it to FastAPI.
-4. FastAPI includes it in response/error bodies and forwards it on backend HTTP calls.
-5. The current Spring backend does not yet read or echo this header. Propagation into room API
-   logs requires a backend request-ID filter/interceptor during implementation.
-6. Logs record the request ID, route, status, and latency—not authorization headers or bodies.
-
-## 9. Timeout and retry rules (proposed)
-
-| Hop | Timeout |
-|---|---|
-| Spring -> FastAPI recommendation | 10 seconds total |
-| Spring -> FastAPI chat | 30 seconds total |
-| FastAPI -> Spring catalogue/availability | 5 seconds total; matches the bootstrap sample setting |
-
-- A timeout never falls back to embedded price or availability.
-- Spring does not automatically retry the POST AI endpoints.
-- FastAPI may retry one idempotent catalogue/availability read after a connection failure or
-  502/503, only when the remaining deadline permits it. It does not retry 4xx responses.
-- Booking creation is outside these endpoints and is never retried by AI.
-
-## 10. Credential handling and endpoint protection (proposed)
-
-Environment variable names for the implementation task:
-
-| Process | Variable | Purpose |
-|---|---|---|
-| Spring | `AI_SERVICE_BASE_URL` | Private FastAPI base URL |
-| Spring | `AI_SERVICE_AUTH_TOKEN` | Opaque token sent to FastAPI |
-| FastAPI | `AI_SERVICE_AUTH_TOKEN` | Expected inbound opaque token |
-| FastAPI | `BACKEND_API_URL` | Existing Spring base URL; already present in bootstrap settings |
-| FastAPI | `BACKEND_REQUEST_TIMEOUT_SECONDS` | Backend read timeout; already present |
-
-Secrets must be injected by the runtime/secret manager, never committed to `.env.example`, docs,
-logs, frontend bundles, or error bodies. The same literal token must not be reused for JWT signing.
-
-Production protection requirements:
-
-- FastAPI business routes are reachable only from the Spring service network/security group.
-- No permissive FastAPI CORS middleware is added; browsers call Spring.
-- Constant-time service-token comparison and generic 401 responses.
-- Spring applies per-account/IP rate limits and request-size limits before proxying.
-- Health probes are separated from business ingress.
-- Credential rotation procedure must exist before deployment.
-
-## 11. AI-to-backend data access
-
-V1 reuses existing public read APIs; no direct database access:
-
-| Need | Existing endpoint | Verified definition |
-|---|---|---|
-| Room-type features | `GET /api/public/rooms/room-types` | `PublicRoomController.java:27-30` |
-| Price and availability | `POST /api/public/rooms/available` | `PublicRoomController.java:73-77` |
-
-The POST availability body is `RoomSearchRequest`; the response is
-`ApiResponse<List<AvailableRoomResponse>>`. FastAPI must unwrap `data` and validate the DTO shape.
-
-These routes are currently permitted by `/api/public/**`, so v1 needs no outbound backend
-credential. If the backend later introduces an internal read endpoint, its credential must be
-documented and authorized separately.
-
-Direct MySQL access is not justified: it would duplicate availability, pricing, validation, and
-authorization rules. A future bulk knowledge export would require an approved read-only API or,
-only as a last resort, a read-only database account limited to explicit non-PII views.
-
-## 12. Backend source index
-
-Short source references in this contract resolve to these repository paths:
-
-| Source | Repository path |
-|---|---|
-| `SecurityConfig.java` | `BE/src/main/java/com/example/pbl6/security/SecurityConfig.java` |
-| `JwtAuthenticationFilter.java` | `BE/src/main/java/com/example/pbl6/security/JwtAuthenticationFilter.java` |
-| `JwtTokenProvider.java` | `BE/src/main/java/com/example/pbl6/security/JwtTokenProvider.java` |
-| `ApiResponse.java` | `BE/src/main/java/com/example/pbl6/common/ApiResponse.java` |
-| `GlobalExceptionHandler.java` | `BE/src/main/java/com/example/pbl6/exception/GlobalExceptionHandler.java` |
-| `PublicRoomController.java` | `BE/src/main/java/com/example/pbl6/controller/PublicRoomController.java` |
-| `RoomSearchRequest.java` | `BE/src/main/java/com/example/pbl6/dto/room/RoomSearchRequest.java` |
-| `AvailableRoomResponse.java` | `BE/src/main/java/com/example/pbl6/dto/room/AvailableRoomResponse.java` |
-
-## 13. Open decisions
-
-- Product approval for requiring login versus anonymous, rate-limited chat/recommendation.
-- Exact maximum chat length and supported locales.
-- Whether amounts are contractually VND; the backend currently exposes decimal amounts without a
-  currency field.
-- Explicit hotel business timezone; backend date logic currently uses Java `LocalDate` and the
-  JVM default timezone.
-- Deployment secret manager and service-token rotation process.
+The future Spring facade should authenticate the end user, hold the service token privately,
+forward a validated request ID, call the private AI route with a bounded timeout, and map these
+errors to its existing `ApiResponse` convention. No end-user JWT or signing secret is forwarded
+to FastAPI.
