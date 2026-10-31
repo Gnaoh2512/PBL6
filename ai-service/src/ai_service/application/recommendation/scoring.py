@@ -1,8 +1,10 @@
 """Replaceable, deterministic scorers for already eligible rooms."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -14,7 +16,9 @@ from ai_service.application.recommendation.models import (
     RecommendationRequest,
     ScoreComponent,
 )
-from ai_service.infrastructure.backend.models import AvailableRoomCandidate
+
+if TYPE_CHECKING:
+    from ai_service.infrastructure.backend.models import AvailableRoomCandidate
 
 
 class ScoringConfig(BaseModel):
@@ -205,8 +209,8 @@ class MultiCriteriaScorer:
             )
         if capacity_score is not None:
             preference = (
-                "vừa đủ" if request.preferences.capacity is CapacityPreference.CLOSE_FIT
-                else "rộng rãi"
+                "sức chứa vừa đủ" if request.preferences.capacity is CapacityPreference.CLOSE_FIT
+                else "sức chứa lớn hơn"
             )
             reasons.append(
                 f"Sức chứa {candidate.room_type.capacity}; điểm ưu tiên {preference}: "

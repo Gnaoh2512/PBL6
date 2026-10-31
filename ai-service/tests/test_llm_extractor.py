@@ -8,6 +8,7 @@ import pytest
 from ai_service.application.recommendation.conversation_models import SearchState
 from ai_service.infrastructure.llm import (
     ExtractionInvalidResponse,
+    ExtractionRateLimited,
     ExtractionTimeout,
     ExtractionUnavailable,
     GeminiExtractor,
@@ -121,6 +122,42 @@ def test_provider_receives_pending_amount_and_question() -> None:
 
     result = execute(handler, state=state)
     assert result.changes[0].value == "PER_NIGHT"
+
+
+def test_provider_usage_metadata_is_returned_without_raw_response() -> None:
+    def handler(_request):
+        return httpx.Response(200, json={
+            "candidates": [{
+                "finishReason": "STOP",
+                "content": {"parts": [{"text": json.dumps({
+                    "changes": [], "ambiguities": [], "unsupportedIntent": False,
+                })}]},
+            }],
+            "usageMetadata": {"promptTokenCount": 42, "candidatesTokenCount": 7,
+                              "other": "not a token count"},
+        })
+
+    async def run():
+        extractor = GeminiExtractor(
+            api_key="test-key", model="gemini-2.5-flash",
+            timezone_name="Asia/Ho_Chi_Minh", timeout_seconds=3,
+            transport=httpx.MockTransport(handler),
+        )
+        try:
+            return await extractor.extract_with_metadata(
+                "Tìm phòng", SearchState(), today=date(2026, 10, 31), request_id="eval-test"
+            )
+        finally:
+            await extractor.aclose()
+
+    result, usage = asyncio.run(run())
+    assert result.changes == []
+    assert usage == {"promptTokenCount": 42, "candidatesTokenCount": 7}
+
+
+def test_rate_limit_has_distinct_error_category() -> None:
+    with pytest.raises(ExtractionRateLimited):
+        execute(lambda _: httpx.Response(429, json={"error": "rate limit"}))
 
 
 @pytest.mark.parametrize(

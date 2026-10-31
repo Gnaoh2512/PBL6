@@ -16,7 +16,7 @@
     .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
     .card { background: white; border: 1px solid #d6e3da; border-radius: 18px; padding: 22px; box-shadow: 0 8px 26px #1a41320d; }
     label { display: block; font-weight: 650; margin: 14px 0 6px; }
-    input, textarea { width: 100%; border: 1px solid #9fb9ab; border-radius: 9px; padding: 11px; font: inherit; }
+    input, select, textarea { width: 100%; border: 1px solid #9fb9ab; border-radius: 9px; padding: 11px; font: inherit; }
     textarea { min-height: 110px; resize: vertical; }
     button { border: 0; border-radius: 9px; background: #126c50; color: white; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; margin-top: 14px; }
     button.secondary { background: #e0ede5; color: #14533e; margin-left: 8px; }
@@ -63,6 +63,13 @@
           <label for="check-in">Ngày nhận phòng</label><input id="check-in" type="date" required>
           <label for="check-out">Ngày trả phòng</label><input id="check-out" type="date" required>
           <label for="guests">Số khách / một phòng</label><input id="guests" type="number" min="1" value="2" required>
+          <label for="capacity-preference">Ưu tiên sức chứa (không phải diện tích)</label>
+          <select id="capacity-preference">
+            <option value="">Không ưu tiên</option>
+            <option value="CLOSE_FIT">Sức chứa vừa đủ</option>
+            <option value="SPACIOUS">Sức chứa lớn hơn</option>
+          </select>
+          <p class="notice">Sức chứa là số khách tối đa. Hệ thống chưa có trường diện tích để so sánh phòng rộng hay hẹp.</p>
           <label for="max-price">Giá tối đa mỗi đêm</label><input id="max-price" type="number" min="0" step="0.01" value="1000000">
           <label for="total-budget">Tổng ngân sách tiền phòng cơ bản toàn kỳ</label><input id="total-budget" type="number" min="0" step="0.01" placeholder="Để trống nếu không giới hạn">
           <p class="notice">Giới hạn toàn kỳ chỉ so với tổng tiền phòng cơ bản do hệ thống trả về; chưa gồm thuế, dịch vụ, voucher hoặc chi phí khác.</p>
@@ -160,6 +167,7 @@
         preferences: { amenities: $('amenities').value.split(',').map(x => x.trim()).filter(Boolean) },
         requiredAmenities: $('required-amenities').value.split(',').map(x => x.trim()).filter(Boolean),
       };
+      if ($('capacity-preference').value) body.preferences.capacity = $('capacity-preference').value;
       if ($('max-price').value) body.maxPrice = $('max-price').value;
       if ($('total-budget').value) body.totalBudget = $('total-budget').value;
       send('/api/v1/ai/recommendations', body, event.submitter);

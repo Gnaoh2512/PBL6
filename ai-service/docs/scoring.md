@@ -22,6 +22,15 @@ The request may carry `preferences.amenities`, `preferences.price` (`SAVE` or `P
 and `preferences.capacity` (`CLOSE_FIT` or `SPACIOUS`). The price and capacity choices
 must be explicitly expressed. A maximum budget is a filter, never an inferred `SAVE`
 preference. `guestCount` is a minimum capacity, never an inferred `CLOSE_FIT` choice.
+`capacity` means maximum guest count, not area, room width or bed count. The legacy
+wire value `SPACIOUS` is retained for contract compatibility and means only “prefer
+higher guest capacity.” It cannot prove a room is physically more spacious. A request
+for “phòng rộng” is held for clarification; an explicit desire for spare capacity
+activates this score. A specified preferred count such as four for two actual guests
+is represented only as a directional preference by the current schema, not as a
+guaranteed four-person threshold. Backend room descriptions may mention size but
+there is no structured area field in the availability DTO, so descriptions never
+become a derived area score.
 
 | Component | Score in `[0, 1]` when requested | Default weight |
 |---|---|---:|
@@ -67,6 +76,8 @@ the backend per-night price or capacity, without an invented currency. Reasons c
 only verified required amenities, matched amenity preferences, and requested price/capacity
 scores with their backend values, generated deterministically
 from backend evidence and score breakdown. There is no second LLM call.
+The Vietnamese capacity reason says “sức chứa lớn hơn” for `SPACIOUS`; it never
+calls the room wider or quotes an unverified area.
 
 Relative normalization describes which eligible room best fits an expressed direction;
 it is not a calibrated probability or quality rating. These experimental weights

@@ -1,0 +1,182 @@
+{
+  "version": "synthetic-rooms-v1",
+  "source": "synthetic",
+  "rooms": [
+    {
+      "roomId": 101,
+      "roomNumber": "EVAL-101",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 1,
+        "typeName": "Mẫu Tiêu chuẩn A",
+        "capacity": 2,
+        "basePrice": "500000.00",
+        "amenities": "Wifi, TV",
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "500000.00",
+      "totalRoomCharge": "1000000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 102,
+      "roomNumber": "EVAL-102",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 2,
+        "typeName": "Mẫu Tiêu chuẩn B",
+        "capacity": 2,
+        "basePrice": "700000.00",
+        "amenities": "Wifi, Air conditioning",
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "700000.00",
+      "totalRoomCharge": "1400000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 103,
+      "roomNumber": "EVAL-103",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 3,
+        "typeName": "Mẫu Ban công",
+        "capacity": 2,
+        "basePrice": "900000.00",
+        "amenities": "Wifi, Balcony, Minibar",
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "900000.00",
+      "totalRoomCharge": "1800000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 104,
+      "roomNumber": "EVAL-104",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 4,
+        "typeName": "Mẫu Gia đình",
+        "capacity": 4,
+        "basePrice": "1200000.00",
+        "amenities": "Wifi, Kitchen, Sofa bed",
+        "description": "Mô tả mẫu có thể nhắc không gian; không phải trường diện tích"
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "1200000.00",
+      "totalRoomCharge": "2400000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 105,
+      "roomNumber": "EVAL-105",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 5,
+        "typeName": "Mẫu Linh hoạt",
+        "capacity": 4,
+        "basePrice": "1400000.00",
+        "amenities": "Balcony, Bathtub, Wifi",
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "1400000.00",
+      "totalRoomCharge": "2800000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 106,
+      "roomNumber": "EVAL-106",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 6,
+        "typeName": "Mẫu Nhóm",
+        "capacity": 6,
+        "basePrice": "1800000.00",
+        "amenities": "Wifi, Kitchen, TV",
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "1800000.00",
+      "totalRoomCharge": "3600000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 107,
+      "roomNumber": "EVAL-107",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 7,
+        "typeName": "Mẫu Thiếu chứng cứ",
+        "capacity": 2,
+        "basePrice": "650000.00",
+        "amenities": null,
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "650000.00",
+      "totalRoomCharge": "1300000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    },
+    {
+      "roomId": 108,
+      "roomNumber": "EVAL-108",
+      "floor": 1,
+      "status": "AVAILABLE",
+      "note": "Synthetic evaluation fixture",
+      "roomType": {
+        "roomTypeId": 8,
+        "typeName": "Mẫu Cao cấp",
+        "capacity": 4,
+        "basePrice": "2200000.00",
+        "amenities": "Wifi, Balcony, Minibar, Bathtub",
+        "description": null
+      },
+      "checkInDate": "2026-11-10",
+      "checkOutDate": "2026-11-12",
+      "nights": 2,
+      "pricePerNight": "2200000.00",
+      "totalRoomCharge": "4400000.00",
+      "depositPercentage": 30,
+      "estimatedDeposit": "0.00"
+    }
+  ]
+}

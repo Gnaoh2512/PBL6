@@ -41,9 +41,18 @@ Mỗi thay đổi có field, action SET/CLEAR, value là chuỗi hoặc null khi
 EXTRACTION_PROMPT += """
 Chỉ SET pricePreference=SAVE khi khách nói rõ ưu tiên tiết kiệm/rẻ hơn, hoặc PREMIUM khi
 khách nói rõ ưu tiên phòng giá cao hơn. minPrice/maxPrice chỉ là giới hạn, không suy ra
-pricePreference. Chỉ SET capacityPreference=CLOSE_FIT khi khách ưu tiên sức chứa vừa đủ,
-hoặc SPACIOUS khi muốn phòng rộng/sức chứa dư. guestCount chỉ là giới hạn, không suy ra
-capacityPreference. CLEAR khi khách bỏ sở thích tương ứng.
+pricePreference. capacityPreference chỉ nói về SỐ KHÁCH TỐI ĐA phòng chứa được, không
+nói về diện tích, số giường hay độ rộng thực tế. Chỉ SET capacityPreference=CLOSE_FIT
+khi khách ưu tiên sức chứa vừa đủ; SET SPACIOUS (tên cũ trong contract, nghĩa là ưu tiên
+sức chứa lớn hơn) khi khách nói rõ muốn sức chứa dư/nhiều người hơn, ví dụ hai khách
+nhưng ưu tiên phòng có sức chứa bốn người. Giữ guestCount=2 trong ví dụ đó; không biến
+sức chứa ưu tiên thành số khách thực tế hay điều kiện bắt buộc. Schema hiện chỉ biểu diễn
+hướng ưu tiên, không lưu ngưỡng sức chứa bốn người. Nếu khách chỉ nói "phòng rộng",
+"rộng rãi" hoặc hỏi diện tích mà không nói rõ sức chứa, ghi capacityPreference vào
+ambiguities, không SET SPACIOUS. Hỏi họ muốn ưu tiên sức chứa lớn hơn hay cần diện tích.
+Nếu khách trả lời chỉ cần diện tích, CLEAR capacityPreference đang chờ và đặt
+unsupportedIntent=true vì availability API không có trường diện tích. CLEAR khi khách
+bỏ sở thích sức chứa.
 """
 
 FIELDS = [field.value for field in SearchField]
@@ -98,6 +107,10 @@ class ExtractionUnavailable(ExtractionError):
     pass
 
 
+class ExtractionRateLimited(ExtractionUnavailable):
+    """Provider returned HTTP 429; callers can stop a bounded evaluation run."""
+
+
 class ExtractionInvalidResponse(ExtractionError):
     pass
 
@@ -129,6 +142,15 @@ class GeminiExtractor:
     async def extract(
         self, message: str, state: SearchState, *, today: date, request_id: str
     ) -> ExtractedChanges:
+        result, _ = await self.extract_with_metadata(
+            message, state, today=today, request_id=request_id
+        )
+        return result
+
+    async def extract_with_metadata(
+        self, message: str, state: SearchState, *, today: date, request_id: str
+    ) -> tuple[ExtractedChanges, dict[str, int] | None]:
+        """Return validated extraction and non-sensitive token counts when supplied."""
         user_data = simplejson.dumps(
             {
                 "referenceDate": today.isoformat(),
@@ -158,6 +180,8 @@ class GeminiExtractor:
         except httpx.RequestError as exc:
             raise ExtractionUnavailable("LLM provider unavailable") from exc
 
+        if response.status_code == 429:
+            raise ExtractionRateLimited("LLM provider rate limited")
         if response.status_code != 200:
             raise ExtractionUnavailable("LLM provider returned an error")
         if len(response.content) > 65536:
@@ -170,7 +194,15 @@ class GeminiExtractor:
             texts = [part["text"] for part in candidate["content"]["parts"] if "text" in part]
             if len(texts) != 1:
                 raise ValueError("LLM response had no single structured output")
-            return ExtractedChanges.model_validate(simplejson.loads(texts[0]))
+            extracted = ExtractedChanges.model_validate(simplejson.loads(texts[0]))
+            raw_usage = body.get("usageMetadata")
+            usage = (
+                {key: value for key, value in raw_usage.items()
+                 if key.endswith("TokenCount") and isinstance(value, int)
+                 and not isinstance(value, bool) and value >= 0}
+                if isinstance(raw_usage, dict) else None
+            )
+            return extracted, usage
         except (
             KeyError,
             IndexError,

@@ -1,6 +1,7 @@
 # Recommendation integration contract
 
-The existing Spring facade remains unimplemented. The FastAPI routes below are private and
+The Spring facade exposes `POST /api/ai/recommendations` and
+`POST /api/ai/recommendations/conversation` to authenticated users. The FastAPI routes below are private and
 require an opaque service Bearer token plus `X-Request-ID` (1–64 ASCII letters, digits, `.`, `_`,
 or `-`). The browser demo calls them directly for local testing only.
 
@@ -24,6 +25,13 @@ The 422 `error.details` names `body.requiredAmenities` or `body.preferredAmeniti
 The optional `preferences` object now also accepts `price: "SAVE" | "PREMIUM" | null` and
 `capacity: "CLOSE_FIT" | "SPACIOUS" | null`. Both default to null. They affect ranking only
 when explicitly supplied; `minPrice`, `maxPrice`, and `guestCount` remain hard filters.
+`capacity` is the maximum guest count from `roomType.capacity`, not floor area or bed count.
+For compatibility, the existing wire value `SPACIOUS` means **prefer higher guest capacity**;
+it does not claim a physically larger room. `CLOSE_FIT` means prefer capacity nearer the
+minimum eligible capacity. Neither choice is inferred from `guestCount` alone. The schema
+does not carry an exact preferred capacity (such as four people for two guests): a clear
+request for surplus capacity maps to the directional `SPACIOUS` preference while
+`guestCount` remains the actual two guests. This does not guarantee capacity of four.
 `sortBy` controls the price tie-breaker after score and does not activate a price score.
 The result adds `scoringVersion` and, for each room, `scoreBreakdown`,
 `matchedPreferences`, and `unmatchedPreferences`. A breakdown component has `score`
@@ -69,6 +77,15 @@ checked against backend `totalRoomCharge`. An unrelated answer keeps the pending
 and prompts again. A newer ambiguous amount replaces the pending amount while confirmed
 limits remain unchanged until the basis is resolved. Date
 changes without an explicit year remain pending even when another date in state has a year.
+
+“Phòng rộng” or a request for area without an explicit capacity request leaves
+`capacityPreference` unresolved in `pending` and returns `NEEDS_CLARIFICATION` with
+`clarificationFields:["capacityPreference"]`. The reply asks whether the customer means
+higher guest capacity or physical area. No availability call runs while it is pending.
+An explicit answer requesting area clears that pending field and returns `UNSUPPORTED`:
+the backend availability DTO has no structured area field. Answering with an explicit
+capacity preference can set `capacityPreference` and resume the search. An extractor
+output of `SPACIOUS` for “phòng rộng” alone is discarded by the service guard.
 
 If the customer asks for a budget including tax, services, vouchers, or other charges,
 `budgetScope` stays pending and no availability call is made. The service asks whether
@@ -119,7 +136,13 @@ serialization. The response is a suggestion, not a room hold.
 | Spring timeout | `504 BACKEND_TIMEOUT` |
 | Spring connection/status/schema failure | `502 BACKEND_UNAVAILABLE` |
 
-The future Spring facade should authenticate the end user, hold the service token privately,
-forward a validated request ID, call the private AI route with a bounded timeout, and map these
-errors to its existing `ApiResponse` convention. No end-user JWT or signing secret is forwarded
-to FastAPI.
+Spring authenticates the end user through its existing JWT filter, holds the service token in
+`AI_SERVICE_AUTH_TOKEN`, and forwards a validated `X-Request-ID` or generates a UUID. Its
+configured `AI_SERVICE_URL` is an HTTP(S) origin and `AI_SERVICE_TIMEOUT_MS` bounds each call.
+The facade uses one POST with redirects disabled and no application retry. It returns the AI
+success JSON under `ApiResponse.data`, preserving fields such as `state`, `scoreBreakdown`, and
+`requestId`. For AI 413/422/502/503/504 responses it retains the HTTP status and puts the safe
+AI error `code` and `details` under `ApiResponse.data`; transport errors become 502 and timeouts
+504. AI service authentication failure becomes 502 because it is an internal configuration
+failure. No end-user JWT or signing secret is forwarded to FastAPI. Spring does not change AI
+ranking, availability, booking, or conversation state.

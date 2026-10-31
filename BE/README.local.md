@@ -40,3 +40,38 @@ java -jar .\target\pbl6-0.0.1-SNAPSHOT.jar
 Check `http://127.0.0.1:9090/api/public/rooms/room-types`. The AI service points at that API,
 not at MySQL directly. Its browser test page is `http://127.0.0.1:8006/demo` when AI service
 is running.
+
+## Recommendation facade
+
+Start the AI service on port 8006 as described in `../ai-service/README.md`. Set the same private
+`AI_SERVICE_AUTH_TOKEN` in the process environments of Spring and the AI service; do not put a
+real token in either committed example file. Spring reads `AI_SERVICE_URL` (default
+`http://127.0.0.1:8006`) and `AI_SERVICE_TIMEOUT_MS` (default 15000). Start Spring after setting
+these values. The conversation route also needs `GEMINI_API_KEY` on the AI service side.
+
+Send the end-user JWT only to Spring. Both facade routes require the existing JWT authentication:
+
+```powershell
+$headers = @{ Authorization = "Bearer <USER_JWT>"; "X-Request-ID" = "demo-search-1" }
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:9090/api/ai/recommendations `
+  -Headers $headers -ContentType 'application/json' `
+  -Body '{"checkInDate":"2026-11-10","checkOutDate":"2026-11-12","guestCount":2}'
+```
+
+`POST /api/ai/recommendations/conversation` accepts the AI contract's `{ "message": "...",
+"state": {} }` body. Pass the returned `data.state` on subsequent turns. Spring preserves
+the AI JSON object under `ApiResponse.data` and returns the same `X-Request-ID`; it creates a
+UUID if the header is absent. It sends only its service token to FastAPI, never the user's JWT.
+The URL is a configured origin, POST is sent once, and redirects are disabled.
+
+AI validation/size errors map to 422/413. AI dependency and configuration errors map to
+502/503/504, while a failed Spring-to-AI connection maps to 502 and a timeout to 504.
+An invalid service token is an internal upstream failure (502). Upstream error codes and safe
+validation details appear in `ApiResponse.data`; no room search result is synthesized on error.
+The facade does not book or hold a room.
+
+Run the focused tests without FastAPI, Gemini, MySQL or H2:
+
+```powershell
+.\mvnw.cmd '-Dtest=RecommendationAiClientTest,RecommendationAiControllerTest' test
+```

@@ -22,6 +22,7 @@ from ai_service.application.recommendation.conversation_models import (
     ConversationResponse,
     ConversationStatus,
     ExtractedChanges,
+    FieldChange,
     PendingBudget,
     PendingDate,
     PendingField,
@@ -57,7 +58,10 @@ FIELD_QUESTIONS = {
     SearchField.PREFERRED_AMENITIES: "Bạn muốn ưu tiên tiện nghi nào?",
     SearchField.SORT_BY: "Bạn muốn sắp xếp theo giá tăng hay giảm?",
     SearchField.PRICE_PREFERENCE: "Bạn ưu tiên tiết kiệm hay phòng giá cao hơn?",
-    SearchField.CAPACITY_PREFERENCE: "Bạn ưu tiên sức chứa vừa đủ hay rộng rãi hơn?",
+    SearchField.CAPACITY_PREFERENCE: (
+        "Bạn muốn ưu tiên phòng có sức chứa nhiều khách hơn, hay đang cần thông tin "
+        "diện tích/độ rộng? Hiện hệ thống chưa có dữ liệu diện tích để so sánh."
+    ),
     SearchField.BUDGET_SCOPE: (
         "Hiện chỉ lọc được tổng tiền phòng cơ bản do hệ thống trả về, chưa gồm thuế, "
         "dịch vụ, voucher hoặc chi phí khác. Bạn có đồng ý dùng phạm vi này không?"
@@ -195,6 +199,31 @@ def _mentions_unavailable_costs(message: str) -> bool:
     )
 
 
+def _ambiguous_room_size(message: str) -> bool:
+    """Room size is not guest capacity; require an explicit capacity request."""
+    normalized = normalize(message)
+    size_words = re.search(r"\b(?:rong|dien tich|met vuong|m2)\b", normalized)
+    capacity_words = re.search(r"\b(?:suc chua|chua du|chua nhieu)\b", normalized)
+    return bool(size_words and not capacity_words)
+
+
+def _area_answer_to_capacity_question(message: str, state: SearchState) -> bool:
+    normalized = normalize(message)
+    return (
+        state.pending_question is SearchField.CAPACITY_PREFERENCE
+        and any(
+            isinstance(item, PendingField) and item.field is SearchField.CAPACITY_PREFERENCE
+            for item in state.pending
+        )
+        and bool(re.search(r"\b(?:dien tich|met vuong|m2)\b", normalized))
+        and not re.search(r"\b(?:suc chua|chua du|chua nhieu)\b", normalized)
+        and not re.search(
+            r"\bkhong (?:can|muon|quan tam) (?:thong tin )?(?:dien tich|met vuong|m2)\b",
+            normalized,
+        )
+    )
+
+
 def _date_is_explicit(message: str, value: str, today: date | None) -> bool:
     if not message:
         return True
@@ -222,6 +251,92 @@ def _date_is_explicit(message: str, value: str, today: date | None) -> bool:
         (int(year), int(month), int(day)) for day, month, year in FULL_NUMERIC_DATE.findall(message)
     }
     return not full_dates or (parsed.year, parsed.month, parsed.day) in full_dates
+
+
+def _resolve_budget_basis(
+    state: SearchState, values: dict, pending: dict[SearchField, object],
+    changes: dict[SearchField, FieldChange], ambiguous: set[SearchField],
+    budget_was_cleared: bool,
+) -> None:
+    basis_change = changes.get(SearchField.BUDGET_BASIS)
+    if (
+        basis_change is not None
+        and not budget_was_cleared
+        and SearchField.BUDGET_BASIS not in ambiguous
+    ):
+        budget = pending.get(SearchField.BUDGET)
+        if (
+            not isinstance(budget, PendingBudget)
+            and state.max_price is not None
+            and state.total_budget is not None
+            and basis_change.action == "SET"
+        ):
+            budget = PendingBudget()
+        if not isinstance(budget, PendingBudget) and (
+            (state.max_price is None) != (state.total_budget is None)
+        ):
+            amount = state.max_price if state.max_price is not None else state.total_budget
+            budget = PendingBudget(amount=amount)
+            old_field = "maxPrice" if state.max_price is not None else "totalBudget"
+            values[old_field] = None
+        if isinstance(budget, PendingBudget):
+            basis = BudgetBasis(basis_change.value) if basis_change.action == "SET" else None
+            pending[SearchField.BUDGET] = budget.model_copy(update={"basis": basis})
+
+    budget = pending.get(SearchField.BUDGET)
+    if (
+        isinstance(budget, PendingBudget)
+        and budget.amount is not None
+        and budget.basis is not None
+    ):
+        target = "maxPrice" if budget.basis is BudgetBasis.PER_NIGHT else "totalBudget"
+        values[target] = budget.amount
+        pending.pop(SearchField.BUDGET)
+
+
+def _resolve_pending_year(
+    state: SearchState, values: dict, pending: dict[SearchField, object],
+    changes: dict[SearchField, FieldChange], message: str,
+) -> None:
+    year_only = re.fullmatch(
+        r"\s*(?:năm\s*)?((?:19|20)\d{2})\s*[.!]?\s*", message, re.IGNORECASE
+    )
+    if (
+        year_only
+        and state.pending_question in DATE_FIELDS
+        and not any(field in changes for field in DATE_FIELDS)
+    ):
+        year = int(year_only.group(1))
+        dates = [
+            pending.get(field)
+            for field in (SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE)
+        ]
+        dated = [
+            item for item in dates if isinstance(item, PendingDate) and item.month is not None
+        ]
+        if len(dated) == 2:
+            try:
+                check_in = date(year, dated[0].month, dated[0].day)
+                check_out = date(year, dated[1].month, dated[1].day)
+            except ValueError:
+                pass
+            else:
+                if check_out > check_in:
+                    for item, resolved in zip(dated, (check_in, check_out)):
+                        values[item.field.value] = resolved
+                        pending.pop(item.field)
+                else:
+                    values[dated[0].field.value] = check_in
+                    pending.pop(dated[0].field)
+        elif dated:
+            item = dated[0]
+            try:
+                resolved = date(year, item.month, item.day)
+            except ValueError:
+                pass
+            else:
+                values[item.field.value] = resolved
+                pending.pop(item.field)
 
 
 def apply_changes(
@@ -323,80 +438,8 @@ def apply_changes(
                     pending[field] = PendingField(field=field)
                     values[field.value] = [] if field in LIST_FIELDS else None
 
-        basis_change = changes.get(SearchField.BUDGET_BASIS)
-        if (
-            basis_change is not None
-            and not budget_was_cleared
-            and SearchField.BUDGET_BASIS not in ambiguous
-        ):
-            budget = pending.get(SearchField.BUDGET)
-            if (
-                not isinstance(budget, PendingBudget)
-                and state.max_price is not None
-                and state.total_budget is not None
-                and basis_change.action == "SET"
-            ):
-                budget = PendingBudget()
-            if not isinstance(budget, PendingBudget) and (
-                (state.max_price is None) != (state.total_budget is None)
-            ):
-                amount = state.max_price if state.max_price is not None else state.total_budget
-                budget = PendingBudget(amount=amount)
-                old_field = "maxPrice" if state.max_price is not None else "totalBudget"
-                values[old_field] = None
-            if isinstance(budget, PendingBudget):
-                basis = BudgetBasis(basis_change.value) if basis_change.action == "SET" else None
-                pending[SearchField.BUDGET] = budget.model_copy(update={"basis": basis})
-
-        budget = pending.get(SearchField.BUDGET)
-        if (
-            isinstance(budget, PendingBudget)
-            and budget.amount is not None
-            and budget.basis is not None
-        ):
-            target = "maxPrice" if budget.basis is BudgetBasis.PER_NIGHT else "totalBudget"
-            values[target] = budget.amount
-            pending.pop(SearchField.BUDGET)
-
-        year_only = re.fullmatch(
-            r"\s*(?:năm\s*)?((?:19|20)\d{2})\s*[.!]?\s*", message, re.IGNORECASE
-        )
-        if (
-            year_only
-            and state.pending_question in DATE_FIELDS
-            and not any(field in changes for field in DATE_FIELDS)
-        ):
-            year = int(year_only.group(1))
-            dates = [
-                pending.get(field)
-                for field in (SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE)
-            ]
-            dated = [
-                item for item in dates if isinstance(item, PendingDate) and item.month is not None
-            ]
-            if len(dated) == 2:
-                try:
-                    check_in = date(year, dated[0].month, dated[0].day)
-                    check_out = date(year, dated[1].month, dated[1].day)
-                except ValueError:
-                    pass
-                else:
-                    if check_out > check_in:
-                        for item, resolved in zip(dated, (check_in, check_out)):
-                            values[item.field.value] = resolved
-                            pending.pop(item.field)
-                    else:
-                        values[dated[0].field.value] = check_in
-                        pending.pop(dated[0].field)
-            elif dated:
-                item = dated[0]
-                try:
-                    resolved = date(year, item.month, item.day)
-                except ValueError:
-                    pass
-                else:
-                    values[item.field.value] = resolved
-                    pending.pop(item.field)
+        _resolve_budget_basis(state, values, pending, changes, ambiguous, budget_was_cleared)
+        _resolve_pending_year(state, values, pending, changes, message)
 
         values["pending"] = list(pending.values())
         values["pendingQuestion"] = _next_pending_question(pending)
@@ -421,11 +464,11 @@ class ConversationService:
         self._clock = clock
         self._scoring_config = scoring_config
 
-    async def execute(
-        self, request: ConversationRequest, *, request_id: str
-    ) -> ConversationResponse:
-        today = self._clock().astimezone(self._timezone).date()
-        proposal = request.state.pending_relaxation
+    async def _extract_changes(
+        self, request: ConversationRequest, *, request_id: str, today: date,
+        proposal: RelaxationProposal | None,
+    ) -> tuple[ExtractedChanges, bool]:
+        area_answer = _area_answer_to_capacity_question(request.message, request.state)
         scope_pending = any(
             isinstance(item, PendingField) and item.field is SearchField.BUDGET_SCOPE
             for item in request.state.pending
@@ -434,7 +477,15 @@ class ConversationService:
             _explicit_relaxation_decision(request.message)
             if proposal is not None or scope_pending else None
         )
-        if scope_pending and direct_decision is not None:
+        if area_answer:
+            extracted = ExtractedChanges.model_validate({
+                "changes": [{
+                    "field": SearchField.CAPACITY_PREFERENCE,
+                    "action": "CLEAR", "value": None,
+                }],
+                "ambiguities": [], "unsupportedIntent": True,
+            })
+        elif scope_pending and direct_decision is not None:
             scope = (
                 BudgetScope.ROOM_CHARGE if direct_decision is RelaxationDecision.ACCEPT
                 else BudgetScope.ALL_COSTS
@@ -454,6 +505,21 @@ class ConversationService:
             extracted = await self._extractor.extract(
                 request.message, request.state, today=today, request_id=request_id
             )
+        if not area_answer and _ambiguous_room_size(request.message):
+            # A provider may still label "phòng rộng" as SPACIOUS. Never score that
+            # inference; preserve other extracted search edits while asking what was meant.
+            extracted = extracted.model_copy(update={
+                "changes": [
+                    change for change in extracted.changes
+                    if not (
+                        change.field is SearchField.CAPACITY_PREFERENCE
+                        and change.action == "SET"
+                    )
+                ],
+                "ambiguities": list(dict.fromkeys([
+                    *extracted.ambiguities, SearchField.CAPACITY_PREFERENCE,
+                ])),
+            })
         if (
             _mentions_unavailable_costs(request.message)
             and not any(change.field is SearchField.BUDGET_SCOPE for change in extracted.changes)
@@ -476,6 +542,16 @@ class ConversationService:
                     ]
                 }
             )
+        return extracted, area_answer
+
+    async def execute(
+        self, request: ConversationRequest, *, request_id: str
+    ) -> ConversationResponse:
+        today = self._clock().astimezone(self._timezone).date()
+        proposal = request.state.pending_relaxation
+        extracted, area_answer = await self._extract_changes(
+            request, request_id=request_id, today=today, proposal=proposal
+        )
         explicit_changes = bool(extracted.changes or extracted.ambiguities)
         if proposal is not None and not explicit_changes:
             if extracted.unsupported_intent:
@@ -534,6 +610,18 @@ class ConversationService:
                 requestId=request_id,
             )
 
+        if area_answer:
+            return ConversationResponse(
+                status=ConversationStatus.UNSUPPORTED,
+                reply=(
+                    "Hiện dữ liệu phòng chưa có diện tích để so sánh độ rộng. "
+                    "Sức chứa chỉ cho biết số khách tối đa, không chứng minh phòng rộng hơn."
+                ),
+                state=state,
+                clarificationFields=[],
+                result=None,
+                requestId=request_id,
+            )
         if state.pending:
             field = state.pending_question
             if field in (SearchField.REQUIRED_AMENITIES, SearchField.PREFERRED_AMENITIES):
