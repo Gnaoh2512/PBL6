@@ -22,6 +22,7 @@ from ai_service.application.recommendation.conversation_models import (
     ConversationResponse,
     ConversationStatus,
     ExtractedChanges,
+    FieldChange,
     PendingBudget,
     PendingDate,
     PendingField,
@@ -252,6 +253,92 @@ def _date_is_explicit(message: str, value: str, today: date | None) -> bool:
     return not full_dates or (parsed.year, parsed.month, parsed.day) in full_dates
 
 
+def _resolve_budget_basis(
+    state: SearchState, values: dict, pending: dict[SearchField, object],
+    changes: dict[SearchField, FieldChange], ambiguous: set[SearchField],
+    budget_was_cleared: bool,
+) -> None:
+    basis_change = changes.get(SearchField.BUDGET_BASIS)
+    if (
+        basis_change is not None
+        and not budget_was_cleared
+        and SearchField.BUDGET_BASIS not in ambiguous
+    ):
+        budget = pending.get(SearchField.BUDGET)
+        if (
+            not isinstance(budget, PendingBudget)
+            and state.max_price is not None
+            and state.total_budget is not None
+            and basis_change.action == "SET"
+        ):
+            budget = PendingBudget()
+        if not isinstance(budget, PendingBudget) and (
+            (state.max_price is None) != (state.total_budget is None)
+        ):
+            amount = state.max_price if state.max_price is not None else state.total_budget
+            budget = PendingBudget(amount=amount)
+            old_field = "maxPrice" if state.max_price is not None else "totalBudget"
+            values[old_field] = None
+        if isinstance(budget, PendingBudget):
+            basis = BudgetBasis(basis_change.value) if basis_change.action == "SET" else None
+            pending[SearchField.BUDGET] = budget.model_copy(update={"basis": basis})
+
+    budget = pending.get(SearchField.BUDGET)
+    if (
+        isinstance(budget, PendingBudget)
+        and budget.amount is not None
+        and budget.basis is not None
+    ):
+        target = "maxPrice" if budget.basis is BudgetBasis.PER_NIGHT else "totalBudget"
+        values[target] = budget.amount
+        pending.pop(SearchField.BUDGET)
+
+
+def _resolve_pending_year(
+    state: SearchState, values: dict, pending: dict[SearchField, object],
+    changes: dict[SearchField, FieldChange], message: str,
+) -> None:
+    year_only = re.fullmatch(
+        r"\s*(?:năm\s*)?((?:19|20)\d{2})\s*[.!]?\s*", message, re.IGNORECASE
+    )
+    if (
+        year_only
+        and state.pending_question in DATE_FIELDS
+        and not any(field in changes for field in DATE_FIELDS)
+    ):
+        year = int(year_only.group(1))
+        dates = [
+            pending.get(field)
+            for field in (SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE)
+        ]
+        dated = [
+            item for item in dates if isinstance(item, PendingDate) and item.month is not None
+        ]
+        if len(dated) == 2:
+            try:
+                check_in = date(year, dated[0].month, dated[0].day)
+                check_out = date(year, dated[1].month, dated[1].day)
+            except ValueError:
+                pass
+            else:
+                if check_out > check_in:
+                    for item, resolved in zip(dated, (check_in, check_out)):
+                        values[item.field.value] = resolved
+                        pending.pop(item.field)
+                else:
+                    values[dated[0].field.value] = check_in
+                    pending.pop(dated[0].field)
+        elif dated:
+            item = dated[0]
+            try:
+                resolved = date(year, item.month, item.day)
+            except ValueError:
+                pass
+            else:
+                values[item.field.value] = resolved
+                pending.pop(item.field)
+
+
 def apply_changes(
     state: SearchState, extracted: ExtractedChanges, *, message: str = "", today: date | None = None
 ) -> SearchState:
@@ -351,80 +438,8 @@ def apply_changes(
                     pending[field] = PendingField(field=field)
                     values[field.value] = [] if field in LIST_FIELDS else None
 
-        basis_change = changes.get(SearchField.BUDGET_BASIS)
-        if (
-            basis_change is not None
-            and not budget_was_cleared
-            and SearchField.BUDGET_BASIS not in ambiguous
-        ):
-            budget = pending.get(SearchField.BUDGET)
-            if (
-                not isinstance(budget, PendingBudget)
-                and state.max_price is not None
-                and state.total_budget is not None
-                and basis_change.action == "SET"
-            ):
-                budget = PendingBudget()
-            if not isinstance(budget, PendingBudget) and (
-                (state.max_price is None) != (state.total_budget is None)
-            ):
-                amount = state.max_price if state.max_price is not None else state.total_budget
-                budget = PendingBudget(amount=amount)
-                old_field = "maxPrice" if state.max_price is not None else "totalBudget"
-                values[old_field] = None
-            if isinstance(budget, PendingBudget):
-                basis = BudgetBasis(basis_change.value) if basis_change.action == "SET" else None
-                pending[SearchField.BUDGET] = budget.model_copy(update={"basis": basis})
-
-        budget = pending.get(SearchField.BUDGET)
-        if (
-            isinstance(budget, PendingBudget)
-            and budget.amount is not None
-            and budget.basis is not None
-        ):
-            target = "maxPrice" if budget.basis is BudgetBasis.PER_NIGHT else "totalBudget"
-            values[target] = budget.amount
-            pending.pop(SearchField.BUDGET)
-
-        year_only = re.fullmatch(
-            r"\s*(?:năm\s*)?((?:19|20)\d{2})\s*[.!]?\s*", message, re.IGNORECASE
-        )
-        if (
-            year_only
-            and state.pending_question in DATE_FIELDS
-            and not any(field in changes for field in DATE_FIELDS)
-        ):
-            year = int(year_only.group(1))
-            dates = [
-                pending.get(field)
-                for field in (SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE)
-            ]
-            dated = [
-                item for item in dates if isinstance(item, PendingDate) and item.month is not None
-            ]
-            if len(dated) == 2:
-                try:
-                    check_in = date(year, dated[0].month, dated[0].day)
-                    check_out = date(year, dated[1].month, dated[1].day)
-                except ValueError:
-                    pass
-                else:
-                    if check_out > check_in:
-                        for item, resolved in zip(dated, (check_in, check_out)):
-                            values[item.field.value] = resolved
-                            pending.pop(item.field)
-                    else:
-                        values[dated[0].field.value] = check_in
-                        pending.pop(dated[0].field)
-            elif dated:
-                item = dated[0]
-                try:
-                    resolved = date(year, item.month, item.day)
-                except ValueError:
-                    pass
-                else:
-                    values[item.field.value] = resolved
-                    pending.pop(item.field)
+        _resolve_budget_basis(state, values, pending, changes, ambiguous, budget_was_cleared)
+        _resolve_pending_year(state, values, pending, changes, message)
 
         values["pending"] = list(pending.values())
         values["pendingQuestion"] = _next_pending_question(pending)
@@ -449,11 +464,10 @@ class ConversationService:
         self._clock = clock
         self._scoring_config = scoring_config
 
-    async def execute(
-        self, request: ConversationRequest, *, request_id: str
-    ) -> ConversationResponse:
-        today = self._clock().astimezone(self._timezone).date()
-        proposal = request.state.pending_relaxation
+    async def _extract_changes(
+        self, request: ConversationRequest, *, request_id: str, today: date,
+        proposal: RelaxationProposal | None,
+    ) -> tuple[ExtractedChanges, bool]:
         area_answer = _area_answer_to_capacity_question(request.message, request.state)
         scope_pending = any(
             isinstance(item, PendingField) and item.field is SearchField.BUDGET_SCOPE
@@ -528,6 +542,16 @@ class ConversationService:
                     ]
                 }
             )
+        return extracted, area_answer
+
+    async def execute(
+        self, request: ConversationRequest, *, request_id: str
+    ) -> ConversationResponse:
+        today = self._clock().astimezone(self._timezone).date()
+        proposal = request.state.pending_relaxation
+        extracted, area_answer = await self._extract_changes(
+            request, request_id=request_id, today=today, proposal=proposal
+        )
         explicit_changes = bool(extracted.changes or extracted.ambiguities)
         if proposal is not None and not explicit_changes:
             if extracted.unsupported_intent:

@@ -16,6 +16,13 @@ SET/CLEAR edits, validates caller-carried criteria on every turn, asks about mis
 inputs, and then calls that same pipeline. The LLM has no tool that can book a room or create a
 price. Room-type names are resolved through Spring's live catalogue.
 
+Within `conversation_service.py`, extraction and ambiguity checks run before state updates.
+`apply_changes` keeps budget-basis and partial-year resolution in focused helpers, then
+validates the resulting `SearchState`. Search validation and the recommendation pipeline
+still run only after unresolved criteria are handled. The synthetic offline runner feeds the
+same room fixtures to both scoring versions and shares aggregation for labeled nDCG.
+These internal boundaries do not change the HTTP contract or scoring rules.
+
 `application` owns the typed criteria, state transition, questions, and deterministic ranking.
 `infrastructure` owns HTTP adapters for Spring and Gemini. `presentation` owns authentication,
 request IDs, body limits, response serialization, and the local test page. `config` owns validated

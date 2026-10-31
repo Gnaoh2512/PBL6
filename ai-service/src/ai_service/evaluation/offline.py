@@ -28,6 +28,7 @@ from ai_service.application.recommendation.scoring import BaselineAmenityScorer,
 from ai_service.evaluation.dataset import (
     DATA_DIR,
     EvaluationTurn,
+    RankingCase,
     Scenario,
     load_ranking,
     load_rooms,
@@ -169,6 +170,45 @@ def _git_commit() -> str:
         return "unknown"
 
 
+def _mean_ndcg(rows: list[dict]) -> dict[str, float | None]:
+    labeled = [row for row in rows if row["hasRelevanceLabels"]]
+    return {
+        name: round(mean(row[name]["nDCG@5"] for row in labeled), 6) if labeled else None
+        for name in ("baseline", "multiCriteria")
+    }
+
+
+async def _ranking_row(case: RankingCase, rooms: list[AvailableRoomCandidate]) -> dict:
+    versions = {}
+    for name, scorer in (
+        ("baseline", BaselineAmenityScorer()),
+        ("multiCriteria", MultiCriteriaScorer()),
+    ):
+        backend = SyntheticBackend(rooms)
+        result = await RecommendationPipeline(
+            backend, scorer=scorer, clock=lambda: FIXED_NOW
+        ).execute(case.request, request_id=f"eval-{case.id}-{name}")
+        ids = [room.room_id for room in result.recommendations]
+        versions[name] = {
+            "scoringVersion": result.scoring_version,
+            "order": ids,
+            "eligibleSetMatchesLabel": set(ids) == set(case.eligible_room_ids),
+            "backendCalls": backend.calls,
+            "nDCG@5": round(ndcg_at_k(ids, case.relevance, 5), 6)
+            if case.relevance is not None else None,
+        }
+    return {
+        "id": case.id,
+        "split": case.split,
+        "labelStatus": case.label_status,
+        "hasRelevanceLabels": case.relevance is not None,
+        "sameEligibleCandidates": (
+            set(versions["baseline"]["order"]) == set(versions["multiCriteria"]["order"])
+        ),
+        **versions,
+    }
+
+
 async def evaluate(split: str = "all") -> dict:
     scenarios = [case for case in load_scenarios() if split == "all" or case.split == split]
     rooms_fixture = load_rooms()
@@ -184,52 +224,17 @@ async def evaluate(split: str = "all") -> dict:
         bucket["turns"] += 1
         bucket["passed"] += int(row["pass"])
 
-    ranking_rows = []
-    for case in ranking_cases:
-        versions = {}
-        for name, scorer in (
-            ("baseline", BaselineAmenityScorer()),
-            ("multiCriteria", MultiCriteriaScorer()),
-        ):
-            backend = SyntheticBackend(rooms_fixture.rooms)
-            result = await RecommendationPipeline(
-                backend, scorer=scorer, clock=lambda: FIXED_NOW
-            ).execute(case.request, request_id=f"eval-{case.id}-{name}")
-            ids = [room.room_id for room in result.recommendations]
-            versions[name] = {
-                "scoringVersion": result.scoring_version,
-                "order": ids,
-                "eligibleSetMatchesLabel": set(ids) == set(case.eligible_room_ids),
-                "backendCalls": backend.calls,
-                "nDCG@5": round(ndcg_at_k(ids, case.relevance, 5), 6)
-                if case.relevance is not None else None,
-            }
-        ranking_rows.append({
-            "id": case.id,
-            "split": case.split,
-            "labelStatus": case.label_status,
-            "hasRelevanceLabels": case.relevance is not None,
-            "sameEligibleCandidates": (
-                set(versions["baseline"]["order"])
-                == set(versions["multiCriteria"]["order"])
-            ),
-            **versions,
-        })
+    ranking_rows = [await _ranking_row(case, rooms_fixture.rooms) for case in ranking_cases]
     ranking_by_split = {}
     for split_name in ("dev", "heldout"):
         rows = [row for row in ranking_rows if row["split"] == split_name]
-        labeled = [row for row in rows if row["hasRelevanceLabels"]]
         ranking_by_split[split_name] = {
             "cases": len(rows),
-            "labeledCases": len(labeled),
+            "labeledCases": sum(row["hasRelevanceLabels"] for row in rows),
             "orderDifferences": sum(
                 row["baseline"]["order"] != row["multiCriteria"]["order"] for row in rows
             ),
-            "provisionalMeanNDCG@5": {
-                name: round(mean(row[name]["nDCG@5"] for row in labeled), 6)
-                if labeled else None
-                for name in ("baseline", "multiCriteria")
-            },
+            "provisionalMeanNDCG@5": _mean_ndcg(rows),
         }
     scorer = MultiCriteriaScorer()
     return {
@@ -272,12 +277,7 @@ async def evaluate(split: str = "all") -> dict:
                 row["baseline"]["order"] != row["multiCriteria"]["order"]
                 for row in ranking_rows
             ),
-            "provisionalMeanNDCG@5": {
-                name: round(mean(
-                    row[name]["nDCG@5"] for row in ranking_rows if row["hasRelevanceLabels"]
-                ), 6) if any(row["hasRelevanceLabels"] for row in ranking_rows) else None
-                for name in ("baseline", "multiCriteria")
-            },
+            "provisionalMeanNDCG@5": _mean_ndcg(ranking_rows),
             "allSameEligibleCandidates": all(row["sameEligibleCandidates"] for row in ranking_rows),
             "allEligibleSetsMatchLabels": all(
                 row[name]["eligibleSetMatchesLabel"]
