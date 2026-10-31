@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from ai_service.application.recommendation.amenities import (
@@ -18,6 +17,12 @@ from ai_service.application.recommendation.models import (
     RecommendationStatus,
     RecommendedRoom,
     SortBy,
+)
+from ai_service.application.recommendation.scoring import (
+    MultiCriteriaScorer,
+    RoomScorer,
+    ScoreEvaluation,
+    ScoringContext,
 )
 from ai_service.application.request_id import validate_request_id
 from ai_service.infrastructure.backend.errors import BackendInvalidResponseError
@@ -39,9 +44,11 @@ class RecommendationPipeline:
         backend_client: "BackendClient",
         *,
         clock: Callable[[], datetime] = _utc_now,
+        scorer: RoomScorer | None = None,
     ) -> None:
         self._backend_client = backend_client
         self._clock = clock
+        self._scorer = scorer or MultiCriteriaScorer()
 
     async def execute(
         self,
@@ -70,6 +77,7 @@ class RecommendationPipeline:
         status = RecommendationStatus.OK if recommendations else RecommendationStatus.NO_MATCH
         return RecommendationResult(
             status=status,
+            scoringVersion=self._scorer.version,
             recommendations=recommendations,
             availabilityCheckedAt=self._clock(),
             requestId=request_id,
@@ -130,15 +138,21 @@ class RecommendationPipeline:
         evidence = evidence_for(candidate.room_type.amenities)
         return all(status_for(evidence, code) is AmenityStatus.PRESENT for code in required)
 
-    @staticmethod
     def _rank(
+        self,
         candidates: list[AvailableRoomCandidate],
         request: RecommendationRequest,
         required: set[str],
         preferred: set[str],
     ) -> list[RecommendedRoom]:
+        if not candidates:
+            return []
+        context = ScoringContext.from_candidates(candidates)
         ranked = [
-            RecommendationPipeline._to_recommendation(candidate, required, preferred)
+            self._to_recommendation(
+                candidate,
+                self._scorer.score(candidate, context, request, required, preferred),
+            )
             for candidate in candidates
         ]
         price_direction = -1 if request.sort_by is SortBy.PRICE_DESC else 1
@@ -154,23 +168,8 @@ class RecommendationPipeline:
     @staticmethod
     def _to_recommendation(
         candidate: AvailableRoomCandidate,
-        required: set[str],
-        preferred: set[str],
+        evaluation: ScoreEvaluation,
     ) -> RecommendedRoom:
-        evidence = evidence_for(candidate.room_type.amenities)
-        matched = [
-            code
-            for code in sorted(preferred)
-            if status_for(evidence, code) is AmenityStatus.PRESENT
-        ]
-        score = Decimal(len(matched)) / Decimal(len(preferred)) if preferred else Decimal("0")
-        reasons = [
-            f"Required amenity verified: {evidence[code].raw_token}" for code in sorted(required)
-        ]
-        reasons.extend(
-            f"Amenity preference matched: {evidence[code].raw_token}" for code in matched
-        )
-
         return RecommendedRoom(
             roomId=candidate.room_id,
             roomNumber=candidate.room_number,
@@ -189,6 +188,9 @@ class RecommendationPipeline:
             totalRoomCharge=candidate.total_room_charge,
             depositPercentage=candidate.deposit_percentage,
             estimatedDeposit=candidate.estimated_deposit,
-            score=score,
-            reasons=reasons,
+            score=evaluation.score,
+            scoreBreakdown=evaluation.breakdown,
+            matchedPreferences=evaluation.matched,
+            unmatchedPreferences=evaluation.unmatched,
+            reasons=evaluation.reasons,
         )

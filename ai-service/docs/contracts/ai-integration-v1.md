@@ -21,10 +21,24 @@ backend amenity token; no model invents room amenities. See `recommendation-pipe
 The 422 `error.details` names `body.requiredAmenities` or `body.preferredAmenities` with
 `UNKNOWN_AMENITY` (and `supportedCodes`) or `AMENITY_CONFLICT`; raw submitted names are not echoed.
 
+The optional `preferences` object now also accepts `price: "SAVE" | "PREMIUM" | null` and
+`capacity: "CLOSE_FIT" | "SPACIOUS" | null`. Both default to null. They affect ranking only
+when explicitly supplied; `minPrice`, `maxPrice`, and `guestCount` remain hard filters.
+`sortBy` controls the price tie-breaker after score and does not activate a price score.
+The result adds `scoringVersion` and, for each room, `scoreBreakdown`,
+`matchedPreferences`, and `unmatchedPreferences`. A breakdown component has `score`
+(decimal in `[0,1]` or null when inactive), `weight` (decimal), and `evidence`
+(string or null). A preference evidence entry has `criterion` (`amenities`, `price`, or
+`capacity`), `requested`, and `evidence` (string or null). Price and capacity are
+"matched" only for score `1`; partial matches are listed as unmatched but still
+contribute their numeric score. `reasons` are deterministic Vietnamese strings derived
+from verified backend evidence. See [scoring.md](../scoring.md) for formula and ordering.
+
 `message` is a nonblank Vietnamese search utterance, at most 2,000 characters. `state` is the
 previous `ConversationResponse.state` or `{}` on the first turn. Its optional fields are
 `checkInDate`, `checkOutDate`, `guestCount`, `roomCount`, `roomTypeId`, `roomTypeName`, `minPrice`,
-`maxPrice`, `totalBudget`, `sortBy`, `preferredAmenities`, and `requiredAmenities`. It also contains
+`maxPrice`, `totalBudget`, `sortBy`, `pricePreference`, `capacityPreference`,
+`preferredAmenities`, and `requiredAmenities`. It also contains
 `pending` (up to 12 unresolved criteria) and `pendingQuestion` (the field currently being asked).
 All fields and cross-field invariants are validated on every request. A missing field stays
 missing. A correction changes only named fields; a CLEAR operation removes both confirmed and

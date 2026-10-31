@@ -12,6 +12,11 @@ from ai_service.application.recommendation import (
     RecommendationStatus,
 )
 from ai_service.application.recommendation.pipeline import RecommendationPipeline
+from ai_service.application.recommendation.scoring import (
+    BaselineAmenityScorer,
+    MultiCriteriaScorer,
+    ScoringConfig,
+)
 from ai_service.infrastructure.backend import (
     BackendConnectionError,
     BackendHttpError,
@@ -99,8 +104,12 @@ def recommendation_request(**changes: object) -> RecommendationRequest:
 def run_pipeline(
     backend: StubBackendClient,
     request: RecommendationRequest | None = None,
+    *,
+    scorer=None,
 ):
-    pipeline = RecommendationPipeline(backend, clock=lambda: FIXED_NOW)
+    pipeline = RecommendationPipeline(
+        backend, clock=lambda: FIXED_NOW, scorer=scorer or BaselineAmenityScorer()
+    )
     return asyncio.run(
         pipeline.execute(request or recommendation_request(), request_id="req-pipeline_1")
     )
@@ -374,3 +383,137 @@ def test_money_and_score_serialize_as_precise_json_numbers() -> None:
     assert room["totalRoomCharge"] == Decimal("1999999.98")
     assert room["score"] == Decimal("0.5")
     assert '"pricePerNight":999999.99' in encoded
+
+
+def test_multi_criteria_activates_only_expressed_preferences() -> None:
+    rooms = [candidate(1, price="900000", capacity=2, amenities="Wifi"),
+             candidate(2, price="600000", capacity=4, amenities="Balcony")]
+    request = recommendation_request(
+        preferences={"amenities": ["wifi"], "price": "SAVE", "capacity": "SPACIOUS"}
+    )
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    assert result.scoring_version == "multi-criteria-experimental-v1"
+    assert [room.room_id for room in result.recommendations] == [2, 1]
+    assert result.recommendations[0].score == Decimal("0.6")
+    assert result.recommendations[0].score_breakdown["amenities"].score == 0
+    assert result.recommendations[0].score_breakdown["price"].score == 1
+    assert result.recommendations[0].score_breakdown["capacity"].score == 1
+    assert [item.criterion for item in result.recommendations[0].matched_preferences] == [
+        "price", "capacity"
+    ]
+    assert [item.requested for item in result.recommendations[0].unmatched_preferences] == [
+        "WIFI"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("preferences", "expected"),
+    [
+        ({"amenities": ["wifi"]}, [1, 2]),
+        ({"price": "SAVE"}, [2, 1]),
+        ({"price": "PREMIUM"}, [1, 2]),
+        ({"capacity": "CLOSE_FIT"}, [1, 2]),
+        ({"capacity": "SPACIOUS"}, [2, 1]),
+    ],
+)
+def test_each_requested_criterion_controls_order(preferences, expected) -> None:
+    rooms = [candidate(1, price="900000", capacity=2, amenities="Wifi"),
+             candidate(2, price="600000", capacity=4, amenities="Balcony")]
+    request = recommendation_request(preferences=preferences)
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    assert [room.room_id for room in result.recommendations] == expected
+
+
+def test_budget_limit_is_not_savings_preference_and_inactive_components_are_neutral() -> None:
+    rooms = [candidate(1, price="900000", capacity=2), candidate(2, price="600000", capacity=4)]
+    request = recommendation_request(preferences={})
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    assert [room.score for room in result.recommendations] == [0, 0]
+    assert [room.room_id for room in result.recommendations] == [1, 2]
+    assert all(component.score is None for component in result.recommendations[0].score_breakdown.values())
+
+
+def test_missing_amenity_evidence_is_unmatched_and_cannot_make_a_reason() -> None:
+    request = recommendation_request(preferences={"amenities": ["wifi"]})
+    result = run_pipeline(
+        StubBackendClient([candidate(1, amenities=None)]), request,
+        scorer=MultiCriteriaScorer(),
+    )
+    room = result.recommendations[0]
+    assert room.score == 0
+    assert room.reasons == []
+    assert room.unmatched_preferences[0].evidence is None
+
+
+@pytest.mark.parametrize("sort_by,expected", [(None, [2, 3, 1]),
+                                             ("PRICE_ASC", [2, 3, 1]),
+                                             ("PRICE_DESC", [1, 2, 3])])
+def test_multi_ties_use_sort_by_then_room_id_independent_of_backend_order(sort_by, expected) -> None:
+    rooms = [candidate(1, price="900000"), candidate(3, price="700000"),
+             candidate(2, price="700000")]
+    payload = recommendation_request(preferences={}, topK=2).model_dump(by_alias=True)
+    payload["sortBy"] = sort_by
+    request = RecommendationRequest.model_validate(payload)
+    forward = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    reverse = run_pipeline(StubBackendClient(list(reversed(rooms))), request,
+                           scorer=MultiCriteriaScorer())
+    assert [room.room_id for room in forward.recommendations] == expected[:2]
+    assert [room.room_id for room in reverse.recommendations] == expected[:2]
+
+
+def test_multi_hard_filters_before_relative_scoring() -> None:
+    rooms = [candidate(1, capacity=1, price="500000"),
+             candidate(2, capacity=2, price="700000"),
+             candidate(3, capacity=2, price="900000")]
+    request = recommendation_request(preferences={"price": "SAVE"}, topK=1)
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    assert [room.room_id for room in result.recommendations] == [2]
+    assert result.recommendations[0].score == 1
+
+
+def test_config_weights_are_validated_and_can_change_rank() -> None:
+    with pytest.raises(ValidationError):
+        ScoringConfig(amenity_weight=0, price_weight=0, capacity_weight=0)
+    with pytest.raises(ValidationError):
+        ScoringConfig(version="unknown")
+    rooms = [candidate(1, price="900000", amenities="Wifi"),
+             candidate(2, price="600000", amenities="Balcony")]
+    request = recommendation_request(preferences={"amenities": ["wifi"], "price": "SAVE"})
+    config = ScoringConfig(amenity_weight=Decimal("0.1"), price_weight=Decimal("0.9"))
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer(config))
+    assert [room.room_id for room in result.recommendations] == [2, 1]
+
+
+def test_baseline_and_experimental_scorer_can_be_compared_on_identical_candidates() -> None:
+    rooms = [candidate(1, price="900000", amenities="Wifi"),
+             candidate(2, price="600000", amenities="Balcony")]
+    request = recommendation_request(preferences={"amenities": ["wifi"], "price": "SAVE"})
+    baseline = run_pipeline(StubBackendClient(rooms), request)
+    experimental = run_pipeline(
+        StubBackendClient(rooms), request,
+        scorer=MultiCriteriaScorer(ScoringConfig(amenity_weight=1, price_weight=2)),
+    )
+    assert baseline.scoring_version == "amenity-baseline-v1"
+    assert [room.room_id for room in baseline.recommendations] == [1, 2]
+    assert [room.room_id for room in experimental.recommendations] == [2, 1]
+
+
+def test_partial_price_fit_has_grounded_vietnamese_reason_and_structured_score() -> None:
+    rooms = [candidate(1, price="600000"), candidate(2, price="750000"),
+             candidate(3, price="900000")]
+    request = recommendation_request(preferences={"price": "SAVE"})
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    middle = next(room for room in result.recommendations if room.room_id == 2)
+    assert middle.score_breakdown["price"].score == Decimal("0.5")
+    assert middle.unmatched_preferences[0].evidence == "750000"
+    assert middle.reasons == ["Giá mỗi đêm 750000; điểm ưu tiên tiết kiệm: 0.5"]
+    assert "Wifi" not in " ".join(middle.reasons)
+
+
+def test_explicit_price_preference_scores_before_conflicting_sort_by() -> None:
+    rooms = [candidate(1, price="600000"), candidate(2, price="900000")]
+    request = recommendation_request(
+        sortBy="PRICE_DESC", preferences={"price": "SAVE"}
+    )
+    result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
+    assert [room.room_id for room in result.recommendations] == [1, 2]

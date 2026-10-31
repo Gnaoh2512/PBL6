@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 import simplejson
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictInt, model_validator
@@ -26,6 +26,16 @@ class SortBy(str, Enum):
 
     PRICE_ASC = "PRICE_ASC"
     PRICE_DESC = "PRICE_DESC"
+
+
+class PricePreference(str, Enum):
+    SAVE = "SAVE"
+    PREMIUM = "PREMIUM"
+
+
+class CapacityPreference(str, Enum):
+    CLOSE_FIT = "CLOSE_FIT"
+    SPACIOUS = "SPACIOUS"
 
 
 class AvailabilitySearchRequest(BaseModel):
@@ -62,6 +72,24 @@ class RecommendationPreferences(BaseModel):
     amenities: list[Annotated[str, Field(max_length=100)]] = Field(
         default_factory=list, max_length=20
     )
+    price: PricePreference | None = None
+    capacity: CapacityPreference | None = None
+
+
+class ScoreComponent(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    score: Decimal | None = Field(default=None, ge=Decimal("0"), le=Decimal("1"))
+    weight: Decimal = Field(ge=Decimal("0"))
+    evidence: str | None = None
+
+
+class PreferenceEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    criterion: Literal["amenities", "price", "capacity"]
+    requested: str
+    evidence: str | None = None
 
 
 class RecommendationRequest(AvailabilitySearchRequest):
@@ -124,6 +152,9 @@ class RecommendedRoom(BaseModel):
     deposit_percentage: StrictInt = Field(alias="depositPercentage")
     estimated_deposit: Decimal = Field(alias="estimatedDeposit")
     score: Decimal = Field(ge=Decimal("0"), le=Decimal("1"))
+    score_breakdown: dict[str, ScoreComponent] = Field(alias="scoreBreakdown")
+    matched_preferences: list[PreferenceEvidence] = Field(alias="matchedPreferences")
+    unmatched_preferences: list[PreferenceEvidence] = Field(alias="unmatchedPreferences")
     reasons: list[str]
 
 
@@ -133,6 +164,7 @@ class RecommendationResult(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     status: RecommendationStatus
+    scoring_version: str = Field(alias="scoringVersion")
     recommendations: list[RecommendedRoom]
     availability_checked_at: AwareDatetime = Field(alias="availabilityCheckedAt")
     request_id: str = Field(alias="requestId")

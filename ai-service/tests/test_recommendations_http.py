@@ -85,6 +85,10 @@ def test_success_uses_live_availability_and_preserves_decimal_numbers() -> None:
     assert [room["roomId"] for room in data["recommendations"]] == [101]
     assert data["recommendations"][0]["pricePerNight"] == Decimal("1250000.50")
     assert data["recommendations"][0]["score"] == 1
+    assert data["scoringVersion"] == "multi-criteria-experimental-v1"
+    assert data["recommendations"][0]["scoreBreakdown"]["amenities"]["score"] == 1
+    assert data["recommendations"][0]["scoreBreakdown"]["price"]["score"] is None
+    assert data["recommendations"][0]["matchedPreferences"][0]["requested"] == "MINIBAR"
     assert len(backend_requests) == 1
     assert backend_requests[0].url.path == "/api/public/rooms/available"
     assert backend_requests[0].headers["X-Request-ID"] == "req-http-1"
@@ -121,7 +125,7 @@ def test_json_required_amenity_is_enforced_and_not_forwarded_to_spring() -> None
     assert response.status_code == 200
     assert response.json()["status"] == "OK"
     assert response.json()["recommendations"][0]["reasons"] == [
-        "Required amenity verified: balcony"
+            "Đã xác nhận tiện nghi bắt buộc: balcony"
     ]
     assert len(backend_requests) == 1
     assert "requiredAmenities" not in backend_requests[0].content.decode()

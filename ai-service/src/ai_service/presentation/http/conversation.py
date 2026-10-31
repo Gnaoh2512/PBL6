@@ -44,7 +44,8 @@ async def converse(
         raise ApiError(503, "LLM_NOT_CONFIGURED", "Language extraction is not configured")
     try:
         result = await ConversationService(
-            backend, extractor, timezone=ZoneInfo(settings.hotel_timezone)
+            backend, extractor, timezone=ZoneInfo(settings.hotel_timezone),
+            scoring_config=settings.scoring_config,
         ).execute(payload, request_id=request_id)
     except ExtractionTimeout as exc:
         raise ApiError(504, "LLM_TIMEOUT", "Language extraction timed out") from exc

@@ -38,6 +38,14 @@ Nếu khách yêu cầu hủy/đặt phòng, thanh toán, hỏi chính sách ho�
 Mỗi thay đổi có field, action SET/CLEAR, value là chuỗi hoặc null khi CLEAR.
 """
 
+EXTRACTION_PROMPT += """
+Chỉ SET pricePreference=SAVE khi khách nói rõ ưu tiên tiết kiệm/rẻ hơn, hoặc PREMIUM khi
+khách nói rõ ưu tiên phòng giá cao hơn. minPrice/maxPrice chỉ là giới hạn, không suy ra
+pricePreference. Chỉ SET capacityPreference=CLOSE_FIT khi khách ưu tiên sức chứa vừa đủ,
+hoặc SPACIOUS khi muốn phòng rộng/sức chứa dư. guestCount chỉ là giới hạn, không suy ra
+capacityPreference. CLEAR khi khách bỏ sở thích tương ứng.
+"""
+
 FIELDS = [field.value for field in SearchField]
 CHANGE_FIELDS = FIELDS
 EXTRACTION_SCHEMA = {

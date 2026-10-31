@@ -127,6 +127,24 @@ def test_complete_extraction_uses_live_room_and_decimal_price() -> None:
     assert "không giữ chỗ" in response.reply
 
 
+def test_explicit_price_and_capacity_preferences_reach_scorer() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend,
+        FakeExtractor(full_output(
+            change("pricePreference", "SAVE"),
+            change("capacityPreference", "SPACIOUS"),
+        )),
+    )
+    assert response.status is ConversationStatus.RECOMMENDED
+    assert response.state.price_preference.value == "SAVE"
+    assert response.state.capacity_preference.value == "SPACIOUS"
+    room_result = response.result.recommendations[0]
+    assert room_result.score_breakdown["price"].score == 1
+    assert room_result.score_breakdown["capacity"].score == 1
+    assert backend.searches[0].max_price is None
+
+
 def test_missing_then_followup_then_correction_preserves_other_fields() -> None:
     backend = FakeBackend()
     first = run(

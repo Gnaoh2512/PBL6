@@ -48,6 +48,8 @@ def test_recommendation_request_maps_contract_and_preserves_decimal() -> None:
         ({"city": "Da Nang"}, "city"),
         ({"preferences": {"amenities": ["x"] * 21}}, "amenities"),
         ({"preferences": {"amenities": ["x" * 101]}}, "amenities"),
+        ({"preferences": {"price": "CHEAPEST"}}, "price"),
+        ({"preferences": {"capacity": "SMALLEST"}}, "capacity"),
     ],
 )
 def test_recommendation_request_rejects_invalid_values(

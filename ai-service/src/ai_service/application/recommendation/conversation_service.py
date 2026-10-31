@@ -23,8 +23,14 @@ from ai_service.application.recommendation.conversation_models import (
     SearchField,
     SearchState,
 )
-from ai_service.application.recommendation.models import RecommendationRequest, RecommendationStatus
+from ai_service.application.recommendation.models import (
+    CapacityPreference,
+    PricePreference,
+    RecommendationRequest,
+    RecommendationStatus,
+)
 from ai_service.application.recommendation.pipeline import RecommendationPipeline
+from ai_service.application.recommendation.scoring import MultiCriteriaScorer, ScoringConfig
 from ai_service.infrastructure.backend.client import BackendClient
 from ai_service.infrastructure.llm import ExtractionInvalidResponse
 
@@ -43,6 +49,8 @@ FIELD_QUESTIONS = {
     SearchField.REQUIRED_AMENITIES: "Tiện nghi đó là bắt buộc hay chỉ ưu tiên?",
     SearchField.PREFERRED_AMENITIES: "Bạn muốn ưu tiên tiện nghi nào?",
     SearchField.SORT_BY: "Bạn muốn sắp xếp theo giá tăng hay giảm?",
+    SearchField.PRICE_PREFERENCE: "Bạn ưu tiên tiết kiệm hay phòng giá cao hơn?",
+    SearchField.CAPACITY_PREFERENCE: "Bạn ưu tiên sức chứa vừa đủ hay rộng rãi hơn?",
 }
 DATE_FIELDS = {SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE}
 INT_FIELDS = {SearchField.GUEST_COUNT, SearchField.ROOM_COUNT, SearchField.ROOM_TYPE_ID}
@@ -76,6 +84,10 @@ def _utc_now() -> datetime:
 
 
 def _parse_value(field: SearchField, value: str) -> object:
+    if field is SearchField.PRICE_PREFERENCE:
+        return PricePreference(value)
+    if field is SearchField.CAPACITY_PREFERENCE:
+        return CapacityPreference(value)
     if field in DATE_FIELDS:
         if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
             raise ValueError("date must be YYYY-MM-DD")
@@ -351,11 +363,13 @@ class ConversationService:
         *,
         timezone: ZoneInfo,
         clock: Callable[[], datetime] = _utc_now,
+        scoring_config: ScoringConfig | None = None,
     ) -> None:
         self._backend = backend
         self._extractor = extractor
         self._timezone = timezone
         self._clock = clock
+        self._scoring_config = scoring_config
 
     async def execute(
         self, request: ConversationRequest, *, request_id: str
@@ -485,10 +499,16 @@ class ConversationService:
                 "maxPrice": state.max_price,
                 "sortBy": state.sort_by,
                 "requiredAmenities": state.required_amenities,
-                "preferences": {"amenities": state.preferred_amenities},
+                "preferences": {
+                    "amenities": state.preferred_amenities,
+                    "price": state.price_preference,
+                    "capacity": state.capacity_preference,
+                },
             }
         )
-        result = await RecommendationPipeline(self._backend).execute(
+        result = await RecommendationPipeline(
+            self._backend, scorer=MultiCriteriaScorer(self._scoring_config)
+        ).execute(
             criteria, request_id=request_id
         )
         if result.status is RecommendationStatus.NO_MATCH:
@@ -506,19 +526,7 @@ class ConversationService:
                 requestId=request_id,
             )
 
-        rooms = []
-        for room in result.recommendations:
-            reasons = [f"Đủ sức chứa cho {state.guest_count} khách"]
-            if state.max_price is not None:
-                reasons.append("Giá mỗi đêm nằm trong mức tối đa đã chọn")
-            reasons.extend(
-                reason.replace("Amenity preference matched: ", "Khớp tiện nghi ưu tiên: ").replace(
-                    "Required amenity verified: ", "Đã xác nhận tiện nghi bắt buộc: "
-                )
-                for reason in room.reasons
-            )
-            rooms.append(room.model_copy(update={"reasons": reasons}))
-        result = result.model_copy(update={"recommendations": rooms})
+        rooms = result.recommendations
         return ConversationResponse(
             status=ConversationStatus.RECOMMENDED,
             reply=f"Có {len(rooms)} phòng phù hợp. Gợi ý này không giữ chỗ; tình trạng có thể thay đổi.",

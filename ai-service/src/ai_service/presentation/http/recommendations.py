@@ -13,6 +13,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ai_service.application.recommendation import RecommendationRequest, RecommendationResult
 from ai_service.application.recommendation.amenities import CATALOG, AmenityCriteriaError
 from ai_service.application.recommendation.pipeline import RecommendationPipeline
+from ai_service.application.recommendation.scoring import MultiCriteriaScorer
 from ai_service.application.request_id import validate_request_id
 from ai_service.config import Settings, get_settings
 from ai_service.infrastructure.backend.errors import (
@@ -149,6 +150,7 @@ async def recommend_rooms(
     request: Request,
     _: Annotated[None, Depends(require_service_token)],
     request_id: Annotated[str, Depends(require_request_id)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> Response:
     """Return ranked concrete rooms from one live Spring availability query."""
 
@@ -157,7 +159,9 @@ async def recommend_rooms(
         raise ApiError(503, "SERVICE_UNAVAILABLE", "Recommendation service is not ready")
 
     try:
-        result = await RecommendationPipeline(backend_client).execute(
+        result = await RecommendationPipeline(
+            backend_client, scorer=MultiCriteriaScorer(settings.scoring_config)
+        ).execute(
             payload, request_id=request_id
         )
     except BackendClientError as exc:

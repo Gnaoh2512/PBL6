@@ -9,6 +9,8 @@ import simplejson
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator, model_validator
 
 from ai_service.application.recommendation.models import (
+    CapacityPreference,
+    PricePreference,
     RecommendationResult,
     SortBy,
     _contract_json_default,
@@ -30,6 +32,8 @@ class SearchField(str, Enum):
     MAX_PRICE = "maxPrice"
     TOTAL_BUDGET = "totalBudget"
     SORT_BY = "sortBy"
+    PRICE_PREFERENCE = "pricePreference"
+    CAPACITY_PREFERENCE = "capacityPreference"
     PREFERRED_AMENITIES = "preferredAmenities"
     REQUIRED_AMENITIES = "requiredAmenities"
     BUDGET_BASIS = "budgetBasis"
@@ -105,6 +109,8 @@ class SearchState(BaseModel):
     max_price: Money | None = Field(default=None, alias="maxPrice")
     total_budget: Money | None = Field(default=None, alias="totalBudget")
     sort_by: SortBy | None = Field(default=None, alias="sortBy")
+    price_preference: PricePreference | None = Field(default=None, alias="pricePreference")
+    capacity_preference: CapacityPreference | None = Field(default=None, alias="capacityPreference")
     preferred_amenities: list[Amenity] = Field(
         default_factory=list, alias="preferredAmenities", max_length=20
     )

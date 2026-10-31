@@ -1,5 +1,9 @@
 # Recommendation V1 scope
 
+> This is the historical REC-01 draft. The implemented experimental ranking now uses
+> [versioned scoring](scoring.md); the hard constraints and backend authority described
+> here remain in force.
+
 | Item | Value |
 |---|---|
 | Decision ID | `REC-01` |

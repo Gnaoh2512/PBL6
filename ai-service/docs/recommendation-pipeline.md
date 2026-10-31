@@ -13,7 +13,7 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
 4. Reject candidates with a non-available status, mismatched dates/night count, or negative
    amounts. Defensively recheck capacity, optional room type, inclusive per-night price bounds,
    and every `requiredAmenities` code against verified backend amenity evidence.
-5. Rank the remaining candidates by amenity preference score descending. For equal scores,
+5. Rank the remaining candidates by the versioned multi-criteria score descending. For equal scores,
    use `sortBy` as a price tie-breaker: `PRICE_DESC` means per-night price descending;
    `PRICE_ASC` or omitted `sortBy` means per-night price ascending. If price also ties,
    use integer `roomId` ascending. Backend response order does not decide the final rank.
@@ -22,6 +22,10 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
 An empty availability response or an empty eligible set returns `NO_MATCH`. Timeout, connection,
 HTTP, invalid-envelope, inconsistent-candidate, and conflicting-duplicate failures keep their backend error category and
 never become `NO_MATCH`.
+
+The active formula, missing-data treatment, comparison baseline, and configurable weights are
+documented in [scoring.md](scoring.md). The amenity-only formula below describes the retained
+`amenity-baseline-v1` scorer, not the default scorer.
 
 The pipeline does not query a room catalogue, cache, LLM, or database. Soft scoring
 cannot restore a candidate rejected by hard filtering.
