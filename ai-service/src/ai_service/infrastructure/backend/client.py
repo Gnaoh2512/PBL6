@@ -15,9 +15,14 @@ from ai_service.infrastructure.backend.errors import (
     BackendInvalidResponseError,
     BackendTimeoutError,
 )
-from ai_service.infrastructure.backend.models import AvailableRoomCandidate, BackendApiResponse
+from ai_service.infrastructure.backend.models import (
+    AvailableRoomCandidate,
+    BackendApiResponse,
+    BackendRoomType,
+)
 
 AVAILABILITY_PATH = "/api/public/rooms/available"
+ROOM_TYPES_PATH = "/api/public/rooms/room-types"
 
 
 class BackendClient:
@@ -100,4 +105,29 @@ class BackendClient:
             raise BackendInvalidResponseError(
                 "backend availability response was not a successful data envelope"
             )
+        return envelope.data
+
+    async def list_room_types(self, *, request_id: str) -> list[BackendRoomType]:
+        """Resolve a user-named type only against the current Spring catalogue."""
+
+        request_id = validate_request_id(request_id)
+        try:
+            response = await self._http.get(
+                ROOM_TYPES_PATH,
+                headers={"Accept": "application/json", "X-Request-ID": request_id},
+            )
+        except httpx.TimeoutException as exc:
+            raise BackendTimeoutError("backend room-type request timed out") from exc
+        except httpx.RequestError as exc:
+            raise BackendConnectionError("backend room-type connection failed") from exc
+        if not 200 <= response.status_code < 300:
+            raise BackendHttpError(response.status_code)
+        try:
+            envelope = BackendApiResponse[list[BackendRoomType]].model_validate(
+                simplejson.loads(response.content, use_decimal=True)
+            )
+        except (simplejson.JSONDecodeError, UnicodeDecodeError, ValidationError) as exc:
+            raise BackendInvalidResponseError("backend room-type response did not match its DTO") from exc
+        if not envelope.success or envelope.data is None:
+            raise BackendInvalidResponseError("backend room-type response was not successful")
         return envelope.data

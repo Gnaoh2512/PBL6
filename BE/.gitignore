@@ -3,6 +3,8 @@ target/
 .localdb/
 backend-local.stdout.log
 backend-local.stderr.log
+mysql-backend.stdout.log
+mysql-backend.stderr.log
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

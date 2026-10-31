@@ -6,7 +6,10 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from ai_service.presentation.http.recommendations import error_response, request_id_for_error
 
 MAX_RECOMMENDATION_BODY_BYTES = 16 * 1024
-RECOMMENDATION_PATH = "/api/v1/ai/recommendations"
+RECOMMENDATION_PATHS = {
+    "/api/v1/ai/recommendations",
+    "/api/v1/ai/recommendations/conversation",
+}
 
 
 class RecommendationBodyLimitMiddleware:
@@ -14,7 +17,7 @@ class RecommendationBodyLimitMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http" or scope["path"] != RECOMMENDATION_PATH:
+        if scope["type"] != "http" or scope["path"] not in RECOMMENDATION_PATHS:
             await self.app(scope, receive, send)
             return
 

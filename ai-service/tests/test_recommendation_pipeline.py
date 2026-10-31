@@ -184,7 +184,7 @@ def test_filtered_candidate_cannot_return_through_soft_scoring() -> None:
     assert result.recommendations[0].score == Decimal("0")
 
 
-def test_exact_amenity_tokens_are_normalized_deduplicated_and_ground_reasons() -> None:
+def test_amenity_prefixes_are_normalized_deduplicated_and_ground_reasons() -> None:
     backend = StubBackendClient(
         [candidate(1, amenities="  WiFi , Minibar, Ban công ngắm cảnh biển  ")]
     )
@@ -195,13 +195,25 @@ def test_exact_amenity_tokens_are_normalized_deduplicated_and_ground_reasons() -
     result = run_pipeline(backend, request)
     room = result.recommendations[0]
 
-    assert room.score == Decimal("2") / Decimal("3")
+    assert room.score == Decimal("1")
     assert room.reasons == [
-        "Exact amenity token matched: Minibar",
-        "Exact amenity token matched: WiFi",
+        "Amenity preference matched: Ban công ngắm cảnh biển",
+        "Amenity preference matched: Minibar",
+        "Amenity preference matched: WiFi",
     ]
-    assert all("Ban công" not in reason for reason in room.reasons)
     assert all("Synthetic fixture only" not in reason for reason in room.reasons)
+
+
+def test_amenity_prefix_requires_word_boundary() -> None:
+    backend = StubBackendClient([candidate(1, amenities="Minibar, Wifi tốc độ cao")])
+    request = recommendation_request(preferences={"amenities": ["bar", "wifi"]})
+
+    result = run_pipeline(backend, request)
+
+    assert result.recommendations[0].score == Decimal("0.5")
+    assert result.recommendations[0].reasons == [
+        "Amenity preference matched: Wifi tốc độ cao"
+    ]
 
 
 def test_missing_amenities_and_no_preferences_give_equal_neutral_scores() -> None:

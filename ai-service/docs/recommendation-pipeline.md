@@ -12,7 +12,7 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
    `roomId` records; conflicting records for one `roomId` make the response invalid.
 4. Reject candidates with a non-available status, mismatched dates/night count, or negative
    amounts. Defensively recheck capacity, optional room type, and inclusive per-night price bounds.
-5. Rank the remaining candidates by exact amenity-token score descending. For equal scores,
+5. Rank the remaining candidates by amenity preference score descending. For equal scores,
    use `sortBy` as a price tie-breaker: `PRICE_DESC` means per-night price descending;
    `PRICE_ASC` or omitted `sortBy` means per-night price ascending. If price also ties,
    use integer `roomId` ascending. Backend response order does not decide the final rank.
@@ -22,7 +22,7 @@ An empty availability response or an empty eligible set returns `NO_MATCH`. Time
 HTTP, invalid-envelope, inconsistent-candidate, and conflicting-duplicate failures keep their backend error category and
 never become `NO_MATCH`.
 
-The pipeline does not query a room catalogue, cache, vector store, LLM, or database. Soft scoring
+The pipeline does not query a room catalogue, cache, LLM, or database. Soft scoring
 cannot restore a candidate rejected by hard filtering.
 
 ## Amenity parsing and scoring
@@ -35,18 +35,18 @@ fixture use comma-separated items
 - splits backend amenity text only on commas;
 - normalizes each complete token with Unicode NFKC, case folding, and collapsed whitespace;
 - removes duplicate requested tokens after the same normalization;
-- requires exact normalized-token equality;
-- does not remove diacritics, use substring matching, translate, or generate synonyms.
+- matches a full token or a prefix ending at a word boundary, so `ban công` matches
+  `Ban công ngắm cảnh biển` but `bar` does not match `Minibar`;
+- does not remove diacritics, translate, or generate synonyms.
 
-For `R` distinct, non-blank requested amenities and `M` exact matches:
+For `R` distinct, non-blank requested amenities and `M` matches:
 
 ```text
 score = M / R
 ```
 
-When `R = 0`, all candidates receive score `0` and empty reasons. Reasons use only the exact
-matched token from backend data, for example `Exact amenity token matched: Minibar`. A request for
-`ban công` does not prove a match against the longer token `Ban công ngắm cảnh biển`.
+When `R = 0`, all candidates receive score `0` and empty reasons. Reasons use only the
+matched full token from backend data, for example `Amenity preference matched: Ban công ngắm cảnh biển`.
 
 ## Synthetic example
 

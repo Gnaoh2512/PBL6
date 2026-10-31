@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Thử gợi ý phòng · PBL6</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #142c29; background: #edf3ef; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 980px; margin: auto; }
+    header { margin: 20px 0 24px; }
+    h1 { margin: 0 0 8px; font-size: clamp(28px, 5vw, 44px); }
+    h2 { margin: 0 0 16px; font-size: 22px; }
+    p { line-height: 1.5; color: #41534e; }
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+    .card { background: white; border: 1px solid #d6e3da; border-radius: 18px; padding: 22px; box-shadow: 0 8px 26px #1a41320d; }
+    label { display: block; font-weight: 650; margin: 14px 0 6px; }
+    input, textarea { width: 100%; border: 1px solid #9fb9ab; border-radius: 9px; padding: 11px; font: inherit; }
+    textarea { min-height: 110px; resize: vertical; }
+    button { border: 0; border-radius: 9px; background: #126c50; color: white; padding: 11px 16px; font: inherit; font-weight: 700; cursor: pointer; margin-top: 14px; }
+    button.secondary { background: #e0ede5; color: #14533e; margin-left: 8px; }
+    button:disabled { opacity: .6; cursor: wait; }
+    .result { margin-top: 20px; }
+    .room { border: 1px solid #d6e3da; border-radius: 12px; padding: 14px; margin: 10px 0; background: #f8fbf9; }
+    .room strong { display: block; margin-bottom: 5px; }
+    .tag { color: #126c50; font-weight: 700; }
+    pre { overflow: auto; max-height: 360px; background: #102521; color: #dcf4e5; padding: 16px; border-radius: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .notice { font-size: 14px; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } body { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Thử gợi ý phòng</h1>
+      <p>Phòng và giá lấy trực tiếp từ Spring Boot kết nối MySQL. Gợi ý không giữ chỗ.</p>
+    </header>
+    <section class="card">
+      <h2>Kết nối nội bộ</h2>
+      <label for="token">Service token</label>
+      <input id="token" type="password" autocomplete="off" placeholder="Nhập AI_SERVICE_AUTH_TOKEN từ ai-service/.env">
+      <p class="notice">Token chỉ nằm trong ô nhập của trang này, không lưu vào trình duyệt. Hội thoại tiếng Việt cần GEMINI_API_KEY trên server; tìm kiếm có cấu trúc vẫn chạy khi chưa có khóa LLM.</p>
+    </section>
+    <div class="grid" style="margin-top:20px">
+      <section class="card">
+        <h2>Hội thoại tiếng Việt</h2>
+        <form id="conversation-form">
+          <label for="message">Câu của khách</label>
+          <textarea id="message" required maxlength="2000"></textarea>
+          <button type="submit">Gửi yêu cầu</button>
+          <button type="button" class="secondary" id="reset">Bắt đầu lại</button>
+        </form>
+        <p class="notice" id="state-note">Chưa có trạng thái tìm kiếm.</p>
+      </section>
+      <section class="card">
+        <h2>Tìm kiếm có cấu trúc</h2>
+        <form id="structured-form">
+          <label for="check-in">Ngày nhận phòng</label><input id="check-in" type="date" required>
+          <label for="check-out">Ngày trả phòng</label><input id="check-out" type="date" required>
+          <label for="guests">Số khách / một phòng</label><input id="guests" type="number" min="1" value="2" required>
+          <label for="max-price">Giá tối đa mỗi đêm</label><input id="max-price" type="number" min="0" step="0.01" value="1000000">
+          <label for="amenities">Tiện nghi ưu tiên (ngăn bằng dấu phẩy)</label><input id="amenities" value="Ban công">
+          <button type="submit">Tìm phòng thật</button>
+        </form>
+      </section>
+    </div>
+    <section class="card result" aria-live="polite">
+      <h2>Kết quả</h2>
+      <p id="summary">Chưa gửi yêu cầu.</p>
+      <div id="rooms"></div>
+      <details><summary>Dữ liệu JSON trả về</summary><pre id="raw">—</pre></details>
+    </section>
+  </main>
+  <script>
+    let state = {};
+    const $ = (id) => document.getElementById(id);
+    const iso = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+    const start = new Date(); start.setDate(start.getDate() + 15);
+    const end = new Date(start); end.setDate(end.getDate() + 2);
+    $('check-in').value = iso(start); $('check-out').value = iso(end);
+    $('message').value = `Tôi cần một phòng cho hai người từ ngày ${start.getDate()}/${start.getMonth() + 1}/${start.getFullYear()} đến ngày ${end.getDate()}/${end.getMonth() + 1}/${end.getFullYear()}, tối đa một triệu mỗi đêm, ưu tiên ban công.`;
+
+    function showRoom(room) {
+      const card = document.createElement('div'); card.className = 'room';
+      const title = document.createElement('strong');
+      title.textContent = `${room.roomType.typeName} · Phòng ${room.roomNumber} (ID ${room.roomId})`;
+      card.append(title);
+      const price = document.createElement('div');
+      price.textContent = `Giá mỗi đêm: ${room.pricePerNight} · Tổng tiền phòng: ${room.totalRoomCharge}`;
+      card.append(price);
+      const reasons = document.createElement('div');
+      reasons.textContent = room.reasons?.length ? room.reasons.join(' · ') : `Sức chứa: ${room.roomType.capacity} khách`;
+      card.append(reasons);
+      return card;
+    }
+
+    function render(data, raw) {
+      $('raw').textContent = raw;
+      $('rooms').replaceChildren();
+      if (data.error) {
+        $('summary').textContent = `${data.error.code}: ${data.error.message}`;
+        return;
+      }
+      if (data.state) {
+        state = data.state;
+        $('state-note').textContent = `Trạng thái tìm kiếm: ${JSON.stringify(state)}`;
+      }
+      $('summary').textContent = data.reply || data.status || 'Đã nhận phản hồi.';
+      const rooms = data.result?.recommendations || data.recommendations || [];
+      rooms.forEach((room) => $('rooms').append(showRoom(room)));
+    }
+
+    async function send(path, body, button) {
+      const token = $('token').value.trim();
+      if (!token) { $('summary').textContent = 'Vui lòng nhập service token.'; return; }
+      button.disabled = true;
+      try {
+        const response = await fetch(path, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-Request-ID': crypto.randomUUID(),
+          },
+          body: JSON.stringify(body),
+        });
+        const raw = await response.text();
+        render(JSON.parse(raw), raw);
+      } catch (error) {
+        $('summary').textContent = `Không kết nối được service: ${error.message}`;
+      } finally { button.disabled = false; }
+    }
+
+    $('conversation-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      send('/api/v1/ai/recommendations/conversation',
+        { message: $('message').value, state }, event.submitter);
+    });
+    $('structured-form').addEventListener('submit', (event) => {
+      event.preventDefault();
+      const body = {
+        checkInDate: $('check-in').value,
+        checkOutDate: $('check-out').value,
+        guestCount: Number($('guests').value),
+        preferences: { amenities: $('amenities').value.split(',').map(x => x.trim()).filter(Boolean) },
+      };
+      if ($('max-price').value) body.maxPrice = $('max-price').value;
+      send('/api/v1/ai/recommendations', body, event.submitter);
+    });
+    $('reset').addEventListener('click', () => {
+      state = {};
+      $('state-note').textContent = 'Chưa có trạng thái tìm kiếm.';
+      $('summary').textContent = 'Đã xóa trạng thái hội thoại.';
+      $('rooms').replaceChildren();
+      $('raw').textContent = '—';
+    });
+  </script>
+</body>
+</html>

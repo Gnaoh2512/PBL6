@@ -15,9 +15,8 @@ from ai_service.application.recommendation.pipeline import RecommendationPipelin
 from ai_service.application.request_id import validate_request_id
 from ai_service.config import Settings, get_settings
 from ai_service.infrastructure.backend.errors import (
-    BackendConnectionError,
+    BackendClientError,
     BackendHttpError,
-    BackendInvalidResponseError,
     BackendTimeoutError,
 )
 
@@ -115,6 +114,14 @@ def require_request_id(value: Annotated[str, Header(alias="X-Request-ID")]) -> s
         raise ApiError(422, "VALIDATION_ERROR", "Invalid X-Request-ID") from exc
 
 
+def map_backend_error(exc: BackendClientError) -> ApiError:
+    if isinstance(exc, BackendTimeoutError):
+        return ApiError(504, "BACKEND_TIMEOUT", "Current room availability could not be retrieved")
+    if isinstance(exc, BackendHttpError) and 400 <= exc.status_code < 500:
+        return ApiError(422, "BACKEND_REJECTED_REQUEST", "Backend rejected the search criteria")
+    return ApiError(502, "BACKEND_UNAVAILABLE", "Current room availability could not be retrieved")
+
+
 @router.post(
     "/recommendations",
     response_model=RecommendationResult,
@@ -141,22 +148,8 @@ async def recommend_rooms(
         result = await RecommendationPipeline(backend_client).execute(
             payload, request_id=request_id
         )
-    except BackendTimeoutError as exc:
-        raise ApiError(
-            504, "BACKEND_TIMEOUT", "Current room availability could not be retrieved"
-        ) from exc
-    except BackendHttpError as exc:
-        if 400 <= exc.status_code < 500:
-            raise ApiError(
-                422, "BACKEND_REJECTED_REQUEST", "Backend rejected the search criteria"
-            ) from exc
-        raise ApiError(
-            502, "BACKEND_UNAVAILABLE", "Current room availability could not be retrieved"
-        ) from exc
-    except (BackendConnectionError, BackendInvalidResponseError) as exc:
-        raise ApiError(
-            502, "BACKEND_UNAVAILABLE", "Current room availability could not be retrieved"
-        ) from exc
+    except BackendClientError as exc:
+        raise map_backend_error(exc) from exc
 
     return Response(
         content=result.to_contract_json(),

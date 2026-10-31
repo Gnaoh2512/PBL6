@@ -164,9 +164,22 @@ class RecommendationPipeline:
         requested: set[str],
     ) -> RecommendedRoom:
         available = _candidate_amenities(candidate.room_type.amenities)
-        matched = sorted(requested.intersection(available))
+        matched = {
+            preference: display
+            for preference in sorted(requested)
+            if (
+                display := next(
+                    (
+                        label
+                        for normalized, label in available.items()
+                        if normalized == preference or normalized.startswith(preference + " ")
+                    ),
+                    None,
+                )
+            )
+        }
         score = Decimal(len(matched)) / Decimal(len(requested)) if requested else Decimal("0")
-        reasons = [f"Exact amenity token matched: {available[item]}" for item in matched]
+        reasons = [f"Amenity preference matched: {label}" for label in matched.values()]
 
         return RecommendedRoom(
             roomId=candidate.room_id,
