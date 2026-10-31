@@ -20,6 +20,16 @@ export default function Navbar({ variant, hideLinks = false }) {
   const isStaff = hasRole(["RECEPTIONIST", "HOUSEKEEPING", "SERVICE_STAFF", "MAINTENANCE", "MANAGER", "ADMIN"]);
   const isAdmin = hasRole(["ADMIN", "MANAGER"]);
 
+  const handlePortalNavigation = () => {
+    if (hasRole(["CUSTOMER"])) {
+      navigate("/guest");
+    } else if (hasRole(["MANAGER", "ADMIN"])) {
+      navigate("/admin/overview");
+    } else {
+      navigate("/staff");
+    }
+  };
+
   if (variant === "resort") {
     return (
       <header className={`hc-navbar resort-nav ${scrolled ? "scrolled" : ""} ${mobileOpen ? "menu-open" : ""}`}>
@@ -50,7 +60,7 @@ export default function Navbar({ variant, hideLinks = false }) {
           </nav>
           <div className="resort-nav-actions">
             {isAuthenticated ? (
-              <button className="resort-login" onClick={() => (hasRole(["CUSTOMER"]) ? navigate("/guest") : hasRole(["MANAGER", "ADMIN"]) ? navigate("/admin/overview") : navigate("/staff"))}>
+              <button className="resort-login" onClick={handlePortalNavigation}>
                 {user?.fullName || user?.username}
               </button>
             ) : (
@@ -58,7 +68,7 @@ export default function Navbar({ variant, hideLinks = false }) {
                 Đăng nhập
               </Link>
             )}
-            <Link className="resort-nav-book" to={{ pathname: "/", hash: "#stay" }} onClick={() => setMobileOpen(false)}>
+            <Link className="resort-nav-book" to="/booking" onClick={() => setMobileOpen(false)}>
               Đặt phòng
             </Link>
             <button className="resort-menu-toggle" aria-label="Mở hoặc đóng trình đơn" onClick={() => setMobileOpen(!mobileOpen)}>
@@ -74,16 +84,6 @@ export default function Navbar({ variant, hideLinks = false }) {
     logout();
     addToast("Đã đăng xuất thành công", "info");
     navigate("/login");
-  };
-
-  const getRoleDisplayName = (r) => {
-    if (!r) return "";
-    const clean = r.replace("ROLE_", "").toUpperCase();
-    if (clean === "ADMIN") return "Quản Trị Viên";
-    if (clean === "RECEPTIONIST") return "Lễ Tân";
-    if (clean === "HOUSEKEEPING") return "Buồng Phòng";
-    if (clean === "MANAGER") return "Quản Lý";
-    return "Thành Viên";
   };
 
   return (
@@ -138,12 +138,9 @@ export default function Navbar({ variant, hideLinks = false }) {
         <div className="hc-navbar-actions">
           {isAuthenticated && user ? (
             <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div className="hc-user-badge">
+              <div className="hc-user-badge" onClick={handlePortalNavigation} style={{ cursor: "pointer" }} title="Chuyển đến trang cá nhân">
                 <i className="bi bi-person-circle"></i>
                 <span>{user.fullName || user.username}</span>
-                <span className="hc-badge hc-badge-primary" style={{ fontSize: "11px" }}>
-                  {getRoleDisplayName(user.role)}
-                </span>
               </div>
               <button type="button" onClick={handleLogout} className="hc-btn hc-btn-outline hc-btn-sm" title="Đăng xuất">
                 <i className="bi bi-box-arrow-right"></i>

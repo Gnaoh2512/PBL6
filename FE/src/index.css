@@ -85,6 +85,10 @@
   --hc-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+button {
+  cursor: pointer;
+}
+
 @media (prefers-reduced-motion: reduce) {
   :root {
     --hc-duration-fast: 0ms;
@@ -1216,9 +1220,7 @@ a:hover {
    ============================================ */
 
 .hc-auth-page {
-  background-image:
-    linear-gradient(115deg, rgba(13, 54, 65, 0.78), rgba(20, 66, 77, 0.38)),
-    url("https://images.unsplash.com/photo-1735770517146-e95c872226fc?auto=format&fit=crop&w=2000&q=85");
+  background-image: linear-gradient(115deg, rgba(13, 54, 65, 0.78), rgba(20, 66, 77, 0.38)), url("https://images.unsplash.com/photo-1735770517146-e95c872226fc?auto=format&fit=crop&w=2000&q=85");
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
