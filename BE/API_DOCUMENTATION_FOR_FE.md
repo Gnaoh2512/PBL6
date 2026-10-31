@@ -3,7 +3,7 @@
 **Dự án:** Hệ thống Quản lý Khách sạn & Đặt phòng Trực tuyến (PBL6)  
 **Công nghệ Backend:** Spring Boot 3, Spring Security (JWT), MySQL  
 **Base URL:** `http://localhost:9090`  
-**Cập nhật lần cuối:** 02/10/2026 (Phiên bản đầy đủ 57 APIs)
+**Cập nhật lần cuối:** 22/10/2026 (Phiên bản đầy đủ 84 API mappings)
 
 ---
 
@@ -61,8 +61,7 @@ Mật khẩu mặc định của tất cả các tài khoản thử nghiệm: **
 | :--- | :--- | :--- |
 | `admin` | `ROLE_ADMIN` | Quản trị toàn hệ thống (Tài khoản, Phòng, Dịch vụ, Ca trực, Voucher) |
 | `manager` | `ROLE_MANAGER` | Quản lý khách sạn, duyệt giảm giá, theo dõi doanh thu |
-| `receptionist` | `ROLE_RECEPTIONIST` | Lễ tân: Đặt phòng tại quầy (Walk-in), Check-in, Duyệt cọc, Hủy đơn |
-| `cashier` | `ROLE_CASHIER` | Thu ngân: Mở/Đóng ca thu ngân, Xem Live Folio, Quyết toán Check-out |
+| `receptionist` | `ROLE_RECEPTIONIST` | Lễ tân / thu ngân: Đặt phòng tại quầy, check-in, thanh toán và quản lý ca |
 | `housekeeper` | `ROLE_HOUSEKEEPING` | Buồng phòng: Cập nhật phòng sạch, kiểm tra minibar phát sinh |
 | `customer1` | `ROLE_CUSTOMER` | Khách hàng thành viên (SĐT: `0901234567`) |
 
@@ -142,14 +141,21 @@ Mật khẩu mặc định của tất cả các tài khoản thử nghiệm: **
 - **Response `data`:**
   ```json
   {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "type": "Bearer",
-    "username": "receptionist",
-    "fullName": "Lễ tân Minh Trang",
-    "role": "ROLE_RECEPTIONIST"
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "expiresInMs": 86400000,
+    "user": {
+      "accountId": 3,
+      "username": "receptionist",
+      "fullName": "Account full name",
+      "email": "receptionist@hotel.com",
+      "phone": "0900000003",
+      "role": "ROLE_RECEPTIONIST",
+      "status": "ACTIVE"
+    }
   }
   ```
-  > *FE lưu `token` vào `localStorage` và chuyển trang theo `role` tương ứng.*
+  > *FE lưu `accessToken` vào `localStorage` và chuyển trang theo `role` tương ứng.*
 
 ### 4.3. Lấy thông tin tài khoản đang đăng nhập
 - **Endpoint:** `GET /api/auth/me`
@@ -312,7 +318,7 @@ Mật khẩu mặc định của tất cả các tài khoản thử nghiệm: **
 ## 6. PHÂN HỆ LỄ TÂN & THU NGÂN (STAFF OPERATIONS)
 
 > **Lưu ý:** Tất cả API trong phân hệ này bắt buộc Header:  
-> `Authorization: Bearer <token_nhan_vien>` (Role: `RECEPTIONIST`, `CASHIER`, `MANAGER`, `ADMIN`)
+> `Authorization: Bearer <token_nhan_vien>` (Role: `RECEPTIONIST`, `MANAGER`, `ADMIN`)
 
 ---
 
@@ -519,3 +525,23 @@ Khi Backend trả về lỗi, Status Code sẽ khác `200` và body luôn chứa
 | **`403`** | **Forbidden** | Tài khoản không đủ quyền (Ví dụ: Khách hàng cố gọi API của Lễ tân). **FE hiển thị Alert: "Bạn không có quyền thực hiện chức năng này".** |
 | **`404`** | **Not Found** | Không tìm thấy mã đơn đặt phòng, phòng hoặc mã voucher. **FE hiển thị thông báo "Dữ liệu không tồn tại".** |
 | **`500`** | **Server Error** | Lỗi nội bộ hệ thống. **FE hiển thị thông báo: "Hệ thống đang bận, vui lòng thử lại sau".** |
+
+---
+
+## PHU LUC: DOI CHIEU ROUTE VA QUYEN TRUY CAP (22/10/2026)
+
+Danh sach nay doi chieu 84 API mappings khai bao trong controller. API can dang nhap deu gui `Authorization: Bearer <accessToken>`; cac route `/api/public/**` va dang ky/dang nhap la public. Role trong response co tien to `ROLE_`.
+
+| Nhom | Route | Quyen |
+| :--- | :--- | :--- |
+| Auth | `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` | Register/login public; me can token |
+| Public | `/api/public/rooms/**`, `/api/public/vouchers/**`, `/api/public/bookings/**`, `/api/public/history/**`, `/api/public/services`, `/api/public/services/order` | Public; webhook co validation rieng |
+| Customer bookings | `GET /api/customer/bookings/my-bookings`, `/history`, `/history/{bookingCode}`, `POST /{bookingCode}/cancel` | Can token; backend kiem tra booking cua user hien tai |
+| Customer billing | `GET /api/customer/billing/services`, `POST /services/order`, `GET /bookings/{bookingCode}/folio` | CUSTOMER |
+| Customer loyalty/requests | loyalty `/profile`, `/transactions`, `/benefits`; requests `POST /api/customer/service-requests`, `GET /my-requests`, `POST /{id}/cancel` | CUSTOMER hoac ADMIN |
+| Staff booking/billing | `/api/staff/bookings/**`, `/api/staff/billing/bookings/**` | RECEPTIONIST, MANAGER, ADMIN |
+| Cashier shifts | `/api/staff/cashier-shifts/**` | ADMIN, MANAGER, RECEPTIONIST |
+| Staff service requests | `/api/staff/service-requests/**` | SERVICE_STAFF, RECEPTIONIST, MANAGER, ADMIN |
+| Staff maintenance | `GET /api/staff/maintenance/equipment`, other `/api/staff/maintenance/**` | Quyen thay doi theo thao tac; MAINTENANCE xu ly assign/complete, HOUSEKEEPING duoc bao cao va xem |
+| Admin accounts/audit | `/api/admin/accounts/**`, `/api/admin/audit-logs` | ADMIN |
+| Admin management | rooms/types, services, shifts, schedules, vouchers, equipment, loyalty duoi `/api/admin/**` | Thong thuong ADMIN/MANAGER; room list/status cho phep them RECEPTIONIST/HOUSEKEEPING |

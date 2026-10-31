@@ -1,0 +1,297 @@
+/* =========================================================
+   BookingPage styles (moved out of inline style props)
+   ========================================================= */
+
+/* ---------- Coastal room badge ("PHÒNG 101", "LỰA CHỌN CỦA BẠN") ----------
+   Replaces the yellowish badge with a soft aqua / deep teal pair that matches
+   the HomePage resort palette. Scoped under .booking-experience so it wins
+   over the global .hc-hero-badge rule. */
+.booking-experience .hc-hero-badge,
+.booking-experience .booking-room-card .hc-hero-badge,
+.booking-experience .booking-selected-room .hc-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 6px 12px;
+  color: var(--hc-primary, #19525f);
+  background: #e6f4f6;
+  background: color-mix(in srgb, var(--hc-primary, #19525f) 9%, white);
+  border: 1px solid rgba(25, 82, 95, 0.22);
+  border: 1px solid color-mix(in srgb, var(--hc-primary, #19525f) 22%, white);
+  border-radius: 2px;
+  box-shadow: none;
+  text-shadow: none;
+  backdrop-filter: none;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.booking-experience .hc-hero-badge::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hc-primary, #19525f);
+  opacity: 0.55;
+}
+
+/* ---------- Room number: plain text ---------- */
+.bk-room-number {
+  color: var(--hc-primary, #19525f);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.bk-room-number b {
+  margin-left: 4px;
+  font-family: var(--hc-font-heading, "Playfair Display", Georgia, serif);
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+.bk-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+.bk-title-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- Page width = navbar content width ----------
+   --bk-content-width / --bk-content-offset are measured from the navbar in BookingPage.jsx,
+   so the page edges line up exactly with the logo (left) and the account buttons (right). */
+main.booking-experience > .hc-container {
+  box-sizing: border-box;
+  width: var(--bk-content-width, auto);
+  max-width: none;
+  margin-left: var(--bk-content-offset, auto);
+  margin-right: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ---------- Layout helpers ---------- */
+.bk-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.bk-icon-gap {
+  margin-right: 8px;
+}
+.bk-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.bk-grid-1-2 {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+.bk-center {
+  text-align: center;
+}
+.bk-mb-16 {
+  margin-bottom: 16px;
+}
+.bk-required {
+  color: var(--hc-error);
+}
+.bk-muted {
+  color: var(--hc-text-secondary);
+}
+
+/* ---------- Form ---------- */
+.bk-submit-btn {
+  width: 100%;
+  margin-top: 12px;
+}
+.hc-spinner.bk-spinner-light {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+  border-color: #fff;
+  border-top-color: transparent;
+}
+
+/* ---------- Voucher ---------- */
+.bk-voucher-card {
+  margin-bottom: 24px;
+}
+.bk-voucher-row {
+  display: flex;
+  gap: 8px;
+}
+.bk-voucher-applied {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hc-success);
+}
+
+/* ---------- Bill summary ---------- */
+.bk-bill-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.bk-bill-row.bk-bill-row-discount {
+  color: var(--hc-success);
+}
+.bk-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.bk-total-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+.bk-total-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--hc-primary);
+}
+
+/* Deposit box: was yellow warning, now soft coastal aqua */
+.bk-deposit-box {
+  padding: 16px;
+  background: #eef8f9;
+  background: color-mix(in srgb, var(--hc-primary, #19525f) 7%, white);
+  border: 1px solid rgba(25, 82, 95, 0.2);
+  border: 1px solid color-mix(in srgb, var(--hc-primary, #19525f) 20%, white);
+  border-radius: var(--hc-radius-md);
+}
+.bk-deposit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.bk-deposit-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--hc-primary, #19525f);
+}
+.bk-deposit-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--hc-error);
+}
+.bk-deposit-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--hc-text-secondary);
+}
+
+/* ---------- QR payment modal ---------- */
+.bk-wait-badge {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+.bk-qr-fallback {
+  width: 240px;
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  color: #6c757d;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+.bk-qr-fallback-icon {
+  font-size: 36px;
+}
+.bk-transfer-info {
+  margin-bottom: 16px;
+  padding: 16px;
+  text-align: left;
+  font-size: 13px;
+  background: var(--hc-bg);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+}
+.bk-info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.bk-info-row.bk-info-row-flush {
+  margin-bottom: 0;
+}
+.bk-strong-primary {
+  color: var(--hc-primary);
+}
+.bk-strong-error {
+  font-size: 16px;
+  color: var(--hc-error);
+}
+.bk-strong-text {
+  color: var(--hc-text);
+}
+
+/* ---------- Payment success ---------- */
+.bk-success-wrap {
+  padding: 20px 0;
+}
+.bk-success-icon {
+  width: 64px;
+  height: 64px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  font-size: 32px;
+  color: var(--hc-success);
+  background: var(--hc-success-bg);
+  border-radius: 50%;
+}
+.bk-success-title {
+  margin-bottom: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--hc-success);
+}
+.bk-success-text {
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: var(--hc-text-secondary);
+}
+.bk-success-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 640px) {
+  .bk-grid-2,
+  .bk-grid-1-2 {
+    grid-template-columns: 1fr;
+  }
+  .bk-voucher-row {
+    flex-direction: column;
+  }
+  .bk-success-actions {
+    flex-direction: column;
+  }
+}

@@ -33,7 +33,7 @@ public class AccountResponse {
                 .fullName(account.getFullName())
                 .email(account.getEmail())
                 .phone(account.getPhone())
-                .role(account.getRole())
+                .role(account.getRole() != null ? account.getRole().getRoleCode() : null)
                 .status(account.getStatus())
                 .lastLogin(account.getLastLogin())
                 .createdAt(account.getCreatedAt())

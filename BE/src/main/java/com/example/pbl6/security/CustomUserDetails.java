@@ -8,6 +8,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
 
 @Getter
 public class CustomUserDetails implements UserDetails {
@@ -20,13 +21,13 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        String role = account.getRole();
-        if (role == null || role.isBlank()) {
-            role = "CUSTOMER";
+        String role = null;
+        if (account.getRole() != null) {
+            role = account.getRole().getRoleCode();
         }
-        if (!role.startsWith("ROLE_")) {
-            role = "ROLE_" + role.toUpperCase();
-        }
+        if (role == null || role.isBlank()) return Collections.emptyList();
+        role = role.trim().toUpperCase(Locale.ROOT);
+        if (!role.startsWith("ROLE_")) role = "ROLE_" + role;
         return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 

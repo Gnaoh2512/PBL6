@@ -1,0 +1,87 @@
+/* Rich modal variant – only applied when Modal receives icon / subtitle / accent / headerExtra.
+   Plain modals keep the original look from index.css. */
+
+.hc-modal--rich {
+  overflow: hidden;
+  border-top: 4px solid var(--modal-accent, var(--hc-primary));
+}
+
+.hc-modal--rich .hc-modal-header {
+  gap: 14px;
+  justify-content: flex-start;
+  padding: 18px 20px 16px 24px;
+  border-bottom: 1px solid var(--hc-border-light);
+  background: linear-gradient(180deg, var(--hc-primary-subtle), var(--hc-surface));
+}
+.hc-modal-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--hc-radius-md);
+  font-size: 1.25rem;
+  color: var(--modal-accent, var(--hc-primary));
+  background: color-mix(in srgb, var(--modal-accent, var(--hc-primary)) 14%, var(--hc-surface));
+}
+.hc-modal-heading {
+  flex: 1;
+  min-width: 0;
+}
+.hc-modal--rich .hc-modal-title {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+}
+.hc-modal-subtitle {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--hc-text-secondary);
+}
+.hc-modal-extra {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.hc-modal--rich .hc-modal-close {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--hc-surface);
+  border: 1px solid var(--hc-border);
+}
+.hc-modal--rich .hc-modal-close:hover {
+  background: var(--hc-error-bg);
+  border-color: transparent;
+  color: var(--hc-error);
+}
+.hc-modal--rich .hc-modal-body {
+  padding: 20px 24px 24px;
+  background: var(--hc-bg);
+}
+.hc-modal--rich .hc-modal-footer {
+  background: var(--hc-bg);
+}
+
+@media (max-width: 520px) {
+  .hc-modal--rich .hc-modal-header {
+    flex-wrap: wrap;
+  }
+  .hc-modal-extra {
+    order: 3;
+    width: 100%;
+  }
+}
+
+/* Picker dropdowns are portalled to <body>; keep them above any modal overlay (z-index 2000). */
+.fp-pop {
+  z-index: 3000;
+}

@@ -14,32 +14,42 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
 public class AdminRoomController {
 
     private final RoomAdminService roomAdminService;
 
+    @GetMapping("/rooms")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'HOUSEKEEPING')")
+    public ApiResponse<java.util.List<Room>> getAllRooms() {
+        return ApiResponse.ok(roomAdminService.getAllRooms());
+    }
+
     @PostMapping("/room-types")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<RoomType> createRoomType(@Valid @RequestBody RoomTypeRequest request) {
         return ApiResponse.ok("Room type created successfully", roomAdminService.createRoomType(request));
     }
 
     @PutMapping("/room-types/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<RoomType> updateRoomType(@PathVariable Integer id, @Valid @RequestBody RoomTypeRequest request) {
         return ApiResponse.ok("Room type updated successfully", roomAdminService.updateRoomType(id, request));
     }
 
     @PostMapping("/rooms")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Room> createRoom(@Valid @RequestBody RoomRequest request) {
         return ApiResponse.ok("Room created successfully", roomAdminService.createRoom(request));
     }
 
     @PutMapping("/rooms/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
     public ApiResponse<Room> updateRoom(@PathVariable Integer id, @Valid @RequestBody RoomRequest request) {
         return ApiResponse.ok("Room updated successfully", roomAdminService.updateRoom(id, request));
     }
 
     @PatchMapping("/rooms/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'HOUSEKEEPING')")
     public ApiResponse<Room> updateRoomStatus(@PathVariable Integer id, @RequestParam String status) {
         return ApiResponse.ok("Room status updated successfully", roomAdminService.updateRoomStatus(id, status));
     }

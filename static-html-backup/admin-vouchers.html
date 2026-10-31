@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Voucher Khuyến Mãi - Hotel California</title>
+    <!-- Zero-Flash Synchronous Route Guard -->
+    <style>body { display: none; }</style>
+    <script src="js/api.js"></script>
+    <script>
+        guardPageAccess(['ADMIN', 'MANAGER']);
+    </script>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header id="top-navbar"></header>
+
+    <div class="app-wrapper">
+        <aside id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h2 class="fw-bold fs-4 text-dark mb-1">
+                        <i class="bi bi-ticket-perforated text-primary"></i> Quản Lý Voucher Khuyến Mãi
+                    </h2>
+                    <p class="text-secondary small mb-0">Tạo mã giảm giá ưu đãi theo phần trăm hoặc số tiền cố định và bật/tắt kích hoạt voucher</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button onclick="loadAdminVouchers()" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-arrow-clockwise"></i> Tải lại
+                    </button>
+                    <button onclick="openCreateVoucherModal()" class="btn btn-primary btn-sm shadow-sm">
+                        <i class="bi bi-plus-lg"></i> Tạo Voucher Mới
+                    </button>
+                </div>
+            </div>
+
+            <div class="card border shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-dark">Danh Sách Mã Giảm Giá & Voucher Khách Sạn</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mã Voucher</th>
+                                    <th>Tên Chương Trình</th>
+                                    <th>Mức Giảm</th>
+                                    <th>Đơn Tối Thiểu</th>
+                                    <th>Giảm Tối Đa</th>
+                                    <th>Thời Gian Hiệu Lực</th>
+                                    <th>Đã Dùng / Giới Hạn</th>
+                                    <th>Trạng Thái</th>
+                                    <th class="text-end">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vouchersTableBody">
+                                <tr><td colspan="9" class="text-center text-secondary py-4">Đang tải dữ liệu voucher...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Tạo Voucher Mới -->
+    <div class="modal fade" id="voucherModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fs-6 fw-bold">Tạo Chương Trình Voucher Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="voucherForm" onsubmit="handleCreateVoucher(event)">
+                    <div class="modal-body p-4">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vCode">Mã Voucher (Code) <span class="text-danger">*</span></label>
+                                <input type="text" id="vCode" class="form-control text-uppercase font-monospace" placeholder="VD: CALIFORNIA20" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vType">Loại giảm giá <span class="text-danger">*</span></label>
+                                <select id="vType" class="form-select" onchange="toggleVoucherValueInputs()">
+                                    <option value="PERCENTAGE">Giảm theo % (PERCENTAGE)</option>
+                                    <option value="FIXED_AMOUNT">Giảm tiền mặt VNĐ (FIXED)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold" for="vName">Tên chương trình ưu đãi <span class="text-danger">*</span></label>
+                            <input type="text" id="vName" class="form-control" placeholder="Ví dụ: Ưu đãi tri ân mùa thu 20%" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vValue">Giá trị giảm <span class="text-danger">*</span></label>
+                                <input type="number" id="vValue" class="form-control" placeholder="20 (hoặc 100000)" min="1" step="any" required>
+                                <small id="vValueHelp" class="text-secondary" style="font-size: 0.75rem;">Nhập số % (ví dụ: 20 cho 20%)</small>
+                            </div>
+                            <div class="col-6" id="maxDiscountGroup">
+                                <label class="form-label small fw-semibold" for="vMaxDiscount">Giảm tối đa (VNĐ)</label>
+                                <input type="number" id="vMaxDiscount" class="form-control" placeholder="300000" min="0" step="10000">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vMinOrder">Đơn tối thiểu (VNĐ)</label>
+                                <input type="number" id="vMinOrder" class="form-control" placeholder="500000" min="0" step="50000">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vUsageLimit">Giới hạn số lượt dùng</label>
+                                <input type="number" id="vUsageLimit" class="form-control" value="100" min="1" max="10000">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vStartDate">Ngày bắt đầu <span class="text-danger">*</span></label>
+                                <input type="date" id="vStartDate" class="form-control" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold" for="vEndDate">Ngày kết thúc <span class="text-danger">*</span></label>
+                                <input type="date" id="vEndDate" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="saveVoucherBtn" class="btn btn-primary btn-sm">Xác nhận tạo Voucher</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle & App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let adminVouchersList = [];
+
+        async function initPage() {
+            renderTopNav('admin');
+            renderSidebar('admin-vouchers');
+
+            const today = new Date();
+            const nextMonth = new Date();
+            nextMonth.setMonth(today.getMonth() + 2);
+
+            document.getElementById('vStartDate').value = today.toISOString().split('T')[0];
+            document.getElementById('vEndDate').value = nextMonth.toISOString().split('T')[0];
+
+            loadAdminVouchers();
+        }
+
+        async function loadAdminVouchers() {
+            try {
+                const res = await apiCall('/api/admin/vouchers');
+                if (res && res.success) {
+                    adminVouchersList = res.data || [];
+                    renderVouchersTable(adminVouchersList);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderVouchersTable(vouchers) {
+            const tbody = document.getElementById('vouchersTableBody');
+            if (vouchers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-secondary py-4">Chưa có voucher nào trong hệ thống.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = vouchers.map(v => {
+                const isPercent = v.discountType === 'PERCENTAGE';
+                const discountText = isPercent ? `${v.discountValue}%` : formatVND(v.discountValue);
+
+                return `
+                    <tr>
+                        <td><strong class="text-primary font-monospace fs-6">${v.code}</strong></td>
+                        <td><strong class="text-dark">${v.voucherName}</strong></td>
+                        <td><span class="badge ${isPercent ? 'bg-info text-dark' : 'bg-success'}">${discountText}</span></td>
+                        <td>${formatVND(v.minOrderAmount || 0)}</td>
+                        <td>${v.maxDiscountAmount ? formatVND(v.maxDiscountAmount) : '<span class="text-secondary">Không giới hạn</span>'}</td>
+                        <td><small class="text-secondary">${formatDate(v.startDate)} → ${formatDate(v.endDate)}</small></td>
+                        <td><strong>${v.usedCount || 0}</strong> / ${v.usageLimit || '∞'}</td>
+                        <td>
+                            <span class="badge ${v.isActive ? 'bg-success' : 'bg-secondary'}">
+                                ${v.isActive ? 'ĐANG BẬT' : 'ĐÃ TẮT'}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <button onclick="handleToggleVoucher(${v.voucherId}, ${v.isActive})" class="btn ${v.isActive ? 'btn-outline-danger' : 'btn-outline-success'} btn-sm">
+                                <i class="bi ${v.isActive ? 'bi-pause-circle' : 'bi-play-circle'}"></i> ${v.isActive ? 'Tắt voucher' : 'Kích hoạt'}
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function handleToggleVoucher(voucherId, currentActive) {
+            try {
+                const res = await apiCall(`/api/admin/vouchers/${voucherId}/toggle`, { method: 'PATCH' });
+                if (res && res.success) {
+                    showToast(currentActive ? 'Đã tắt voucher!' : 'Đã kích hoạt voucher thành công!', 'success');
+                    loadAdminVouchers();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function toggleVoucherValueInputs() {
+            const type = document.getElementById('vType').value;
+            const help = document.getElementById('vValueHelp');
+            const maxGroup = document.getElementById('maxDiscountGroup');
+
+            if (type === 'PERCENTAGE') {
+                help.textContent = 'Nhập số % (ví dụ: 15 cho 15%)';
+                maxGroup.style.display = 'block';
+            } else {
+                help.textContent = 'Nhập số tiền VNĐ (ví dụ: 100000)';
+                maxGroup.style.display = 'none';
+            }
+        }
+
+        function openCreateVoucherModal() {
+            document.getElementById('voucherForm').reset();
+            const today = new Date();
+            const nextMonth = new Date();
+            nextMonth.setMonth(today.getMonth() + 2);
+            document.getElementById('vStartDate').value = today.toISOString().split('T')[0];
+            document.getElementById('vEndDate').value = nextMonth.toISOString().split('T')[0];
+            toggleVoucherValueInputs();
+            openModal('voucherModal');
+        }
+
+        async function handleCreateVoucher(event) {
+            event.preventDefault();
+            const btn = document.getElementById('saveVoucherBtn');
+
+            const code = document.getElementById('vCode').value.trim().toUpperCase();
+            const voucherName = document.getElementById('vName').value.trim();
+            const discountType = document.getElementById('vType').value;
+            const discountValue = parseFloat(document.getElementById('vValue').value);
+            const maxDiscount = document.getElementById('vMaxDiscount').value;
+            const minOrder = document.getElementById('vMinOrder').value;
+            const usageLimit = document.getElementById('vUsageLimit').value;
+            const startDate = document.getElementById('vStartDate').value;
+            const endDate = document.getElementById('vEndDate').value;
+
+            if (new Date(endDate) <= new Date(startDate)) {
+                showToast('Ngày kết thúc phải sau ngày bắt đầu!', 'error');
+                return;
+            }
+
+            const payload = {
+                code,
+                voucherName,
+                discountType,
+                discountValue,
+                maxDiscountAmount: (discountType === 'PERCENTAGE' && maxDiscount) ? parseFloat(maxDiscount) : null,
+                minOrderAmount: minOrder ? parseFloat(minOrder) : null,
+                startDate,
+                endDate,
+                usageLimit: usageLimit ? parseInt(usageLimit) : 100
+            };
+
+            btn.disabled = true;
+            try {
+                const res = await apiCall('/api/admin/vouchers', { method: 'POST', body: payload });
+                btn.disabled = false;
+                if (res && res.success) {
+                    showToast('Đã tạo chương trình Voucher thành công!', 'success');
+                    closeModal('voucherModal');
+                    loadAdminVouchers();
+                }
+            } catch (err) {
+                btn.disabled = false;
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

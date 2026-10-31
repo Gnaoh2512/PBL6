@@ -17,6 +17,9 @@ public class CancellationRefundResponse {
     private int refundPercentage;
     private BigDecimal refundAmount;
     private BigDecimal penaltyFee;
+    private String refundOption; // CASH_REFUND | CREDIT_VOUCHER | LOYALTY_POINTS
+    private String creditVoucherCode;
+    private BigDecimal loyaltyPointsCredited;
     private String status;
     private String message;
 }

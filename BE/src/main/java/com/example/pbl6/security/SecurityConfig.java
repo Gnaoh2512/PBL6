@@ -60,13 +60,24 @@ public class SecurityConfig {
                                 "/api/auth/**",
                                 "/api/public/**",
                                 "/",
-                                "/login.html",
-                                "/register.html",
-                                "/favicon.ico",
+                                "/index.html",
+                                "/*.html",
+                                "/**/*.html",
+                                "/assets/**",
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/error"
+                                "/favicon.ico",
+                                "/error",
+                                "/login",
+                                "/register",
+                                "/booking",
+                                "/services",
+                                "/history",
+                                "/staff",
+                                "/staff/**",
+                                "/admin",
+                                "/admin/**"
                         ).permitAll()
                         .requestMatchers("/api/ai/**").authenticated()
                         .anyRequest().authenticated()

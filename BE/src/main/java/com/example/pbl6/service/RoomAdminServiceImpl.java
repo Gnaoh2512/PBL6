@@ -11,12 +11,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class RoomAdminServiceImpl implements RoomAdminService {
 
     private final RoomRepository roomRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -28,7 +31,12 @@ public class RoomAdminServiceImpl implements RoomAdminService {
                 .amenities(request.getAmenities())
                 .description(request.getDescription())
                 .build();
-        return roomTypeRepository.save(roomType);
+        RoomType saved = roomTypeRepository.save(roomType);
+
+        auditLogService.log("PHÒNG & HẠNG PHÒNG", "CREATE_ROOM_TYPE", "room_type", Long.valueOf(saved.getRoomTypeId()),
+                "Tạo mới hạng phòng: " + saved.getTypeName() + " (Sức chứa: " + saved.getCapacity() + " người, Giá: " + saved.getBasePrice() + " VNĐ)");
+
+        return saved;
     }
 
     @Override
@@ -43,7 +51,12 @@ public class RoomAdminServiceImpl implements RoomAdminService {
         roomType.setAmenities(request.getAmenities());
         roomType.setDescription(request.getDescription());
 
-        return roomTypeRepository.save(roomType);
+        RoomType updated = roomTypeRepository.save(roomType);
+
+        auditLogService.log("PHÒNG & HẠNG PHÒNG", "UPDATE_ROOM_TYPE", "room_type", Long.valueOf(updated.getRoomTypeId()),
+                "Cập nhật thông tin hạng phòng: " + updated.getTypeName() + " (Giá: " + updated.getBasePrice() + " VNĐ)");
+
+        return updated;
     }
 
     @Override
@@ -64,7 +77,12 @@ public class RoomAdminServiceImpl implements RoomAdminService {
                 .note(request.getNote())
                 .build();
 
-        return roomRepository.save(room);
+        Room saved = roomRepository.save(room);
+
+        auditLogService.log("PHÒNG & HẠNG PHÒNG", "CREATE_ROOM", "room", Long.valueOf(saved.getRoomId()),
+                "Thêm phòng mới: Phòng " + saved.getRoomNumber() + " (Tầng " + saved.getFloor() + ", Hạng: " + roomType.getTypeName() + ")");
+
+        return saved;
     }
 
     @Override
@@ -89,7 +107,12 @@ public class RoomAdminServiceImpl implements RoomAdminService {
         }
         room.setNote(request.getNote());
 
-        return roomRepository.save(room);
+        Room updated = roomRepository.save(room);
+
+        auditLogService.log("PHÒNG & HẠNG PHÒNG", "UPDATE_ROOM", "room", Long.valueOf(updated.getRoomId()),
+                "Cập nhật phòng " + updated.getRoomNumber() + " (Trạng thái: " + updated.getStatus() + ", Tầng: " + updated.getFloor() + ")");
+
+        return updated;
     }
 
     @Override
@@ -97,7 +120,20 @@ public class RoomAdminServiceImpl implements RoomAdminService {
     public Room updateRoomStatus(Integer id, String status) {
         Room room = roomRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Room", "id", id));
+        String oldStatus = room.getStatus();
         room.setStatus(status);
-        return roomRepository.save(room);
+        Room updated = roomRepository.save(room);
+
+        auditLogService.log("PHÒNG & HẠNG PHÒNG", "STATUS_CHANGE", "room", Long.valueOf(updated.getRoomId()),
+                oldStatus,
+                "Đổi trạng thái phòng " + updated.getRoomNumber() + ": " + oldStatus + " ➔ " + status);
+
+        return updated;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Room> getAllRooms() {
+        return roomRepository.findAll();
     }
 }

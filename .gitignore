@@ -1,0 +1,12 @@
+# Environment variables
+.env
+BE/.env
+
+# Build outputs
+BE/target/
+target/
+
+# IDE configs
+.idea/
+.vscode/
+*.iml

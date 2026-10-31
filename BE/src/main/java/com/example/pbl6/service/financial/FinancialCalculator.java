@@ -98,14 +98,15 @@ public class FinancialCalculator {
         }
 
         BigDecimal discount = BigDecimal.ZERO;
-        if ("PERCENTAGE".equalsIgnoreCase(voucher.getDiscountType())) {
+        String type = voucher.getDiscountType() != null ? voucher.getDiscountType().toUpperCase() : "";
+        if ("PERCENTAGE".equals(type) || "PERCENT".equals(type)) {
             BigDecimal percentage = voucher.getDiscountValue() != null ? voucher.getDiscountValue() : BigDecimal.ZERO;
             discount = subtotal.multiply(percentage).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
             if (voucher.getMaxDiscountAmount() != null && discount.compareTo(voucher.getMaxDiscountAmount()) > 0) {
                 discount = voucher.getMaxDiscountAmount();
             }
-        } else if ("FIXED_AMOUNT".equalsIgnoreCase(voucher.getDiscountType())) {
+        } else if ("FIXED_AMOUNT".equals(type) || "FIXED".equals(type)) {
             discount = voucher.getDiscountValue() != null ? voucher.getDiscountValue() : BigDecimal.ZERO;
         }
 
