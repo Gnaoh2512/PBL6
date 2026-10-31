@@ -13,9 +13,27 @@ or `-`). The browser demo calls them directly for local testing only.
 `message` is a nonblank Vietnamese search utterance, at most 2,000 characters. `state` is the
 previous `ConversationResponse.state` or `{}` on the first turn. Its optional fields are
 `checkInDate`, `checkOutDate`, `guestCount`, `roomCount`, `roomTypeId`, `roomTypeName`, `minPrice`,
-`maxPrice`, `totalBudget`, `sortBy`, `preferredAmenities`, and `requiredAmenities`. All fields are
-validated on every request. A missing field stays missing. A correction changes only named fields;
-a CLEAR operation removes a criterion. Caller state does not prove room availability or price.
+`maxPrice`, `totalBudget`, `sortBy`, `preferredAmenities`, and `requiredAmenities`. It also contains
+`pending` (up to 12 unresolved criteria) and `pendingQuestion` (the field currently being asked).
+All fields and cross-field invariants are validated on every request. A missing field stays
+missing. A correction changes only named fields; a CLEAR operation removes both confirmed and
+pending values for that criterion. Caller state does not prove room availability or price.
+
+`pending` uses a discriminated `kind`:
+
+| Kind | Fields | Meaning |
+|---|---|---|
+| `budget` | `amount` (decimal or null), `basis` (`PER_NIGHT`, `TOTAL_STAY`, or null) | Keep an amount until its basis is clear. A confirmed budget appears only as `maxPrice` or `totalBudget`. |
+| `date` | `field` (`checkInDate` or `checkOutDate`), `month`, `day` | Keep day/month without inventing a year. Month/day can be null when even those are unclear. |
+| `field` | `field`, `value` | Keep another unresolved criterion without applying it as a confirmed filter. |
+
+For example, after “ngân sách một triệu” the response state may contain
+`"pending":[{"kind":"budget","amount":1000000,"basis":null}]` and
+`"pendingQuestion":"budgetBasis"`. Send that state back with “mỗi đêm”; the service moves the
+amount to `maxPrice` before querying Spring. “Toàn kỳ” moves it to `totalBudget` and returns
+`UNSUPPORTED`. An unrelated answer keeps the pending criterion and prompts again. A newer
+ambiguous amount replaces the older one and suspends any previously confirmed budget. Date
+changes without an explicit year remain pending even when another date in state has a year.
 
 `ConversationResponse` contains `status`, Vietnamese `reply`, updated `state`,
 `clarificationFields`, `result` (a complete `RecommendationResult` or null), and `requestId`.
@@ -23,7 +41,7 @@ The statuses are:
 
 | Status | Meaning | Backend availability call |
 |---|---|---|
-| `NEEDS_CLARIFICATION` | Missing or ambiguous critical input | No |
+| `NEEDS_CLARIFICATION` | Missing or ambiguous critical input; unresolved values remain in `state.pending` | No |
 | `UNSUPPORTED` | Multiple rooms, total budget, mandatory amenity, or unrelated intent | No |
 | `RECOMMENDED` | One or more current backend rooms match | Yes |
 | `NO_MATCH` | Complete criteria but no eligible backend room | Yes |
@@ -31,7 +49,8 @@ The statuses are:
 The LLM returns only an extraction patch. It cannot provide room IDs, prices, capacity or
 availability. The server resolves exact room-type names against `GET /api/public/rooms/room-types`
 and sends hard criteria to `POST /api/public/rooms/available`. For each complete request, that
-availability API remains the only source of candidate rooms. Money uses `Decimal` and JSON number
+availability API remains the only source of candidate rooms. Availability is never called while
+`state.pending` is nonempty. Money uses `Decimal` and JSON number
 serialization. The response is a suggestion, not a room hold.
 
 | Failure | HTTP/code |

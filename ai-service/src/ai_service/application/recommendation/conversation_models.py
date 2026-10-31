@@ -19,6 +19,77 @@ PositiveInt = Annotated[StrictInt, Field(gt=0)]
 Amenity = Annotated[str, Field(min_length=1, max_length=100)]
 
 
+class SearchField(str, Enum):
+    CHECK_IN_DATE = "checkInDate"
+    CHECK_OUT_DATE = "checkOutDate"
+    GUEST_COUNT = "guestCount"
+    ROOM_COUNT = "roomCount"
+    ROOM_TYPE_ID = "roomTypeId"
+    ROOM_TYPE_NAME = "roomTypeName"
+    MIN_PRICE = "minPrice"
+    MAX_PRICE = "maxPrice"
+    TOTAL_BUDGET = "totalBudget"
+    SORT_BY = "sortBy"
+    PREFERRED_AMENITIES = "preferredAmenities"
+    REQUIRED_AMENITIES = "requiredAmenities"
+    BUDGET_BASIS = "budgetBasis"
+    BUDGET = "budget"
+
+
+class BudgetBasis(str, Enum):
+    PER_NIGHT = "PER_NIGHT"
+    TOTAL_STAY = "TOTAL_STAY"
+
+
+class PendingBudget(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["budget"] = "budget"
+    amount: Money | None = None
+    basis: BudgetBasis | None = None
+
+
+class PendingDate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["date"] = "date"
+    field: Literal[SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE]
+    month: Annotated[StrictInt, Field(ge=1, le=12)] | None = None
+    day: Annotated[StrictInt, Field(ge=1, le=31)] | None = None
+
+    @model_validator(mode="after")
+    def valid_partial_date(self) -> Self:
+        if (self.month is None) != (self.day is None):
+            raise ValueError("pending date needs both month and day")
+        if self.month is not None:
+            date(2000, self.month, self.day)
+        return self
+
+
+class PendingField(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["field"] = "field"
+    field: SearchField
+    value: str | None = Field(default=None, max_length=200)
+
+    @model_validator(mode="after")
+    def supported_field(self) -> Self:
+        if self.field in (
+            SearchField.BUDGET,
+            SearchField.BUDGET_BASIS,
+            SearchField.CHECK_IN_DATE,
+            SearchField.CHECK_OUT_DATE,
+        ):
+            raise ValueError("field uses a dedicated pending criterion")
+        return self
+
+
+PendingCriterion = Annotated[
+    PendingBudget | PendingDate | PendingField, Field(discriminator="kind")
+]
+
+
 class SearchState(BaseModel):
     """Only user search criteria are carried across turns; never rooms or prices from BE."""
 
@@ -34,8 +105,14 @@ class SearchState(BaseModel):
     max_price: Money | None = Field(default=None, alias="maxPrice")
     total_budget: Money | None = Field(default=None, alias="totalBudget")
     sort_by: SortBy | None = Field(default=None, alias="sortBy")
-    preferred_amenities: list[Amenity] = Field(default_factory=list, alias="preferredAmenities", max_length=20)
-    required_amenities: list[Amenity] = Field(default_factory=list, alias="requiredAmenities", max_length=20)
+    preferred_amenities: list[Amenity] = Field(
+        default_factory=list, alias="preferredAmenities", max_length=20
+    )
+    required_amenities: list[Amenity] = Field(
+        default_factory=list, alias="requiredAmenities", max_length=20
+    )
+    pending: list[PendingCriterion] = Field(default_factory=list, max_length=12)
+    pending_question: SearchField | None = Field(default=None, alias="pendingQuestion")
 
     @field_validator("room_type_name")
     @classmethod
@@ -45,26 +122,43 @@ class SearchState(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def one_room_type_selector(self) -> Self:
+    def consistent_criteria_and_pending(self) -> Self:
         if self.room_type_id is not None and self.room_type_name is not None:
             raise ValueError("roomTypeId and roomTypeName cannot both be set")
+        keys = [
+            item.field if isinstance(item, (PendingDate, PendingField)) else SearchField.BUDGET
+            for item in self.pending
+        ]
+        if len(keys) != len(set(keys)):
+            raise ValueError("pending criteria must be unique")
+        for item in self.pending:
+            if isinstance(item, PendingBudget):
+                if self.max_price is not None or self.total_budget is not None:
+                    raise ValueError("pending budget cannot coexist with a confirmed budget")
+                if item.amount is not None and item.basis is not None:
+                    raise ValueError("completed budget must be confirmed")
+            if isinstance(item, PendingDate):
+                confirmed = (
+                    self.check_in_date
+                    if item.field is SearchField.CHECK_IN_DATE
+                    else self.check_out_date
+                )
+                if confirmed is not None:
+                    raise ValueError("pending date cannot coexist with a confirmed date")
+            if isinstance(item, PendingField):
+                confirmed = self.model_dump(by_alias=True)[item.field.value]
+                if confirmed not in (None, []):
+                    raise ValueError("pending field cannot coexist with a confirmed value")
+        if self.pending:
+            questions = {
+                (SearchField.BUDGET if item.amount is None else SearchField.BUDGET_BASIS)
+                if isinstance(item, PendingBudget)
+                else item.field
+                for item in self.pending
+            }
+            if self.pending_question not in questions:
+                raise ValueError("pendingQuestion must identify an unresolved criterion")
         return self
-
-
-class SearchField(str, Enum):
-    CHECK_IN_DATE = "checkInDate"
-    CHECK_OUT_DATE = "checkOutDate"
-    GUEST_COUNT = "guestCount"
-    ROOM_COUNT = "roomCount"
-    ROOM_TYPE_ID = "roomTypeId"
-    ROOM_TYPE_NAME = "roomTypeName"
-    MIN_PRICE = "minPrice"
-    MAX_PRICE = "maxPrice"
-    TOTAL_BUDGET = "totalBudget"
-    SORT_BY = "sortBy"
-    PREFERRED_AMENITIES = "preferredAmenities"
-    REQUIRED_AMENITIES = "requiredAmenities"
-    BUDGET_BASIS = "budgetBasis"
 
 
 class FieldChange(BaseModel):
@@ -76,12 +170,12 @@ class FieldChange(BaseModel):
 
     @model_validator(mode="after")
     def validate_action(self) -> Self:
-        if self.field is SearchField.BUDGET_BASIS:
-            raise ValueError("budgetBasis is an ambiguity, not a stored criterion")
         if self.action == "SET" and (self.value is None or not self.value.strip()):
             raise ValueError("SET requires a value")
         if self.action == "CLEAR" and self.value is not None:
             raise ValueError("CLEAR requires null value")
+        if self.field is SearchField.BUDGET_BASIS and self.action == "SET":
+            BudgetBasis(self.value)
         return self
 
 

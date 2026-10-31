@@ -122,6 +122,23 @@ def test_conversation_body_limit_is_applied_before_extraction() -> None:
     assert extractor.calls == 0
 
 
+def test_caller_cannot_submit_conflicting_confirmed_and_pending_budget() -> None:
+    extractor = FakeExtractor()
+    response = exercise(
+        extractor=extractor,
+        body={
+            "message": "Mỗi đêm",
+            "state": {
+                "maxPrice": 1000000,
+                "pending": [{"kind": "budget", "amount": 1000000}],
+                "pendingQuestion": "budgetBasis",
+            },
+        },
+    )
+    assert response.status_code == 422
+    assert extractor.calls == 0
+
+
 def test_provider_timeout_and_invalid_output_are_technical_errors() -> None:
     timeout = exercise(extractor=FakeExtractor(ExtractionTimeout("slow")))
     invalid = exercise(extractor=FakeExtractor(ExtractionInvalidResponse("bad")))

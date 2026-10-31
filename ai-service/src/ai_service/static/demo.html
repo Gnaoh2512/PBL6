@@ -104,7 +104,11 @@
       }
       if (data.state) {
         state = data.state;
-        $('state-note').textContent = `Trạng thái tìm kiếm: ${JSON.stringify(state)}`;
+        const pending = state.pending || [];
+        const waiting = pending.length
+          ? `Đang chờ làm rõ ${state.pendingQuestion}: ${pending.map(item => JSON.stringify(item)).join('; ')}. `
+          : '';
+        $('state-note').textContent = `${waiting}Trạng thái tìm kiếm: ${JSON.stringify(state)}`;
       }
       $('summary').textContent = data.reply || data.status || 'Đã nhận phản hồi.';
       const rooms = data.result?.recommendations || data.recommendations || [];

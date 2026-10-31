@@ -14,7 +14,7 @@ from ai_service.infrastructure.llm import (
 )
 
 
-def execute(handler):
+def execute(handler, *, state=None):
     async def run():
         extractor = GeminiExtractor(
             api_key="test-key",
@@ -26,7 +26,7 @@ def execute(handler):
         try:
             return await extractor.extract(
                 "Ngày mai, một phòng hai người",
-                SearchState(),
+                state or SearchState(),
                 today=date(2026, 10, 31),
                 request_id="test-provider-1",
             )
@@ -52,19 +52,25 @@ def test_provider_request_and_structured_response() -> None:
                 "candidates": [
                     {
                         "finishReason": "STOP",
-                        "content": {"parts": [
-                            {
-                                "text": json.dumps(
-                                    {
-                                        "changes": [
-                                            {"field": "checkInDate", "action": "SET", "value": "2026-11-01"}
-                                        ],
-                                        "ambiguities": [],
-                                        "unsupportedIntent": False,
-                                    }
-                                ),
-                            }
-                        ]},
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": json.dumps(
+                                        {
+                                            "changes": [
+                                                {
+                                                    "field": "checkInDate",
+                                                    "action": "SET",
+                                                    "value": "2026-11-01",
+                                                }
+                                            ],
+                                            "ambiguities": [],
+                                            "unsupportedIntent": False,
+                                        }
+                                    ),
+                                }
+                            ]
+                        },
                     }
                 ],
             },
@@ -74,11 +80,57 @@ def test_provider_request_and_structured_response() -> None:
     assert result.changes[0].value == "2026-11-01"
 
 
+def test_provider_receives_pending_amount_and_question() -> None:
+    state = SearchState.model_validate(
+        {"pending": [{"kind": "budget", "amount": 1000000}], "pendingQuestion": "budgetBasis"}
+    )
+
+    def handler(request):
+        user_data = json.loads(json.loads(request.content)["contents"][0]["parts"][0]["text"])
+        assert user_data["previousState"]["pending"][0]["amount"] == "1000000"
+        assert user_data["previousState"]["pendingQuestion"] == "budgetBasis"
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [
+                    {
+                        "finishReason": "STOP",
+                        "content": {
+                            "parts": [
+                                {
+                                    "text": json.dumps(
+                                        {
+                                            "changes": [
+                                                {
+                                                    "field": "budgetBasis",
+                                                    "action": "SET",
+                                                    "value": "PER_NIGHT",
+                                                }
+                                            ],
+                                            "ambiguities": [],
+                                            "unsupportedIntent": False,
+                                        }
+                                    )
+                                }
+                            ]
+                        },
+                    }
+                ],
+            },
+        )
+
+    result = execute(handler, state=state)
+    assert result.changes[0].value == "PER_NIGHT"
+
+
 @pytest.mark.parametrize(
     ("handler", "error"),
     [
         (lambda _: httpx.Response(429, json={"error": "private"}), ExtractionUnavailable),
-        (lambda _: httpx.Response(200, json={"candidates": [{"finishReason": "MAX_TOKENS"}]}), ExtractionInvalidResponse),
+        (
+            lambda _: httpx.Response(200, json={"candidates": [{"finishReason": "MAX_TOKENS"}]}),
+            ExtractionInvalidResponse,
+        ),
         (lambda _: httpx.Response(200, json={"candidates": []}), ExtractionInvalidResponse),
         (lambda _: (_ for _ in ()).throw(httpx.ReadTimeout("slow")), ExtractionTimeout),
     ],

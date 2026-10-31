@@ -53,8 +53,9 @@ key. The token is not stored by the page. `GET /health` is available without a t
 
 Each request requires `Authorization: Bearer <AI_SERVICE_AUTH_TOKEN>` and a valid `X-Request-ID`.
 Body limit: 16 KiB. Message limit: 2,000 characters. Each response returns the updated `state`;
-send it back with the next message. The state contains search criteria only, never cached rooms
-or prices. No server-side conversation store is used.
+send it back with the next message. The state contains confirmed search criteria, unresolved
+`pending` criteria, and `pendingQuestion`, never cached rooms or prices. No server-side
+conversation store is used. An unresolved budget or date blocks availability until clarified.
 
 ```json
 {
@@ -83,7 +84,8 @@ Reply with the returned `state` and the new message. The other outcomes are `REC
 }
 ```
 
-The example abbreviates null state fields and other room fields; actual responses include the full
+The example abbreviates null state fields, empty `pending`, `pendingQuestion`, and other room
+fields; actual responses include the full
 `RecommendedRoom` contract. Money remains JSON numbers generated from `Decimal` values.
 
 Multiple rooms, a total-stay budget, and mandatory amenities return `UNSUPPORTED` rather than
