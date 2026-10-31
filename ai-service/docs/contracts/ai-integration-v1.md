@@ -34,12 +34,21 @@ The result adds `scoringVersion` and, for each room, `scoreBreakdown`,
 contribute their numeric score. `reasons` are deterministic Vietnamese strings derived
 from verified backend evidence. See [scoring.md](../scoring.md) for formula and ordering.
 
+Optional top-level `totalBudget` is a nonnegative Decimal ceiling on the **basic room
+charge for the whole stay**, compared inclusively with the backend's `totalRoomCharge`.
+The AI does not divide it by nights or calculate a final bill. `minPrice`/`maxPrice`
+remain separate per-night bounds; both forms may be present and all must pass. Spring's
+availability request does not accept `totalBudget`, so the AI applies this hard filter
+to the live response before scoring. Tax, services, vouchers, and other charges are not
+included because the availability response does not provide a final payable amount.
+
 `message` is a nonblank Vietnamese search utterance, at most 2,000 characters. `state` is the
 previous `ConversationResponse.state` or `{}` on the first turn. Its optional fields are
 `checkInDate`, `checkOutDate`, `guestCount`, `roomCount`, `roomTypeId`, `roomTypeName`, `minPrice`,
-`maxPrice`, `totalBudget`, `sortBy`, `pricePreference`, `capacityPreference`,
+`maxPrice`, `totalBudget`, `budgetScope`, `sortBy`, `pricePreference`, `capacityPreference`,
 `preferredAmenities`, and `requiredAmenities`. It also contains
-`pending` (up to 12 unresolved criteria) and `pendingQuestion` (the field currently being asked).
+`pending` (up to 12 unresolved criteria), `pendingQuestion` (the field currently being asked),
+and `pendingRelaxation` (at most one proposed change after `NO_MATCH`).
 All fields and cross-field invariants are validated on every request. A missing field stays
 missing. A correction changes only named fields; a CLEAR operation removes both confirmed and
 pending values for that criterion. Caller state does not prove room availability or price.
@@ -48,17 +57,37 @@ pending values for that criterion. Caller state does not prove room availability
 
 | Kind | Fields | Meaning |
 |---|---|---|
-| `budget` | `amount` (decimal or null), `basis` (`PER_NIGHT`, `TOTAL_STAY`, or null) | Keep an amount until its basis is clear. A confirmed budget appears only as `maxPrice` or `totalBudget`. |
+| `budget` | `amount` (decimal or null), `basis` (`PER_NIGHT`, `TOTAL_STAY`, or null) | Keep an amount until its basis is clear. Confirmed nightly and stay limits may coexist and remain unchanged during clarification. |
 | `date` | `field` (`checkInDate` or `checkOutDate`), `month`, `day` | Keep day/month without inventing a year. Month/day can be null when even those are unclear. |
 | `field` | `field`, `value` (at most 2,100 characters) | Keep another unresolved criterion, including the full requested amenity list, without applying it as a confirmed filter. |
 
 For example, after “ngân sách một triệu” the response state may contain
 `"pending":[{"kind":"budget","amount":1000000,"basis":null}]` and
 `"pendingQuestion":"budgetBasis"`. Send that state back with “mỗi đêm”; the service moves the
-amount to `maxPrice` before querying Spring. “Toàn kỳ” moves it to `totalBudget` and returns
-`UNSUPPORTED`. An unrelated answer keeps the pending criterion and prompts again. A newer
-ambiguous amount replaces the older one and suspends any previously confirmed budget. Date
+amount to `maxPrice` before querying Spring. “Toàn kỳ” moves it to `totalBudget`, which is
+checked against backend `totalRoomCharge`. An unrelated answer keeps the pending criterion
+and prompts again. A newer ambiguous amount replaces the pending amount while confirmed
+limits remain unchanged until the basis is resolved. Date
 changes without an explicit year remain pending even when another date in state has a year.
+
+If the customer asks for a budget including tax, services, vouchers, or other charges,
+`budgetScope` stays pending and no availability call is made. The service asks whether
+basic room charge alone is acceptable. `ROOM_CHARGE` confirms that scope; `ALL_COSTS`
+returns `UNSUPPORTED` with a clear explanation. A plain `totalBudget` uses the documented
+basic-room-charge scope, and recommendation replies restate this limitation. Exact short
+"đồng ý" and "không" replies to the scope question are handled deterministically.
+
+After a complete search returns `NO_MATCH`, the original `result` stays `NO_MATCH` and
+`state.pendingRelaxation` records one suggested criterion: `totalBudget`, `maxPrice`,
+one exact `requiredAmenities` entry, or `checkInDate` (new dates required). The reply
+states that no cause has been diagnosed. No diagnostic availability query is made.
+`relaxationDecision` extracted as `ACCEPT`, `REJECT`, or `NONE` handles follow-up; exact
+short “đồng ý” and “không” replies are handled deterministically. Rejecting clears the
+proposal without querying Spring. Accepting a suggested amenity removal removes only
+that requirement and performs a new search. Accepting a budget or date suggestion
+requires the customer to supply a concrete new amount or dates before a new search.
+An explicit edit such as “tăng lên 1,2 triệu” updates the proposed bound and triggers
+one new live search. The new result can still be `NO_MATCH`; no availability is promised.
 
 `ConversationResponse` contains `status`, Vietnamese `reply`, updated `state`,
 `clarificationFields`, `result` (a complete `RecommendationResult` or null), and `requestId`.
@@ -67,9 +96,9 @@ The statuses are:
 | Status | Meaning | Backend availability call |
 |---|---|---|
 | `NEEDS_CLARIFICATION` | Missing or ambiguous critical input; unresolved values remain in `state.pending` | No |
-| `UNSUPPORTED` | Multiple rooms, total budget, or unrelated intent | No |
+| `UNSUPPORTED` | Multiple rooms, all-costs budget scope, or unrelated intent | No |
 | `RECOMMENDED` | One or more current backend rooms match | Yes |
-| `NO_MATCH` | Complete criteria but no eligible backend room | Yes |
+| `NO_MATCH` | Complete criteria but no eligible backend room; a rejected proposal may return `result: null` without requery | One on search, zero on rejection |
 
 The LLM returns only an extraction patch. It cannot provide room IDs, prices, capacity or
 availability. The server resolves exact room-type names against `GET /api/public/rooms/room-types`

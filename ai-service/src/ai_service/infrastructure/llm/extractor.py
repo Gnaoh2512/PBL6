@@ -47,6 +47,19 @@ capacityPreference. CLEAR khi khách bỏ sở thích tương ứng.
 """
 
 FIELDS = [field.value for field in SearchField]
+EXTRACTION_PROMPT += """
+totalBudget là giới hạn tổng tiền phòng cơ bản toàn kỳ do backend trả về, không phải tổng
+thanh toán cuối. Nếu khách muốn gồm thuế, dịch vụ, voucher hoặc chi phí khác, ghi
+budgetScope vào ambiguities để hỏi trước. Khi trả lời câu hỏi đó, SET budgetScope thành
+ROOM_CHARGE nếu khách đồng ý chỉ tính tiền phòng cơ bản, hoặc ALL_COSTS nếu khách vẫn
+yêu cầu tổng chi phí. Không tự đổi totalBudget thành maxPrice, không xóa giới hạn còn lại
+khi khách đặt đồng thời giới hạn mỗi đêm và toàn kỳ.
+Nếu previousState.pendingRelaxation có đề xuất, chỉ đặt relaxationDecision=ACCEPT khi
+khách đồng ý rõ, REJECT khi từ chối rõ, còn lại NONE. Chỉ đồng ý không tự tạo giá mới
+hoặc ngày mới. Khi khách đưa mức tiền mới, SET đúng trường trong pendingRelaxation
+(maxPrice hoặc totalBudget), giá trị số dạng thập phân; không suy ra mức tiền. Khi khách
+đưa ngày mới, SET ngày được nêu rõ. Không coi lời từ chối là unsupportedIntent.
+"""
 CHANGE_FIELDS = FIELDS
 EXTRACTION_SCHEMA = {
     "type": "object",
@@ -66,6 +79,7 @@ EXTRACTION_SCHEMA = {
         },
         "ambiguities": {"type": "array", "items": {"type": "string", "enum": FIELDS}},
         "unsupportedIntent": {"type": "boolean"},
+        "relaxationDecision": {"type": "string", "enum": ["NONE", "ACCEPT", "REJECT"]},
     },
     "required": ["changes", "ambiguities", "unsupportedIntent"],
     "additionalProperties": False,

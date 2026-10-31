@@ -10,9 +10,14 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
-from ai_service.application.recommendation.amenities import AmenityCriteriaError, resolve_criteria
+from ai_service.application.recommendation.amenities import (
+    AmenityCriteriaError,
+    normalize,
+    resolve_criteria,
+)
 from ai_service.application.recommendation.conversation_models import (
     BudgetBasis,
+    BudgetScope,
     ConversationRequest,
     ConversationResponse,
     ConversationStatus,
@@ -20,6 +25,8 @@ from ai_service.application.recommendation.conversation_models import (
     PendingBudget,
     PendingDate,
     PendingField,
+    RelaxationDecision,
+    RelaxationProposal,
     SearchField,
     SearchState,
 )
@@ -51,6 +58,10 @@ FIELD_QUESTIONS = {
     SearchField.SORT_BY: "Bạn muốn sắp xếp theo giá tăng hay giảm?",
     SearchField.PRICE_PREFERENCE: "Bạn ưu tiên tiết kiệm hay phòng giá cao hơn?",
     SearchField.CAPACITY_PREFERENCE: "Bạn ưu tiên sức chứa vừa đủ hay rộng rãi hơn?",
+    SearchField.BUDGET_SCOPE: (
+        "Hiện chỉ lọc được tổng tiền phòng cơ bản do hệ thống trả về, chưa gồm thuế, "
+        "dịch vụ, voucher hoặc chi phí khác. Bạn có đồng ý dùng phạm vi này không?"
+    ),
 }
 DATE_FIELDS = {SearchField.CHECK_IN_DATE, SearchField.CHECK_OUT_DATE}
 INT_FIELDS = {SearchField.GUEST_COUNT, SearchField.ROOM_COUNT, SearchField.ROOM_TYPE_ID}
@@ -84,6 +95,8 @@ def _utc_now() -> datetime:
 
 
 def _parse_value(field: SearchField, value: str) -> object:
+    if field is SearchField.BUDGET_SCOPE:
+        return BudgetScope(value)
     if field is SearchField.PRICE_PREFERENCE:
         return PricePreference(value)
     if field is SearchField.CAPACITY_PREFERENCE:
@@ -135,6 +148,51 @@ def _next_pending_question(pending: dict[SearchField, object]) -> SearchField | 
         if item is not None:
             return field
     return next(iter(pending), None)
+
+
+def _suggest_relaxation(state: SearchState) -> RelaxationProposal:
+    if state.total_budget is not None:
+        return RelaxationProposal(criterion=SearchField.TOTAL_BUDGET)
+    if state.max_price is not None:
+        return RelaxationProposal(criterion=SearchField.MAX_PRICE)
+    if state.required_amenities:
+        return RelaxationProposal(
+            criterion=SearchField.REQUIRED_AMENITIES, value=state.required_amenities[0]
+        )
+    return RelaxationProposal(criterion=SearchField.CHECK_IN_DATE)
+
+
+def _relaxation_question(proposal: RelaxationProposal) -> str:
+    if proposal.criterion is SearchField.TOTAL_BUDGET:
+        return "Bạn có muốn tăng giới hạn tổng tiền phòng cơ bản toàn kỳ? Nếu có, hãy cho biết mức mới."
+    if proposal.criterion is SearchField.MAX_PRICE:
+        return "Bạn có muốn tăng giới hạn giá mỗi đêm? Nếu có, hãy cho biết mức mới."
+    if proposal.criterion is SearchField.REQUIRED_AMENITIES:
+        return f"Bạn có muốn bỏ yêu cầu bắt buộc về tiện nghi {proposal.value} không?"
+    return "Bạn có muốn thử ngày khác? Nếu có, hãy cho biết ngày nhận và trả phòng mới."
+
+
+def _explicit_relaxation_decision(message: str) -> RelaxationDecision | None:
+    answer = re.sub(r"[.!?]+$", "", normalize(message)).strip()
+    if answer in {"dong y", "co", "duoc", "vang", "ok", "yes"}:
+        return RelaxationDecision.ACCEPT
+    if answer in {"khong", "khong muon", "giu nguyen", "no"}:
+        return RelaxationDecision.REJECT
+    return None
+
+
+def _mentions_unavailable_costs(message: str) -> bool:
+    normalized = normalize(message)
+    if re.search(r"(?<!\w)thuế(?!\w)", _normalize(message)):
+        return True
+    return any(
+        phrase in normalized
+        for phrase in (
+            "tax", "dich vu", "service", "voucher", "phi khac", "tong chi phi",
+            "thanh toan cuoi", "tat ca chi phi", "moi chi phi", "phu thu", "bua sang",
+            "bao gom thue", "gom thue", "tinh thue", "ca thue",
+        )
+    )
 
 
 def _date_is_explicit(message: str, value: str, today: date | None) -> bool:
@@ -192,8 +250,6 @@ def apply_changes(
                     previous = pending.get(SearchField.BUDGET)
                     basis = previous.basis if isinstance(previous, PendingBudget) else None
                     pending[SearchField.BUDGET] = PendingBudget(amount=amount, basis=basis)
-                    for money in MONEY_FIELDS - {SearchField.BUDGET}:
-                        values[money.value] = None
                 continue
             if field in DATE_FIELDS:
                 previous_date = pending.pop(field, None)
@@ -220,23 +276,14 @@ def apply_changes(
                 if change.action == "CLEAR":
                     if field in (SearchField.MAX_PRICE, SearchField.TOTAL_BUDGET):
                         pending.pop(SearchField.BUDGET, None)
-                        pending.pop(SearchField.MAX_PRICE, None)
-                        pending.pop(SearchField.TOTAL_BUDGET, None)
-                        values["maxPrice"] = None
-                        values["totalBudget"] = None
-                    else:
-                        values[field.value] = None
+                    values[field.value] = None
                 elif SearchField.BUDGET_BASIS in ambiguous:
                     pending[SearchField.BUDGET] = PendingBudget(
                         amount=_parse_value(field, change.value or "")
                     )
-                    for money in MONEY_FIELDS - {SearchField.BUDGET}:
-                        values[money.value] = None
                 else:
                     if field in (SearchField.MAX_PRICE, SearchField.TOTAL_BUDGET):
                         pending.pop(SearchField.BUDGET, None)
-                        other = "totalBudget" if field is SearchField.MAX_PRICE else "maxPrice"
-                        values[other] = None
                     values[field.value] = _parse_value(field, change.value or "")
                 continue
             pending.pop(field, None)
@@ -263,14 +310,10 @@ def apply_changes(
             and SearchField.BUDGET not in pending
         ):
             pending[SearchField.BUDGET] = PendingBudget()
-            for money in MONEY_FIELDS - {SearchField.BUDGET}:
-                values[money.value] = None
         for field in ambiguous - set(changes):
             if field in (SearchField.BUDGET, SearchField.BUDGET_BASIS):
                 if not budget_was_cleared and SearchField.BUDGET not in pending:
                     pending[SearchField.BUDGET] = PendingBudget()
-                    for money in MONEY_FIELDS - {SearchField.BUDGET}:
-                        values[money.value] = None
             elif field in DATE_FIELDS:
                 if field not in pending:
                     pending[field] = PendingDate(field=field)
@@ -287,13 +330,20 @@ def apply_changes(
             and SearchField.BUDGET_BASIS not in ambiguous
         ):
             budget = pending.get(SearchField.BUDGET)
+            if (
+                not isinstance(budget, PendingBudget)
+                and state.max_price is not None
+                and state.total_budget is not None
+                and basis_change.action == "SET"
+            ):
+                budget = PendingBudget()
             if not isinstance(budget, PendingBudget) and (
-                state.max_price is not None or state.total_budget is not None
+                (state.max_price is None) != (state.total_budget is None)
             ):
                 amount = state.max_price if state.max_price is not None else state.total_budget
                 budget = PendingBudget(amount=amount)
-                values["maxPrice"] = None
-                values["totalBudget"] = None
+                old_field = "maxPrice" if state.max_price is not None else "totalBudget"
+                values[old_field] = None
             if isinstance(budget, PendingBudget):
                 basis = BudgetBasis(basis_change.value) if basis_change.action == "SET" else None
                 pending[SearchField.BUDGET] = budget.model_copy(update={"basis": basis})
@@ -375,10 +425,102 @@ class ConversationService:
         self, request: ConversationRequest, *, request_id: str
     ) -> ConversationResponse:
         today = self._clock().astimezone(self._timezone).date()
-        extracted = await self._extractor.extract(
-            request.message, request.state, today=today, request_id=request_id
+        proposal = request.state.pending_relaxation
+        scope_pending = any(
+            isinstance(item, PendingField) and item.field is SearchField.BUDGET_SCOPE
+            for item in request.state.pending
         )
-        state = apply_changes(request.state, extracted, message=request.message, today=today)
+        direct_decision = (
+            _explicit_relaxation_decision(request.message)
+            if proposal is not None or scope_pending else None
+        )
+        if scope_pending and direct_decision is not None:
+            scope = (
+                BudgetScope.ROOM_CHARGE if direct_decision is RelaxationDecision.ACCEPT
+                else BudgetScope.ALL_COSTS
+            )
+            extracted = ExtractedChanges.model_validate({
+                "changes": [{
+                    "field": SearchField.BUDGET_SCOPE, "action": "SET", "value": scope.value,
+                }],
+                "ambiguities": [], "unsupportedIntent": False,
+            })
+        elif direct_decision is not None:
+            extracted = ExtractedChanges.model_validate({
+                "changes": [], "ambiguities": [], "unsupportedIntent": False,
+                "relaxationDecision": direct_decision,
+            })
+        else:
+            extracted = await self._extractor.extract(
+                request.message, request.state, today=today, request_id=request_id
+            )
+        if (
+            _mentions_unavailable_costs(request.message)
+            and not any(change.field is SearchField.BUDGET_SCOPE for change in extracted.changes)
+            and SearchField.BUDGET_SCOPE not in extracted.ambiguities
+        ):
+            extracted = extracted.model_copy(
+                update={"ambiguities": [*extracted.ambiguities, SearchField.BUDGET_SCOPE]}
+            )
+        if proposal is not None and proposal.criterion in (
+            SearchField.MAX_PRICE, SearchField.TOTAL_BUDGET
+        ):
+            extracted = extracted.model_copy(
+                update={
+                    "changes": [
+                        change.model_copy(update={"field": proposal.criterion})
+                        if change.field is SearchField.BUDGET
+                        and SearchField.BUDGET_BASIS not in extracted.ambiguities
+                        else change
+                        for change in extracted.changes
+                    ]
+                }
+            )
+        explicit_changes = bool(extracted.changes or extracted.ambiguities)
+        if proposal is not None and not explicit_changes:
+            if extracted.unsupported_intent:
+                return ConversationResponse(
+                    status=ConversationStatus.UNSUPPORTED,
+                    reply="Tôi chỉ hỗ trợ tìm và gợi ý phòng phù hợp.",
+                    state=request.state,
+                    clarificationFields=[], result=None, requestId=request_id,
+                )
+            if extracted.relaxation_decision is RelaxationDecision.REJECT:
+                state = request.state.model_copy(update={"pending_relaxation": None})
+                return ConversationResponse(
+                    status=ConversationStatus.NO_MATCH,
+                    reply="Đã giữ nguyên các điều kiện tìm kiếm. Chưa có phòng đáp ứng yêu cầu hiện tại.",
+                    state=state,
+                    clarificationFields=[], result=None, requestId=request_id,
+                )
+            if extracted.relaxation_decision is RelaxationDecision.ACCEPT:
+                if proposal.criterion is SearchField.REQUIRED_AMENITIES:
+                    kept = [
+                        item for item in request.state.required_amenities
+                        if item != proposal.value
+                    ]
+                    values = request.state.model_dump(by_alias=True)
+                    values["requiredAmenities"] = kept
+                    values["pendingRelaxation"] = None
+                    state_input = SearchState.model_validate(values)
+                else:
+                    return ConversationResponse(
+                        status=ConversationStatus.NEEDS_CLARIFICATION,
+                        reply=_relaxation_question(proposal),
+                        state=request.state,
+                        clarificationFields=[proposal.criterion],
+                        result=None, requestId=request_id,
+                    )
+            else:
+                return ConversationResponse(
+                    status=ConversationStatus.NEEDS_CLARIFICATION,
+                    reply=_relaxation_question(proposal),
+                    state=request.state,
+                    clarificationFields=[proposal.criterion], result=None, requestId=request_id,
+                )
+        else:
+            state_input = request.state.model_copy(update={"pending_relaxation": None})
+        state = apply_changes(state_input, extracted, message=request.message, today=today)
 
         def respond(
             status: ConversationStatus, reply: str, fields: list[SearchField] | None = None
@@ -405,15 +547,16 @@ class ConversationService:
             return respond(
                 ConversationStatus.UNSUPPORTED, "Tôi chỉ hỗ trợ tìm và gợi ý phòng phù hợp."
             )
+        if state.budget_scope is BudgetScope.ALL_COSTS:
+            return respond(
+                ConversationStatus.UNSUPPORTED,
+                "Chưa thể lọc ngân sách gồm thuế, dịch vụ, voucher hoặc chi phí khác. "
+                "Hiện chỉ hỗ trợ tổng tiền phòng cơ bản do hệ thống trả về.",
+            )
         if state.room_count is not None and state.room_count != 1:
             return respond(
                 ConversationStatus.UNSUPPORTED,
                 "Hiện chỉ hỗ trợ tìm một phòng cho mỗi lần yêu cầu.",
-            )
-        if state.total_budget is not None:
-            return respond(
-                ConversationStatus.UNSUPPORTED,
-                "Hiện chưa lọc theo tổng ngân sách toàn kỳ. Bạn có thể cho biết mức tối đa mỗi đêm.",
             )
         try:
             resolve_criteria(state.required_amenities, state.preferred_amenities)
@@ -497,6 +640,7 @@ class ConversationService:
                 "roomTypeId": room_type_id,
                 "minPrice": state.min_price,
                 "maxPrice": state.max_price,
+                "totalBudget": state.total_budget,
                 "sortBy": state.sort_by,
                 "requiredAmenities": state.required_amenities,
                 "preferences": {
@@ -512,10 +656,12 @@ class ConversationService:
             criteria, request_id=request_id
         )
         if result.status is RecommendationStatus.NO_MATCH:
+            proposal = _suggest_relaxation(state)
+            state = state.model_copy(update={"pending_relaxation": proposal})
             reply = (
-                "Hiện không có phòng thỏa tất cả điều kiện, gồm cả tiện nghi bắt buộc đã xác nhận. Bạn có thể đổi tiện nghi, ngày hoặc ngân sách."
-                if state.required_amenities
-                else "Hiện không có phòng thỏa các điều kiện này. Bạn có thể đổi ngày hoặc ngân sách."
+                "Chưa tìm thấy phòng đáp ứng đồng thời các điều kiện hiện tại. "
+                "Chưa xác định điều kiện nào là nguyên nhân. "
+                + _relaxation_question(proposal)
             )
             return ConversationResponse(
                 status=ConversationStatus.NO_MATCH,
@@ -527,9 +673,17 @@ class ConversationService:
             )
 
         rooms = result.recommendations
+        budget_note = (
+            " Giới hạn toàn kỳ chỉ tính tổng tiền phòng cơ bản, chưa gồm thuế, dịch vụ, "
+            "voucher hoặc chi phí khác."
+            if state.total_budget is not None else ""
+        )
         return ConversationResponse(
             status=ConversationStatus.RECOMMENDED,
-            reply=f"Có {len(rooms)} phòng phù hợp. Gợi ý này không giữ chỗ; tình trạng có thể thay đổi.",
+            reply=(
+                f"Có {len(rooms)} phòng phù hợp. Gợi ý này không giữ chỗ; "
+                f"tình trạng có thể thay đổi.{budget_note}"
+            ),
             state=state,
             clarificationFields=[],
             result=result,

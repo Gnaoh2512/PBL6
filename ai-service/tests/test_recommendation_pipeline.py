@@ -517,3 +517,45 @@ def test_explicit_price_preference_scores_before_conflicting_sort_by() -> None:
     )
     result = run_pipeline(StubBackendClient(rooms), request, scorer=MultiCriteriaScorer())
     assert [room.room_id for room in result.recommendations] == [1, 2]
+
+
+def test_total_budget_uses_backend_stay_charge_with_exact_inclusive_boundary() -> None:
+    backend = StubBackendClient([
+        candidate(1, price="600000.005"),
+        candidate(2, price="600000.01"),
+    ])
+    request = recommendation_request(totalBudget="1200000.010")
+    result = run_pipeline(backend, request, scorer=MultiCriteriaScorer())
+    assert [room.room_id for room in result.recommendations] == [1]
+    assert result.recommendations[0].total_room_charge == Decimal("1200000.010")
+    assert len(backend.calls) == 1
+    assert "totalBudget" not in backend.calls[0][0].model_dump(by_alias=True)
+
+
+def test_total_budget_for_multiple_nights_and_per_night_limit_both_apply() -> None:
+    rooms = [
+        candidate(1, price="600000").model_copy(update={
+            "check_out_date": date(2026, 11, 13), "nights": 3,
+            "total_room_charge": Decimal("1800000"),
+        }),
+        candidate(2, price="650000").model_copy(update={
+            "check_out_date": date(2026, 11, 13), "nights": 3,
+            "total_room_charge": Decimal("1950000"),
+        }),
+        candidate(3, price="750000").model_copy(update={
+            "check_out_date": date(2026, 11, 13), "nights": 3,
+            "total_room_charge": Decimal("2250000"),
+        }),
+    ]
+    request = recommendation_request(
+        checkOutDate="2026-11-13", maxPrice="700000", totalBudget="1800000"
+    )
+    result = run_pipeline(StubBackendClient(rooms), request)
+    assert [room.room_id for room in result.recommendations] == [1]
+
+
+def test_total_budget_does_not_change_backend_error_semantics() -> None:
+    backend = StubBackendClient(error=BackendTimeoutError("slow"))
+    with pytest.raises(BackendTimeoutError):
+        run_pipeline(backend, recommendation_request(totalBudget="1000000"))
+    assert len(backend.calls) == 1

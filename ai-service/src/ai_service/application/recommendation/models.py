@@ -101,6 +101,7 @@ class RecommendationRequest(AvailabilitySearchRequest):
     required_amenities: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(
         default_factory=list, alias="requiredAmenities", max_length=20
     )
+    total_budget: NonNegativeMoney | None = Field(default=None, alias="totalBudget")
     top_k: TopK = Field(default=5, alias="topK")
 
     @model_validator(mode="after")
@@ -112,7 +113,9 @@ class RecommendationRequest(AvailabilitySearchRequest):
         """Return only fields accepted by the authoritative backend search DTO."""
 
         return AvailabilitySearchRequest.model_validate(
-            self.model_dump(exclude={"preferences", "required_amenities", "top_k"})
+            self.model_dump(
+                exclude={"preferences", "required_amenities", "total_budget", "top_k"}
+            )
         )
 
 

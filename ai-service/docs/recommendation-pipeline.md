@@ -12,6 +12,7 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
    `roomId` records; conflicting records for one `roomId` make the response invalid.
 4. Reject candidates with a non-available status, mismatched dates/night count, or negative
    amounts. Defensively recheck capacity, optional room type, inclusive per-night price bounds,
+   optional inclusive `totalBudget` against backend `totalRoomCharge`,
    and every `requiredAmenities` code against verified backend amenity evidence.
 5. Rank the remaining candidates by the versioned multi-criteria score descending. For equal scores,
    use `sortBy` as a price tie-breaker: `PRICE_DESC` means per-night price descending;
@@ -22,6 +23,12 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
 An empty availability response or an empty eligible set returns `NO_MATCH`. Timeout, connection,
 HTTP, invalid-envelope, inconsistent-candidate, and conflicting-duplicate failures keep their backend error category and
 never become `NO_MATCH`.
+
+The conversation layer may retain one proposed relaxation in caller state after `NO_MATCH`.
+It does not run diagnostic searches or alter dates, budget, capacity, or required amenities
+until the customer supplies an explicit edit or accepts the exact amenity removal.
+The next search still uses the live availability API once. The total-stay ceiling covers
+only the backend's basic room charge, not a final bill.
 
 The active formula, missing-data treatment, comparison baseline, and configurable weights are
 documented in [scoring.md](scoring.md). The amenity-only formula below describes the retained

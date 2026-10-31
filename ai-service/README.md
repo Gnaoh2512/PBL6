@@ -54,7 +54,8 @@ key. The token is not stored by the page. `GET /health` is available without a t
 Each request requires `Authorization: Bearer <AI_SERVICE_AUTH_TOKEN>` and a valid `X-Request-ID`.
 Body limit: 16 KiB. Message limit: 2,000 characters. Each response returns the updated `state`;
 send it back with the next message. The state contains confirmed search criteria, unresolved
-`pending` criteria, and `pendingQuestion`, never cached rooms or prices. No server-side
+`pending` criteria, `pendingQuestion`, and an optional `pendingRelaxation` proposal after
+`NO_MATCH`, never cached rooms or prices. No server-side
 conversation store is used. An unresolved budget or date blocks availability until clarified.
 
 ```json
@@ -76,7 +77,8 @@ Reply with the returned `state` and the new message. The other outcomes are `REC
   "clarificationFields": [],
   "result": {
     "status": "OK",
-    "recommendations": [{"roomId": 1, "pricePerNight": 500000, "reasons": ["Đủ sức chứa cho 2 khách"]}],
+    "scoringVersion": "multi-criteria-experimental-v1",
+    "recommendations": [{"roomId": 1, "pricePerNight": 500000, "score": 0, "reasons": []}],
     "availabilityCheckedAt": "2026-10-31T03:00:00Z",
     "requestId": "example-1"
   },
@@ -84,11 +86,16 @@ Reply with the returned `state` and the new message. The other outcomes are `REC
 }
 ```
 
-The example abbreviates null state fields, empty `pending`, `pendingQuestion`, and other room
+The example abbreviates null state fields, empty `pending`, `pendingQuestion`, the score
+breakdown and other room
 fields; actual responses include the full
 `RecommendedRoom` contract. Money remains JSON numbers generated from `Decimal` values.
 
-Multiple rooms and a total-stay budget return `UNSUPPORTED`. Required amenities are filtered
+Multiple rooms and budgets that must include tax, services, vouchers or other charges return
+`UNSUPPORTED`. A `totalBudget` for the basic room charge is supported and compared against
+the backend's `totalRoomCharge`; per-night limits remain separate. After `NO_MATCH`, the
+conversation may propose a change but does not apply it or query relaxed criteria until
+the customer explicitly agrees or supplies a new value. Required amenities are filtered
 using verified backend room-type text; unknown or conflicting names trigger clarification in
 conversation or HTTP 422 in the JSON route. Room-type names are matched only against Spring's live room-type list.
 The backend is queried for availability for every complete supported request.

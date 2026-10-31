@@ -51,6 +51,10 @@
           <button type="submit">Gửi yêu cầu</button>
           <button type="button" class="secondary" id="reset">Bắt đầu lại</button>
         </form>
+        <div id="relaxation-actions" hidden>
+          <button type="button" id="accept-relaxation">Đồng ý đề xuất</button>
+          <button type="button" class="secondary" id="reject-relaxation">Giữ điều kiện cũ</button>
+        </div>
         <p class="notice" id="state-note">Chưa có trạng thái tìm kiếm.</p>
       </section>
       <section class="card">
@@ -60,6 +64,8 @@
           <label for="check-out">Ngày trả phòng</label><input id="check-out" type="date" required>
           <label for="guests">Số khách / một phòng</label><input id="guests" type="number" min="1" value="2" required>
           <label for="max-price">Giá tối đa mỗi đêm</label><input id="max-price" type="number" min="0" step="0.01" value="1000000">
+          <label for="total-budget">Tổng ngân sách tiền phòng cơ bản toàn kỳ</label><input id="total-budget" type="number" min="0" step="0.01" placeholder="Để trống nếu không giới hạn">
+          <p class="notice">Giới hạn toàn kỳ chỉ so với tổng tiền phòng cơ bản do hệ thống trả về; chưa gồm thuế, dịch vụ, voucher hoặc chi phí khác.</p>
           <label for="amenities">Tiện nghi ưu tiên (ngăn bằng dấu phẩy)</label><input id="amenities" value="Ban công">
           <label for="required-amenities">Tiện nghi bắt buộc (ngăn bằng dấu phẩy)</label><input id="required-amenities" placeholder="Ví dụ: Wi-Fi">
           <button type="submit">Tìm phòng thật</button>
@@ -105,11 +111,14 @@
       }
       if (data.state) {
         state = data.state;
+        $('relaxation-actions').hidden = !state.pendingRelaxation || data.status !== 'NO_MATCH';
         const pending = state.pending || [];
         const waiting = pending.length
           ? `Đang chờ làm rõ ${state.pendingQuestion}: ${pending.map(item => JSON.stringify(item)).join('; ')}. `
           : '';
         $('state-note').textContent = `${waiting}Trạng thái tìm kiếm: ${JSON.stringify(state)}`;
+      } else {
+        $('relaxation-actions').hidden = true;
       }
       $('summary').textContent = data.reply || data.status || 'Đã nhận phản hồi.';
       const rooms = data.result?.recommendations || data.recommendations || [];
@@ -152,10 +161,20 @@
         requiredAmenities: $('required-amenities').value.split(',').map(x => x.trim()).filter(Boolean),
       };
       if ($('max-price').value) body.maxPrice = $('max-price').value;
+      if ($('total-budget').value) body.totalBudget = $('total-budget').value;
       send('/api/v1/ai/recommendations', body, event.submitter);
+    });
+    $('accept-relaxation').addEventListener('click', (event) => {
+      send('/api/v1/ai/recommendations/conversation',
+        { message: 'đồng ý', state }, event.currentTarget);
+    });
+    $('reject-relaxation').addEventListener('click', (event) => {
+      send('/api/v1/ai/recommendations/conversation',
+        { message: 'không', state }, event.currentTarget);
     });
     $('reset').addEventListener('click', () => {
       state = {};
+      $('relaxation-actions').hidden = true;
       $('state-note').textContent = 'Chưa có trạng thái tìm kiếm.';
       $('summary').textContent = 'Đã xóa trạng thái hội thoại.';
       $('rooms').replaceChildren();

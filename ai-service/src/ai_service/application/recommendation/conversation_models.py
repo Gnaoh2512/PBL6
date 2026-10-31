@@ -31,6 +31,7 @@ class SearchField(str, Enum):
     MIN_PRICE = "minPrice"
     MAX_PRICE = "maxPrice"
     TOTAL_BUDGET = "totalBudget"
+    BUDGET_SCOPE = "budgetScope"
     SORT_BY = "sortBy"
     PRICE_PREFERENCE = "pricePreference"
     CAPACITY_PREFERENCE = "capacityPreference"
@@ -43,6 +44,11 @@ class SearchField(str, Enum):
 class BudgetBasis(str, Enum):
     PER_NIGHT = "PER_NIGHT"
     TOTAL_STAY = "TOTAL_STAY"
+
+
+class BudgetScope(str, Enum):
+    ROOM_CHARGE = "ROOM_CHARGE"
+    ALL_COSTS = "ALL_COSTS"
 
 
 class PendingBudget(BaseModel):
@@ -89,6 +95,32 @@ class PendingField(BaseModel):
         return self
 
 
+class RelaxationProposal(BaseModel):
+    """A single suggested change; no original constraint changes until explicit consent."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    criterion: Literal[
+        SearchField.MAX_PRICE,
+        SearchField.TOTAL_BUDGET,
+        SearchField.REQUIRED_AMENITIES,
+        SearchField.CHECK_IN_DATE,
+    ]
+    value: str | None = None
+
+    @model_validator(mode="after")
+    def value_only_for_amenity(self) -> Self:
+        if (self.criterion is SearchField.REQUIRED_AMENITIES) != (self.value is not None):
+            raise ValueError("only an amenity proposal names a value")
+        return self
+
+
+class RelaxationDecision(str, Enum):
+    NONE = "NONE"
+    ACCEPT = "ACCEPT"
+    REJECT = "REJECT"
+
+
 PendingCriterion = Annotated[
     PendingBudget | PendingDate | PendingField, Field(discriminator="kind")
 ]
@@ -108,6 +140,7 @@ class SearchState(BaseModel):
     min_price: Money | None = Field(default=None, alias="minPrice")
     max_price: Money | None = Field(default=None, alias="maxPrice")
     total_budget: Money | None = Field(default=None, alias="totalBudget")
+    budget_scope: BudgetScope | None = Field(default=None, alias="budgetScope")
     sort_by: SortBy | None = Field(default=None, alias="sortBy")
     price_preference: PricePreference | None = Field(default=None, alias="pricePreference")
     capacity_preference: CapacityPreference | None = Field(default=None, alias="capacityPreference")
@@ -119,6 +152,7 @@ class SearchState(BaseModel):
     )
     pending: list[PendingCriterion] = Field(default_factory=list, max_length=12)
     pending_question: SearchField | None = Field(default=None, alias="pendingQuestion")
+    pending_relaxation: RelaxationProposal | None = Field(default=None, alias="pendingRelaxation")
 
     @field_validator("room_type_name")
     @classmethod
@@ -131,6 +165,18 @@ class SearchState(BaseModel):
     def consistent_criteria_and_pending(self) -> Self:
         if self.room_type_id is not None and self.room_type_name is not None:
             raise ValueError("roomTypeId and roomTypeName cannot both be set")
+        proposal = self.pending_relaxation
+        if proposal is not None:
+            if proposal.criterion is SearchField.MAX_PRICE and self.max_price is None:
+                raise ValueError("maxPrice proposal requires an active bound")
+            if proposal.criterion is SearchField.TOTAL_BUDGET and self.total_budget is None:
+                raise ValueError("totalBudget proposal requires an active bound")
+            if proposal.criterion is SearchField.REQUIRED_AMENITIES:
+                if proposal.value not in self.required_amenities:
+                    raise ValueError("proposed amenity must be an active requirement")
+            if proposal.criterion is SearchField.CHECK_IN_DATE:
+                if self.check_in_date is None or self.check_out_date is None:
+                    raise ValueError("date proposal requires confirmed dates")
         keys = [
             item.field if isinstance(item, (PendingDate, PendingField)) else SearchField.BUDGET
             for item in self.pending
@@ -139,8 +185,6 @@ class SearchState(BaseModel):
             raise ValueError("pending criteria must be unique")
         for item in self.pending:
             if isinstance(item, PendingBudget):
-                if self.max_price is not None or self.total_budget is not None:
-                    raise ValueError("pending budget cannot coexist with a confirmed budget")
                 if item.amount is not None and item.basis is not None:
                     raise ValueError("completed budget must be confirmed")
             if isinstance(item, PendingDate):
@@ -191,6 +235,9 @@ class ExtractedChanges(BaseModel):
     changes: list[FieldChange] = Field(max_length=20)
     ambiguities: list[SearchField] = Field(max_length=12)
     unsupported_intent: bool = Field(alias="unsupportedIntent")
+    relaxation_decision: RelaxationDecision = Field(
+        default=RelaxationDecision.NONE, alias="relaxationDecision"
+    )
 
     @model_validator(mode="after")
     def unique_changes(self) -> Self:

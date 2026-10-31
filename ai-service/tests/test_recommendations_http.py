@@ -111,6 +111,21 @@ def test_no_available_rooms_is_a_successful_no_match() -> None:
     assert response.json()["recommendations"] == []
 
 
+def test_structured_total_budget_filters_backend_charge_without_forwarding_it() -> None:
+    backend_requests = []
+
+    def backend(request: httpx.Request) -> httpx.Response:
+        backend_requests.append(request)
+        return httpx.Response(200, content=FIXTURE.read_bytes())
+
+    accepted = exercise(backend, body={**BODY, "totalBudget": "2500001.00"})
+    rejected = exercise(backend, body={**BODY, "totalBudget": "2500000.99"})
+    assert accepted.json()["status"] == "OK"
+    assert rejected.json()["status"] == "NO_MATCH"
+    assert len(backend_requests) == 2
+    assert all("totalBudget" not in request.content.decode() for request in backend_requests)
+
+
 def test_json_required_amenity_is_enforced_and_not_forwarded_to_spring() -> None:
     backend_requests = []
 

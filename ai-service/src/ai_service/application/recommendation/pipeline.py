@@ -133,6 +133,8 @@ class RecommendationPipeline:
             return False
         if request.max_price is not None and candidate.price_per_night > request.max_price:
             return False
+        if request.total_budget is not None and candidate.total_room_charge > request.total_budget:
+            return False
         if not required:
             return True
         evidence = evidence_for(candidate.room_type.amenities)

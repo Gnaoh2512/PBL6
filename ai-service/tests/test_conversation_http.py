@@ -122,7 +122,7 @@ def test_conversation_body_limit_is_applied_before_extraction() -> None:
     assert extractor.calls == 0
 
 
-def test_caller_cannot_submit_conflicting_confirmed_and_pending_budget() -> None:
+def test_caller_can_carry_unresolved_budget_without_dropping_confirmed_limit() -> None:
     extractor = FakeExtractor()
     response = exercise(
         extractor=extractor,
@@ -135,8 +135,9 @@ def test_caller_cannot_submit_conflicting_confirmed_and_pending_budget() -> None
             },
         },
     )
-    assert response.status_code == 422
-    assert extractor.calls == 0
+    assert response.status_code == 200
+    assert response.json()["state"]["maxPrice"] == 1000000
+    assert extractor.calls == 1
 
 
 def test_provider_timeout_and_invalid_output_are_technical_errors() -> None:

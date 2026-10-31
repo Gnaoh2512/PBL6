@@ -3,6 +3,9 @@
 > This is the historical REC-01 draft. The implemented experimental ranking now uses
 > [versioned scoring](scoring.md); the hard constraints and backend authority described
 > here remain in force.
+> The current AI service also supports an optional basic-room-charge `totalBudget`
+> filter and explicit `NO_MATCH` relaxation proposals; see
+> [the integration contract](contracts/ai-integration-v1.md).
 
 | Item | Value |
 |---|---|

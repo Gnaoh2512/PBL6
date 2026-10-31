@@ -38,8 +38,10 @@ class FakeExtractor:
         self.output = output
         self.today = None
         self.seen_state = None
+        self.calls = 0
 
     async def extract(self, message, state, *, today, request_id):
+        self.calls += 1
         self.today = today
         self.seen_state = state
         if isinstance(self.output, Exception):
@@ -80,11 +82,12 @@ def change(field, value=None, action="SET"):
     return {"field": field, "action": action, "value": value}
 
 
-def output(*changes, ambiguities=None, unsupported=False):
+def output(*changes, ambiguities=None, unsupported=False, decision="NONE"):
     return {
         "changes": list(changes),
         "ambiguities": ambiguities or [],
         "unsupportedIntent": unsupported,
+        "relaxationDecision": decision,
     }
 
 
@@ -96,6 +99,13 @@ def full_output(*extra):
         change("roomCount", "1"),
         *extra,
     )
+
+
+def complete_state(**changes):
+    return SearchState.model_validate({
+        "checkInDate": "2026-11-10", "checkOutDate": "2026-11-12",
+        "guestCount": 2, "roomCount": 1,
+    } | changes)
 
 
 def run(backend, extractor, *, state=None, message="Tìm phòng ngày 10-12/11/2026", now=FIXED_NOW):
@@ -234,14 +244,8 @@ def test_relative_dates_use_injected_reference_day() -> None:
     assert backend.searches[0].check_in_date.isoformat() == "2026-10-31"
 
 
-@pytest.mark.parametrize(
-    "extra",
-    [
-        change("roomCount", "2"),
-        change("totalBudget", "1000000"),
-    ],
-)
-def test_unsupported_constraints_are_not_silently_dropped(extra) -> None:
+def test_unsupported_room_count_is_not_silently_dropped() -> None:
+    extra = change("roomCount", "2")
     changes = [change("checkInDate", "2026-11-10"), change("checkOutDate", "2026-11-12")]
     changes.append(change("guestCount", "2"))
     if extra["field"] != "roomCount":
@@ -273,7 +277,7 @@ def test_required_amenity_without_backend_evidence_returns_no_match() -> None:
     )
     assert response.status is ConversationStatus.NO_MATCH
     assert response.result.recommendations == []
-    assert "tiện nghi bắt buộc" in response.reply
+    assert "tiện nghi" in response.reply
     assert len(backend.searches) == 1
 
 
@@ -376,7 +380,7 @@ def test_ambiguous_amount_survives_per_night_followup_and_reaches_backend() -> N
     assert backend.searches[0].max_price == Decimal("1000000")
 
 
-def test_new_ambiguous_budget_supersedes_old_and_unrelated_reply_keeps_waiting() -> None:
+def test_new_ambiguous_budget_preserves_old_until_confirmed() -> None:
     previous = SearchState.model_validate(
         {
             "checkInDate": "2026-11-10",
@@ -393,7 +397,7 @@ def test_new_ambiguous_budget_supersedes_old_and_unrelated_reply_keeps_waiting()
         state=previous,
         message="Đổi ngân sách thành chín trăm nghìn",
     )
-    assert first.state.max_price is None
+    assert first.state.max_price == Decimal("1500000")
     assert first.state.pending[0].amount == Decimal("900000")
     assert backend.searches == []
 
@@ -420,7 +424,7 @@ def test_ambiguous_new_budget_without_amount_does_not_reuse_old_amount() -> None
         state=previous,
         message="Tôi muốn đổi ngân sách",
     )
-    assert first.state.max_price is None
+    assert first.state.max_price == Decimal("1500000")
     assert first.state.pending[0].amount is None
     second = run(
         backend,
@@ -430,7 +434,7 @@ def test_ambiguous_new_budget_without_amount_does_not_reuse_old_amount() -> None
     )
     assert second.status is ConversationStatus.NEEDS_CLARIFICATION
     assert second.state.pending_question.value == "budget"
-    assert second.state.max_price is None
+    assert second.state.max_price == Decimal("1500000")
     assert backend.searches == []
 
 
@@ -473,11 +477,15 @@ def test_budget_clear_removes_confirmed_and_pending_without_restoring_old_value(
     assert response.state.pending == []
 
 
-def test_total_stay_confirmation_remains_unsupported() -> None:
+def test_total_stay_confirmation_is_supported_after_other_fields_are_known() -> None:
     backend = FakeBackend()
     first = run(
         backend,
         FakeExtractor(output(change("budget", "1000000"), ambiguities=["budgetBasis"])),
+        state=SearchState.model_validate({
+            "checkInDate": "2026-11-10", "checkOutDate": "2026-11-12",
+            "guestCount": 2, "roomCount": 1,
+        }),
         message="Ngân sách một triệu",
     )
     second = run(
@@ -486,12 +494,250 @@ def test_total_stay_confirmation_remains_unsupported() -> None:
         state=first.state,
         message="Cho toàn kỳ",
     )
-    assert second.status is ConversationStatus.UNSUPPORTED
+    assert second.status is ConversationStatus.NO_MATCH
     assert second.state.total_budget == Decimal("1000000")
+    assert len(backend.searches) == 1
+    assert backend.searches[0].max_price is None
+
+
+def test_total_budget_and_nightly_bound_coexist_across_conversation_turns() -> None:
+    backend = FakeBackend()
+    state = complete_state(maxPrice="1300000")
+    response = run(
+        backend, FakeExtractor(output(change("totalBudget", "2500001.00"))),
+        state=state, message="Tổng tiền phòng cơ bản toàn kỳ tối đa 2500001",
+    )
+    assert response.status is ConversationStatus.RECOMMENDED
+    assert response.state.max_price == Decimal("1300000")
+    assert response.state.total_budget == Decimal("2500001.00")
+    assert backend.searches[0].max_price == Decimal("1300000")
+    assert "totalBudget" not in backend.searches[0].model_dump(by_alias=True)
+    assert "tiền phòng cơ bản" in response.reply
+
+
+def test_new_nightly_bound_does_not_erase_confirmed_total_budget() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(output(change("maxPrice", "1300000"))),
+        state=complete_state(totalBudget="2500001"),
+        message="Mỗi đêm tối đa 1,3 triệu",
+    )
+    assert response.status is ConversationStatus.RECOMMENDED
+    assert response.state.total_budget == Decimal("2500001")
+    assert response.state.max_price == Decimal("1300000")
+    assert len(backend.searches) == 1
+
+
+def test_basis_only_with_two_limits_asks_for_amount_and_keeps_both() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(output(change("budgetBasis", "TOTAL_STAY"))),
+        state=complete_state(maxPrice="1300000", totalBudget="2500001"),
+        message="Đổi cơ sở ngân sách sang toàn kỳ",
+    )
+    assert response.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert response.state.pending_question.value == "budget"
+    assert response.state.max_price == Decimal("1300000")
+    assert response.state.total_budget == Decimal("2500001")
     assert backend.searches == []
-    third = run(backend, FakeExtractor(output()), state=second.state, message="Vẫn vậy")
-    assert third.status is ConversationStatus.UNSUPPORTED
+
+
+def test_unprovided_tax_service_or_voucher_scope_is_clarified_before_search() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend,
+        FakeExtractor(output(change("totalBudget", "3000000"), ambiguities=["budgetScope"])),
+        state=complete_state(),
+        message="Tối đa 3 triệu toàn kỳ gồm thuế và dịch vụ",
+    )
+    assert first.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert first.state.pending_question.value == "budgetScope"
+    assert first.state.total_budget == Decimal("3000000")
     assert backend.searches == []
+    accepted = run(
+        backend, FakeExtractor(output(change("budgetScope", "ROOM_CHARGE"))),
+        state=first.state, message="Đồng ý chỉ tính tiền phòng cơ bản",
+    )
+    assert accepted.status is ConversationStatus.RECOMMENDED
+    assert len(backend.searches) == 1
+
+
+def test_cost_scope_mention_cannot_be_missed_by_extractor() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(output(change("totalBudget", "3000000"))),
+        state=complete_state(), message="Tổng ba triệu bao gồm thuế và voucher",
+    )
+    assert response.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert response.state.pending_question.value == "budgetScope"
+    assert backend.searches == []
+
+
+def test_ordinary_room_rental_word_does_not_trigger_tax_clarification() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(output()),
+        state=complete_state(totalBudget="3000000"),
+        message="Tôi muốn thuê một phòng",
+    )
+    assert response.status is ConversationStatus.RECOMMENDED
+    assert len(backend.searches) == 1
+
+
+def test_all_costs_scope_is_not_falsely_supported() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(output(change("budgetScope", "ALL_COSTS"))),
+        state=complete_state(totalBudget="3000000"),
+        message="Tôi vẫn muốn gồm mọi chi phí",
+    )
+    assert response.status is ConversationStatus.UNSUPPORTED
+    assert backend.searches == []
+    assert "thuế" in response.reply
+
+
+def test_exact_scope_acceptance_or_rejection_needs_no_provider_guess() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend, FakeExtractor(output(ambiguities=["budgetScope"])),
+        state=complete_state(totalBudget="3000000"),
+        message="Ngân sách gồm dịch vụ",
+    )
+    accept_extractor = FakeExtractor(ExtractionInvalidResponse("unused"))
+    accepted = run(
+        backend, accept_extractor, state=first.state, message="Đồng ý",
+    )
+    assert accepted.status is ConversationStatus.RECOMMENDED
+    assert accept_extractor.calls == 0
+    assert len(backend.searches) == 1
+    reject_extractor = FakeExtractor(ExtractionInvalidResponse("unused"))
+    rejected = run(
+        backend, reject_extractor, state=first.state, message="Không",
+    )
+    assert rejected.status is ConversationStatus.UNSUPPORTED
+    assert reject_extractor.calls == 0
+    assert len(backend.searches) == 1
+
+
+def test_no_match_retains_constraints_and_proposes_without_diagnostic_query() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(output()),
+        state=complete_state(totalBudget="1000000", maxPrice="1300000"),
+    )
+    assert response.status is ConversationStatus.NO_MATCH
+    assert response.result.status.value == "NO_MATCH"
+    assert response.state.total_budget == Decimal("1000000")
+    assert response.state.max_price == Decimal("1300000")
+    assert response.state.pending_relaxation.criterion.value == "totalBudget"
+    assert "Chưa xác định điều kiện nào" in response.reply
+    assert len(backend.searches) == 1
+
+
+def test_rejecting_relaxation_keeps_original_search_and_skips_backend() -> None:
+    backend = FakeBackend()
+    first = run(backend, FakeExtractor(output()), state=complete_state(totalBudget="1000000"))
+    extractor = FakeExtractor(ExtractionInvalidResponse("should not call provider"))
+    rejected = run(
+        backend, extractor, state=first.state,
+        message="Không",
+    )
+    assert rejected.status is ConversationStatus.NO_MATCH
+    assert rejected.result is None
+    assert rejected.state.total_budget == Decimal("1000000")
+    assert rejected.state.pending_relaxation is None
+    assert len(backend.searches) == 1
+    assert extractor.calls == 0
+
+
+def test_accepting_budget_relaxation_waits_for_amount_then_requeries_once() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend, FakeExtractor(output()),
+        state=complete_state(totalBudget="1000000", maxPrice="1300000"),
+    )
+    accept_extractor = FakeExtractor(ExtractionInvalidResponse("should not call provider"))
+    accepted = run(
+        backend, accept_extractor, state=first.state,
+        message="Đồng ý",
+    )
+    assert accepted.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert accepted.state.pending_relaxation is not None
+    assert len(backend.searches) == 1
+    assert accept_extractor.calls == 0
+    revised = run(
+        backend, FakeExtractor(output(change("budget", "2600000"))),
+        state=accepted.state, message="Tăng lên 2,6 triệu",
+    )
+    assert revised.status is ConversationStatus.RECOMMENDED
+    assert revised.state.total_budget == Decimal("2600000")
+    assert revised.state.max_price == Decimal("1300000")
+    assert revised.state.pending_relaxation is None
+    assert len(backend.searches) == 2
+
+
+def test_explicit_one_point_two_million_edit_requeries_without_promising_a_room() -> None:
+    backend = FakeBackend()
+    first = run(backend, FakeExtractor(output()), state=complete_state(maxPrice="1000000"))
+    revised = run(
+        backend, FakeExtractor(output(change("budget", "1200000"))),
+        state=first.state, message="Tăng lên 1,2 triệu",
+    )
+    assert revised.status is ConversationStatus.NO_MATCH
+    assert revised.state.max_price == Decimal("1200000")
+    assert revised.result.recommendations == []
+    assert len(backend.searches) == 2
+
+
+def test_accepting_amenity_relaxation_removes_only_named_requirement() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend, FakeExtractor(output()),
+        state=complete_state(requiredAmenities=["bathtub"]),
+    )
+    assert first.status is ConversationStatus.NO_MATCH
+    assert first.state.pending_relaxation.value == "bathtub"
+    second = run(
+        backend, FakeExtractor(output(decision="ACCEPT")), state=first.state,
+        message="Đồng ý bỏ tiện nghi đó",
+    )
+    assert second.status is ConversationStatus.RECOMMENDED
+    assert second.state.required_amenities == []
+    assert len(backend.searches) == 2
+
+
+def test_date_relaxation_requires_explicit_new_dates() -> None:
+    backend = FakeBackend(rooms=[])
+    first = run(backend, FakeExtractor(output()), state=complete_state())
+    assert first.state.pending_relaxation.criterion.value == "checkInDate"
+    accepted = run(
+        backend, FakeExtractor(output(decision="ACCEPT")), state=first.state,
+        message="Đồng ý đổi ngày",
+    )
+    assert accepted.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert accepted.state.check_in_date == first.state.check_in_date
+    assert accepted.state.check_out_date == first.state.check_out_date
+    assert accepted.state.guest_count == 2
+    assert len(backend.searches) == 1
+
+
+def test_backend_error_does_not_create_relaxation_proposal() -> None:
+    backend = FakeBackend(error=BackendTimeoutError("slow"))
+    with pytest.raises(BackendTimeoutError):
+        run(backend, FakeExtractor(output()), state=complete_state(totalBudget="1000000"))
+    assert len(backend.searches) == 1
+
+
+def test_backend_error_on_revised_search_is_not_reported_as_no_match() -> None:
+    backend = FakeBackend()
+    first = run(backend, FakeExtractor(output()), state=complete_state(totalBudget="1000000"))
+    backend.error = BackendTimeoutError("slow")
+    with pytest.raises(BackendTimeoutError):
+        run(
+            backend, FakeExtractor(output(change("totalBudget", "2600000"))),
+            state=first.state, message="Tăng tổng tiền phòng lên 2,6 triệu",
+        )
+    assert len(backend.searches) == 2
 
 
 def test_yearless_dates_survive_unrelated_turn_then_explicit_year() -> None:

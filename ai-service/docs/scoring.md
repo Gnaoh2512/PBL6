@@ -11,7 +11,8 @@ codes`, or zero when none are requested.
 The live availability response remains the only source of rooms. The pipeline first
 deduplicates and validates candidates, then applies status, dates, nights, capacity
 `>= guestCount`, optional room type, inclusive per-night `minPrice`/`maxPrice`, and all
-verified required amenities. These are hard constraints and contribute no points. All
+verified required amenities. Optional `totalBudget` also filters inclusively against the
+backend's `totalRoomCharge`. These are hard constraints and contribute no points. All
 money stays `Decimal`; an amount equal to a price boundary passes the filter. Backend
 pricing, stay total and deposit are copied without recalculation.
 
