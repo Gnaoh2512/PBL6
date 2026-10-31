@@ -6,7 +6,7 @@ import Modal from '../components/Modal';
 import { apiCall, formatVND, formatDate, formatDateTime, getAuthUser } from '../services/api';
 import { useToast } from '../contexts/ToastContext';
 
-export default function HistoryPage() {
+export default function HistoryPage({ portal = false }) {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const authUser = getAuthUser();
@@ -98,7 +98,7 @@ export default function HistoryPage() {
 
   return (
     <>
-      <Navbar />
+      {!portal && <Navbar />}
 
       <main className="hc-page">
         <div className="hc-container">
@@ -349,7 +349,7 @@ export default function HistoryPage() {
         )}
       </Modal>
 
-      <Footer />
+      {!portal && <Footer />}
     </>
   );
 }

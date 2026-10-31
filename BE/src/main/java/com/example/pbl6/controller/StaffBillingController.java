@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/staff/billing")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('RECEPTIONIST', 'CASHIER', 'MANAGER', 'ADMIN')")
+@PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER', 'ADMIN')")
 public class StaffBillingController {
 
     private final CustomerBillingService billingService;
@@ -73,7 +73,7 @@ public class StaffBillingController {
             @RequestBody(required = false) SettlementRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        String cashierUsername = userDetails != null ? userDetails.getUsername() : "cashier";
+        String cashierUsername = userDetails != null ? userDetails.getUsername() : null;
         if (request == null) {
             request = SettlementRequest.builder().paymentMethod("CASH").build();
         }

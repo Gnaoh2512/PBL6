@@ -2,6 +2,7 @@ package com.example.pbl6.repository;
 
 import com.example.pbl6.entity.Room;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,6 +13,9 @@ public interface RoomRepository extends JpaRepository<Room, Integer> {
     Optional<Room> findByRoomNumber(String roomNumber);
     boolean existsByRoomNumber(String roomNumber);
     List<Room> findByStatus(String status);
+
+    @EntityGraph(attributePaths = "roomType")
+    Optional<Room> findFirstByStatusIgnoreCaseOrderByRoomNumberAsc(String status);
 
     @org.springframework.data.jpa.repository.Query("SELECT r FROM Room r " +
             "JOIN FETCH r.roomType rt " +

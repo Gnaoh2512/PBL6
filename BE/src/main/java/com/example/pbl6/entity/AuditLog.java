@@ -19,8 +19,9 @@ public class AuditLog {
     @Column(name = "log_id")
     private Long logId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "account_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"passwordHash", "hibernateLazyInitializer", "handler"})
     private Account account;
 
     @Column(name = "module_name", length = 100)
@@ -35,10 +36,10 @@ public class AuditLog {
     @Column(name = "target_id")
     private Long targetId;
 
-    @Column(name = "old_value", columnDefinition = "json")
+    @Column(name = "old_value", columnDefinition = "text")
     private String oldValue;
 
-    @Column(name = "new_value", columnDefinition = "json")
+    @Column(name = "new_value", columnDefinition = "text")
     private String newValue;
 
     @Column(name = "ip_address", length = 45)
@@ -47,4 +48,27 @@ public class AuditLog {
     @CreationTimestamp
     @Column(name = "logged_at", updatable = false)
     private LocalDateTime loggedAt;
+
+    public String getUsername() {
+        return account != null ? account.getUsername() : "Hệ thống";
+    }
+
+    public String getPerformerName() {
+        if (account == null) return "Hệ thống";
+        if (account.getFullName() != null && !account.getFullName().isBlank()) {
+            return account.getFullName() + " (" + account.getUsername() + ")";
+        }
+        return account.getUsername();
+    }
+
+    public String getPerformerRole() {
+        if (account != null && account.getRole() != null) {
+            return account.getRole().getRoleCode();
+        }
+        return null;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return loggedAt;
+    }
 }

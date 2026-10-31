@@ -40,6 +40,7 @@ public class StaffBookingServiceImpl implements StaffBookingService {
     private final BankConfig bankConfig;
     private final CustomerBookingService customerBookingService;
     private final VoucherService voucherService;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -215,6 +216,11 @@ public class StaffBookingServiceImpl implements StaffBookingService {
 
         log.info("Nhân viên {} đã tạo thành công đơn đặt phòng tại quầy (Walk-in): {}, Phòng: {}, Check-in ngay: {}", 
                 staffUsername, bookingCode, room.getRoomNumber(), checkInImmediately);
+
+        auditLogService.log(staffAccount, "ĐẶT PHÒNG", "WALKIN", "booking", Long.valueOf(savedBooking.getBookingId()),
+                "Tạo đơn đặt phòng Walk-in mã " + bookingCode + " cho khách " + customer.getFullName() +
+                        " (Phòng " + room.getRoomNumber() + ", " + checkInDate + " ➔ " + checkOutDate +
+                        ", Thu tiền: " + amountPaid + " VNĐ, Check-in ngay: " + (checkInImmediately ? "Có" : "Không") + ")");
 
         return customerBookingService.getBookingByCode(bookingCode);
     }

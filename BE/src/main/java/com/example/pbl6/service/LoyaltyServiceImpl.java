@@ -77,7 +77,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<LoyaltyTransactionResponse> getTransactions(String username) {
         Customer customer = getCustomerByUsername(username);
         return loyaltyTransactionRepository.findByCustomer_CustomerIdOrderByCreatedAtDesc(customer.getCustomerId())
@@ -87,7 +87,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TierBenefitResponse> getAvailableBenefits(String username) {
         Customer customer = getCustomerByUsername(username);
         CustomerLoyalty loyalty = getOrCreateLoyalty(customer);
@@ -225,11 +225,26 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
 
-        return customerRepository.findAll().stream()
-                .filter(c -> c.getAccount() != null && c.getAccount().getAccountId().equals(account.getAccountId()))
-                .findFirst()
-                .orElseGet(() -> customerRepository.findByEmail(account.getEmail())
-                        .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin khách hàng")));
+        Customer customer = customerRepository.findByAccount_Username(username).orElse(null);
+        if (customer == null && account.getEmail() != null && !account.getEmail().isBlank()) {
+            customer = customerRepository.findByEmail(account.getEmail()).orElse(null);
+        }
+        if (customer != null) {
+            if (customer.getAccount() == null) {
+                customer.setAccount(account);
+                customerRepository.save(customer);
+            }
+            return customer;
+        }
+        if (account.getRole() == null || !"ROLE_CUSTOMER".equalsIgnoreCase(account.getRole().getRoleCode())) {
+            throw new ResourceNotFoundException("Không tìm thấy thông tin khách hàng");
+        }
+        return customerRepository.save(Customer.builder()
+                .account(account)
+                .fullName(account.getFullName() != null ? account.getFullName() : account.getUsername())
+                .email(account.getEmail())
+                .phone(account.getPhone())
+                .build());
     }
 
     private CustomerLoyalty getOrCreateLoyalty(Customer customer) {

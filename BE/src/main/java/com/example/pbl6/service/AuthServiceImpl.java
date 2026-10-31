@@ -5,9 +5,15 @@ import com.example.pbl6.dto.auth.AuthResponse;
 import com.example.pbl6.dto.auth.LoginRequest;
 import com.example.pbl6.dto.auth.RegisterRequest;
 import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.Customer;
+import com.example.pbl6.entity.CustomerLoyalty;
+import com.example.pbl6.entity.LoyaltyTier;
 import com.example.pbl6.entity.Role;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
+import com.example.pbl6.repository.CustomerLoyaltyRepository;
+import com.example.pbl6.repository.CustomerRepository;
+import com.example.pbl6.repository.LoyaltyTierRepository;
 import com.example.pbl6.repository.RoleRepository;
 import com.example.pbl6.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -26,8 +32,12 @@ public class AuthServiceImpl implements AuthService {
 
     private final AccountRepository accountRepository;
     private final RoleRepository roleRepository;
+    private final CustomerRepository customerRepository;
+    private final CustomerLoyaltyRepository customerLoyaltyRepository;
+    private final LoyaltyTierRepository loyaltyTierRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -62,7 +72,31 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         Account saved = accountRepository.save(account);
+        if (role != null && "ROLE_CUSTOMER".equalsIgnoreCase(role.getRoleCode())) {
+            Customer customer = StringUtils.hasText(saved.getEmail())
+                    ? customerRepository.findByEmail(saved.getEmail()).orElseGet(Customer::new)
+                    : new Customer();
+            customer.setAccount(saved);
+            customer.setFullName(saved.getFullName());
+            customer.setEmail(saved.getEmail());
+            customer.setPhone(saved.getPhone());
+            Customer savedCustomer = customerRepository.save(customer);
+            if (customerLoyaltyRepository.findByCustomer_CustomerId(savedCustomer.getCustomerId()).isEmpty()) {
+                loyaltyTierRepository.findByTierCode("SEASHELL").ifPresent(tier ->
+                        customerLoyaltyRepository.save(CustomerLoyalty.builder()
+                                .customer(savedCustomer)
+                                .tier(tier)
+                                .totalStayDays(0)
+                                .totalSpent(java.math.BigDecimal.ZERO)
+                                .totalScore(java.math.BigDecimal.ZERO)
+                                .build()));
+            }
+        }
         log.info("Registered new user with username: {}", saved.getUsername());
+
+        auditLogService.log(saved, "XÁC THỰC", "REGISTER", "account", Long.valueOf(saved.getAccountId()),
+                "Đăng ký tài khoản khách hàng mới: " + saved.getUsername() + " (Họ tên: " + saved.getFullName() + ")");
+
         return AccountResponse.fromEntity(saved);
     }
 
@@ -88,8 +122,15 @@ public class AuthServiceImpl implements AuthService {
         account.setLastLogin(LocalDateTime.now());
         accountRepository.save(account);
 
-        String roleStr = account.getRole() != null ? account.getRole().getRoleCode() : "ROLE_CUSTOMER";
+        if (account.getRole() == null || !StringUtils.hasText(account.getRole().getRoleCode())) {
+            throw new IllegalStateException("Tài khoản chưa được gán vai trò. Vui lòng liên hệ quản trị viên.");
+        }
+        String roleStr = account.getRole().getRoleCode().trim().toUpperCase(java.util.Locale.ROOT);
+        if (!roleStr.startsWith("ROLE_")) roleStr = "ROLE_" + roleStr;
         String token = jwtTokenProvider.generateToken(account.getUsername(), roleStr, account.getAccountId());
+
+        auditLogService.log(account, "XÁC THỰC", "LOGIN", "account", Long.valueOf(account.getAccountId()),
+                "Đăng nhập thành công vào hệ thống (Vai trò: " + (account.getRole() != null ? account.getRole().getRoleCode() : "N/A") + ")");
 
         return AuthResponse.builder()
                 .accessToken(token)

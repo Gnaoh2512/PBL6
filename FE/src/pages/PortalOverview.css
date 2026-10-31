@@ -1,0 +1,113 @@
+/* Portal overview – deliberately minimal: one card style, one accent colour. */
+
+/* Metrics strip: a single card split into four cells */
+.ov-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  margin-bottom: 24px;
+  overflow: hidden;
+  background: var(--hc-border-light);
+  border: 1px solid var(--hc-border-light);
+  border-radius: var(--hc-radius-lg);
+  box-shadow: var(--hc-shadow-sm);
+}
+.ov-stat {
+  padding: 20px 24px;
+  background: var(--hc-surface);
+}
+.ov-stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hc-text-muted);
+}
+.ov-stat-value {
+  margin: 4px 0 2px;
+  font-family: var(--hc-font-heading);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--hc-primary-dark);
+}
+.ov-stat-sub {
+  font-size: 12px;
+  color: var(--hc-text-secondary);
+}
+
+/* Shift notice uses the standard .hc-alert; this only aligns its link */
+.ov-notice {
+  margin-bottom: 24px;
+  align-items: center;
+}
+.ov-notice .ov-link {
+  margin-left: auto;
+}
+
+/* Content grid */
+.ov-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+.ov-grid .hc-card,
+.ov-full {
+  margin-bottom: 0;
+}
+.ov-link {
+  color: var(--hc-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ov-link:hover {
+  color: var(--hc-primary-dark);
+  text-decoration: underline;
+}
+
+/* Room status list */
+.ov-room-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hc-border-light);
+  font-size: 14px;
+}
+.ov-room-row:last-child {
+  border-bottom: 0;
+}
+.ov-room-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+}
+.ov-room-label {
+  flex: 1;
+  color: var(--hc-text-secondary);
+}
+.ov-room-row b {
+  color: var(--hc-text);
+}
+
+@media (max-width: 1100px) {
+  .ov-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .ov-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .ov-strip {
+    grid-template-columns: 1fr;
+  }
+  .ov-notice {
+    flex-wrap: wrap;
+  }
+}

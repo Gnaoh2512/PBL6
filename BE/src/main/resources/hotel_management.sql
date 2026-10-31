@@ -1,5 +1,5 @@
 -- ====================================================================
--- HOTEL MANAGEMENT DATABASE SCHEMA & SEED DATA (V2 COMPLETE - 26 TABLES)
+-- HOTEL MANAGEMENT DATABASE SCHEMA & SEED DATA (V3 - UNIFIED FRONT DESK ROLE)
 -- ====================================================================
 
 CREATE DATABASE IF NOT EXISTS hotel_management CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -32,8 +32,10 @@ CREATE TABLE IF NOT EXISTS service_category (
 
 CREATE TABLE IF NOT EXISTS shift (
     shift_id INT AUTO_INCREMENT PRIMARY KEY,
+    shift_name VARCHAR(100),
     start_time TIME,
-    end_time TIME
+    end_time TIME,
+    description TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS loyalty_tier (
@@ -106,6 +108,7 @@ CREATE TABLE IF NOT EXISTS work_schedule (
     account_id INT,
     shift_id INT,
     work_date DATE,
+    notes TEXT,
     FOREIGN KEY (account_id) REFERENCES account(account_id) ON DELETE CASCADE,
     FOREIGN KEY (shift_id) REFERENCES shift(shift_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -117,8 +120,8 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action_type VARCHAR(50),
     target_table VARCHAR(100),
     target_id BIGINT,
-    old_value JSON,
-    new_value JSON,
+    old_value TEXT,
+    new_value TEXT,
     ip_address VARCHAR(45),
     logged_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (account_id) REFERENCES account(account_id) ON DELETE SET NULL
@@ -410,24 +413,30 @@ CREATE TABLE IF NOT EXISTS benefit_redemption (
 INSERT INTO role (role_code, role_name, description) VALUES
 ('ROLE_ADMIN', 'Quản trị viên hệ thống', 'Toàn quyền cấu hình và quản trị hệ thống khách sạn'),
 ('ROLE_MANAGER', 'Quản lý khách sạn', 'Quản lý vận hành toàn diện, phê duyệt chiết khấu, giám sát báo cáo'),
-('ROLE_RECEPTIONIST', 'Nhân viên lễ tân', 'Xử lý đặt phòng, check-in, check-out, thanh toán và thu cọc'),
+('ROLE_RECEPTIONIST', 'Receptionist / Cashier', 'Front desk, booking, check-in/check-out, payments and cashier shift management'),
 ('ROLE_HOUSEKEEPING', 'Nhân viên buồng phòng', 'Dọn dẹp phòng, kiểm tra buồng phòng và cập nhật tình trạng phòng'),
 ('ROLE_MAINTENANCE', 'Nhân viên kỹ thuật & bảo trì', 'Tiếp nhận và xử lý sửa chữa trang thiết bị, bảo trì phòng'),
 ('ROLE_SERVICE_STAFF', 'Nhân viên phục vụ dịch vụ', 'Tiếp nhận và thực hiện các dịch vụ phòng, ăn uống, giặt ủi cho khách'),
 ('ROLE_CUSTOMER', 'Khách hàng', 'Tài khoản khách hàng trực tuyến đặt phòng và tra cứu lịch sử')
 ON DUPLICATE KEY UPDATE role_name = VALUES(role_name);
+-- Merge legacy cashier accounts into the unified front-desk role before seeding accounts.
+UPDATE account a
+JOIN role old_role ON old_role.role_id = a.role_id AND old_role.role_code = 'ROLE_CASHIER'
+JOIN role front_desk ON front_desk.role_code = 'ROLE_RECEPTIONIST'
+SET a.role_id = front_desk.role_id;
+DELETE FROM role WHERE role_code = 'ROLE_CASHIER';
+UPDATE account SET status = 'INACTIVE' WHERE username = 'cashier';
 
 -- 6.2. Accounts (Mật khẩu mặc định: 123456 -> BCrypt: $2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6)
 INSERT INTO account (username, password_hash, full_name, email, phone, role_id, status) VALUES
-('admin', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Quản trị viên Hệ thống', 'admin@hotel.com', '0900000001', 1, 'ACTIVE'),
-('manager', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Nguyễn Văn Quản Lý', 'manager@hotel.com', '0900000002', 2, 'ACTIVE'),
-('receptionist', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Trần Thị Lễ Tân', 'receptionist@hotel.com', '0900000003', 3, 'ACTIVE'),
-('cashier', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Lê Văn Thu Ngân', 'cashier@hotel.com', '0900000004', 3, 'ACTIVE'),
-('housekeeper', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Phạm Thị Buồng Phòng', 'housekeeper@hotel.com', '0900000005', 4, 'ACTIVE'),
-('technician', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Trần Kỹ Thuật Bảo Trì', 'tech@hotel.com', '0900000006', 5, 'ACTIVE'),
-('servicestaff', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Võ Phục Vụ Buồng Dịch Vụ', 'service@hotel.com', '0900000007', 6, 'ACTIVE'),
-('customer1', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Nguyễn Văn Khách', 'customer1@gmail.com', '0901234567', 7, 'ACTIVE')
-ON DUPLICATE KEY UPDATE full_name = VALUES(full_name);
+('admin', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Quản trị viên Hệ thống', 'admin@hotel.com', '0900000001', (SELECT role_id FROM role WHERE role_code = 'ROLE_ADMIN'), 'ACTIVE'),
+('manager', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Nguyễn Văn Quản Lý', 'manager@hotel.com', '0900000002', (SELECT role_id FROM role WHERE role_code = 'ROLE_MANAGER'), 'ACTIVE'),
+('receptionist', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Trần Thị Lễ Tân', 'receptionist@hotel.com', '0900000003', (SELECT role_id FROM role WHERE role_code = 'ROLE_RECEPTIONIST'), 'ACTIVE'),
+('housekeeper', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Phạm Thị Buồng Phòng', 'housekeeper@hotel.com', '0900000005', (SELECT role_id FROM role WHERE role_code = 'ROLE_HOUSEKEEPING'), 'ACTIVE'),
+('technician', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Trần Kỹ Thuật Bảo Trì', 'tech@hotel.com', '0900000006', (SELECT role_id FROM role WHERE role_code = 'ROLE_MAINTENANCE'), 'ACTIVE'),
+('servicestaff', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Võ Phục Vụ Buồng Dịch Vụ', 'service@hotel.com', '0900000007', (SELECT role_id FROM role WHERE role_code = 'ROLE_SERVICE_STAFF'), 'ACTIVE'),
+('customer1', '$2a$10$eACCYoNOHEqgkVE8aIUTNuG3z5P3W7VqK0b9v3LzV2yZ6hQ7uIom6', 'Nguyễn Văn Khách', 'customer1@gmail.com', '0901234567', (SELECT role_id FROM role WHERE role_code = 'ROLE_CUSTOMER'), 'ACTIVE')
+ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), password_hash = VALUES(password_hash), role_id = VALUES(role_id), status = VALUES(status);
 
 -- 6.3. Customers
 INSERT INTO customer (full_name, account_id, id_type, id_number, id_issue_date, id_issue_place, phone, email, nationality) VALUES
@@ -475,11 +484,11 @@ INSERT INTO service (category_id, service_name, unit_price, unit, is_active) VAL
 ON DUPLICATE KEY UPDATE service_name = VALUES(service_name);
 
 -- 6.8. Shifts
-INSERT INTO shift (start_time, end_time) VALUES
-('06:00:00', '14:00:00'),
-('14:00:00', '22:00:00'),
-('22:00:00', '06:00:00')
-ON DUPLICATE KEY UPDATE start_time = VALUES(start_time);
+INSERT INTO shift (shift_name, start_time, end_time, description) VALUES
+('Ca Sáng (Morning)', '06:00:00', '14:00:00', 'Ca làm việc buổi sáng (06:00 - 14:00)'),
+('Ca Chiều (Afternoon)', '14:00:00', '22:00:00', 'Ca làm việc buổi chiều (14:00 - 22:00)'),
+('Ca Đêm (Night)', '22:00:00', '06:00:00', 'Ca làm việc ban đêm (22:00 - 06:00)')
+ON DUPLICATE KEY UPDATE shift_name = VALUES(shift_name), description = VALUES(description);
 
 -- 6.9. Vouchers
 INSERT INTO voucher (created_by, voucher_code, voucher_name, description, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, usage_limit_per_customer, valid_from, valid_to, is_active) VALUES
@@ -513,3 +522,28 @@ SELECT
 FROM customer c
 LEFT JOIN customer_loyalty cl ON c.customer_id = cl.customer_id
 WHERE cl.customer_id IS NULL;
+
+-- In-house test booking for customer1, used to exercise the guest service-order flow.
+INSERT INTO booking (booking_code, customer_id, created_by, check_in_date, check_out_date, guest_count, status, deposit_required, source, note)
+SELECT 'BK-CUSTOMER1-DEMO', c.customer_id, a.account_id, CURRENT_DATE - INTERVAL 1 DAY,
+       CURRENT_DATE + INTERVAL 2 DAY, 2, 'CHECKED_IN', 0, 'DEMO', 'Demo stay for testing guest service orders'
+FROM customer c
+JOIN account a ON a.account_id = c.account_id
+WHERE a.username = 'customer1'
+  AND EXISTS (SELECT 1 FROM room WHERE room_number = '101')
+  AND NOT EXISTS (SELECT 1 FROM booking WHERE booking_code = 'BK-CUSTOMER1-DEMO');
+
+INSERT INTO booking_room (booking_id, room_id, planned_checkin, planned_checkout, status, actual_checkin, price_applied)
+SELECT b.booking_id, r.room_id, b.check_in_date, b.check_out_date, 'CHECKED_IN', CURRENT_TIMESTAMP, rt.base_price
+FROM booking b
+JOIN customer c ON c.customer_id = b.customer_id
+JOIN account a ON a.account_id = c.account_id AND a.username = 'customer1'
+JOIN room r ON r.room_number = '101'
+JOIN room_type rt ON rt.room_type_id = r.room_type_id
+WHERE b.booking_code = 'BK-CUSTOMER1-DEMO'
+  AND NOT EXISTS (SELECT 1 FROM booking_room br WHERE br.booking_id = b.booking_id);
+
+UPDATE room r
+JOIN booking_room br ON br.room_id = r.room_id
+JOIN booking b ON b.booking_id = br.booking_id AND b.booking_code = 'BK-CUSTOMER1-DEMO'
+SET r.status = 'OCCUPIED';

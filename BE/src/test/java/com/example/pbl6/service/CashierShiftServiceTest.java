@@ -10,6 +10,7 @@ import com.example.pbl6.repository.AccountRepository;
 import com.example.pbl6.repository.CashierShiftRepository;
 import com.example.pbl6.repository.WorkScheduleRepository;
 import com.example.pbl6.security.CustomUserDetails;
+import com.example.pbl6.entity.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +53,10 @@ class CashierShiftServiceTest {
                 .accountId(1)
                 .username("cashier1")
                 .fullName("Cashier One")
-                .role("CASHIER")
+                .role(Role.builder()
+                    .roleCode("ROLE_RECEPTIONIST")
+                    .roleName("Receptionist")
+                    .build())
                 .build();
 
         userDetails = new CustomUserDetails(mockAccount);

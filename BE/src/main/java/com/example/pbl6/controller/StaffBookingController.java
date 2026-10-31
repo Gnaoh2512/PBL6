@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/staff/bookings")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('RECEPTIONIST', 'CASHIER', 'MANAGER', 'ADMIN')")
+@PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER', 'ADMIN')")
 public class StaffBookingController {
 
     private final StaffBookingService staffBookingService;
