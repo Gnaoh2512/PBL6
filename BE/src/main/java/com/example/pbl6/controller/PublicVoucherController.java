@@ -36,6 +36,9 @@ public class PublicVoucherController {
             @Valid @RequestBody VoucherApplyRequest request
     ) {
         VoucherApplyResponse response = voucherService.previewVoucher(request);
+        if (!response.isValid()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(response.getMessage()));
+        }
         return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
     }
 }

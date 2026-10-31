@@ -5,6 +5,8 @@ import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.AuditLog;
 import com.example.pbl6.repository.AccountRepository;
 import com.example.pbl6.repository.AuditLogRepository;
+import com.example.pbl6.repository.RoleRepository;
+import com.example.pbl6.entity.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,6 +34,9 @@ class AccountAdminServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private RoleRepository roleRepository;
+
     @InjectMocks
     private AccountAdminServiceImpl accountAdminService;
 
@@ -43,7 +49,10 @@ class AccountAdminServiceTest {
                 .username("admin")
                 .fullName("Admin User")
                 .email("admin@hotel.com")
-                .role("ADMIN")
+                .role(Role.builder()
+                    .roleCode("ADMIN")
+                    .roleName("Administrator")
+                    .build())
                 .status("ACTIVE")
                 .build();
     }
@@ -77,11 +86,18 @@ class AccountAdminServiceTest {
             return acc;
         });
 
+        when(roleRepository.findByRoleCode("ROLE_RECEPTIONIST"))
+        .thenReturn(Optional.of(Role.builder()
+                .roleId(2)
+                .roleCode("ROLE_RECEPTIONIST")
+                .roleName("Receptionist")
+                .build()));
+
         Account result = accountAdminService.createAccount(request);
 
         assertNotNull(result);
         assertEquals("receptionist1", result.getUsername());
-        assertEquals("RECEPTIONIST", result.getRole());
+        assertEquals("ROLE_RECEPTIONIST", result.getRole().getRoleCode());
         verify(accountRepository, times(1)).save(any(Account.class));
     }
 
@@ -103,7 +119,7 @@ class AccountAdminServiceTest {
     @Test
     void getAuditLogs_Success() {
         AuditLog log = AuditLog.builder().logId(100L).moduleName("ACCOUNT").build();
-        when(auditLogRepository.findAll()).thenReturn(List.of(log));
+        when(auditLogRepository.findAllByOrderByLoggedAtDesc()).thenReturn(List.of(log));
 
         List<AuditLog> logs = accountAdminService.getAuditLogs();
 

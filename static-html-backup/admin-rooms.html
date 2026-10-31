@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Phòng & Hạng Phòng - Hotel California</title>
+    <!-- Zero-Flash Synchronous Route Guard -->
+    <style>body { display: none; }</style>
+    <script src="js/api.js"></script>
+    <script>
+        guardPageAccess(['ADMIN', 'MANAGER']);
+    </script>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header id="top-navbar"></header>
+
+    <div class="app-wrapper">
+        <aside id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h2 class="fw-bold fs-4 text-dark mb-1">
+                        <i class="bi bi-door-closed text-primary"></i> Quản Lý Phòng & Hạng Phòng
+                    </h2>
+                    <p class="text-secondary small mb-0">Quản trị danh sách phòng, định giá theo hạng và cập nhật trạng thái</p>
+                </div>
+            </div>
+
+            <!-- Nav Tabs Bootstrap 5 -->
+            <ul class="nav nav-tabs mb-4" id="roomTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-semibold" id="rooms-tab" data-bs-toggle="tab" data-bs-target="#rooms-tab-pane" type="button" role="tab">
+                        <i class="bi bi-door-open"></i> Danh Sách Phòng
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-semibold" id="types-tab" data-bs-toggle="tab" data-bs-target="#types-tab-pane" type="button" role="tab">
+                        <i class="bi bi-tags"></i> Danh Mục Hạng Phòng
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="roomTabContent">
+                <!-- TAB 1: DANH SÁCH PHÒNG -->
+                <div class="tab-pane fade show active" id="rooms-tab-pane" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h6 class="fw-bold mb-0 text-dark">Danh Sách Tất Cả Phòng</h6>
+                            <div class="d-flex gap-2">
+                                <button onclick="loadAdminRooms()" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-arrow-clockwise"></i> Tải lại
+                                </button>
+                                <button onclick="openCreateRoomModal()" class="btn btn-primary btn-sm shadow-sm">
+                                    <i class="bi bi-plus-lg"></i> Thêm Phòng Mới
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Số phòng</th>
+                                            <th>Hạng loại phòng</th>
+                                            <th>Tầng</th>
+                                            <th>Trạng thái</th>
+                                            <th>Ghi chú</th>
+                                            <th>Đổi trạng thái nhanh</th>
+                                            <th class="text-end">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="roomsTableBody">
+                                        <tr><td colspan="8" class="text-center text-secondary py-4">Đang tải dữ liệu phòng...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: HẠNG LOẠI PHÒNG -->
+                <div class="tab-pane fade" id="types-tab-pane" role="tabpanel">
+                    <div class="card border shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <h6 class="fw-bold mb-0 text-dark">Danh Sách Hạng Loại Phòng</h6>
+                            <div class="d-flex gap-2">
+                                <button onclick="loadAdminRoomTypes()" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-arrow-clockwise"></i> Tải lại
+                                </button>
+                                <button onclick="openCreateTypeModal()" class="btn btn-primary btn-sm shadow-sm">
+                                    <i class="bi bi-plus-lg"></i> Thêm Hạng Phòng Mới
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Tên hạng phòng</th>
+                                            <th>Sức chứa</th>
+                                            <th>Giá cơ bản / đêm</th>
+                                            <th>Tiện nghi</th>
+                                            <th>Mô tả</th>
+                                            <th class="text-end">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="roomTypesTableBody">
+                                        <tr><td colspan="7" class="text-center text-secondary py-4">Đang tải danh mục hạng phòng...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Thêm / Sửa Phòng -->
+    <div class="modal fade" id="roomModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fs-6 fw-bold" id="roomModalTitle">Thêm Phòng Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="roomForm" onsubmit="handleSaveRoom(event)">
+                    <input type="hidden" id="editRoomId">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Số phòng <span class="text-danger">*</span></label>
+                            <input type="text" id="roomNumber" class="form-control" placeholder="Ví dụ: 401" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Hạng loại phòng <span class="text-danger">*</span></label>
+                            <select id="roomTypeIdSelect" class="form-select" required></select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tầng <span class="text-danger">*</span></label>
+                            <input type="number" id="floorNumber" class="form-control" value="1" min="1" max="50" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Trạng thái phòng</label>
+                            <select id="roomStatusSelect" class="form-select">
+                                <option value="AVAILABLE">AVAILABLE (Sạch & Trống)</option>
+                                <option value="OCCUPIED">OCCUPIED (Có khách)</option>
+                                <option value="CLEANING">CLEANING (Dọn phòng)</option>
+                                <option value="MAINTENANCE">MAINTENANCE (Bảo trì)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Ghi chú phòng</label>
+                            <input type="text" id="roomNote" class="form-control" placeholder="View đẹp, gần thang máy...">
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="saveRoomBtn" class="btn btn-primary btn-sm">Lưu phòng</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm / Sửa Hạng Phòng -->
+    <div class="modal fade" id="typeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fs-6 fw-bold" id="typeModalTitle">Thêm Hạng Loại Phòng Mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="typeForm" onsubmit="handleSaveRoomType(event)">
+                    <input type="hidden" id="editTypeId">
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tên hạng phòng <span class="text-danger">*</span></label>
+                            <input type="text" id="typeName" class="form-control" placeholder="Ví dụ: VIP Ocean Suite" required>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Sức chứa tối đa (Khách) <span class="text-danger">*</span></label>
+                                <input type="number" id="typeCapacity" class="form-control" value="2" min="1" max="20" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Giá phòng / đêm (VNĐ) <span class="text-danger">*</span></label>
+                                <input type="number" id="typeBasePrice" class="form-control" placeholder="850000" min="0" step="50000" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tiện nghi phòng</label>
+                            <input type="text" id="typeAmenities" class="form-control" placeholder="Wifi, TV 4K, Bồn tắm, Ban công...">
+                        </div>
+
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Mô tả chi tiết</label>
+                            <textarea id="typeDescription" class="form-control" rows="3" placeholder="Không gian nghỉ dưỡng sang trọng đẳng cấp..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light py-2">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" id="saveTypeBtn" class="btn btn-primary btn-sm">Lưu hạng phòng</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle & App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let adminRooms = [];
+        let adminRoomTypes = [];
+
+        async function initPage() {
+            renderTopNav('admin');
+            renderSidebar('admin-rooms');
+            await loadAdminRoomTypes();
+            await loadAdminRooms();
+        }
+
+        async function loadAdminRooms() {
+            try {
+                const res = await apiCall('/api/admin/rooms');
+                if (res && res.success) {
+                    adminRooms = res.data || [];
+                    renderRoomsTable(adminRooms);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderRoomsTable(rooms) {
+            const tbody = document.getElementById('roomsTableBody');
+            if (rooms.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-secondary py-4">Chưa có phòng nào.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rooms.map(r => {
+                const st = (r.status || 'AVAILABLE').toUpperCase();
+                const badgeClass = st === 'AVAILABLE' ? 'bg-success' : (st === 'OCCUPIED' ? 'bg-danger' : 'bg-warning text-dark');
+
+                return `
+                    <tr>
+                        <td>#${r.roomId}</td>
+                        <td><strong class="fs-6 text-dark">Phòng ${r.roomNumber}</strong></td>
+                        <td>${r.roomType ? r.roomType.typeName : '---'}</td>
+                        <td>Tầng ${r.floor}</td>
+                        <td><span class="badge ${badgeClass}">${st}</span></td>
+                        <td><small class="text-secondary">${r.note || '---'}</small></td>
+                        <td>
+                            <select onchange="handleQuickStatusChange(${r.roomId}, this.value)" class="form-select form-select-sm" style="width: 130px;">
+                                <option value="AVAILABLE" ${st === 'AVAILABLE' ? 'selected' : ''}>AVAILABLE</option>
+                                <option value="OCCUPIED" ${st === 'OCCUPIED' ? 'selected' : ''}>OCCUPIED</option>
+                                <option value="CLEANING" ${st === 'CLEANING' ? 'selected' : ''}>CLEANING</option>
+                                <option value="MAINTENANCE" ${st === 'MAINTENANCE' ? 'selected' : ''}>MAINTENANCE</option>
+                            </select>
+                        </td>
+                        <td class="text-end">
+                            <button onclick="openEditRoomModal(${r.roomId})" class="btn btn-outline-primary btn-sm">Sửa</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function handleQuickStatusChange(roomId, newStatus) {
+            try {
+                const res = await apiCall(`/api/admin/rooms/${roomId}/status?status=${newStatus}`, { method: 'PATCH' });
+                if (res && res.success) {
+                    showToast(`Đã cập nhật trạng thái phòng sang ${newStatus}!`, 'success');
+                    loadAdminRooms();
+                }
+            } catch (err) {
+                loadAdminRooms();
+            }
+        }
+
+        async function loadAdminRoomTypes() {
+            try {
+                const res = await apiCall('/api/public/rooms/room-types');
+                if (res && res.success) {
+                    adminRoomTypes = res.data || [];
+                    renderRoomTypesTable(adminRoomTypes);
+                    populateTypeSelectOptions();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function populateTypeSelectOptions() {
+            const select = document.getElementById('roomTypeIdSelect');
+            select.innerHTML = '';
+            adminRoomTypes.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.roomTypeId;
+                opt.textContent = `${t.typeName} (${formatVND(t.basePrice)}/đêm)`;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderRoomTypesTable(types) {
+            const tbody = document.getElementById('roomTypesTableBody');
+            if (types.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-secondary py-4">Chưa có loại phòng nào.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = types.map(t => `
+                <tr>
+                    <td>#${t.roomTypeId}</td>
+                    <td><strong>${t.typeName}</strong></td>
+                    <td>${t.capacity} người</td>
+                    <td><strong class="text-primary">${formatVND(t.basePrice)}</strong></td>
+                    <td><small class="text-secondary">${t.amenities || '---'}</small></td>
+                    <td><small class="text-secondary">${t.description || '---'}</small></td>
+                    <td class="text-end">
+                        <button onclick="openEditTypeModal(${t.roomTypeId})" class="btn btn-outline-primary btn-sm">Sửa</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openCreateRoomModal() {
+            document.getElementById('roomForm').reset();
+            document.getElementById('editRoomId').value = '';
+            document.getElementById('roomModalTitle').textContent = 'Thêm Phòng Mới';
+            openModal('roomModal');
+        }
+
+        function openEditRoomModal(roomId) {
+            const room = adminRooms.find(r => r.roomId === roomId);
+            if (!room) return;
+
+            document.getElementById('editRoomId').value = room.roomId;
+            document.getElementById('roomNumber').value = room.roomNumber;
+            if (room.roomType) document.getElementById('roomTypeIdSelect').value = room.roomType.roomTypeId;
+            document.getElementById('floorNumber').value = room.floor;
+            document.getElementById('roomStatusSelect').value = room.status || 'AVAILABLE';
+            document.getElementById('roomNote').value = room.note || '';
+
+            document.getElementById('roomModalTitle').textContent = `Chỉnh Sửa Phòng ${room.roomNumber}`;
+            openModal('roomModal');
+        }
+
+        async function handleSaveRoom(event) {
+            event.preventDefault();
+            const editId = document.getElementById('editRoomId').value;
+            const btn = document.getElementById('saveRoomBtn');
+
+            const payload = {
+                roomNumber: document.getElementById('roomNumber').value.trim(),
+                roomTypeId: parseInt(document.getElementById('roomTypeIdSelect').value),
+                floor: parseInt(document.getElementById('floorNumber').value),
+                status: document.getElementById('roomStatusSelect').value,
+                note: document.getElementById('roomNote').value.trim() || null
+            };
+
+            btn.disabled = true;
+            try {
+                let res;
+                if (editId) {
+                    res = await apiCall(`/api/admin/rooms/${editId}`, { method: 'PUT', body: payload });
+                } else {
+                    res = await apiCall('/api/admin/rooms', { method: 'POST', body: payload });
+                }
+
+                btn.disabled = false;
+                if (res && res.success) {
+                    showToast(editId ? 'Cập nhật phòng thành công!' : 'Tạo phòng mới thành công!', 'success');
+                    closeModal('roomModal');
+                    loadAdminRooms();
+                }
+            } catch (err) {
+                btn.disabled = false;
+            }
+        }
+
+        function openCreateTypeModal() {
+            document.getElementById('typeForm').reset();
+            document.getElementById('editTypeId').value = '';
+            document.getElementById('typeModalTitle').textContent = 'Thêm Hạng Loại Phòng Mới';
+            openModal('typeModal');
+        }
+
+        function openEditTypeModal(typeId) {
+            const type = adminRoomTypes.find(t => t.roomTypeId === typeId);
+            if (!type) return;
+
+            document.getElementById('editTypeId').value = type.roomTypeId;
+            document.getElementById('typeName').value = type.typeName;
+            document.getElementById('typeCapacity').value = type.capacity;
+            document.getElementById('typeBasePrice').value = type.basePrice;
+            document.getElementById('typeAmenities').value = type.amenities || '';
+            document.getElementById('typeDescription').value = type.description || '';
+
+            document.getElementById('typeModalTitle').textContent = `Chỉnh Sửa Hạng Phòng: ${type.typeName}`;
+            openModal('typeModal');
+        }
+
+        async function handleSaveRoomType(event) {
+            event.preventDefault();
+            const editId = document.getElementById('editTypeId').value;
+            const btn = document.getElementById('saveTypeBtn');
+
+            const payload = {
+                typeName: document.getElementById('typeName').value.trim(),
+                capacity: parseInt(document.getElementById('typeCapacity').value),
+                basePrice: parseFloat(document.getElementById('typeBasePrice').value),
+                amenities: document.getElementById('typeAmenities').value.trim() || null,
+                description: document.getElementById('typeDescription').value.trim() || null
+            };
+
+            btn.disabled = true;
+            try {
+                let res;
+                if (editId) {
+                    res = await apiCall(`/api/admin/room-types/${editId}`, { method: 'PUT', body: payload });
+                } else {
+                    res = await apiCall('/api/admin/room-types', { method: 'POST', body: payload });
+                }
+
+                btn.disabled = false;
+                if (res && res.success) {
+                    showToast(editId ? 'Cập nhật hạng phòng thành công!' : 'Tạo hạng phòng mới thành công!', 'success');
+                    closeModal('typeModal');
+                    loadAdminRoomTypes();
+                }
+            } catch (err) {
+                btn.disabled = false;
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

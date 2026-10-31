@@ -21,6 +21,10 @@ public class Customer {
     @Column(name = "customer_id")
     private Integer customerId;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", unique = true)
+    private Account account;
+
     @Column(name = "full_name", nullable = false, length = 100)
     private String fullName;
 

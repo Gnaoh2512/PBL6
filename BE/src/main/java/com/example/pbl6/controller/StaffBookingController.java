@@ -12,15 +12,36 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/staff/bookings")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('RECEPTIONIST', 'CASHIER', 'MANAGER', 'ADMIN')")
+@PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER', 'ADMIN')")
 public class StaffBookingController {
 
     private final StaffBookingService staffBookingService;
+
+    /**
+     * Danh sách đơn đặt phòng dành cho nhân viên (lọc theo trạng thái PENDING_DEPOSIT, CONFIRMED... hoặc từ khóa)
+     */
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<BookingDetailResponse>>> getAllBookings(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword) {
+        List<BookingDetailResponse> bookings = staffBookingService.getAllBookings(status, keyword);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách đơn đặt phòng thành công", bookings));
+    }
+
+    /**
+     * Lễ tân xem chi tiết đơn đặt phòng theo mã
+     */
+    @GetMapping("/{bookingCode}")
+    public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingByCode(@PathVariable String bookingCode) {
+        BookingDetailResponse booking = staffBookingService.getBookingByCode(bookingCode);
+        return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết đơn đặt phòng thành công", booking));
+    }
 
     /**
      * Nhân viên Lễ tân tạo đơn đặt phòng trực tiếp tại quầy cho khách vãng lai (Walk-in Booking)

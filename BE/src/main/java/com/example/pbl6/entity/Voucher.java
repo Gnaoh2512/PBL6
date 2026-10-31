@@ -21,53 +21,45 @@ public class Voucher {
     @Column(name = "voucher_id")
     private Integer voucherId;
 
-    @Column(name = "code", unique = true, nullable = false, length = 50)
-    private String code;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by")
+    private Account createdBy;
+
+    @Column(name = "voucher_code", unique = true, nullable = false, length = 50)
+    private String voucherCode;
 
     @Column(name = "voucher_name", nullable = false, length = 150)
     private String voucherName;
 
-    /**
-     * Loại giảm giá: PERCENTAGE (% giá trị đơn) hoặc FIXED_AMOUNT (tiền cố định)
-     */
-    @Column(name = "discount_type", nullable = false, length = 20)
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    @Column(name = "discount_type", nullable = false, length = 50)
     private String discountType;
 
-    /**
-     * Giá trị giảm: 10 (nếu 10%) hoặc 50000 (nếu 50,000đ)
-     */
     @Column(name = "discount_value", precision = 15, scale = 2, nullable = false)
     private BigDecimal discountValue;
 
-    /**
-     * Mức giảm tối đa (áp dụng cho PERCENTAGE, ví dụ giảm 20% nhưng tối đa 300,000đ)
-     */
     @Column(name = "max_discount_amount", precision = 15, scale = 2)
     private BigDecimal maxDiscountAmount;
 
-    /**
-     * Giá trị đơn hàng tối thiểu để được áp dụng voucher
-     */
     @Column(name = "min_order_amount", precision = 15, scale = 2)
     private BigDecimal minOrderAmount;
 
-    @Column(name = "start_date")
-    private LocalDate startDate;
+    @Column(name = "valid_from")
+    private LocalDateTime validFrom;
 
-    @Column(name = "end_date")
-    private LocalDate endDate;
+    @Column(name = "valid_to")
+    private LocalDateTime validTo;
 
-    /**
-     * Tổng số lượt dùng tối đa cho phép
-     */
     @Column(name = "usage_limit")
     private Integer usageLimit;
 
-    /**
-     * Số lượt đã sử dụng
-     */
+    @Column(name = "usage_limit_per_customer")
+    private Integer usageLimitPerCustomer;
+
+    @Transient
     @Builder.Default
-    @Column(name = "used_count")
     private Integer usedCount = 0;
 
     @Builder.Default
@@ -77,4 +69,52 @@ public class Voucher {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    // Helper methods for backward compatibility — @Transient prevents Hibernate from treating 'code' as a separate DB column
+    @Transient
+    public String getCode() {
+        return voucherCode;
+    }
+
+    @Transient
+    public void setCode(String code) {
+        this.voucherCode = code;
+    }
+
+    @Transient
+    public LocalDate getStartDate() {
+        return validFrom != null ? validFrom.toLocalDate() : null;
+    }
+
+    @Transient
+    public void setStartDate(LocalDate startDate) {
+        this.validFrom = startDate != null ? startDate.atStartOfDay() : null;
+    }
+
+    @Transient
+    public LocalDate getEndDate() {
+        return validTo != null ? validTo.toLocalDate() : null;
+    }
+
+    @Transient
+    public void setEndDate(LocalDate endDate) {
+        this.validTo = endDate != null ? endDate.atTime(23, 59, 59) : null;
+    }
+
+    public static class VoucherBuilder {
+        public VoucherBuilder code(String code) {
+            this.voucherCode = code;
+            return this;
+        }
+
+        public VoucherBuilder startDate(LocalDate startDate) {
+            this.validFrom = startDate != null ? startDate.atStartOfDay() : null;
+            return this;
+        }
+
+        public VoucherBuilder endDate(LocalDate endDate) {
+            this.validTo = endDate != null ? endDate.atTime(23, 59, 59) : null;
+            return this;
+        }
+    }
 }

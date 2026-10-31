@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Ca Thu Ngân - Hotel California</title>
+    <!-- Zero-Flash Synchronous Route Guard -->
+    <style>body { display: none; }</style>
+    <script src="js/api.js"></script>
+    <script>
+        guardPageAccess(['RECEPTIONIST', 'CASHIER', 'MANAGER', 'ADMIN']);
+    </script>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header id="top-navbar"></header>
+
+    <div class="app-wrapper">
+        <aside id="app-sidebar"></aside>
+
+        <main class="app-main">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold fs-4 text-dark mb-1">
+                        <i class="bi bi-cash-coin text-primary"></i> Quản Lý Ca Thu Ngân (Cashier Shift)
+                    </h2>
+                    <p class="text-secondary small mb-0">Quản lý đóng/mở ca thu tiền mặt và bàn giao két tiền nhân viên</p>
+                </div>
+                <button onclick="checkCurrentShift()" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise"></i> Cập nhật trạng thái
+                </button>
+            </div>
+
+            <!-- Thẻ Trạng Thái Ca Thu Ngân Hiện Tại -->
+            <div id="currentShiftCard" class="card border shadow-sm mb-4">
+                <div class="card-body text-center py-4 text-secondary">
+                    <span class="spinner-border spinner-border-sm me-2"></span> Đang kiểm tra trạng thái ca trực...
+                </div>
+            </div>
+
+            <!-- Form MỞ CA THU NGÂN -->
+            <div id="openShiftSection" class="card border shadow-sm" style="display: none; max-width: 600px;">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-success d-flex align-items-center gap-2">
+                        <i class="bi bi-play-circle-fill"></i> Mở Ca Thu Ngân Đầu Ngày
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info small py-2 mb-3">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        Vui lòng mở ca thu ngân trước khi thực hiện thu tiền mặt cho khách tại quầy (đặt phòng Walk-in hoặc tất toán Check-out).
+                    </div>
+
+                    <form id="openShiftForm" onsubmit="handleOpenShift(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Số tiền mặt trong két đầu ca (VNĐ) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-cash"></i></span>
+                                <input type="number" id="openingCash" class="form-control" placeholder="Ví dụ: 1000000" min="0" step="10000" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold">Mã lịch trực phân công (Tùy chọn)</label>
+                            <input type="number" id="scheduleId" class="form-control" placeholder="Để trống nếu ca linh hoạt">
+                        </div>
+
+                        <button type="submit" id="openShiftBtn" class="btn btn-success w-100 py-2 fw-semibold shadow-sm">
+                            <i class="bi bi-check-lg"></i> Xác nhận Mở Ca Thu Ngân
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Form ĐÓNG CA THU NGÂN -->
+            <div id="closeShiftSection" class="card border shadow-sm" style="display: none; max-width: 600px;">
+                <div class="card-header bg-white py-3">
+                    <h6 class="fw-bold mb-0 text-danger d-flex align-items-center gap-2">
+                        <i class="bi bi-stop-circle-fill"></i> Đóng Ca & Bàn Giao Két Tiền
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <form id="closeShiftForm" onsubmit="handleCloseShift(event)">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Số tiền mặt thực tế kiểm đếm cuối ca (VNĐ) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-cash-stack"></i></span>
+                                <input type="number" id="closingCashActual" class="form-control" placeholder="Ví dụ: 3500000" min="0" step="10000" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Nhân viên nhận bàn giao ca tiếp theo</label>
+                            <select id="receivedBy" class="form-select">
+                                <option value="">-- Đang nạp danh sách nhân viên... --</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-semibold">Ghi chú bàn giao két tiền</label>
+                            <textarea id="handoverNote" class="form-control" rows="3" placeholder="Đã kiểm đếm đủ tiền mặt, không có chênh lệch, bàn giao đủ két tiền..."></textarea>
+                        </div>
+
+                        <button type="submit" id="closeShiftBtn" class="btn btn-danger w-100 py-2 fw-semibold shadow-sm">
+                            <i class="bi bi-lock-fill"></i> Xác nhận Đóng Ca & Bàn Giao Két
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Bootstrap Bundle & App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentShift = null;
+
+        async function initPage() {
+            renderTopNav('staff');
+            renderSidebar('staff-shifts');
+            await checkCurrentShift();
+            loadStaffAccountsList();
+        }
+
+        async function checkCurrentShift() {
+            const shiftCard = document.getElementById('currentShiftCard');
+            const openSec = document.getElementById('openShiftSection');
+            const closeSec = document.getElementById('closeShiftSection');
+
+            try {
+                const res = await apiCall('/api/staff/cashier-shifts/me');
+
+                if (res && res.success && res.data && res.data.cashierShiftId) {
+                    currentShift = res.data;
+                    shiftCard.innerHTML = `
+                        <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <h5 class="fw-bold text-dark mb-0">Ca Thu Ngân Hiện Tại: #${currentShift.cashierShiftId}</h5>
+                                    <span class="badge bg-success">ĐANG HOẠT ĐỘNG (OPEN)</span>
+                                </div>
+                                <div class="text-secondary small">
+                                    <i class="bi bi-clock"></i> Bắt đầu lúc: <strong>${formatDateTime(currentShift.openedAt)}</strong>
+                                </div>
+                            </div>
+                            <div class="fs-5 fw-bold text-primary">
+                                Tiền két đầu ca: ${formatVND(currentShift.openingCash)}
+                            </div>
+                        </div>
+                    `;
+
+                    openSec.style.display = 'none';
+                    closeSec.style.display = 'block';
+                } else {
+                    currentShift = null;
+                    shiftCard.innerHTML = `
+                        <div class="card-body p-4 text-center">
+                            <i class="bi bi-cash-stack fs-1 text-secondary mb-2 d-block"></i>
+                            <h5 class="fw-bold">Bạn chưa có ca thu ngân nào đang mở</h5>
+                            <p class="text-secondary small mb-0">Vui lòng mở ca thu ngân ở bên dưới để bắt đầu nhận thanh toán tiền mặt tại quầy.</p>
+                        </div>
+                    `;
+                    openSec.style.display = 'block';
+                    closeSec.style.display = 'none';
+                }
+            } catch (err) {
+                currentShift = null;
+                openSec.style.display = 'block';
+                closeSec.style.display = 'none';
+                shiftCard.innerHTML = `
+                    <div class="card-body p-4 text-center text-secondary small">
+                        Chưa có ca thu ngân đang mở. Vui lòng mở ca mới bên dưới.
+                    </div>
+                `;
+            }
+        }
+
+        async function handleOpenShift(event) {
+            event.preventDefault();
+            const openingCash = document.getElementById('openingCash').value;
+            const scheduleId = document.getElementById('scheduleId').value;
+            const btn = document.getElementById('openShiftBtn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang mở ca...';
+
+            try {
+                const res = await apiCall('/api/staff/cashier-shifts/open', {
+                    method: 'POST',
+                    body: {
+                        openingCash: parseFloat(openingCash),
+                        scheduleId: scheduleId ? parseInt(scheduleId) : null
+                    }
+                });
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg"></i> Xác nhận Mở Ca Thu Ngân';
+
+                if (res && res.success) {
+                    showToast('Đã mở ca thu ngân thành công!', 'success');
+                    checkCurrentShift();
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-check-lg"></i> Xác nhận Mở Ca Thu Ngân';
+            }
+        }
+
+        async function handleCloseShift(event) {
+            event.preventDefault();
+            if (!currentShift) return;
+
+            const closingCashActual = document.getElementById('closingCashActual').value;
+            const receivedBy = document.getElementById('receivedBy').value;
+            const handoverNote = document.getElementById('handoverNote').value.trim();
+            const btn = document.getElementById('closeShiftBtn');
+
+            if (!confirm('Xác nhận đóng ca và bàn giao két tiền kết thúc phiên làm việc?')) {
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang đóng ca...';
+
+            try {
+                const res = await apiCall(`/api/staff/cashier-shifts/${currentShift.cashierShiftId}/close`, {
+                    method: 'POST',
+                    body: {
+                        closingCashActual: parseFloat(closingCashActual),
+                        receivedBy: receivedBy ? parseInt(receivedBy) : null,
+                        handoverNote: handoverNote || null
+                    }
+                });
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-lock-fill"></i> Xác nhận Đóng Ca & Bàn Giao Két';
+
+                if (res && res.success) {
+                    showToast('Đóng ca thu ngân và bàn giao két tiền thành công!', 'success');
+                    checkCurrentShift();
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-lock-fill"></i> Xác nhận Đóng Ca & Bàn Giao Két';
+            }
+        }
+
+        async function loadStaffAccountsList() {
+            try {
+                const res = await apiCall('/api/admin/accounts');
+                if (res && res.success && res.data) {
+                    const select = document.getElementById('receivedBy');
+                    select.innerHTML = '<option value="">-- Chọn nhân viên nhận bàn giao --</option>';
+                    res.data.forEach(acc => {
+                        const opt = document.createElement('option');
+                        opt.value = acc.accountId;
+                        opt.textContent = `${acc.fullName || acc.username} (${acc.role})`;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                // Fallback nếu tài khoản không có quyền admin
+                const select = document.getElementById('receivedBy');
+                select.innerHTML = '<option value="3">Nhân viên Lễ tân</option><option value="4">Nhân viên Thu ngân</option>';
+            }
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

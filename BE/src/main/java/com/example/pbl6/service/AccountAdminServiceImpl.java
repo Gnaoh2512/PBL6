@@ -3,8 +3,9 @@ package com.example.pbl6.service;
 import com.example.pbl6.dto.adminaccount.AccountCreateRequest;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.AuditLog;
+import com.example.pbl6.entity.Role;
 import com.example.pbl6.repository.AccountRepository;
-import com.example.pbl6.repository.AuditLogRepository;
+import com.example.pbl6.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,8 @@ import java.util.List;
 public class AccountAdminServiceImpl implements AccountAdminService {
 
     private final AccountRepository accountRepository;
-    private final AuditLogRepository auditLogRepository;
+    private final RoleRepository roleRepository;
+    private final AuditLogService auditLogService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -35,21 +37,33 @@ public class AccountAdminServiceImpl implements AccountAdminService {
             throw new IllegalArgumentException("Email already exists: " + request.getEmail());
         }
 
+        String roleCode = request.getRole() != null ? request.getRole().trim().toUpperCase() : "ROLE_RECEPTIONIST";
+        if (!roleCode.startsWith("ROLE_")) {
+            roleCode = "ROLE_" + roleCode;
+        }
+        Role role = roleRepository.findByRoleCode(roleCode)
+                .orElseGet(() -> roleRepository.findByRoleCode("ROLE_RECEPTIONIST").orElse(null));
+
         Account account = Account.builder()
                 .username(request.getUsername())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .phone(request.getPhone())
-                .role(request.getRole() != null ? request.getRole() : "RECEPTIONIST")
+                .role(role)
                 .status(request.getStatus() != null ? request.getStatus() : "ACTIVE")
                 .build();
 
-        return accountRepository.save(account);
+        Account saved = accountRepository.save(account);
+
+        auditLogService.log("QUẢN TRỊ TÀI KHOẢN", "CREATE", "account", Long.valueOf(saved.getAccountId()),
+                "Tạo tài khoản mới: " + saved.getUsername() + " (Họ tên: " + saved.getFullName() + ", Vai trò: " + (role != null ? role.getRoleName() : roleCode) + ")");
+
+        return saved;
     }
 
     @Override
     public List<AuditLog> getAuditLogs() {
-        return auditLogRepository.findAll();
+        return auditLogService.getAllAuditLogs();
     }
 }

@@ -35,8 +35,9 @@ public class Account {
     @Column(name = "phone", length = 20)
     private String phone;
 
-    @Column(name = "role", length = 50)
-    private String role;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "role_id")
+    private Role role;
 
     @Column(name = "status", length = 50)
     private String status;

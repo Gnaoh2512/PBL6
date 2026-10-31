@@ -10,4 +10,5 @@ import java.util.List;
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findByTargetTableAndTargetId(String targetTable, Long targetId);
     List<AuditLog> findByAccount_AccountId(Integer accountId);
+    List<AuditLog> findAllByOrderByLoggedAtDesc();
 }

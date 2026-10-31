@@ -1,5 +1,6 @@
 package com.example.pbl6.service;
 
+import com.example.pbl6.dto.billing.CancelBookingRequest;
 import com.example.pbl6.dto.billing.CancellationRefundResponse;
 import com.example.pbl6.dto.billing.LiveFolioResponse;
 import com.example.pbl6.dto.billing.SettlementRequest;
@@ -49,7 +50,12 @@ public interface CustomerBillingService {
     boolean processSettlementWebhook(String bookingCode, BigDecimal amount, String referenceCode);
 
     /**
-     * Hủy đặt phòng theo chính sách hoàn cọc
+     * Hủy đặt phòng theo chính sách hoàn cọc linh hoạt (hoàn tiền, đổi sang Voucher hoặc Điểm thưởng)
+     */
+    CancellationRefundResponse cancelWithFlexibleOptions(String bookingCode, CancelBookingRequest request, String username);
+
+    /**
+     * Hủy đặt phòng theo chính sách hoàn cọc mặc định (hoàn tiền)
      */
     CancellationRefundResponse cancelWithRefundPolicy(String bookingCode, String reason, String username);
 }

@@ -11,4 +11,5 @@ public interface RoomAdminService {
     Room createRoom(RoomRequest request);
     Room updateRoom(Integer id, RoomRequest request);
     Room updateRoomStatus(Integer id, String status);
+    java.util.List<Room> getAllRooms();
 }

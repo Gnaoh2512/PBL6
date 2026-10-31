@@ -15,4 +15,6 @@ public class WorkScheduleRequest {
 
     @NotNull(message = "Work date is required")
     private LocalDate workDate;
+
+    private String notes;
 }

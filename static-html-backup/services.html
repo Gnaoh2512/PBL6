@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dịch Vụ Lưu Trú & Hóa Đơn Trực Tiếp - Hotel California</title>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header id="top-navbar"></header>
+
+    <main class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2 class="fw-bold fs-4 text-dark mb-1">
+                    <i class="bi bi-cup-hot text-primary"></i> Dịch Vụ Lưu Trú & Hóa Đơn Trực Tiếp (Live Folio)
+                </h2>
+                <p class="text-secondary small mb-0">Gọi món ăn, nước uống, giặt ủi và theo dõi chi tiết hóa đơn theo thời gian thực</p>
+            </div>
+        </div>
+
+        <!-- Tra cứu theo Booking Code -->
+        <div class="card border shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-9">
+                        <label class="form-label small fw-semibold">Mã đơn đặt phòng (Booking Code)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                            <input type="text" id="bookingCodeInput" class="form-control text-uppercase" placeholder="Nhập mã đơn, ví dụ: BK-20261012-XXXX">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="button" onclick="handleLoadFolio()" id="loadFolioBtn" class="btn btn-primary w-100 shadow-sm">
+                            Xem hóa đơn phòng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Menu Dịch Vụ Khách Sạn -->
+            <div class="col-lg-6">
+                <div class="card border shadow-sm h-100">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-card-list text-primary"></i> Menu Dịch Vụ Khách Sạn
+                        </h6>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle" id="servicesCountBadge">0 dịch vụ</span>
+                    </div>
+                    <div class="card-body p-3">
+                        <div id="servicesMenuContainer" class="d-flex flex-column gap-3">
+                            <div class="text-secondary text-center py-4">Đang tải danh mục dịch vụ...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bảng Kê Chi Phí Thời Gian Thực (Live Folio) -->
+            <div class="col-lg-6">
+                <div class="card border shadow-sm h-100">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                        <h6 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-receipt text-primary"></i> Bảng Kê Hóa Đơn Trực Tiếp (Live Folio)
+                        </h6>
+                        <button type="button" onclick="handleLoadFolio()" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-clockwise"></i> Làm mới
+                        </button>
+                    </div>
+                    <div class="card-body p-3" id="folioContent">
+                        <div class="text-secondary text-center py-5">
+                            <i class="bi bi-receipt-cutoff fs-1 d-block mb-2"></i>
+                            Vui lòng nhập Mã đặt phòng ở trên để tra cứu chi tiết hóa đơn phòng.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Gọi Món / Dịch Vụ -->
+    <div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light py-2">
+                    <h6 class="modal-title fw-bold" id="orderModalTitle">Gọi Dịch Vụ</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong class="d-block text-dark fs-6" id="orderServiceName">Tên dịch vụ</strong>
+                        <span class="text-danger fw-bold" id="orderServicePrice">0 đ</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Số lượng:</label>
+                        <input type="number" id="orderQuantity" class="form-control" value="1" min="1" max="50">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Ghi chú (yêu cầu):</label>
+                        <input type="text" id="orderNote" class="form-control" placeholder="Ví dụ: Giao lên phòng lúc 19h...">
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" id="confirmOrderBtn" onclick="submitOrderService()" class="btn btn-primary btn-sm">
+                        Xác nhận đặt
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle & App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let availableServices = [];
+        let selectedServiceToOrder = null;
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryCode = urlParams.get('bookingCode');
+        if (queryCode) {
+            document.getElementById('bookingCodeInput').value = queryCode;
+        }
+
+        async function loadServices() {
+            try {
+                const res = await apiCall('/api/public/services');
+                if (res && res.success) {
+                    availableServices = res.data || [];
+                    document.getElementById('servicesCountBadge').textContent = `${availableServices.length} món/dịch vụ`;
+                    renderServicesMenu(availableServices);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function renderServicesMenu(services) {
+            const container = document.getElementById('servicesMenuContainer');
+            if (services.length === 0) {
+                container.innerHTML = '<div class="text-secondary text-center py-3">Hiện tại chưa có dịch vụ nào sẵn sàng.</div>';
+                return;
+            }
+
+            container.innerHTML = services.map(s => `
+                <div class="border rounded p-3 d-flex justify-content-between align-items-center bg-white shadow-sm">
+                    <div>
+                        <div class="fw-semibold text-dark">${s.serviceName}</div>
+                        <div class="small text-secondary">Đơn vị: ${s.unit || 'Lần'}</div>
+                        <div class="text-danger fw-bold mt-1">${formatVND(s.unitPrice)}</div>
+                    </div>
+                    <button type="button" onclick="openOrderModal(${s.serviceId})" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-plus-lg"></i> Thêm vào phòng
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function openOrderModal(serviceId) {
+            const bookingCode = document.getElementById('bookingCodeInput').value.trim();
+            if (!bookingCode) {
+                showToast('Vui lòng nhập Mã đơn đặt phòng trước khi gọi dịch vụ!', 'warning');
+                return;
+            }
+
+            selectedServiceToOrder = availableServices.find(s => s.serviceId === serviceId);
+            if (!selectedServiceToOrder) return;
+
+            document.getElementById('orderServiceName').textContent = selectedServiceToOrder.serviceName;
+            document.getElementById('orderServicePrice').textContent = `${formatVND(selectedServiceToOrder.unitPrice)} / ${selectedServiceToOrder.unit || 'lần'}`;
+            document.getElementById('orderQuantity').value = 1;
+            document.getElementById('orderNote').value = '';
+
+            openModal('orderModal');
+        }
+
+        async function submitOrderService() {
+            const bookingCode = document.getElementById('bookingCodeInput').value.trim();
+            const quantity = parseInt(document.getElementById('orderQuantity').value) || 1;
+            const note = document.getElementById('orderNote').value.trim();
+            const btn = document.getElementById('confirmOrderBtn');
+
+            if (!selectedServiceToOrder || !bookingCode) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang gửi...';
+
+            try {
+                const res = await apiCall('/api/public/services/order', {
+                    method: 'POST',
+                    body: {
+                        bookingCode,
+                        serviceId: selectedServiceToOrder.serviceId,
+                        quantity,
+                        note: note || null
+                    }
+                });
+
+                btn.disabled = false;
+                btn.innerText = 'Xác nhận đặt';
+                closeModal('orderModal');
+
+                if (res && res.success) {
+                    showToast('Đã ghi nhận dịch vụ vào hóa đơn phòng thành công!', 'success');
+                    handleLoadFolio();
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerText = 'Xác nhận đặt';
+            }
+        }
+
+        async function handleLoadFolio() {
+            const bookingCode = document.getElementById('bookingCodeInput').value.trim();
+            if (!bookingCode) {
+                showToast('Vui lòng nhập Mã đơn đặt phòng!', 'warning');
+                return;
+            }
+
+            const btn = document.getElementById('loadFolioBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang tải...';
+
+            try {
+                const res = await apiCall(`/api/public/bookings/${bookingCode}/folio`);
+                btn.disabled = false;
+                btn.innerText = 'Xem hóa đơn phòng';
+
+                if (res && res.success) {
+                    renderFolioData(res.data);
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerText = 'Xem hóa đơn phòng';
+                document.getElementById('folioContent').innerHTML = `
+                    <div class="text-danger text-center py-4">
+                        <i class="bi bi-exclamation-triangle fs-2 d-block mb-1"></i>
+                        Không tìm thấy hóa đơn lưu trú cho mã <strong>${bookingCode}</strong>.
+                    </div>
+                `;
+            }
+        }
+
+        function renderFolioData(folio) {
+            const container = document.getElementById('folioContent');
+
+            const usages = folio.serviceUsages || [];
+            const usagesHtml = usages.length === 0 
+                ? '<tr><td colspan="4" class="text-center text-secondary small py-3">Chưa có dịch vụ phòng nào</td></tr>'
+                : usages.map(u => `
+                    <tr>
+                        <td class="small">
+                            <strong>${u.serviceName || 'Dịch vụ'}</strong>
+                            <div class="text-secondary" style="font-size: 0.75rem;">${formatDateTime(u.orderTime)}</div>
+                        </td>
+                        <td class="small text-center">${u.quantity}</td>
+                        <td class="small text-end">${formatVND(u.unitPrice)}</td>
+                        <td class="small text-end fw-semibold">${formatVND(u.totalAmount)}</td>
+                    </tr>
+                `).join('');
+
+            container.innerHTML = `
+                <div class="bg-light p-3 rounded mb-3 border">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-bold text-primary">${folio.bookingCode}</span>
+                        <span class="badge bg-primary">${folio.bookingStatus || 'LƯU TRÚ'}</span>
+                    </div>
+                    <div class="small text-secondary">
+                        Khách: <strong class="text-dark">${folio.customerName || '---'}</strong> | 
+                        Phòng: <strong class="text-dark">${folio.roomNumber || '---'}</strong>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="fw-semibold small text-dark mb-2">Chi tiết dịch vụ phát sinh:</div>
+                    <div class="table-responsive border rounded">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Dịch vụ</th>
+                                    <th class="text-center">SL</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${usagesHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="border-top pt-3 small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Tiền phòng:</span>
+                        <strong>${formatVND(folio.roomCharge)}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Tổng dịch vụ phòng:</span>
+                        <strong>${formatVND(folio.serviceCharge)}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1 text-success">
+                        <span>Giảm giá Voucher:</span>
+                        <strong>- ${formatVND(folio.discountAmount || 0)}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-secondary">Thuế GTGT (VAT 10%):</span>
+                        <strong>${formatVND(folio.taxAmount)}</strong>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between mb-1 fw-bold fs-6">
+                        <span>Tổng chi phí:</span>
+                        <span class="text-dark">${formatVND(folio.totalAmount)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-warning-emphasis">
+                        <span>Tiền cọc đã thanh toán:</span>
+                        <strong>- ${formatVND(folio.depositApplied)}</strong>
+                    </div>
+                    <div class="alert alert-danger d-flex justify-content-between align-items-center py-2 px-3 mb-0">
+                        <span class="fw-bold">Số tiền còn lại (Balance Due):</span>
+                        <span class="fs-5 fw-bold text-danger">${formatVND(folio.finalBalance || folio.balanceDue || 0)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        renderTopNav('services');
+        loadServices();
+        if (queryCode) {
+            handleLoadFolio();
+        }
+    </script>
+</body>
+</html>

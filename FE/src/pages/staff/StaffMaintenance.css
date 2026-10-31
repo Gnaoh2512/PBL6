@@ -1,0 +1,215 @@
+/* Staff Maintenance page */
+
+/* Pickers are portalled to <body>; keep them above the modal overlay (z-index 2000). */
+.fp-pop {
+  z-index: 3000;
+}
+
+.mt-row {
+  cursor: pointer;
+}
+.mt-row:focus-visible {
+  outline: 2px solid var(--hc-primary);
+  outline-offset: -2px;
+}
+
+/* ---------- Detail modal ---------- */
+.mt-modal .hc-modal-body {
+  padding: 20px 24px 24px;
+  background: var(--hc-bg);
+}
+
+/* Progress stepper */
+.mt-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.mt-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--hc-text-muted);
+}
+.mt-step::before {
+  content: "";
+  position: absolute;
+  top: 17px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--hc-border);
+}
+.mt-step:first-child::before {
+  display: none;
+}
+.mt-step.is-done::before {
+  background: var(--hc-primary);
+}
+.mt-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid var(--hc-border);
+  background: var(--hc-surface);
+  font-size: 1rem;
+}
+.mt-step.is-done {
+  color: var(--hc-primary);
+}
+.mt-step.is-done .mt-step-dot {
+  background: var(--hc-primary);
+  border-color: var(--hc-primary);
+  color: var(--hc-text-on-primary);
+}
+.mt-step.is-current .mt-step-dot {
+  box-shadow: 0 0 0 4px var(--hc-primary-subtle);
+}
+.mt-step.is-current {
+  color: var(--hc-primary-dark);
+}
+
+/* Info tiles */
+.mt-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.mt-tile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--hc-surface);
+  border: 1px solid var(--hc-border-light);
+  border-radius: var(--hc-radius-md);
+  min-width: 0;
+}
+.mt-tile-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--hc-radius-sm);
+  background: var(--hc-primary-subtle);
+  color: var(--hc-primary);
+}
+.mt-tile-body {
+  min-width: 0;
+}
+.mt-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hc-text-muted);
+}
+.mt-value {
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--hc-primary);
+  color: var(--hc-text-on-primary);
+  font-weight: 700;
+}
+.mt-avatar.is-empty {
+  background: var(--hc-bg-alt);
+  color: var(--hc-text-muted);
+}
+
+/* Text blocks */
+.mt-block {
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--hc-surface);
+  border: 1px solid var(--hc-border-light);
+  border-radius: var(--hc-radius-md);
+}
+.mt-block p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+.mt-block.is-success {
+  background: var(--hc-success-bg);
+  border-color: transparent;
+}
+.mt-block.is-success .mt-label {
+  color: var(--hc-success);
+}
+
+/* Action panels */
+.mt-panel {
+  padding: 16px;
+  margin-bottom: 14px;
+  background: var(--hc-surface);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+  box-shadow: var(--hc-shadow-sm);
+}
+.mt-panel:last-child {
+  margin-bottom: 0;
+}
+.mt-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--hc-primary-dark);
+}
+.mt-inline {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+.mt-inline > .fp-root {
+  flex: 1;
+  min-width: 0;
+}
+.mt-readonly {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px dashed var(--hc-border);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 520px) {
+  .mt-tiles {
+    grid-template-columns: 1fr;
+  }
+  .mt-inline {
+    flex-direction: column;
+  }
+  .mt-step {
+    font-size: 11px;
+  }
+}

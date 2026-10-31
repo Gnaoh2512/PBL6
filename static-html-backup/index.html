@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hotel California - Trang Chủ & Đặt Phòng</title>
+    <!-- Bootstrap 5 & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+            color: #ffffff;
+            padding: 56px 24px 64px;
+            border-radius: 16px;
+            margin-bottom: -32px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .filter-box {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            padding: 28px;
+            margin-bottom: 40px;
+            position: relative;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <header id="top-navbar"></header>
+
+    <main class="container py-4">
+        <!-- Hero Section -->
+        <div class="hero-section text-center">
+            <h1 class="display-6 fw-bold mb-2">Chào mừng quý khách đến với Hotel California</h1>
+            <p class="lead opacity-75 mb-0 fs-6">Trải nghiệm nghỉ dưỡng sang trọng, dịch vụ tận tâm và ưu đãi độc quyền</p>
+        </div>
+
+        <!-- Thanh Tìm Kiếm Phòng Khả Dụng -->
+        <div class="filter-box border">
+            <h5 class="fw-bold mb-3 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-search text-primary"></i> Tìm kiếm phòng còn trống
+            </h5>
+            <form id="searchForm" onsubmit="handleSearchRooms(event)">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Ngày nhận phòng</label>
+                        <input type="date" id="checkInDate" class="form-control" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Ngày trả phòng</label>
+                        <input type="date" id="checkOutDate" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold">Số lượng khách</label>
+                        <input type="number" id="guestCount" class="form-control" value="2" min="1" max="10">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Hạng phòng</label>
+                        <select id="roomTypeId" class="form-select">
+                            <option value="">-- Tất cả hạng phòng --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Giá tối thiểu (VNĐ)</label>
+                        <input type="number" id="minPrice" class="form-control" placeholder="0" step="50000">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold">Giá tối đa (VNĐ)</label>
+                        <input type="number" id="maxPrice" class="form-control" placeholder="Không giới hạn" step="50000">
+                    </div>
+                    <div class="col-md-6 d-flex gap-2">
+                        <button type="submit" id="searchBtn" class="btn btn-primary flex-grow-1 shadow-sm">
+                            <i class="bi bi-search"></i> Tìm phòng ngay
+                        </button>
+                        <button type="button" onclick="loadDefaultDates(); handleSearchRooms();" class="btn btn-outline-secondary">
+                            Đặt lại
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Kết Quả Tìm Kiếm Phòng Khả Dụng -->
+        <section class="mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="fw-bold fs-4 text-dark mb-1" id="searchResultTitle">Danh sách phòng sẵn sàng</h3>
+                    <p class="text-secondary small mb-0" id="searchResultSubtitle">Đang tìm phòng...</p>
+                </div>
+            </div>
+
+            <div id="roomsGrid" class="row g-4">
+                <div class="col-12 text-center py-5 text-secondary">
+                    <span class="spinner-border text-primary me-2"></span> Đang nạp danh sách phòng trống...
+                </div>
+            </div>
+        </section>
+
+        <!-- Ưu đãi Voucher Khuyến Mãi -->
+        <section class="card border mb-5 shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-ticket-perforated-fill text-warning"></i> Chương trình Ưu Đãi & Mã Giảm Giá
+                </h5>
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-2 py-1" id="voucherCountBadge">0 Ưu đãi</span>
+            </div>
+            <div class="card-body">
+                <div id="vouchersGrid" class="row g-3">
+                    <div class="col-12 text-secondary py-3 text-center">Đang tải danh sách ưu đãi...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Danh Mục Các Hạng Phòng Tại Hotel California -->
+        <section class="card border shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                    <i class="bi bi-door-closed-fill text-primary"></i> Hạng Phòng Nghỉ Tại Hotel California
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="roomTypesCatalog" class="row g-4">
+                    <div class="col-12 text-secondary py-3 text-center">Đang tải danh mục hạng phòng...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-top py-4 mt-5 text-center text-secondary small">
+        <div class="container">
+            <p class="mb-1 fw-semibold text-dark">Hotel California - Hệ Thống Quản Lý Khách Sạn & Dịch Vụ Lưu Trú</p>
+            <p class="mb-0">Hotline: 1900 6868 | Email: contact@hotelcalifornia.com</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle & App Script -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script>
+        let availableRoomsData = [];
+
+        function loadDefaultDates() {
+            const today = new Date();
+            const tomorrow = new Date();
+            tomorrow.setDate(today.getDate() + 1);
+
+            document.getElementById('checkInDate').value = today.toISOString().split('T')[0];
+            document.getElementById('checkOutDate').value = tomorrow.toISOString().split('T')[0];
+            document.getElementById('guestCount').value = '2';
+            document.getElementById('roomTypeId').value = '';
+            document.getElementById('minPrice').value = '';
+            document.getElementById('maxPrice').value = '';
+        }
+
+        async function loadRoomTypesOptions() {
+            try {
+                const res = await apiCall('/api/public/rooms/room-types');
+                if (res && res.success) {
+                    const types = res.data || [];
+                    const select = document.getElementById('roomTypeId');
+                    const catalog = document.getElementById('roomTypesCatalog');
+
+                    select.innerHTML = '<option value="">-- Tất cả hạng phòng --</option>';
+                    catalog.innerHTML = '';
+
+                    types.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.roomTypeId;
+                        opt.textContent = `${t.typeName} (${t.capacity} khách - ${formatVND(t.basePrice)}/đêm)`;
+                        select.appendChild(opt);
+
+                        catalog.innerHTML += `
+                            <div class="col-md-4">
+                                <div class="card h-100 border shadow-sm">
+                                    <div class="card-body d-flex flex-column">
+                                        <h5 class="fw-bold text-primary mb-1">${t.typeName}</h5>
+                                        <div class="small text-secondary mb-2">
+                                            <i class="bi bi-people"></i> Sức chứa: <strong>${t.capacity} người</strong>
+                                        </div>
+                                        <div class="fs-5 fw-bold text-danger mb-2">
+                                            ${formatVND(t.basePrice)} <span class="fs-6 fw-normal text-secondary">/ đêm</span>
+                                        </div>
+                                        <p class="small text-dark flex-grow-1">${t.description || 'Tiện nghi đầy đủ, không gian thoáng đãng sang trọng.'}</p>
+                                        <div class="bg-light p-2 rounded small text-secondary">
+                                            <i class="bi bi-stars text-warning"></i> ${t.amenities || 'Wifi, Điều hòa, TV'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadActiveVouchers() {
+            try {
+                const res = await apiCall('/api/public/vouchers');
+                if (res && res.success) {
+                    const vouchers = res.data || [];
+                    document.getElementById('voucherCountBadge').textContent = `${vouchers.length} Ưu đãi`;
+                    const container = document.getElementById('vouchersGrid');
+
+                    if (vouchers.length === 0) {
+                        container.innerHTML = '<div class="col-12 text-secondary py-3 text-center">Hiện tại chưa có chương trình ưu đãi nào đang diễn ra.</div>';
+                        return;
+                    }
+
+                    container.innerHTML = vouchers.map(v => `
+                        <div class="col-md-4">
+                            <div class="border rounded p-3 bg-light border-warning-subtle h-100">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="fs-6 text-primary">${v.code}</strong>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        ${v.discountType === 'PERCENTAGE' ? `Giảm ${v.discountValue}%` : `Giảm ${formatVND(v.discountValue)}`}
+                                    </span>
+                                </div>
+                                <div class="small fw-semibold text-dark mb-1">${v.voucherName}</div>
+                                <div class="small text-secondary">
+                                    Đơn tối thiểu: ${formatVND(v.minOrderAmount || 0)} 
+                                    ${v.maxDiscountAmount ? `| Tối đa: ${formatVND(v.maxDiscountAmount)}` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function handleSearchRooms(event) {
+            if (event) event.preventDefault();
+
+            const checkInDate = document.getElementById('checkInDate').value;
+            const checkOutDate = document.getElementById('checkOutDate').value;
+            const guestCount = document.getElementById('guestCount').value;
+            const roomTypeId = document.getElementById('roomTypeId').value;
+            const minPrice = document.getElementById('minPrice').value;
+            const maxPrice = document.getElementById('maxPrice').value;
+
+            if (!checkInDate || !checkOutDate) {
+                showToast('Vui lòng chọn ngày nhận phòng và ngày trả phòng', 'warning');
+                return;
+            }
+
+            if (new Date(checkOutDate) <= new Date(checkInDate)) {
+                showToast('Ngày trả phòng phải sau ngày nhận phòng!', 'error');
+                return;
+            }
+
+            const searchBtn = document.getElementById('searchBtn');
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Đang tìm...';
+
+            const payload = {
+                checkInDate,
+                checkOutDate,
+                guestCount: guestCount ? parseInt(guestCount) : null,
+                roomTypeId: roomTypeId ? parseInt(roomTypeId) : null,
+                minPrice: minPrice ? parseFloat(minPrice) : null,
+                maxPrice: maxPrice ? parseFloat(maxPrice) : null
+            };
+
+            try {
+                const res = await apiCall('/api/public/rooms/available', {
+                    method: 'POST',
+                    body: payload
+                });
+
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="bi bi-search"></i> Tìm phòng ngay';
+
+                if (res && res.success) {
+                    availableRoomsData = res.data || [];
+                    renderRoomsResult(availableRoomsData, checkInDate, checkOutDate, guestCount);
+                }
+            } catch (err) {
+                searchBtn.disabled = false;
+                searchBtn.innerHTML = '<i class="bi bi-search"></i> Tìm phòng ngay';
+            }
+        }
+
+        function renderRoomsResult(rooms, checkIn, checkOut, guests) {
+            const container = document.getElementById('roomsGrid');
+            const subTitle = document.getElementById('searchResultSubtitle');
+
+            subTitle.textContent = `Tìm thấy ${rooms.length} phòng sẵn sàng từ ngày ${formatDate(checkIn)} đến ${formatDate(checkOut)}`;
+
+            if (rooms.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12 text-center py-5 border rounded bg-white">
+                        <i class="bi bi-door-closed fs-1 text-secondary"></i>
+                        <h5 class="fw-bold mt-2">Không tìm thấy phòng trống phù hợp</h5>
+                        <p class="text-secondary small">Vui lòng thử chọn khoảng ngày khác hoặc điều chỉnh bộ lọc.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = rooms.map(r => `
+                <div class="col-md-4">
+                    <div class="card h-100 border shadow-sm">
+                        <div class="card-body d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-0">Phòng ${r.roomNumber}</h5>
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle small">${r.roomTypeName}</span>
+                                </div>
+                                <span class="badge bg-success">Còn trống</span>
+                            </div>
+
+                            <div class="small text-secondary mb-2">
+                                <i class="bi bi-building"></i> Tầng ${r.floor} | 
+                                <i class="bi bi-people"></i> ${r.capacity} khách | 
+                                <i class="bi bi-moon"></i> ${r.numberOfNights || 1} đêm
+                            </div>
+
+                            <p class="small text-dark flex-grow-1 mb-3">${r.description || 'Không gian nghỉ dưỡng tiện nghi, phục vụ tận tâm chu đáo.'}</p>
+
+                            <div class="bg-light p-2 rounded small text-secondary mb-3">
+                                <i class="bi bi-check2-circle text-success"></i> ${r.amenities || 'Wifi miễn phí, TV, Điều hòa, Nóng lạnh'}
+                            </div>
+
+                            <div class="border-top pt-2 mt-auto">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="small text-secondary">Giá mỗi đêm: ${formatVND(r.basePrice)}</div>
+                                        <div class="fs-5 fw-bold text-danger">${formatVND(r.totalPrice)}</div>
+                                    </div>
+                                    <a href="booking.html?roomId=${r.roomId}&checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}" class="btn btn-primary btn-sm px-3 shadow-sm">
+                                        Đặt ngay →
+                                    </a>
+                                </div>
+                                <div class="small text-warning mt-1">
+                                    <i class="bi bi-info-circle"></i> Cọc giữ phòng (30%): ${formatVND(r.depositRequired)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        renderTopNav('home');
+        loadDefaultDates();
+        loadRoomTypesOptions();
+        loadActiveVouchers();
+        handleSearchRooms();
+    </script>
+</body>
+</html>
