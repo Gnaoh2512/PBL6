@@ -1,6 +1,7 @@
 # Recommendation integration contract
 
-The existing Spring facade remains unimplemented. The FastAPI routes below are private and
+The Spring facade exposes `POST /api/ai/recommendations` and
+`POST /api/ai/recommendations/conversation` to authenticated users. The FastAPI routes below are private and
 require an opaque service Bearer token plus `X-Request-ID` (1–64 ASCII letters, digits, `.`, `_`,
 or `-`). The browser demo calls them directly for local testing only.
 
@@ -135,7 +136,13 @@ serialization. The response is a suggestion, not a room hold.
 | Spring timeout | `504 BACKEND_TIMEOUT` |
 | Spring connection/status/schema failure | `502 BACKEND_UNAVAILABLE` |
 
-The future Spring facade should authenticate the end user, hold the service token privately,
-forward a validated request ID, call the private AI route with a bounded timeout, and map these
-errors to its existing `ApiResponse` convention. No end-user JWT or signing secret is forwarded
-to FastAPI.
+Spring authenticates the end user through its existing JWT filter, holds the service token in
+`AI_SERVICE_AUTH_TOKEN`, and forwards a validated `X-Request-ID` or generates a UUID. Its
+configured `AI_SERVICE_URL` is an HTTP(S) origin and `AI_SERVICE_TIMEOUT_MS` bounds each call.
+The facade uses one POST with redirects disabled and no application retry. It returns the AI
+success JSON under `ApiResponse.data`, preserving fields such as `state`, `scoreBreakdown`, and
+`requestId`. For AI 413/422/502/503/504 responses it retains the HTTP status and puts the safe
+AI error `code` and `details` under `ApiResponse.data`; transport errors become 502 and timeouts
+504. AI service authentication failure becomes 502 because it is an internal configuration
+failure. No end-user JWT or signing secret is forwarded to FastAPI. Spring does not change AI
+ranking, availability, booking, or conversation state.

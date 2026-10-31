@@ -8,7 +8,8 @@ FastAPI supports two private room-search routes:
 
 Both routes use Spring Boot's current availability API. Spring Boot owns MySQL, room inventory,
 pricing, bookings, and payment rules. This service never reads MySQL directly. A recommendation
-does not reserve a room. The existing Spring-to-AI facade is still pending.
+does not reserve a room. Spring's authenticated `/api/ai/recommendations` and
+`/api/ai/recommendations/conversation` facade routes call these private FastAPI routes.
 
 ## Requirements and configuration
 
