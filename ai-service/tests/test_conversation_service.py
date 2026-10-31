@@ -155,6 +155,100 @@ def test_explicit_price_and_capacity_preferences_reach_scorer() -> None:
     assert backend.searches[0].max_price is None
 
 
+@pytest.mark.parametrize("extracted", [
+    full_output(), full_output(change("capacityPreference", "SPACIOUS")),
+])
+def test_room_wide_alone_requires_clarification_without_capacity_scoring(extracted) -> None:
+    backend = FakeBackend()
+    response = run(
+        backend, FakeExtractor(extracted),
+        message="Muốn phòng rộng cho hai người từ 10 đến 12/11/2026",
+    )
+    assert response.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert response.state.capacity_preference is None
+    assert response.state.pending_question.value == "capacityPreference"
+    assert response.clarification_fields[0].value == "capacityPreference"
+    assert "diện tích" in response.reply
+    assert backend.searches == []
+
+
+def test_explicit_spare_capacity_for_two_guests_ranks_four_guest_room() -> None:
+    two = room()
+    four = two.model_copy(update={
+        "room_id": 102,
+        "room_number": "FOUR",
+        "room_type": two.room_type.model_copy(update={
+            "capacity": 4, "description": "Phòng rộng 65m2",
+        }),
+    })
+    backend = FakeBackend(rooms=[two, four])
+    response = run(
+        backend,
+        FakeExtractor(full_output(change("capacityPreference", "SPACIOUS"))),
+        message=(
+            "Hai người nhưng ưu tiên phòng có sức chứa bốn người "
+            "từ 10 đến 12/11/2026"
+        ),
+    )
+    assert response.status is ConversationStatus.RECOMMENDED
+    assert response.state.guest_count == 2
+    assert response.state.capacity_preference.value == "SPACIOUS"
+    assert backend.searches[0].guest_count == 2
+    assert [item.room_id for item in response.result.recommendations] == [102, two.room_id]
+    assert response.result.recommendations[0].score_breakdown["capacity"].score == 1
+    reasons = " ".join(response.result.recommendations[0].reasons).lower()
+    assert "sức chứa lớn hơn" in reasons
+    assert "rộng" not in reasons and "diện tích" not in reasons
+
+
+def test_area_answer_clears_pending_size_question_without_backend_or_provider() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend, FakeExtractor(full_output()),
+        message="Muốn phòng rộng cho hai người từ 10 đến 12/11/2026",
+    )
+    extractor = FakeExtractor(ExtractionInvalidResponse("provider should not be called"))
+    second = run(backend, extractor, state=first.state, message="Tôi cần thông tin diện tích")
+    assert second.status is ConversationStatus.UNSUPPORTED
+    assert second.state.capacity_preference is None
+    assert second.state.pending == []
+    assert "chưa có diện tích" in second.reply
+    assert backend.searches == []
+    assert extractor.calls == 0
+
+
+def test_size_clarification_can_be_resolved_as_capacity_preference() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend, FakeExtractor(full_output()),
+        message="Muốn phòng rộng cho hai người từ 10 đến 12/11/2026",
+    )
+    second = run(
+        backend, FakeExtractor(output(change("capacityPreference", "SPACIOUS"))),
+        state=first.state, message="Tôi muốn sức chứa dư cho hai người",
+    )
+    assert second.status is ConversationStatus.RECOMMENDED
+    assert second.state.pending == []
+    assert second.state.capacity_preference.value == "SPACIOUS"
+    assert len(backend.searches) == 1
+
+
+def test_rejecting_area_as_meaning_and_choosing_capacity_resolves_question() -> None:
+    backend = FakeBackend()
+    first = run(
+        backend, FakeExtractor(full_output()),
+        message="Muốn phòng rộng cho hai người từ 10 đến 12/11/2026",
+    )
+    second = run(
+        backend, FakeExtractor(output(change("capacityPreference", "SPACIOUS"))),
+        state=first.state,
+        message="Tôi muốn sức chứa dư, không cần diện tích",
+    )
+    assert second.status is ConversationStatus.RECOMMENDED
+    assert second.state.capacity_preference.value == "SPACIOUS"
+    assert len(backend.searches) == 1
+
+
 def test_missing_then_followup_then_correction_preserves_other_fields() -> None:
     backend = FakeBackend()
     first = run(

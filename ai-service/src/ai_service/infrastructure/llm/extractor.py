@@ -41,9 +41,18 @@ Mỗi thay đổi có field, action SET/CLEAR, value là chuỗi hoặc null khi
 EXTRACTION_PROMPT += """
 Chỉ SET pricePreference=SAVE khi khách nói rõ ưu tiên tiết kiệm/rẻ hơn, hoặc PREMIUM khi
 khách nói rõ ưu tiên phòng giá cao hơn. minPrice/maxPrice chỉ là giới hạn, không suy ra
-pricePreference. Chỉ SET capacityPreference=CLOSE_FIT khi khách ưu tiên sức chứa vừa đủ,
-hoặc SPACIOUS khi muốn phòng rộng/sức chứa dư. guestCount chỉ là giới hạn, không suy ra
-capacityPreference. CLEAR khi khách bỏ sở thích tương ứng.
+pricePreference. capacityPreference chỉ nói về SỐ KHÁCH TỐI ĐA phòng chứa được, không
+nói về diện tích, số giường hay độ rộng thực tế. Chỉ SET capacityPreference=CLOSE_FIT
+khi khách ưu tiên sức chứa vừa đủ; SET SPACIOUS (tên cũ trong contract, nghĩa là ưu tiên
+sức chứa lớn hơn) khi khách nói rõ muốn sức chứa dư/nhiều người hơn, ví dụ hai khách
+nhưng ưu tiên phòng có sức chứa bốn người. Giữ guestCount=2 trong ví dụ đó; không biến
+sức chứa ưu tiên thành số khách thực tế hay điều kiện bắt buộc. Schema hiện chỉ biểu diễn
+hướng ưu tiên, không lưu ngưỡng sức chứa bốn người. Nếu khách chỉ nói "phòng rộng",
+"rộng rãi" hoặc hỏi diện tích mà không nói rõ sức chứa, ghi capacityPreference vào
+ambiguities, không SET SPACIOUS. Hỏi họ muốn ưu tiên sức chứa lớn hơn hay cần diện tích.
+Nếu khách trả lời chỉ cần diện tích, CLEAR capacityPreference đang chờ và đặt
+unsupportedIntent=true vì availability API không có trường diện tích. CLEAR khi khách
+bỏ sở thích sức chứa.
 """
 
 FIELDS = [field.value for field in SearchField]

@@ -24,6 +24,13 @@ The 422 `error.details` names `body.requiredAmenities` or `body.preferredAmeniti
 The optional `preferences` object now also accepts `price: "SAVE" | "PREMIUM" | null` and
 `capacity: "CLOSE_FIT" | "SPACIOUS" | null`. Both default to null. They affect ranking only
 when explicitly supplied; `minPrice`, `maxPrice`, and `guestCount` remain hard filters.
+`capacity` is the maximum guest count from `roomType.capacity`, not floor area or bed count.
+For compatibility, the existing wire value `SPACIOUS` means **prefer higher guest capacity**;
+it does not claim a physically larger room. `CLOSE_FIT` means prefer capacity nearer the
+minimum eligible capacity. Neither choice is inferred from `guestCount` alone. The schema
+does not carry an exact preferred capacity (such as four people for two guests): a clear
+request for surplus capacity maps to the directional `SPACIOUS` preference while
+`guestCount` remains the actual two guests. This does not guarantee capacity of four.
 `sortBy` controls the price tie-breaker after score and does not activate a price score.
 The result adds `scoringVersion` and, for each room, `scoreBreakdown`,
 `matchedPreferences`, and `unmatchedPreferences`. A breakdown component has `score`
@@ -69,6 +76,15 @@ checked against backend `totalRoomCharge`. An unrelated answer keeps the pending
 and prompts again. A newer ambiguous amount replaces the pending amount while confirmed
 limits remain unchanged until the basis is resolved. Date
 changes without an explicit year remain pending even when another date in state has a year.
+
+“Phòng rộng” or a request for area without an explicit capacity request leaves
+`capacityPreference` unresolved in `pending` and returns `NEEDS_CLARIFICATION` with
+`clarificationFields:["capacityPreference"]`. The reply asks whether the customer means
+higher guest capacity or physical area. No availability call runs while it is pending.
+An explicit answer requesting area clears that pending field and returns `UNSUPPORTED`:
+the backend availability DTO has no structured area field. Answering with an explicit
+capacity preference can set `capacityPreference` and resume the search. An extractor
+output of `SPACIOUS` for “phòng rộng” alone is discarded by the service guard.
 
 If the customer asks for a budget including tax, services, vouchers, or other charges,
 `budgetScope` stays pending and no availability call is made. The service asks whether

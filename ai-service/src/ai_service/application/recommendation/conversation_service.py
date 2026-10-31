@@ -57,7 +57,10 @@ FIELD_QUESTIONS = {
     SearchField.PREFERRED_AMENITIES: "Bạn muốn ưu tiên tiện nghi nào?",
     SearchField.SORT_BY: "Bạn muốn sắp xếp theo giá tăng hay giảm?",
     SearchField.PRICE_PREFERENCE: "Bạn ưu tiên tiết kiệm hay phòng giá cao hơn?",
-    SearchField.CAPACITY_PREFERENCE: "Bạn ưu tiên sức chứa vừa đủ hay rộng rãi hơn?",
+    SearchField.CAPACITY_PREFERENCE: (
+        "Bạn muốn ưu tiên phòng có sức chứa nhiều khách hơn, hay đang cần thông tin "
+        "diện tích/độ rộng? Hiện hệ thống chưa có dữ liệu diện tích để so sánh."
+    ),
     SearchField.BUDGET_SCOPE: (
         "Hiện chỉ lọc được tổng tiền phòng cơ bản do hệ thống trả về, chưa gồm thuế, "
         "dịch vụ, voucher hoặc chi phí khác. Bạn có đồng ý dùng phạm vi này không?"
@@ -191,6 +194,31 @@ def _mentions_unavailable_costs(message: str) -> bool:
             "tax", "dich vu", "service", "voucher", "phi khac", "tong chi phi",
             "thanh toan cuoi", "tat ca chi phi", "moi chi phi", "phu thu", "bua sang",
             "bao gom thue", "gom thue", "tinh thue", "ca thue",
+        )
+    )
+
+
+def _ambiguous_room_size(message: str) -> bool:
+    """Room size is not guest capacity; require an explicit capacity request."""
+    normalized = normalize(message)
+    size_words = re.search(r"\b(?:rong|dien tich|met vuong|m2)\b", normalized)
+    capacity_words = re.search(r"\b(?:suc chua|chua du|chua nhieu)\b", normalized)
+    return bool(size_words and not capacity_words)
+
+
+def _area_answer_to_capacity_question(message: str, state: SearchState) -> bool:
+    normalized = normalize(message)
+    return (
+        state.pending_question is SearchField.CAPACITY_PREFERENCE
+        and any(
+            isinstance(item, PendingField) and item.field is SearchField.CAPACITY_PREFERENCE
+            for item in state.pending
+        )
+        and bool(re.search(r"\b(?:dien tich|met vuong|m2)\b", normalized))
+        and not re.search(r"\b(?:suc chua|chua du|chua nhieu)\b", normalized)
+        and not re.search(
+            r"\bkhong (?:can|muon|quan tam) (?:thong tin )?(?:dien tich|met vuong|m2)\b",
+            normalized,
         )
     )
 
@@ -426,6 +454,7 @@ class ConversationService:
     ) -> ConversationResponse:
         today = self._clock().astimezone(self._timezone).date()
         proposal = request.state.pending_relaxation
+        area_answer = _area_answer_to_capacity_question(request.message, request.state)
         scope_pending = any(
             isinstance(item, PendingField) and item.field is SearchField.BUDGET_SCOPE
             for item in request.state.pending
@@ -434,7 +463,15 @@ class ConversationService:
             _explicit_relaxation_decision(request.message)
             if proposal is not None or scope_pending else None
         )
-        if scope_pending and direct_decision is not None:
+        if area_answer:
+            extracted = ExtractedChanges.model_validate({
+                "changes": [{
+                    "field": SearchField.CAPACITY_PREFERENCE,
+                    "action": "CLEAR", "value": None,
+                }],
+                "ambiguities": [], "unsupportedIntent": True,
+            })
+        elif scope_pending and direct_decision is not None:
             scope = (
                 BudgetScope.ROOM_CHARGE if direct_decision is RelaxationDecision.ACCEPT
                 else BudgetScope.ALL_COSTS
@@ -454,6 +491,21 @@ class ConversationService:
             extracted = await self._extractor.extract(
                 request.message, request.state, today=today, request_id=request_id
             )
+        if not area_answer and _ambiguous_room_size(request.message):
+            # A provider may still label "phòng rộng" as SPACIOUS. Never score that
+            # inference; preserve other extracted search edits while asking what was meant.
+            extracted = extracted.model_copy(update={
+                "changes": [
+                    change for change in extracted.changes
+                    if not (
+                        change.field is SearchField.CAPACITY_PREFERENCE
+                        and change.action == "SET"
+                    )
+                ],
+                "ambiguities": list(dict.fromkeys([
+                    *extracted.ambiguities, SearchField.CAPACITY_PREFERENCE,
+                ])),
+            })
         if (
             _mentions_unavailable_costs(request.message)
             and not any(change.field is SearchField.BUDGET_SCOPE for change in extracted.changes)
@@ -534,6 +586,18 @@ class ConversationService:
                 requestId=request_id,
             )
 
+        if area_answer:
+            return ConversationResponse(
+                status=ConversationStatus.UNSUPPORTED,
+                reply=(
+                    "Hiện dữ liệu phòng chưa có diện tích để so sánh độ rộng. "
+                    "Sức chứa chỉ cho biết số khách tối đa, không chứng minh phòng rộng hơn."
+                ),
+                state=state,
+                clarificationFields=[],
+                result=None,
+                requestId=request_id,
+            )
         if state.pending:
             field = state.pending_question
             if field in (SearchField.REQUIRED_AMENITIES, SearchField.PREFERRED_AMENITIES):

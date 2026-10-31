@@ -34,6 +34,8 @@ class PricePreference(str, Enum):
 
 
 class CapacityPreference(str, Enum):
+    """Guest-capacity ranking; SPACIOUS is a legacy wire name, never floor area."""
+
     CLOSE_FIT = "CLOSE_FIT"
     SPACIOUS = "SPACIOUS"
 
