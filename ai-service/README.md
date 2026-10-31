@@ -115,6 +115,24 @@ Automated extraction tests use a mock provider and do not make paid calls. Live 
 requires a real API key and must be verified separately. Spring/MySQL integration can be checked
 through the structured route or the browser page without a provider key.
 
+The [recommendation evaluation guide](evaluation/README.md) provides 63 provisional Vietnamese
+scenarios, synthetic room fixtures, an offline conversation and scorer comparison, and a
+separate opt-in Gemini extraction run. No Gemini key, Spring or MySQL is needed for offline:
+
+```powershell
+.\.venv\Scripts\python.exe -m ai_service.evaluation.offline --split all --output evaluation/reports/offline.json
+```
+
+To deliberately run real Gemini requests after setting `GEMINI_API_KEY` in the process
+environment (this can consume quota or incur charges):
+
+```powershell
+.\.venv\Scripts\python.exe -m ai_service.evaluation.gemini_live --confirm-live-gemini --split dev --max-requests 10 --output evaluation/reports/gemini-dev.json
+```
+
+The offline report measures reference-patch replay with fake dependencies, not Gemini accuracy.
+The live script measures extraction only. Neither replaces a Spring/MySQL integration test.
+
 More detail: [architecture](docs/architecture.md), [API contract](docs/contracts/ai-integration-v1.md),
 [recommendation pipeline](docs/recommendation-pipeline.md), and
 [backend client](docs/backend-client.md).

@@ -1,0 +1,307 @@
+{
+  "version": "ranking-provisional-v1",
+  "source": "synthetic",
+  "labelStatus": "provisional",
+  "cases": [
+    {
+      "id": "rank-01",
+      "split": "dev",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Hai khách thích ban công nhưng vẫn xem giá và tiện nghi tổng thể.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "preferences": {
+          "amenities": [
+            "ban công"
+          ],
+          "price": "SAVE"
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "relevance": {
+        "101": 1,
+        "102": 1,
+        "103": 3,
+        "104": 0,
+        "105": 2,
+        "106": 0,
+        "107": 0,
+        "108": 1
+      },
+      "rationale": "Nhãn do người soạn đề xuất: ban công là ưu tiên, mức giá cũng ảnh hưởng; cần người dùng rà soát."
+    },
+    {
+      "id": "rank-02",
+      "split": "dev",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Hai khách muốn sức chứa dư, không đòi hỏi diện tích.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "preferences": {
+          "capacity": "SPACIOUS"
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "relevance": {
+        "101": 0,
+        "102": 0,
+        "103": 0,
+        "104": 3,
+        "105": 3,
+        "106": 2,
+        "107": 0,
+        "108": 2
+      },
+      "rationale": "Đề xuất chủ quan: bốn chỗ hợp hơn cho hai khách muốn dư; sáu chỗ có thể quá mức. Không suy ra diện tích."
+    },
+    {
+      "id": "rank-03",
+      "split": "dev",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Yêu cầu bếp mini bắt buộc và TV chỉ ưu tiên.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "requiredAmenities": [
+          "bếp mini"
+        ],
+        "preferences": {
+          "amenities": [
+            "TV"
+          ]
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        104,
+        106
+      ],
+      "relevance": {
+        "104": 2,
+        "106": 3
+      },
+      "rationale": "TV có chứng cứ ở phòng nhóm; sở thích vẫn cần xác nhận với người đánh giá."
+    },
+    {
+      "id": "rank-04",
+      "split": "dev",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Giới hạn tổng tiền phòng 1,3 triệu và ưu tiên tiết kiệm.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "totalBudget": "1300000",
+        "preferences": {
+          "price": "SAVE"
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        107
+      ],
+      "relevance": null,
+      "rationale": null
+    },
+    {
+      "id": "rank-05",
+      "split": "dev",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Năm khách, chỉ phòng có sức chứa phù hợp mới được so sánh.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 5,
+        "preferences": {
+          "amenities": [
+            "TV"
+          ]
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        106
+      ],
+      "relevance": null,
+      "rationale": null
+    },
+    {
+      "id": "rank-06",
+      "split": "heldout",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Hai người có trần giá 900000 và Wi-Fi bắt buộc, thích ban công.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "maxPrice": "900000",
+        "requiredAmenities": [
+          "Wi-Fi"
+        ],
+        "preferences": {
+          "amenities": [
+            "ban công"
+          ]
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        102,
+        103
+      ],
+      "relevance": {
+        "101": 1,
+        "102": 1,
+        "103": 3
+      },
+      "rationale": "Ban công được nêu là ưu tiên trong nhóm qua lọc; chưa được người dùng xác nhận."
+    },
+    {
+      "id": "rank-07",
+      "split": "heldout",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Phòng bốn chỗ, ưu tiên bếp mini và mức giá dễ chịu.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 4,
+        "preferences": {
+          "amenities": [
+            "bếp mini"
+          ],
+          "price": "SAVE"
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        104,
+        105,
+        106,
+        108
+      ],
+      "relevance": {
+        "104": 3,
+        "105": 1,
+        "106": 2,
+        "108": 0
+      },
+      "rationale": "Nhãn đề xuất từ mô tả tình huống, không dùng công thức scorer để tạo."
+    },
+    {
+      "id": "rank-08",
+      "split": "heldout",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Có hai giới hạn tiền cùng lúc và ưu tiên minibar.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "maxPrice": "900000",
+        "totalBudget": "1400000",
+        "preferences": {
+          "amenities": [
+            "minibar"
+          ]
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        102,
+        107
+      ],
+      "relevance": null,
+      "rationale": null
+    },
+    {
+      "id": "rank-09",
+      "split": "heldout",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Ưu tiên Wi-Fi khi một phòng không có bằng chứng tiện nghi.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "preferences": {
+          "amenities": [
+            "Wi-Fi"
+          ]
+        },
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "relevance": null,
+      "rationale": null
+    },
+    {
+      "id": "rank-10",
+      "split": "heldout",
+      "source": "synthetic",
+      "labelStatus": "provisional",
+      "scenario": "Không nêu sở thích, chỉ dùng thứ tự tie-break ổn định.",
+      "request": {
+        "checkInDate": "2026-11-10",
+        "checkOutDate": "2026-11-12",
+        "guestCount": 2,
+        "topK": 20
+      },
+      "eligibleRoomIds": [
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108
+      ],
+      "relevance": null,
+      "rationale": null
+    }
+  ]
+}
