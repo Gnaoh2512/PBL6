@@ -10,9 +10,9 @@ T = TypeVar("T")
 
 
 class BackendModel(BaseModel):
-    """Reject schema drift instead of silently ignoring backend fields."""
+    """Validate fields we use while allowing additive backend DTO changes."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
 
 class BackendApiResponse(BackendModel, Generic[T]):

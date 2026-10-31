@@ -78,6 +78,30 @@ def test_maps_request_and_typed_response_without_authorization() -> None:
     assert rooms[0].room_type.room_type_id == 2
     assert rooms[0].price_per_night == Decimal("1250000.50")
     assert isinstance(rooms[0].price_per_night, Decimal)
+    assert rooms[0].estimated_deposit == Decimal("750000")
+
+
+def test_additive_backend_fields_do_not_break_availability() -> None:
+    fixture = simplejson.loads(fixture_response(), use_decimal=True)
+    fixture["traceId"] = "backend-trace"
+    fixture["data"][0]["newRoomField"] = "future value"
+    fixture["data"][0]["roomType"]["newTypeField"] = True
+
+    rooms = run_client(
+        lambda _: httpx.Response(200, content=simplejson.dumps(fixture, use_decimal=True))
+    )
+
+    assert [room.room_id for room in rooms] == [101]
+
+
+def test_missing_required_room_field_is_still_invalid() -> None:
+    fixture = simplejson.loads(fixture_response(), use_decimal=True)
+    del fixture["data"][0]["roomType"]["capacity"]
+
+    with pytest.raises(BackendInvalidResponseError):
+        run_client(
+            lambda _: httpx.Response(200, content=simplejson.dumps(fixture, use_decimal=True))
+        )
 
 
 def test_empty_availability_is_a_successful_empty_list() -> None:

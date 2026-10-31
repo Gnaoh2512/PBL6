@@ -152,6 +152,9 @@ def test_invalid_requests_have_safe_validation_envelopes(body, headers) -> None:
     ("status", "expected_status", "expected_code"),
     [
         (400, 422, "BACKEND_REJECTED_REQUEST"),
+        (422, 422, "BACKEND_REJECTED_REQUEST"),
+        (401, 502, "BACKEND_UNAVAILABLE"),
+        (404, 502, "BACKEND_UNAVAILABLE"),
         (503, 502, "BACKEND_UNAVAILABLE"),
     ],
 )

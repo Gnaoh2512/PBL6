@@ -117,7 +117,7 @@ def require_request_id(value: Annotated[str, Header(alias="X-Request-ID")]) -> s
 def map_backend_error(exc: BackendClientError) -> ApiError:
     if isinstance(exc, BackendTimeoutError):
         return ApiError(504, "BACKEND_TIMEOUT", "Current room availability could not be retrieved")
-    if isinstance(exc, BackendHttpError) and 400 <= exc.status_code < 500:
+    if isinstance(exc, BackendHttpError) and exc.status_code in (400, 422):
         return ApiError(422, "BACKEND_REJECTED_REQUEST", "Backend rejected the search criteria")
     return ApiError(502, "BACKEND_UNAVAILABLE", "Current room availability could not be retrieved")
 
