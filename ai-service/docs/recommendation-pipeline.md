@@ -11,8 +11,10 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
 3. Use only candidates from that response. Collapse model-equivalent duplicate
    `roomId` records; conflicting records for one `roomId` make the response invalid.
 4. Reject candidates with a non-available status, mismatched dates/night count, or negative
-   amounts. Defensively recheck capacity, optional room type, and inclusive per-night price bounds.
-5. Rank the remaining candidates by exact amenity-token score descending. For equal scores,
+   amounts. Defensively recheck capacity, optional room type, inclusive per-night price bounds,
+   optional inclusive `totalBudget` against backend `totalRoomCharge`,
+   and every `requiredAmenities` code against verified backend amenity evidence.
+5. Rank the remaining candidates by the versioned multi-criteria score descending. For equal scores,
    use `sortBy` as a price tie-breaker: `PRICE_DESC` means per-night price descending;
    `PRICE_ASC` or omitted `sortBy` means per-night price ascending. If price also ties,
    use integer `roomId` ascending. Backend response order does not decide the final rank.
@@ -22,7 +24,17 @@ An empty availability response or an empty eligible set returns `NO_MATCH`. Time
 HTTP, invalid-envelope, inconsistent-candidate, and conflicting-duplicate failures keep their backend error category and
 never become `NO_MATCH`.
 
-The pipeline does not query a room catalogue, cache, vector store, LLM, or database. Soft scoring
+The conversation layer may retain one proposed relaxation in caller state after `NO_MATCH`.
+It does not run diagnostic searches or alter dates, budget, capacity, or required amenities
+until the customer supplies an explicit edit or accepts the exact amenity removal.
+The next search still uses the live availability API once. The total-stay ceiling covers
+only the backend's basic room charge, not a final bill.
+
+The active formula, missing-data treatment, comparison baseline, and configurable weights are
+documented in [scoring.md](scoring.md). The amenity-only formula below describes the retained
+`amenity-baseline-v1` scorer, not the default scorer.
+
+The pipeline does not query a room catalogue, cache, LLM, or database. Soft scoring
 cannot restore a candidate rejected by hard filtering.
 
 ## Amenity parsing and scoring
@@ -33,20 +45,29 @@ fixture use comma-separated items
 `ai-service/tests/fixtures/available_rooms_success.json`). The implementation therefore:
 
 - splits backend amenity text only on commas;
-- normalizes each complete token with Unicode NFKC, case folding, and collapsed whitespace;
-- removes duplicate requested tokens after the same normalization;
-- requires exact normalized-token equality;
-- does not remove diacritics, use substring matching, translate, or generate synonyms.
+- normalizes NFKC/NFKD Unicode, case, whitespace and Vietnamese diacritics (`đ` included);
+- maps only explicit Vietnamese/English aliases and observed backend phrases to a catalog code;
+- counts each requested code once, including aliases such as `wi-fi`/`wifi` and `ban công`/`balcony`;
+- treats explicit negative phrases such as `Không có ban công` as `ABSENT`, an exact catalog
+  phrase as `PRESENT`, and missing, conflicting or unfamiliar text as `UNKNOWN`;
+- admits a room for a required code only when the evidence is `PRESENT`. A preferred code
+  contributes to score only when `PRESENT`. No LLM inference is used for room attributes.
 
-For `R` distinct, non-blank requested amenities and `M` exact matches:
+The controlled catalog currently covers Wi-Fi, balcony, minibar, TV, air conditioning, bathtub,
+water heater, kitchen, living room, king bed and sofa bed. Requests containing an unknown name
+or the same code in both required and preferred lists get HTTP 422 in the JSON route. The
+conversation route keeps the unresolved field in caller state and asks for a correction. The
+original backend `amenities` string remains in each room result and verified raw tokens appear
+in reasons. Empty or omitted `requiredAmenities` preserves the prior client behavior.
+
+For `R` distinct, non-blank requested amenities and `M` matches:
 
 ```text
 score = M / R
 ```
 
-When `R = 0`, all candidates receive score `0` and empty reasons. Reasons use only the exact
-matched token from backend data, for example `Exact amenity token matched: Minibar`. A request for
-`ban công` does not prove a match against the longer token `Ban công ngắm cảnh biển`.
+When `R = 0`, all candidates receive score `0` and empty reasons. Reasons use only the
+matched full token from backend data, for example `Amenity preference matched: Ban công ngắm cảnh biển`.
 
 ## Synthetic example
 

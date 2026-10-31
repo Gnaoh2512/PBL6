@@ -34,6 +34,14 @@ def test_recommendation_request_maps_contract_and_preserves_decimal() -> None:
     assert "top_k" not in backend_search.model_dump()
 
 
+def test_total_budget_is_decimal_and_stays_out_of_backend_search_dto() -> None:
+    request = RecommendationRequest.model_validate(
+        valid_payload() | {"totalBudget": "1200000.01"}
+    )
+    assert request.total_budget == Decimal("1200000.01")
+    assert "totalBudget" not in request.availability_search().model_dump(by_alias=True)
+
+
 @pytest.mark.parametrize(
     ("changes", "error_fragment"),
     [
@@ -41,6 +49,7 @@ def test_recommendation_request_maps_contract_and_preserves_decimal() -> None:
         ({"guestCount": 0}, "guestCount"),
         ({"roomTypeId": "3"}, "roomTypeId"),
         ({"minPrice": "-0.01"}, "minPrice"),
+        ({"totalBudget": "-0.01"}, "totalBudget"),
         ({"minPrice": "10", "maxPrice": "9"}, "minPrice"),
         ({"topK": 0}, "topK"),
         ({"topK": 21}, "topK"),
@@ -48,6 +57,8 @@ def test_recommendation_request_maps_contract_and_preserves_decimal() -> None:
         ({"city": "Da Nang"}, "city"),
         ({"preferences": {"amenities": ["x"] * 21}}, "amenities"),
         ({"preferences": {"amenities": ["x" * 101]}}, "amenities"),
+        ({"preferences": {"price": "CHEAPEST"}}, "price"),
+        ({"preferences": {"capacity": "SMALLEST"}}, "capacity"),
     ],
 )
 def test_recommendation_request_rejects_invalid_values(

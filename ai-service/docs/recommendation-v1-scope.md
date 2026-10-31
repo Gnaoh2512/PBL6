@@ -1,5 +1,12 @@
 # Recommendation V1 scope
 
+> This is the historical REC-01 draft. The implemented experimental ranking now uses
+> [versioned scoring](scoring.md); the hard constraints and backend authority described
+> here remain in force.
+> The current AI service also supports an optional basic-room-charge `totalBudget`
+> filter and explicit `NO_MATCH` relaxation proposals; see
+> [the integration contract](contracts/ai-integration-v1.md).
+
 | Item | Value |
 |---|---|
 | Decision ID | `REC-01` |
@@ -70,15 +77,15 @@ accept, reject, price, or declare a room available.
 
 | Input | Validation/check | Official backend source | Missing data/backend failure |
 |---|---|---|---|
-| `checkInDate` | Required ISO date; must not be before backend “today”. | `RoomSearchRequest.checkInDate` uses `LocalDate`, `@NotNull`, `@FutureOrPresent` (`RoomSearchRequest.java:19-22`). | Missing/invalid: 422 internal → 400 BFF. Do not query RAG. |
+| `checkInDate` | Required ISO date; must not be before backend “today”. | `RoomSearchRequest.checkInDate` uses `LocalDate`, `@NotNull`, `@FutureOrPresent` (`RoomSearchRequest.java:19-22`). | Missing/invalid: 422 internal → 400 BFF. Do not query availability. |
 | `checkOutDate` | Required ISO date and strictly later than check-in. | `RoomSearchRequest.java:24-26`; service rejects non-later checkout (`RoomCatalogServiceImpl.java:56-62`). | Missing/invalid: 422 internal → 400 BFF. |
 | `guestCount` | Required by AI contract; integer `>= 1`. Candidate capacity must be `>= guestCount`. | Query predicate `rt.capacity >= :guestCount` (`RoomRepository.java:20`); booking request also requires minimum 1 (`BookingCreateRequest.java:30-32`). | Missing/invalid: reject. Null must not be forwarded even though backend search currently permits it. |
 | `roomTypeId` | Optional integer. When supplied, must match candidate room type. | `RoomSearchRequest.roomTypeId` (`RoomSearchRequest.java:28`) and query predicate (`RoomRepository.java:19`). | Unknown ID normally yields no candidates; return `NO_MATCH`, not a fabricated substitute. |
 | `minPrice` | Optional decimal `>= 0`; per-night lower bound. | Backend compares `room_type.base_price >= minPrice` (`RoomRepository.java:21`). | Invalid/negative: reject in AI/BFF. |
 | `maxPrice` | Optional decimal `>= 0`; per-night upper bound; must be `>= minPrice` when both exist. | Backend compares `room_type.base_price <= maxPrice` (`RoomRepository.java:22`). | Invalid/range inversion: reject. |
-| Availability | Candidate must appear in the live availability response for the exact dates and other constraints. | `RoomRepository.findAvailableRooms` (`RoomRepository.java:16-38`). | Timeout/unavailable: return backend error; never fall back to embeddings/cache. |
+| Availability | Candidate must appear in the live availability response for the exact dates and other constraints. | `RoomRepository.findAvailableRooms` (`RoomRepository.java:16-38`). | Timeout/unavailable: return backend error. |
 | Physical status | Current query requires `room.status = 'AVAILABLE'`. | `RoomRepository.java:18`. | Respect backend result even for future dates; semantics need backend review but AI must not override it. |
-| Booking overlap | Exclude overlaps unless booking is `CANCELED` or `EXPIRED`; overlap rule is start `<` requested checkout and end `>` requested check-in. | `RoomRepository.java:23-28`. | Respect backend result; do not reconstruct from vector data. |
+| Booking overlap | Exclude overlaps unless booking is `CANCELED` or `EXPIRED`; overlap rule is start `<` requested checkout and end `>` requested check-in. | `RoomRepository.java:23-28`. | Respect backend result. |
 
 `topK` controls truncation after hard filtering and ranking; it is not a hotel/room eligibility
 constraint.
@@ -172,7 +179,8 @@ creation succeeds.
 
 ## 8. Soft preferences and ranking
 
-V1 soft input is limited to `preferences.amenities: string[]`.
+Soft input is `preferences.amenities: string[]`; optional top-level `requiredAmenities: string[]`
+is a hard constraint. Both default to empty lists for existing clients.
 
 The current API accepts at most 20 amenity strings, each at most 100 characters. These are
 operational input limits; requests beyond them return 422.
@@ -182,10 +190,11 @@ operational input limits; requests beyond them return 422.
 - Amenity matching may change ordering but may not restore a room removed by hard filtering.
 - Normalize case/whitespace/diacritics consistently and document the chosen matching method.
 - A reason must be derived from the candidate's actual amenities/description.
-- Because amenities are not normalized entities, an unmatched text preference produces no score;
-  it does not exclude the room.
-- LLMs may later parse natural language into a validated request, but the typed hard constraints
-  and deterministic scorer remain authoritative.
+- The controlled catalog maps known aliases to codes. Unknown request names return 422 or
+  prompt clarification. Missing backend evidence cannot satisfy a required code; it contributes
+  no preference score.
+- The conversation endpoint parses Vietnamese into validated criteria; typed hard constraints
+  and the deterministic scorer remain authoritative.
 
 `sortBy` is passed to the backend as `PRICE_ASC` or `PRICE_DESC` when supplied. The AI service
 always ranks valid rooms by amenity score descending first. For equal scores, `PRICE_DESC` sorts
@@ -227,7 +236,7 @@ REC-01 documentation is complete when:
 - date, guest, budget, currency, tax, availability, booking revalidation, and `topK` rules are
   explicit;
 - product-open decisions are labeled as proposals;
-- no LLM/vector data is authoritative for eligibility, price, or availability.
+- only the Spring availability response is authoritative for eligibility, price, and availability.
 
 Product acceptance is still required before this draft becomes an approved integration contract.
 

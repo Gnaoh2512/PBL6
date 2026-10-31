@@ -85,6 +85,10 @@ def test_success_uses_live_availability_and_preserves_decimal_numbers() -> None:
     assert [room["roomId"] for room in data["recommendations"]] == [101]
     assert data["recommendations"][0]["pricePerNight"] == Decimal("1250000.50")
     assert data["recommendations"][0]["score"] == 1
+    assert data["scoringVersion"] == "multi-criteria-experimental-v1"
+    assert data["recommendations"][0]["scoreBreakdown"]["amenities"]["score"] == 1
+    assert data["recommendations"][0]["scoreBreakdown"]["price"]["score"] is None
+    assert data["recommendations"][0]["matchedPreferences"][0]["requested"] == "MINIBAR"
     assert len(backend_requests) == 1
     assert backend_requests[0].url.path == "/api/public/rooms/available"
     assert backend_requests[0].headers["X-Request-ID"] == "req-http-1"
@@ -105,6 +109,75 @@ def test_no_available_rooms_is_a_successful_no_match() -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "NO_MATCH"
     assert response.json()["recommendations"] == []
+
+
+def test_structured_total_budget_filters_backend_charge_without_forwarding_it() -> None:
+    backend_requests = []
+
+    def backend(request: httpx.Request) -> httpx.Response:
+        backend_requests.append(request)
+        return httpx.Response(200, content=FIXTURE.read_bytes())
+
+    accepted = exercise(backend, body={**BODY, "totalBudget": "2500001.00"})
+    rejected = exercise(backend, body={**BODY, "totalBudget": "2500000.99"})
+    assert accepted.json()["status"] == "OK"
+    assert rejected.json()["status"] == "NO_MATCH"
+    assert len(backend_requests) == 2
+    assert all("totalBudget" not in request.content.decode() for request in backend_requests)
+
+
+def test_json_required_amenity_is_enforced_and_not_forwarded_to_spring() -> None:
+    backend_requests = []
+
+    def backend(request: httpx.Request) -> httpx.Response:
+        backend_requests.append(request)
+        return httpx.Response(200, content=FIXTURE.read_bytes())
+
+    response = exercise(
+        backend,
+        body={**BODY, "requiredAmenities": ["ban công"], "preferences": {"amenities": ["wifi"]}},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "OK"
+    assert response.json()["recommendations"][0]["reasons"] == [
+            "Đã xác nhận tiện nghi bắt buộc: balcony"
+    ]
+    assert len(backend_requests) == 1
+    assert "requiredAmenities" not in backend_requests[0].content.decode()
+
+
+def test_json_unknown_or_conflicting_amenity_is_rejected_before_backend() -> None:
+    def unused(_: httpx.Request) -> httpx.Response:
+        pytest.fail("backend must not be called")
+
+    unknown = exercise(unused, body={**BODY, "requiredAmenities": ["hồ bơi"]})
+    conflict = exercise(unused, body={**BODY, "requiredAmenities": ["minibar"]})
+    assert unknown.status_code == conflict.status_code == 422
+    assert unknown.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert unknown.json()["error"]["details"] == [
+        {
+            "field": "body.requiredAmenities",
+            "type": "UNKNOWN_AMENITY",
+            "supportedCodes": sorted(
+                [
+                    "WIFI",
+                    "BALCONY",
+                    "MINIBAR",
+                    "TV",
+                    "AIR_CONDITIONING",
+                    "BATHTUB",
+                    "WATER_HEATER",
+                    "KITCHEN",
+                    "LIVING_ROOM",
+                    "KING_BED",
+                    "SOFA_BED",
+                ]
+            ),
+        }
+    ]
+    assert conflict.json()["error"]["details"] == [
+        {"field": "body.preferredAmenities", "type": "AMENITY_CONFLICT"}
+    ]
 
 
 def test_service_token_is_required_and_compared(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -135,13 +208,18 @@ def test_service_token_is_required_and_compared(monkeypatch: pytest.MonkeyPatch)
     [
         ({**BODY, "checkOutDate": "2026-11-10"}, HEADERS),
         ({**BODY, "hotelId": 99}, HEADERS),
-        ({"check_in_date": "2026-11-10", "check_out_date": "2026-11-12", "guest_count": 2}, HEADERS),
+        (
+            {"check_in_date": "2026-11-10", "check_out_date": "2026-11-12", "guest_count": 2},
+            HEADERS,
+        ),
         (BODY, {"Authorization": "Bearer test-service-token"}),
         (BODY, {**HEADERS, "X-Request-ID": "bad id"}),
     ],
 )
 def test_invalid_requests_have_safe_validation_envelopes(body, headers) -> None:
-    response = exercise(lambda _: pytest.fail("backend must not be called"), body=body, headers=headers)
+    response = exercise(
+        lambda _: pytest.fail("backend must not be called"), body=body, headers=headers
+    )
 
     assert response.status_code == 422
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
@@ -152,10 +230,15 @@ def test_invalid_requests_have_safe_validation_envelopes(body, headers) -> None:
     ("status", "expected_status", "expected_code"),
     [
         (400, 422, "BACKEND_REJECTED_REQUEST"),
+        (422, 422, "BACKEND_REJECTED_REQUEST"),
+        (401, 502, "BACKEND_UNAVAILABLE"),
+        (404, 502, "BACKEND_UNAVAILABLE"),
         (503, 502, "BACKEND_UNAVAILABLE"),
     ],
 )
-def test_backend_status_is_mapped_without_leaking_body(status, expected_status, expected_code) -> None:
+def test_backend_status_is_mapped_without_leaking_body(
+    status, expected_status, expected_code
+) -> None:
     response = exercise(lambda _: httpx.Response(status, text="private backend error"))
 
     assert response.status_code == expected_status

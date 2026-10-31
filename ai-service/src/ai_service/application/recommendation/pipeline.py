@@ -1,11 +1,15 @@
 """Deterministic hard-filtering and soft-scoring recommendation pipeline."""
 
-import unicodedata
 from collections.abc import Callable
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from ai_service.application.recommendation.amenities import (
+    AmenityStatus,
+    evidence_for,
+    resolve_criteria,
+    status_for,
+)
 from ai_service.application.recommendation.models import (
     RecommendationRequest,
     RecommendationResult,
@@ -13,6 +17,12 @@ from ai_service.application.recommendation.models import (
     RecommendationStatus,
     RecommendedRoom,
     SortBy,
+)
+from ai_service.application.recommendation.scoring import (
+    MultiCriteriaScorer,
+    RoomScorer,
+    ScoreEvaluation,
+    ScoringContext,
 )
 from ai_service.application.request_id import validate_request_id
 from ai_service.infrastructure.backend.errors import BackendInvalidResponseError
@@ -26,28 +36,6 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _normalize_amenity(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value)
-    return " ".join(normalized.casefold().split())
-
-
-def _requested_amenities(values: list[str]) -> set[str]:
-    return {normalized for value in values if (normalized := _normalize_amenity(value))}
-
-
-def _candidate_amenities(value: str | None) -> dict[str, str]:
-    if not value:
-        return {}
-
-    tokens: dict[str, str] = {}
-    for raw_token in value.split(","):
-        display_token = " ".join(raw_token.split())
-        normalized = _normalize_amenity(display_token)
-        if normalized:
-            tokens.setdefault(normalized, display_token)
-    return tokens
-
-
 class RecommendationPipeline:
     """Query live availability once, enforce hard constraints, then rank candidates."""
 
@@ -56,9 +44,11 @@ class RecommendationPipeline:
         backend_client: "BackendClient",
         *,
         clock: Callable[[], datetime] = _utc_now,
+        scorer: RoomScorer | None = None,
     ) -> None:
         self._backend_client = backend_client
         self._clock = clock
+        self._scorer = scorer or MultiCriteriaScorer()
 
     async def execute(
         self,
@@ -67,6 +57,9 @@ class RecommendationPipeline:
         request_id: str,
     ) -> RecommendationResult:
         request_id = validate_request_id(request_id)
+        required, preferred = resolve_criteria(
+            request.required_amenities, request.preferences.amenities
+        )
         candidates = await self._backend_client.find_available_rooms(
             request.availability_search(),
             request_id=request_id,
@@ -78,12 +71,13 @@ class RecommendationPipeline:
         eligible = [
             candidate
             for candidate in unique_candidates
-            if self._meets_hard_constraints(candidate, request)
+            if self._meets_hard_constraints(candidate, request, required)
         ]
-        recommendations = self._rank(eligible, request)
+        recommendations = self._rank(eligible, request, required, preferred)
         status = RecommendationStatus.OK if recommendations else RecommendationStatus.NO_MATCH
         return RecommendationResult(
             status=status,
+            scoringVersion=self._scorer.version,
             recommendations=recommendations,
             availabilityCheckedAt=self._clock(),
             requestId=request_id,
@@ -126,6 +120,7 @@ class RecommendationPipeline:
     def _meets_hard_constraints(
         candidate: AvailableRoomCandidate,
         request: RecommendationRequest,
+        required: set[str],
     ) -> bool:
         if candidate.room_type.capacity < request.guest_count:
             return False
@@ -136,16 +131,30 @@ class RecommendationPipeline:
             return False
         if request.min_price is not None and candidate.price_per_night < request.min_price:
             return False
-        return not (request.max_price is not None and candidate.price_per_night > request.max_price)
+        if request.max_price is not None and candidate.price_per_night > request.max_price:
+            return False
+        if request.total_budget is not None and candidate.total_room_charge > request.total_budget:
+            return False
+        if not required:
+            return True
+        evidence = evidence_for(candidate.room_type.amenities)
+        return all(status_for(evidence, code) is AmenityStatus.PRESENT for code in required)
 
-    @staticmethod
     def _rank(
+        self,
         candidates: list[AvailableRoomCandidate],
         request: RecommendationRequest,
+        required: set[str],
+        preferred: set[str],
     ) -> list[RecommendedRoom]:
-        requested = _requested_amenities(request.preferences.amenities)
+        if not candidates:
+            return []
+        context = ScoringContext.from_candidates(candidates)
         ranked = [
-            RecommendationPipeline._to_recommendation(candidate, requested)
+            self._to_recommendation(
+                candidate,
+                self._scorer.score(candidate, context, request, required, preferred),
+            )
             for candidate in candidates
         ]
         price_direction = -1 if request.sort_by is SortBy.PRICE_DESC else 1
@@ -161,13 +170,8 @@ class RecommendationPipeline:
     @staticmethod
     def _to_recommendation(
         candidate: AvailableRoomCandidate,
-        requested: set[str],
+        evaluation: ScoreEvaluation,
     ) -> RecommendedRoom:
-        available = _candidate_amenities(candidate.room_type.amenities)
-        matched = sorted(requested.intersection(available))
-        score = Decimal(len(matched)) / Decimal(len(requested)) if requested else Decimal("0")
-        reasons = [f"Exact amenity token matched: {available[item]}" for item in matched]
-
         return RecommendedRoom(
             roomId=candidate.room_id,
             roomNumber=candidate.room_number,
@@ -186,6 +190,9 @@ class RecommendationPipeline:
             totalRoomCharge=candidate.total_room_charge,
             depositPercentage=candidate.deposit_percentage,
             estimatedDeposit=candidate.estimated_deposit,
-            score=score,
-            reasons=reasons,
+            score=evaluation.score,
+            scoreBreakdown=evaluation.breakdown,
+            matchedPreferences=evaluation.matched,
+            unmatchedPreferences=evaluation.unmatched,
+            reasons=evaluation.reasons,
         )
