@@ -8,6 +8,8 @@ from typing import Annotated, Self
 import simplejson
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictInt, model_validator
 
+from ai_service.application.recommendation.amenities import resolve_criteria
+
 NonNegativeMoney = Annotated[Decimal, Field(ge=Decimal("0"))]
 PositiveInteger = Annotated[StrictInt, Field(gt=0)]
 TopK = Annotated[StrictInt, Field(ge=1, le=20)]
@@ -68,13 +70,21 @@ class RecommendationRequest(AvailabilitySearchRequest):
     model_config = ConfigDict(populate_by_name=False, validate_by_name=False, extra="forbid")
 
     preferences: RecommendationPreferences = Field(default_factory=RecommendationPreferences)
+    required_amenities: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(
+        default_factory=list, alias="requiredAmenities", max_length=20
+    )
     top_k: TopK = Field(default=5, alias="topK")
+
+    @model_validator(mode="after")
+    def validate_amenities(self) -> Self:
+        resolve_criteria(self.required_amenities, self.preferences.amenities)
+        return self
 
     def availability_search(self) -> AvailabilitySearchRequest:
         """Return only fields accepted by the authoritative backend search DTO."""
 
         return AvailabilitySearchRequest.model_validate(
-            self.model_dump(exclude={"preferences", "top_k"})
+            self.model_dump(exclude={"preferences", "required_amenities", "top_k"})
         )
 
 

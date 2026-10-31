@@ -88,8 +88,9 @@ The example abbreviates null state fields, empty `pending`, `pendingQuestion`, a
 fields; actual responses include the full
 `RecommendedRoom` contract. Money remains JSON numbers generated from `Decimal` values.
 
-Multiple rooms, a total-stay budget, and mandatory amenities return `UNSUPPORTED` rather than
-being silently relaxed. Room-type names are matched only against Spring's live room-type list.
+Multiple rooms and a total-stay budget return `UNSUPPORTED`. Required amenities are filtered
+using verified backend room-type text; unknown or conflicting names trigger clarification in
+conversation or HTTP 422 in the JSON route. Room-type names are matched only against Spring's live room-type list.
 The backend is queried for availability for every complete supported request.
 
 Provider or backend failures return separate technical HTTP errors. Missing Gemini configuration

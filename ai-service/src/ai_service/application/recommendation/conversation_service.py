@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 
 from pydantic import ValidationError
 
+from ai_service.application.recommendation.amenities import AmenityCriteriaError, resolve_criteria
 from ai_service.application.recommendation.conversation_models import (
     BudgetBasis,
     ConversationRequest,
@@ -379,6 +380,12 @@ class ConversationService:
 
         if state.pending:
             field = state.pending_question
+            if field in (SearchField.REQUIRED_AMENITIES, SearchField.PREFERRED_AMENITIES):
+                return respond(
+                    ConversationStatus.NEEDS_CLARIFICATION,
+                    "Tôi chưa xác nhận được tiện nghi này. Bạn hãy nhập lại toàn bộ danh sách muốn giữ, dùng tên cụ thể như Wi-Fi, ban công, minibar, TV, điều hòa, bồn tắm hoặc bếp.",
+                    [field],
+                )
             return respond(ConversationStatus.NEEDS_CLARIFICATION, FIELD_QUESTIONS[field], [field])
         if extracted.unsupported_intent:
             return respond(
@@ -394,10 +401,28 @@ class ConversationService:
                 ConversationStatus.UNSUPPORTED,
                 "Hiện chưa lọc theo tổng ngân sách toàn kỳ. Bạn có thể cho biết mức tối đa mỗi đêm.",
             )
-        if state.required_amenities:
+        try:
+            resolve_criteria(state.required_amenities, state.preferred_amenities)
+        except AmenityCriteriaError as exc:
+            field = SearchField(exc.field)
+            values = state.model_dump(by_alias=True)
+            original = values[field.value]
+            values[field.value] = []
+            values["pending"] = [
+                *state.pending,
+                PendingField(field=field, value=", ".join(original)),
+            ]
+            values["pendingQuestion"] = field
+            state = SearchState.model_validate(values)
+            detail = (
+                "Tên tiện nghi chưa có trong danh mục."
+                if exc.reason == "UNKNOWN"
+                else "Một tiện nghi đang được đánh dấu vừa bắt buộc vừa ưu tiên."
+            )
             return respond(
-                ConversationStatus.UNSUPPORTED,
-                "Hiện chưa bảo đảm tiện nghi bắt buộc. Bạn có thể đổi thành tiện nghi ưu tiên.",
+                ConversationStatus.NEEDS_CLARIFICATION,
+                f"{detail} Bạn hãy nhập lại toàn bộ danh sách tiện nghi muốn giữ hoặc xóa yêu cầu; các tên hỗ trợ gồm Wi-Fi, ban công, minibar, TV, điều hòa, bồn tắm và bếp.",
+                [field],
             )
         required = (
             (SearchField.CHECK_IN_DATE, state.check_in_date),
@@ -459,6 +484,7 @@ class ConversationService:
                 "minPrice": state.min_price,
                 "maxPrice": state.max_price,
                 "sortBy": state.sort_by,
+                "requiredAmenities": state.required_amenities,
                 "preferences": {"amenities": state.preferred_amenities},
             }
         )
@@ -466,9 +492,14 @@ class ConversationService:
             criteria, request_id=request_id
         )
         if result.status is RecommendationStatus.NO_MATCH:
+            reply = (
+                "Hiện không có phòng thỏa tất cả điều kiện, gồm cả tiện nghi bắt buộc đã xác nhận. Bạn có thể đổi tiện nghi, ngày hoặc ngân sách."
+                if state.required_amenities
+                else "Hiện không có phòng thỏa các điều kiện này. Bạn có thể đổi ngày hoặc ngân sách."
+            )
             return ConversationResponse(
                 status=ConversationStatus.NO_MATCH,
-                reply="Hiện không có phòng thỏa các điều kiện này. Bạn có thể đổi ngày hoặc ngân sách.",
+                reply=reply,
                 state=state,
                 clarificationFields=[],
                 result=result,
@@ -481,7 +512,9 @@ class ConversationService:
             if state.max_price is not None:
                 reasons.append("Giá mỗi đêm nằm trong mức tối đa đã chọn")
             reasons.extend(
-                reason.replace("Amenity preference matched: ", "Khớp tiện nghi ưu tiên: ")
+                reason.replace("Amenity preference matched: ", "Khớp tiện nghi ưu tiên: ").replace(
+                    "Required amenity verified: ", "Đã xác nhận tiện nghi bắt buộc: "
+                )
                 for reason in room.reasons
             )
             rooms.append(room.model_copy(update={"reasons": reasons}))

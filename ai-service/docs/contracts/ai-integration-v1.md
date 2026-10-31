@@ -10,6 +10,17 @@ or `-`). The browser demo calls them directly for local testing only.
 | `POST /api/v1/ai/recommendations` | Structured `RecommendationRequest` | `RecommendationResult` |
 | `POST /api/v1/ai/recommendations/conversation` | `{message, state}` | `ConversationResponse` |
 
+The JSON recommendation body adds optional top-level `requiredAmenities: string[]` (default
+`[]`, maximum 20 names of at most 100 characters). Existing bodies remain valid. The existing
+`preferences.amenities` list remains a ranking input only. Both lists use the same controlled
+Vietnamese/English amenity catalog and accentless aliases. An unknown name or a code in both
+lists returns `422 VALIDATION_ERROR` before querying Spring. A room passes all required codes
+only when its backend `roomType.amenities` text explicitly confirms them; absent and unknown
+evidence fail the hard filter. Preferred codes only affect score. Reasons quote the original
+backend amenity token; no model invents room amenities. See `recommendation-pipeline.md`.
+The 422 `error.details` names `body.requiredAmenities` or `body.preferredAmenities` with
+`UNKNOWN_AMENITY` (and `supportedCodes`) or `AMENITY_CONFLICT`; raw submitted names are not echoed.
+
 `message` is a nonblank Vietnamese search utterance, at most 2,000 characters. `state` is the
 previous `ConversationResponse.state` or `{}` on the first turn. Its optional fields are
 `checkInDate`, `checkOutDate`, `guestCount`, `roomCount`, `roomTypeId`, `roomTypeName`, `minPrice`,
@@ -25,7 +36,7 @@ pending values for that criterion. Caller state does not prove room availability
 |---|---|---|
 | `budget` | `amount` (decimal or null), `basis` (`PER_NIGHT`, `TOTAL_STAY`, or null) | Keep an amount until its basis is clear. A confirmed budget appears only as `maxPrice` or `totalBudget`. |
 | `date` | `field` (`checkInDate` or `checkOutDate`), `month`, `day` | Keep day/month without inventing a year. Month/day can be null when even those are unclear. |
-| `field` | `field`, `value` | Keep another unresolved criterion without applying it as a confirmed filter. |
+| `field` | `field`, `value` (at most 2,100 characters) | Keep another unresolved criterion, including the full requested amenity list, without applying it as a confirmed filter. |
 
 For example, after “ngân sách một triệu” the response state may contain
 `"pending":[{"kind":"budget","amount":1000000,"basis":null}]` and
@@ -42,7 +53,7 @@ The statuses are:
 | Status | Meaning | Backend availability call |
 |---|---|---|
 | `NEEDS_CLARIFICATION` | Missing or ambiguous critical input; unresolved values remain in `state.pending` | No |
-| `UNSUPPORTED` | Multiple rooms, total budget, mandatory amenity, or unrelated intent | No |
+| `UNSUPPORTED` | Multiple rooms, total budget, or unrelated intent | No |
 | `RECOMMENDED` | One or more current backend rooms match | Yes |
 | `NO_MATCH` | Complete criteria but no eligible backend room | Yes |
 

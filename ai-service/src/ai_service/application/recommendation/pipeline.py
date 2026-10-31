@@ -1,11 +1,16 @@
 """Deterministic hard-filtering and soft-scoring recommendation pipeline."""
 
-import unicodedata
 from collections.abc import Callable
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from ai_service.application.recommendation.amenities import (
+    AmenityStatus,
+    evidence_for,
+    resolve_criteria,
+    status_for,
+)
 from ai_service.application.recommendation.models import (
     RecommendationRequest,
     RecommendationResult,
@@ -24,28 +29,6 @@ if TYPE_CHECKING:
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _normalize_amenity(value: str) -> str:
-    normalized = unicodedata.normalize("NFKC", value)
-    return " ".join(normalized.casefold().split())
-
-
-def _requested_amenities(values: list[str]) -> set[str]:
-    return {normalized for value in values if (normalized := _normalize_amenity(value))}
-
-
-def _candidate_amenities(value: str | None) -> dict[str, str]:
-    if not value:
-        return {}
-
-    tokens: dict[str, str] = {}
-    for raw_token in value.split(","):
-        display_token = " ".join(raw_token.split())
-        normalized = _normalize_amenity(display_token)
-        if normalized:
-            tokens.setdefault(normalized, display_token)
-    return tokens
 
 
 class RecommendationPipeline:
@@ -67,6 +50,9 @@ class RecommendationPipeline:
         request_id: str,
     ) -> RecommendationResult:
         request_id = validate_request_id(request_id)
+        required, preferred = resolve_criteria(
+            request.required_amenities, request.preferences.amenities
+        )
         candidates = await self._backend_client.find_available_rooms(
             request.availability_search(),
             request_id=request_id,
@@ -78,9 +64,9 @@ class RecommendationPipeline:
         eligible = [
             candidate
             for candidate in unique_candidates
-            if self._meets_hard_constraints(candidate, request)
+            if self._meets_hard_constraints(candidate, request, required)
         ]
-        recommendations = self._rank(eligible, request)
+        recommendations = self._rank(eligible, request, required, preferred)
         status = RecommendationStatus.OK if recommendations else RecommendationStatus.NO_MATCH
         return RecommendationResult(
             status=status,
@@ -126,6 +112,7 @@ class RecommendationPipeline:
     def _meets_hard_constraints(
         candidate: AvailableRoomCandidate,
         request: RecommendationRequest,
+        required: set[str],
     ) -> bool:
         if candidate.room_type.capacity < request.guest_count:
             return False
@@ -136,16 +123,22 @@ class RecommendationPipeline:
             return False
         if request.min_price is not None and candidate.price_per_night < request.min_price:
             return False
-        return not (request.max_price is not None and candidate.price_per_night > request.max_price)
+        if request.max_price is not None and candidate.price_per_night > request.max_price:
+            return False
+        if not required:
+            return True
+        evidence = evidence_for(candidate.room_type.amenities)
+        return all(status_for(evidence, code) is AmenityStatus.PRESENT for code in required)
 
     @staticmethod
     def _rank(
         candidates: list[AvailableRoomCandidate],
         request: RecommendationRequest,
+        required: set[str],
+        preferred: set[str],
     ) -> list[RecommendedRoom]:
-        requested = _requested_amenities(request.preferences.amenities)
         ranked = [
-            RecommendationPipeline._to_recommendation(candidate, requested)
+            RecommendationPipeline._to_recommendation(candidate, required, preferred)
             for candidate in candidates
         ]
         price_direction = -1 if request.sort_by is SortBy.PRICE_DESC else 1
@@ -161,25 +154,22 @@ class RecommendationPipeline:
     @staticmethod
     def _to_recommendation(
         candidate: AvailableRoomCandidate,
-        requested: set[str],
+        required: set[str],
+        preferred: set[str],
     ) -> RecommendedRoom:
-        available = _candidate_amenities(candidate.room_type.amenities)
-        matched = {
-            preference: display
-            for preference in sorted(requested)
-            if (
-                display := next(
-                    (
-                        label
-                        for normalized, label in available.items()
-                        if normalized == preference or normalized.startswith(preference + " ")
-                    ),
-                    None,
-                )
-            )
-        }
-        score = Decimal(len(matched)) / Decimal(len(requested)) if requested else Decimal("0")
-        reasons = [f"Amenity preference matched: {label}" for label in matched.values()]
+        evidence = evidence_for(candidate.room_type.amenities)
+        matched = [
+            code
+            for code in sorted(preferred)
+            if status_for(evidence, code) is AmenityStatus.PRESENT
+        ]
+        score = Decimal(len(matched)) / Decimal(len(preferred)) if preferred else Decimal("0")
+        reasons = [
+            f"Required amenity verified: {evidence[code].raw_token}" for code in sorted(required)
+        ]
+        reasons.extend(
+            f"Amenity preference matched: {evidence[code].raw_token}" for code in matched
+        )
 
         return RecommendedRoom(
             roomId=candidate.room_id,

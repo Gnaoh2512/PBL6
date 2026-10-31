@@ -71,7 +71,7 @@ class PendingField(BaseModel):
 
     kind: Literal["field"] = "field"
     field: SearchField
-    value: str | None = Field(default=None, max_length=200)
+    value: str | None = Field(default=None, max_length=2100)
 
     @model_validator(mode="after")
     def supported_field(self) -> Self:

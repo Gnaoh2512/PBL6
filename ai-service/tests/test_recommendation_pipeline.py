@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 import simplejson
+from pydantic import ValidationError
 
 from ai_service.application.recommendation import (
     AvailabilitySearchRequest,
@@ -206,14 +207,70 @@ def test_amenity_prefixes_are_normalized_deduplicated_and_ground_reasons() -> No
 
 def test_amenity_prefix_requires_word_boundary() -> None:
     backend = StubBackendClient([candidate(1, amenities="Minibar, Wifi tốc độ cao")])
-    request = recommendation_request(preferences={"amenities": ["bar", "wifi"]})
+    with pytest.raises(ValidationError, match="Unknown amenity: bar"):
+        recommendation_request(preferences={"amenities": ["bar", "wifi"]})
+    assert backend.calls == []
+
+
+def test_required_amenity_filters_absent_unknown_and_unconfirmed_phrases() -> None:
+    backend = StubBackendClient(
+        [
+            candidate(1, amenities="WiFi, Ban công ngắm cảnh biển"),
+            candidate(2, amenities="WiFi, Không có ban công"),
+            candidate(3, amenities="WiFi"),
+            candidate(4, amenities=None),
+            candidate(5, amenities="WiFi, Ban công không có"),
+            candidate(6, amenities="WiFi, Ban công không rõ"),
+        ]
+    )
+    request = recommendation_request(
+        requiredAmenities=["BALCONY"], preferences={"amenities": ["wifi"]}
+    )
 
     result = run_pipeline(backend, request)
 
-    assert result.recommendations[0].score == Decimal("0.5")
+    assert [room.room_id for room in result.recommendations] == [1]
     assert result.recommendations[0].reasons == [
-        "Amenity preference matched: Wifi tốc độ cao"
+        "Required amenity verified: Ban công ngắm cảnh biển",
+        "Amenity preference matched: WiFi",
     ]
+
+
+def test_all_required_amenities_must_be_verified() -> None:
+    backend = StubBackendClient(
+        [
+            candidate(1, amenities="WiFi, Balcony"),
+            candidate(2, amenities="WiFi"),
+            candidate(3, amenities="Balcony"),
+        ]
+    )
+    result = run_pipeline(
+        backend,
+        recommendation_request(
+            requiredAmenities=["wi-fi", "ban cong"], preferences={"amenities": []}
+        ),
+    )
+    assert [room.room_id for room in result.recommendations] == [1]
+
+
+def test_alias_duplicates_do_not_inflate_preference_score() -> None:
+    backend = StubBackendClient([candidate(1, amenities="WiFi, Balcony")])
+    request = recommendation_request(
+        preferences={"amenities": ["wi-fi", "WIFI", "ban cong", "ban công", "minibar"]}
+    )
+    result = run_pipeline(backend, request)
+    assert result.recommendations[0].score == Decimal("2") / Decimal("3")
+    assert len(result.recommendations[0].reasons) == 2
+
+
+def test_negative_preference_does_not_score_or_generate_a_reason() -> None:
+    result = run_pipeline(
+        StubBackendClient([candidate(1, amenities="Không có ban công, WiFi")]),
+        recommendation_request(preferences={"amenities": ["balcony", "wifi"]}),
+    )
+    room = result.recommendations[0]
+    assert room.score == Decimal("0.5")
+    assert room.reasons == ["Amenity preference matched: WiFi"]
 
 
 def test_missing_amenities_and_no_preferences_give_equal_neutral_scores() -> None:

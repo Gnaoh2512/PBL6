@@ -31,6 +31,7 @@ Nếu khách thay số tiền đang chờ, SET budget với số mới. Nếu ch
 ghi budget vào ambiguities để hỏi số tiền, không âm thầm dùng số tiền cũ.
 Tiện nghi 'ưu tiên' dùng preferredAmenities; 'bắt buộc/phải có' dùng requiredAmenities.
 Danh sách tiện nghi trong value phân tách bằng dấu phẩy.
+Giữ tên tiện nghi khách đã nói, không tự thay bằng tên khác; server sẽ xác minh theo danh mục.
 Tên hạng phòng do khách nói dùng roomTypeName, không tự suy ra roomTypeId.
 Nếu khách yêu cầu hủy/đặt phòng, thanh toán, hỏi chính sách hoặc chức năng ngoài tìm phòng,
 đặt unsupportedIntent=true. Không trả lời câu hỏi của khách trong JSON.

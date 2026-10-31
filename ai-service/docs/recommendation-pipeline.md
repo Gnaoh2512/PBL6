@@ -11,7 +11,8 @@ FastAPI recommendation endpoint. This does not approve REC-01 product choices.
 3. Use only candidates from that response. Collapse model-equivalent duplicate
    `roomId` records; conflicting records for one `roomId` make the response invalid.
 4. Reject candidates with a non-available status, mismatched dates/night count, or negative
-   amounts. Defensively recheck capacity, optional room type, and inclusive per-night price bounds.
+   amounts. Defensively recheck capacity, optional room type, inclusive per-night price bounds,
+   and every `requiredAmenities` code against verified backend amenity evidence.
 5. Rank the remaining candidates by amenity preference score descending. For equal scores,
    use `sortBy` as a price tie-breaker: `PRICE_DESC` means per-night price descending;
    `PRICE_ASC` or omitted `sortBy` means per-night price ascending. If price also ties,
@@ -33,11 +34,20 @@ fixture use comma-separated items
 `ai-service/tests/fixtures/available_rooms_success.json`). The implementation therefore:
 
 - splits backend amenity text only on commas;
-- normalizes each complete token with Unicode NFKC, case folding, and collapsed whitespace;
-- removes duplicate requested tokens after the same normalization;
-- matches a full token or a prefix ending at a word boundary, so `ban công` matches
-  `Ban công ngắm cảnh biển` but `bar` does not match `Minibar`;
-- does not remove diacritics, translate, or generate synonyms.
+- normalizes NFKC/NFKD Unicode, case, whitespace and Vietnamese diacritics (`đ` included);
+- maps only explicit Vietnamese/English aliases and observed backend phrases to a catalog code;
+- counts each requested code once, including aliases such as `wi-fi`/`wifi` and `ban công`/`balcony`;
+- treats explicit negative phrases such as `Không có ban công` as `ABSENT`, an exact catalog
+  phrase as `PRESENT`, and missing, conflicting or unfamiliar text as `UNKNOWN`;
+- admits a room for a required code only when the evidence is `PRESENT`. A preferred code
+  contributes to score only when `PRESENT`. No LLM inference is used for room attributes.
+
+The controlled catalog currently covers Wi-Fi, balcony, minibar, TV, air conditioning, bathtub,
+water heater, kitchen, living room, king bed and sofa bed. Requests containing an unknown name
+or the same code in both required and preferred lists get HTTP 422 in the JSON route. The
+conversation route keeps the unresolved field in caller state and asks for a correction. The
+original backend `amenities` string remains in each room result and verified raw tokens appear
+in reasons. Empty or omitted `requiredAmenities` preserves the prior client behavior.
 
 For `R` distinct, non-blank requested amenities and `M` matches:
 

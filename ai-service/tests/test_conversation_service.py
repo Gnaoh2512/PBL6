@@ -221,7 +221,6 @@ def test_relative_dates_use_injected_reference_day() -> None:
     [
         change("roomCount", "2"),
         change("totalBudget", "1000000"),
-        change("requiredAmenities", "balcony"),
     ],
 )
 def test_unsupported_constraints_are_not_silently_dropped(extra) -> None:
@@ -233,6 +232,72 @@ def test_unsupported_constraints_are_not_silently_dropped(extra) -> None:
     backend = FakeBackend()
     response = run(backend, FakeExtractor(output(*changes)))
     assert response.status is ConversationStatus.UNSUPPORTED
+    assert backend.searches == []
+
+
+def test_required_amenity_uses_same_filter_as_json_pipeline() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend,
+        FakeExtractor(full_output(change("requiredAmenities", "ban cong"))),
+    )
+    assert response.status is ConversationStatus.RECOMMENDED
+    assert len(backend.searches) == 1
+    assert response.result.recommendations[0].room_type.amenities == "minibar, balcony"
+    assert any("balcony" in reason for reason in response.result.recommendations[0].reasons)
+
+
+def test_required_amenity_without_backend_evidence_returns_no_match() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend,
+        FakeExtractor(full_output(change("requiredAmenities", "bồn tắm"))),
+    )
+    assert response.status is ConversationStatus.NO_MATCH
+    assert response.result.recommendations == []
+    assert "tiện nghi bắt buộc" in response.reply
+    assert len(backend.searches) == 1
+
+
+def test_unknown_amenity_is_pending_until_corrected_or_cleared() -> None:
+    backend = FakeBackend()
+    first = run(backend, FakeExtractor(full_output(change("requiredAmenities", "minibar, hồ bơi"))))
+    assert first.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert first.state.pending_question.value == "requiredAmenities"
+    assert first.state.pending[0].value == "minibar, hồ bơi"
+    assert backend.searches == []
+    again = run(backend, FakeExtractor(output()), state=first.state, message="Tôi muốn phòng đẹp")
+    assert again.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert backend.searches == []
+    corrected = run(
+        backend,
+        FakeExtractor(output(change("requiredAmenities", "minibar, ban công"))),
+        state=again.state,
+    )
+    assert corrected.status is ConversationStatus.RECOMMENDED
+    assert len(backend.searches) == 1
+    cleared = run(
+        backend,
+        FakeExtractor(output(change("requiredAmenities", action="CLEAR"))),
+        state=first.state,
+    )
+    assert cleared.state.required_amenities == []
+    assert cleared.state.pending == []
+
+
+def test_conflicting_required_and_preferred_amenity_asks_without_search() -> None:
+    backend = FakeBackend()
+    response = run(
+        backend,
+        FakeExtractor(
+            full_output(
+                change("requiredAmenities", "ban công"),
+                change("preferredAmenities", "balcony"),
+            )
+        ),
+    )
+    assert response.status is ConversationStatus.NEEDS_CLARIFICATION
+    assert response.state.pending_question.value == "preferredAmenities"
     assert backend.searches == []
 
 

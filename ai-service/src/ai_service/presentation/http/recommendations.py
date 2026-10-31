@@ -11,6 +11,7 @@ from fastapi.responses import Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from ai_service.application.recommendation import RecommendationRequest, RecommendationResult
+from ai_service.application.recommendation.amenities import CATALOG, AmenityCriteriaError
 from ai_service.application.recommendation.pipeline import RecommendationPipeline
 from ai_service.application.request_id import validate_request_id
 from ai_service.config import Settings, get_settings
@@ -69,10 +70,21 @@ def error_response(
 async def validation_error_response(request: Request, exc: RequestValidationError) -> Response:
     """Report field errors without echoing request values or provider internals."""
 
-    details = [
-        {"field": ".".join(str(part) for part in error["loc"]), "type": error["type"]}
-        for error in exc.errors()
-    ]
+    details = []
+    for error in exc.errors():
+        cause = error.get("ctx", {}).get("error")
+        if isinstance(cause, AmenityCriteriaError):
+            detail = {
+                "field": f"body.{cause.field}",
+                "type": "UNKNOWN_AMENITY" if cause.reason == "UNKNOWN" else "AMENITY_CONFLICT",
+            }
+            if cause.reason == "UNKNOWN":
+                detail["supportedCodes"] = sorted(CATALOG)
+            details.append(detail)
+        else:
+            details.append(
+                {"field": ".".join(str(part) for part in error["loc"]), "type": error["type"]}
+            )
     return error_response(
         status_code=422,
         code="VALIDATION_ERROR",
@@ -93,9 +105,7 @@ async def api_error_response(request: Request, exc: ApiError) -> Response:
 
 def require_service_token(
     settings: Annotated[Settings, Depends(get_settings)],
-    credentials: Annotated[
-        HTTPAuthorizationCredentials | None, Depends(service_bearer)
-    ],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(service_bearer)],
 ) -> None:
     expected = settings.ai_service_auth_token
     if expected is None or not expected.get_secret_value():
@@ -125,12 +135,14 @@ def map_backend_error(exc: BackendClientError) -> ApiError:
 @router.post(
     "/recommendations",
     response_model=RecommendationResult,
-    responses={401: {"description": "Invalid service token"},
-               413: {"description": "Request body exceeds 16 KiB"},
-               422: {"description": "Invalid request"},
-               502: {"description": "Backend unavailable"},
-               503: {"description": "Service not configured or ready"},
-               504: {"description": "Backend timeout"}},
+    responses={
+        401: {"description": "Invalid service token"},
+        413: {"description": "Request body exceeds 16 KiB"},
+        422: {"description": "Invalid request"},
+        502: {"description": "Backend unavailable"},
+        503: {"description": "Service not configured or ready"},
+        504: {"description": "Backend timeout"},
+    },
 )
 async def recommend_rooms(
     payload: RecommendationRequest,

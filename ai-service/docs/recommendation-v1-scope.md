@@ -172,7 +172,8 @@ creation succeeds.
 
 ## 8. Soft preferences and ranking
 
-V1 soft input is limited to `preferences.amenities: string[]`.
+Soft input is `preferences.amenities: string[]`; optional top-level `requiredAmenities: string[]`
+is a hard constraint. Both default to empty lists for existing clients.
 
 The current API accepts at most 20 amenity strings, each at most 100 characters. These are
 operational input limits; requests beyond them return 422.
@@ -182,8 +183,9 @@ operational input limits; requests beyond them return 422.
 - Amenity matching may change ordering but may not restore a room removed by hard filtering.
 - Normalize case/whitespace/diacritics consistently and document the chosen matching method.
 - A reason must be derived from the candidate's actual amenities/description.
-- Because amenities are not normalized entities, an unmatched text preference produces no score;
-  it does not exclude the room.
+- The controlled catalog maps known aliases to codes. Unknown request names return 422 or
+  prompt clarification. Missing backend evidence cannot satisfy a required code; it contributes
+  no preference score.
 - The conversation endpoint parses Vietnamese into validated criteria; typed hard constraints
   and the deterministic scorer remain authoritative.
 
