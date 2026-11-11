@@ -5,7 +5,7 @@ const BACKEND_PORT = '9090';
 
 // Ép địa chỉ thủ công nếu cần (vd: 'http://172.31.98.73:9090'). Đặt thành null để dùng tự động.
 // Đặt IP backend ở đây nếu web không tự detect được.
-const MANUAL_OVERRIDE: string | null = 'http://192.168.1.57:9090';
+const MANUAL_OVERRIDE: string | null = 'http://192.168.1.11:9090';
 
 const getApiBaseUrl = (): string => {
   if (MANUAL_OVERRIDE) return MANUAL_OVERRIDE;

@@ -98,11 +98,15 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfYear = LocalDateTime.of(now.getYear(), 1, 1, 0, 0);
         LocalDateTime startOfMonth = LocalDateTime.of(now.getYear(), now.getMonthValue(), 1, 0, 0);
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
 
         return eligibleBenefits.stream().map(b -> {
             Integer remaining = null;
             if (b.getQuota() != null) {
-                LocalDateTime periodStart = "MONTH".equalsIgnoreCase(b.getPeriodType()) ? startOfMonth : startOfYear;
+                String periodType = b.getPeriodType();
+                LocalDateTime periodStart = "DAY".equalsIgnoreCase(periodType) ? startOfDay
+                        : "MONTH".equalsIgnoreCase(periodType) ? startOfMonth
+                        : startOfYear;
                 long used = benefitRedemptionRepository.countByCustomer_CustomerIdAndTierBenefit_TierBenefitIdAndRedeemedAtAfter(
                         customer.getCustomerId(), b.getTierBenefitId(), periodStart);
                 remaining = Math.max(0, b.getQuota() - (int) used);
@@ -191,7 +195,20 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         evaluateAndUpgradeTier(loyalty);
         customerLoyaltyRepository.save(loyalty);
 
-        return getProfile(customer.getEmail() != null ? customer.getEmail() : adminUsername);
+        return LoyaltyProfileResponse.builder()
+                .customerId(customer.getCustomerId())
+                .fullName(customer.getFullName())
+                .email(customer.getEmail())
+                .phone(customer.getPhone())
+                .tierCode(loyalty.getTier().getTierCode())
+                .tierName(loyalty.getTier().getTierName())
+                .tierLevel(loyalty.getTier().getTierLevel())
+                .currentScore(loyalty.getTotalScore())
+                .totalStayDays(loyalty.getTotalStayDays())
+                .totalSpent(loyalty.getTotalSpent())
+                .tierUpdatedAt(loyalty.getTierUpdatedAt())
+                .memberSince(loyalty.getJoinedAt())
+                .build();
     }
 
     @Override

@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap");
+
 /* ============================================
    Hotel California — Design System Tokens & Base
    ============================================ */
@@ -87,14 +89,6 @@
 
 button {
   cursor: pointer;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  :root {
-    --hc-duration-fast: 0ms;
-    --hc-duration-normal: 0ms;
-    --hc-duration-slow: 0ms;
-  }
 }
 
 /* ── Reset & Base ── */
@@ -1421,5 +1415,125 @@ a:hover {
   .hc-grid-3,
   .hc-grid-4 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Compact authenticated/public header used by the booking flow only. */
+.hc-navbar-compact {
+  height: 72px;
+}
+
+.hc-navbar-compact .hc-container {
+  gap: var(--hc-space-3);
+}
+
+.hc-navbar-compact .hc-navbar-brand {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.hc-navbar-compact .hc-navbar-actions {
+  min-width: 0;
+  flex: 0 0 auto;
+}
+
+.hc-navbar-compact .hc-navbar-auth-actions,
+.hc-navbar-compact .hc-navbar-user-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--hc-space-2);
+  min-width: 0;
+}
+
+.hc-navbar-compact .hc-navbar-user-actions .hc-user-badge {
+  max-width: 190px;
+  min-width: 0;
+}
+
+.hc-navbar-compact .hc-navbar-user-actions .hc-user-badge span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .hc-navbar-compact {
+    height: 64px;
+  }
+
+  .hc-navbar-compact .hc-container {
+    padding-right: var(--hc-space-4);
+    padding-left: var(--hc-space-4);
+    gap: var(--hc-space-2);
+  }
+
+  .hc-navbar-compact .hc-navbar-brand {
+    gap: var(--hc-space-2);
+    flex: 1 1 0;
+    font-size: var(--hc-text-lg);
+    white-space: nowrap;
+  }
+
+  .hc-navbar-compact .hc-brand-logo {
+    width: 30px;
+    height: 28px;
+  }
+
+  .hc-navbar-compact .hc-navbar-actions {
+    gap: 0;
+  }
+
+  .hc-navbar-compact .hc-navbar-auth-actions {
+    gap: 6px;
+  }
+
+  .hc-navbar-compact .hc-navbar-auth-actions .hc-btn {
+    min-height: 36px;
+    padding: 6px 9px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .hc-navbar-compact .hc-navbar-user-actions {
+    gap: 6px;
+  }
+
+  .hc-navbar-compact .hc-navbar-user-actions .hc-user-badge {
+    max-width: 112px;
+    padding: 6px 8px;
+    font-size: var(--hc-text-xs);
+  }
+
+  .hc-navbar-compact .hc-navbar-user-actions > .hc-btn {
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hc-navbar-compact .hc-container {
+    padding-right: var(--hc-space-3);
+    padding-left: var(--hc-space-3);
+    gap: 6px;
+  }
+
+  .hc-navbar-compact .hc-navbar-brand {
+    gap: 6px;
+    font-size: var(--hc-text-md);
+  }
+
+  .hc-navbar-compact .hc-brand-logo {
+    width: 27px;
+    height: 26px;
+  }
+
+  .hc-navbar-compact .hc-navbar-auth-actions {
+    gap: 4px;
+  }
+
+  .hc-navbar-compact .hc-navbar-auth-actions .hc-btn {
+    padding-right: 7px;
+    padding-left: 7px;
+    font-size: 10px;
   }
 }

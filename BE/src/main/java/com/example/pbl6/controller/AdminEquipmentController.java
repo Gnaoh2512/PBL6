@@ -11,12 +11,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/admin/equipment")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
 public class AdminEquipmentController {
+
+    private static final Set<String> VALID_STATUSES = Set.of("WORKING", "BROKEN", "UNDER_REPAIR", "RETIRED");
 
     private final EquipmentService equipmentService;
 
@@ -48,6 +51,28 @@ public class AdminEquipmentController {
     ) {
         EquipmentResponse response = equipmentService.updateEquipment(id, request);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật thiết bị thành công", response));
+    }
+
+    // The admin UI calls PATCH /api/admin/equipment/{id}/status?status=BROKEN
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<EquipmentResponse>> updateEquipmentStatus(
+            @PathVariable Integer id,
+            @RequestParam String status
+    ) {
+        String normalized = status == null ? "" : status.trim().toUpperCase();
+        if (!VALID_STATUSES.contains(normalized)) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Trạng thái không hợp lệ: " + status));
+        }
+        EquipmentResponse current = equipmentService.getEquipmentById(id);
+        EquipmentRequest request = EquipmentRequest.builder()
+                .roomId(current.getRoomId())
+                .equipmentName(current.getEquipmentName())
+                .serialNumber(current.getSerialNumber())
+                .status(normalized)
+                .note(current.getNote())
+                .build();
+        EquipmentResponse updated = equipmentService.updateEquipment(id, request);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái thiết bị thành công", updated));
     }
 
     @DeleteMapping("/{id}")

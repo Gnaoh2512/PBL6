@@ -201,7 +201,7 @@ export default function BookingPage() {
       nationality: nationality || "Việt Nam",
       idType,
       idNumber: idNumber.trim() || null,
-      voucherCode: appliedVoucher ? (appliedVoucher.voucherCode || appliedVoucher.code) : (voucherCodeInput.trim().toUpperCase() || null),
+      voucherCode: appliedVoucher ? appliedVoucher.voucherCode || appliedVoucher.code : voucherCodeInput.trim().toUpperCase() || null,
       note: note.trim() || null,
     };
 
@@ -241,7 +241,7 @@ export default function BookingPage() {
 
   return (
     <>
-      <Navbar hideLinks />
+      <Navbar hideLinks compact />
 
       <main className="hc-page booking-experience">
         <div className="hc-container" ref={containerRef}>
@@ -477,15 +477,17 @@ export default function BookingPage() {
                       </button>
                     </div>
                     {appliedVoucher && (
-<div className="bk-voucher-applied" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div className="bk-voucher-applied bk-voucher-applied-row">
                         <span>
                           <i className="bi bi-check-circle-fill"></i> {appliedVoucher.voucherName} (-{formatVND(appliedVoucher.discountAmount)})
                         </span>
                         <button
                           type="button"
-                          className="hc-btn hc-btn-outline hc-btn-sm"
-                          style={{ padding: "2px 8px", fontSize: "11px", color: "var(--hc-error)", borderColor: "var(--hc-error)" }}
-                          onClick={() => { setAppliedVoucher(null); setVoucherCodeInput(""); }}
+                          className="hc-btn hc-btn-outline hc-btn-sm bk-voucher-remove"
+                          onClick={() => {
+                            setAppliedVoucher(null);
+                            setVoucherCodeInput("");
+                          }}
                           title="Hủy mã ưu đãi"
                         >
                           Hủy dùng
