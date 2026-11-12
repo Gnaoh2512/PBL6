@@ -8,9 +8,14 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
- "build-prod": "npm run build && if not exist ..\\BE\\src\\main\\resources\\static mkdir ..\\BE\\src\\main\\resources\\static && xcopy /E /I /Y dist\\* ..\\BE\\src\\main\\resources\\static\\"
+    "build-prod": "npm run build && if not exist ..\\BE\\src\\main\\resources\\static mkdir ..\\BE\\src\\main\\resources\\static && xcopy /E /I /Y dist\\* ..\\BE\\src\\main\\resources\\static\\"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.22",
+    "@fullcalendar/daygrid": "^6.1.22",
+    "@fullcalendar/interaction": "^6.1.22",
+    "@fullcalendar/react": "^7.1.5",
+    "@fullcalendar/timegrid": "^6.1.22",
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.2",
     "react": "^19.2.8",
