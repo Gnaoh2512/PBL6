@@ -4,24 +4,31 @@ import com.example.pbl6.dto.servicerequest.CreateServiceRequestDto;
 import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.Booking;
+import com.example.pbl6.entity.BookingRoom;
 import com.example.pbl6.entity.Customer;
 import com.example.pbl6.entity.Room;
 import com.example.pbl6.entity.ServiceRequest;
+import com.example.pbl6.entity.ServiceUsage;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
 import com.example.pbl6.repository.BookingRepository;
+import com.example.pbl6.repository.BookingRoomRepository;
 import com.example.pbl6.repository.CustomerRepository;
 import com.example.pbl6.repository.InvoiceRepository;
 import com.example.pbl6.repository.RoomRepository;
 import com.example.pbl6.repository.ServiceRepository;
 import com.example.pbl6.repository.ServiceRequestRepository;
+import com.example.pbl6.repository.ServiceUsageRepository;
+import com.example.pbl6.service.financial.FinancialCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,11 +39,14 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private final ServiceRequestRepository serviceRequestRepository;
     private final BookingRepository bookingRepository;
+    private final BookingRoomRepository bookingRoomRepository;
     private final RoomRepository roomRepository;
     private final ServiceRepository serviceRepository;
     private final AccountRepository accountRepository;
     private final CustomerRepository customerRepository;
     private final InvoiceRepository invoiceRepository;
+    private final ServiceUsageRepository serviceUsageRepository;
+    private final FinancialCalculator financialCalculator;
     private final AuditLogService auditLogService;
 
     @Override
@@ -104,12 +114,13 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
 
-        if (!"PENDING".equalsIgnoreCase(request.getStatus())) {
-            throw new IllegalStateException("Chỉ có thể hủy yêu cầu khi đang ở trạng thái PENDING");
+        if ("COMPLETED".equalsIgnoreCase(request.getStatus())) {
+            throw new IllegalStateException("Không thể hủy yêu cầu dịch vụ đã hoàn tất");
         }
 
         request.setStatus("CANCELED");
         ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "CANCELED");
 
         auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hủy yêu cầu dịch vụ #" + requestId + " bởi " + username);
@@ -118,13 +129,35 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ServiceRequestResponse> getAllRequests(String status) {
-        List<ServiceRequest> list = (status != null && !status.isBlank())
-                ? serviceRequestRepository.findByStatus(status.toUpperCase())
-                : serviceRequestRepository.findAll();
+        try {
+            syncServiceUsagesToRequests();
+        } catch (Exception e) {
+            log.warn("Không thể đồng bộ ServiceUsage sang ServiceRequest: {}", e.getMessage());
+        }
+
+        List<ServiceRequest> list;
+        if (status != null && !status.isBlank()) {
+            String upperStatus = status.trim().toUpperCase();
+            if ("DELIVERING".equalsIgnoreCase(upperStatus)) {
+                list = serviceRequestRepository.findAll().stream()
+                        .filter(r -> "DELIVERING".equalsIgnoreCase(r.getStatus()) || "IN_PROGRESS".equalsIgnoreCase(r.getStatus()))
+                        .collect(Collectors.toList());
+            } else {
+                list = serviceRequestRepository.findByStatus(upperStatus);
+            }
+        } else {
+            list = serviceRequestRepository.findAll();
+        }
 
         return list.stream()
+                .sorted((a, b) -> {
+                    if (a.getServiceRequestId() != null && b.getServiceRequestId() != null) {
+                        return b.getServiceRequestId().compareTo(a.getServiceRequestId());
+                    }
+                    return 0;
+                })
                 .map(ServiceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -135,15 +168,21 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
 
-        Account staff = accountRepository.findByUsername(staffUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên: " + staffUsername));
+        Account staff = null;
+        if (StringUtils.hasText(staffUsername)) {
+            staff = accountRepository.findByUsername(staffUsername).orElse(null);
+        }
 
-        request.setAssignedTo(staff);
-        request.setStatus("IN_PROGRESS");
+        if (staff != null) {
+            request.setAssignedTo(staff);
+        }
+        request.setStatus("DELIVERING");
         ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "DELIVERING");
 
+        String staffDisplay = staff != null ? (staff.getFullName() + " (" + staffUsername + ")") : staffUsername;
         auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
-                "Nhân viên " + staff.getFullName() + " (" + staffUsername + ") tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
+                "Nhân viên " + staffDisplay + " tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
 
         return ServiceRequestResponse.fromEntity(saved);
     }
@@ -153,6 +192,10 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     public ServiceRequestResponse completeRequest(Integer requestId, String staffUsername) {
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
+
+        if (request.getAssignedTo() == null && StringUtils.hasText(staffUsername)) {
+            accountRepository.findByUsername(staffUsername).ifPresent(request::setAssignedTo);
+        }
 
         request.setStatus("COMPLETED");
         request.setCompletedAt(LocalDateTime.now());
@@ -165,10 +208,174 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
 
         ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "COMPLETED");
 
         auditLogService.log("YÊU CẦU DỊCH VỤ", "COMPLETE", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " bởi nhân viên " + staffUsername);
 
         return ServiceRequestResponse.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse updateStatus(Integer requestId, String newStatus, String staffUsername) {
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
+
+        String upper = (newStatus != null && !newStatus.isBlank()) ? newStatus.trim().toUpperCase() : "PENDING";
+        request.setStatus(upper);
+
+        if (StringUtils.hasText(staffUsername) && request.getAssignedTo() == null) {
+            accountRepository.findByUsername(staffUsername).ifPresent(request::setAssignedTo);
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(upper)) {
+            request.setCompletedAt(LocalDateTime.now());
+            if (request.getInvoice() == null && request.getBooking() != null) {
+                invoiceRepository.findByBooking_BookingId(request.getBooking().getBookingId()).stream()
+                        .findFirst()
+                        .ifPresent(request::setInvoice);
+            }
+        }
+
+        ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, upper);
+
+        auditLogService.log("YÊU CẦU DỊCH VỤ", "UPDATE_STATUS", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Đổi trạng thái yêu cầu #" + requestId + " sang " + upper + " bởi " + staffUsername);
+
+        return ServiceRequestResponse.fromEntity(saved);
+    }
+
+    private void syncServiceUsagesToRequests() {
+        List<ServiceUsage> usages = serviceUsageRepository.findAll();
+        List<ServiceRequest> existingRequests = serviceRequestRepository.findAll();
+
+        for (ServiceUsage u : usages) {
+            if (u.getBooking() == null || u.getService() == null) continue;
+
+            boolean exists = existingRequests.stream().anyMatch(r -> {
+                try {
+                    return r.getBooking() != null && u.getBooking() != null
+                            && r.getBooking().getBookingId().equals(u.getBooking().getBookingId())
+                            && r.getService() != null && u.getService() != null
+                            && r.getService().getServiceId().equals(u.getService().getServiceId());
+                } catch (Exception ignored) {
+                    return false;
+                }
+            });
+
+            if (!exists) {
+                Room room = null;
+                List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(u.getBooking().getBookingId());
+                for (BookingRoom br : bookingRooms) {
+                    if (br.getRoom() != null) {
+                        room = br.getRoom();
+                        break;
+                    }
+                }
+                if (room == null) {
+                    room = roomRepository.findAll().stream().findFirst().orElse(null);
+                }
+
+                Customer customer = u.getBooking().getCustomer();
+                if (customer == null) {
+                    customer = customerRepository.findAll().stream().findFirst().orElse(null);
+                }
+
+                if (room != null && customer != null) {
+                    int qty = u.getQuantity() != null && u.getQuantity() > 0 ? u.getQuantity() : 1;
+                    BigDecimal fee = u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO;
+                    String initialStatus = (u.getStatus() != null && !u.getStatus().isBlank()) ? u.getStatus().toUpperCase() : "PENDING";
+                    if ("CHARGED_TO_ROOM".equalsIgnoreCase(initialStatus)) {
+                        initialStatus = "PENDING";
+                    }
+
+                    ServiceRequest req = ServiceRequest.builder()
+                            .booking(u.getBooking())
+                            .room(room)
+                            .service(u.getService())
+                            .customer(customer)
+                            .quantity(qty)
+                            .feeAmount(fee)
+                            .status(initialStatus)
+                            .note("Yêu cầu dịch vụ phòng")
+                            .invoice(u.getInvoice())
+                            .requestedAt(u.getUsedAt() != null ? u.getUsedAt() : LocalDateTime.now())
+                            .build();
+
+                    ServiceRequest saved = serviceRequestRepository.save(req);
+                    existingRequests.add(saved);
+                    log.info("Tự động đồng bộ ServiceUsage #{} sang ServiceRequest #{}", u.getUsageId(), saved.getServiceRequestId());
+                }
+            }
+        }
+    }
+
+    private void updateMatchingServiceUsageStatus(ServiceRequest req, String status) {
+        try {
+            if (req.getBooking() != null && req.getService() != null) {
+                List<ServiceUsage> usages = serviceUsageRepository.findByBooking_BookingId(req.getBooking().getBookingId());
+                ServiceUsage target = null;
+                for (ServiceUsage u : usages) {
+                    if (u.getService() != null && u.getService().getServiceId().equals(req.getService().getServiceId())
+                            && !"SETTLED".equalsIgnoreCase(u.getStatus())) {
+                        if (!status.equalsIgnoreCase(u.getStatus())) {
+                            target = u;
+                            break;
+                        }
+                    }
+                }
+                if (target == null && !usages.isEmpty()) {
+                    for (ServiceUsage u : usages) {
+                        if (u.getService() != null && u.getService().getServiceId().equals(req.getService().getServiceId())) {
+                            target = u;
+                            break;
+                        }
+                    }
+                }
+                if (target != null) {
+                    target.setStatus(status);
+                    serviceUsageRepository.save(target);
+                    log.info("Đã đồng bộ ServiceUsage #{} sang trạng thái {}", target.getUsageId(), status);
+                    recalculateActiveInvoice(req.getBooking());
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Không thể cập nhật ServiceUsage đồng bộ: {}", e.getMessage());
+        }
+    }
+
+    private void recalculateActiveInvoice(Booking booking) {
+        if (booking == null) return;
+        try {
+            List<com.example.pbl6.entity.Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
+            com.example.pbl6.entity.Invoice activeInvoice = invoices.stream()
+                    .filter(inv -> !"CANCELED".equalsIgnoreCase(inv.getStatus()))
+                    .findFirst()
+                    .orElse(null);
+            if (activeInvoice != null) {
+                List<ServiceUsage> usages = serviceUsageRepository.findByBooking_BookingId(booking.getBookingId());
+                BigDecimal activeServiceCharge = usages.stream()
+                        .filter(u -> !"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus()))
+                        .map(u -> u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                activeInvoice.setServiceCharge(activeServiceCharge);
+                BigDecimal roomCharge = activeInvoice.getRoomCharge() != null ? activeInvoice.getRoomCharge() : BigDecimal.ZERO;
+                BigDecimal subtotal = roomCharge.add(activeServiceCharge);
+                BigDecimal tax = financialCalculator.calculateTax(subtotal);
+                activeInvoice.setTaxAmount(tax);
+
+                BigDecimal depositApplied = activeInvoice.getDepositApplied() != null ? activeInvoice.getDepositApplied() : BigDecimal.ZERO;
+                BigDecimal discount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal finalTotal = subtotal.add(tax).subtract(discount).subtract(depositApplied);
+                activeInvoice.setTotalAmount(finalTotal.compareTo(BigDecimal.ZERO) > 0 ? finalTotal : BigDecimal.ZERO);
+                invoiceRepository.save(activeInvoice);
+                log.info("Đã tính lại Invoice #{} sau khi cập nhật dịch vụ. Phí dịch vụ: {}", activeInvoice.getInvoiceNumber(), activeServiceCharge);
+            }
+        } catch (Exception e) {
+            log.warn("Lỗi tính lại Invoice: {}", e.getMessage());
+        }
     }
 }

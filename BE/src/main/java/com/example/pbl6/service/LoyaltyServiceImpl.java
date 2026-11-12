@@ -29,6 +29,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
     private final BenefitRedemptionRepository benefitRedemptionRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
+    private final BookingRepository bookingRepository;
 
     @Override
     @Transactional
@@ -113,6 +114,58 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             }
             return TierBenefitResponse.fromEntity(b, remaining);
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public TierBenefitResponse redeemBenefit(RedeemBenefitRequest req, String username) {
+        Customer customer = getCustomerByUsername(username);
+        CustomerLoyalty loyalty = getOrCreateLoyalty(customer);
+
+        TierBenefit benefit = tierBenefitRepository.findById(req.getTierBenefitId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đặc quyền: " + req.getTierBenefitId()));
+
+        if (Boolean.FALSE.equals(benefit.getIsActive())) {
+            throw new IllegalStateException("Đặc quyền này hiện đang tạm ngưng áp dụng");
+        }
+
+        if (loyalty.getTier() != null && loyalty.getTier().getTierLevel() < benefit.getTier().getTierLevel()) {
+            throw new IllegalArgumentException("Hạng thành viên của bạn chưa đủ điều kiện sử dụng đặc quyền này");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        String periodType = benefit.getPeriodType();
+        LocalDateTime periodStart = "DAY".equalsIgnoreCase(periodType) ? now.toLocalDate().atStartOfDay()
+                : "MONTH".equalsIgnoreCase(periodType) ? LocalDateTime.of(now.getYear(), now.getMonthValue(), 1, 0, 0)
+                : LocalDateTime.of(now.getYear(), 1, 1, 0, 0);
+
+        long used = benefitRedemptionRepository.countByCustomer_CustomerIdAndTierBenefit_TierBenefitIdAndRedeemedAtAfter(
+                customer.getCustomerId(), benefit.getTierBenefitId(), periodStart);
+
+        if (benefit.getQuota() != null && used >= benefit.getQuota()) {
+            throw new IllegalStateException("Bạn đã sử dụng hết hạn mức ưu đãi này trong kỳ hiện tại");
+        }
+
+        Booking booking = null;
+        if (req.getBookingId() != null) {
+            booking = bookingRepository.findById(req.getBookingId()).orElse(null);
+        } else if (req.getBookingCode() != null && !req.getBookingCode().isBlank()) {
+            booking = bookingRepository.findByBookingCode(req.getBookingCode().trim().toUpperCase()).orElse(null);
+        }
+
+        BenefitRedemption redemption = BenefitRedemption.builder()
+                .customer(customer)
+                .tierBenefit(benefit)
+                .booking(booking)
+                .valueAmount(benefit.getDiscountPercent() != null ? benefit.getDiscountPercent() : BigDecimal.ZERO)
+                .note(req.getNote())
+                .build();
+        benefitRedemptionRepository.save(redemption);
+
+        log.info("Khách hàng {} đã sử dụng đặc quyền #{} ({})", username, benefit.getTierBenefitId(), benefit.getBenefitName());
+
+        Integer remaining = benefit.getQuota() != null ? Math.max(0, benefit.getQuota() - (int) used - 1) : null;
+        return TierBenefitResponse.fromEntity(benefit, remaining);
     }
 
     @Override

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiCall, formatVND, formatDateTime } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 import "./GuestPages.css";
 
@@ -13,6 +15,7 @@ const TONE = {
 };
 
 export default function GuestLoyaltyPage() {
+  const { user } = useAuth();
   const { addToast } = useToast();
   const [profile, setProfile] = useState(null);
   const [benefits, setBenefits] = useState([]);
@@ -52,25 +55,26 @@ export default function GuestLoyaltyPage() {
     return matchType && matchSearch;
   });
 
-  const stats = profile
-    ? [
-        { icon: "bi-stars", label: "Điểm hiện có", value: fmtNumber(profile.currentScore), tone: "primary" },
-        { icon: "bi-moon-stars", label: "Đêm lưu trú", value: profile.totalStayDays || 0, tone: "info" },
-        { icon: "bi-wallet2", label: "Tổng chi tiêu", value: formatVND(profile.totalSpent || 0), tone: "success" },
-        { icon: "bi-calendar2-heart", label: "Thành viên từ", value: profile.memberSince ? new Date(profile.memberSince).toLocaleDateString("vi-VN") : "—", tone: "warning" },
-      ]
-    : [];
+  const nextTierPoints = profile?.pointsToNextTier || 0;
+  const currentScore = profile?.currentScore || 0;
+  const progressPercent = profile?.nextTierName
+    ? Math.min(100, Math.max(5, Math.round((currentScore / (currentScore + nextTierPoints)) * 100)))
+    : 100;
 
   return (
     <div className="ops-page guest-page">
+      {/* Page Title */}
       <div className="hc-page-title">
         <div>
           <h2>Đặc Quyền Hội Viên</h2>
-          <p>Thông tin hạng thành viên, điểm thưởng và quyền lợi của bạn.</p>
+          <p>Chương trình tri ân khách hàng — Theo dõi điểm tích lũy, các bậc quyền lợi và nâng tầm trải nghiệm nghỉ dưỡng.</p>
         </div>
 
         <div className="guest-title-actions">
-          <button type="button" className="hc-btn hc-btn-outline" onClick={loadData} disabled={loading}>
+          <Link to="/guest/bookings" className="hc-btn hc-btn-outline">
+            <i className="bi bi-clock-history"></i> Lịch sử đặt phòng
+          </Link>
+          <button type="button" className="hc-btn hc-btn-primary" onClick={loadData} disabled={loading}>
             <i className="bi bi-arrow-clockwise"></i> Làm mới
           </button>
         </div>
@@ -86,67 +90,154 @@ export default function GuestLoyaltyPage() {
         <div className="hc-card">
           <div className="hc-empty-state">
             <i className="bi bi-gem"></i>
-            <p>Chưa thể tải hồ sơ hội viên. Bấm "Làm mới" để thử lại.</p>
+            <p>Chưa thể tải dữ liệu hội viên. Vui lòng bấm "Làm mới" để thử lại.</p>
+            <button type="button" className="hc-btn hc-btn-primary" onClick={loadData} style={{ marginTop: "14px" }}>
+              <i className="bi bi-arrow-clockwise"></i> Tải lại
+            </button>
           </div>
         </div>
       ) : (
         <div className="guest-stack">
-          {/* Tier + key numbers */}
-          <div className="hc-card">
-            <div className="hc-card-header">
-              <div className="guest-toolbar">
+          {/* VIP Membership Card */}
+          <div className="guest-vip-card">
+            <div className="guest-vip-top">
+              <div className="guest-vip-brand">
+                <i className="bi bi-gem"></i>
                 <div>
-                  <div className="guest-cell-sub">Hạng thành viên</div>
-                  <div className="guest-toolbar-title" style={{ fontSize: "var(--hc-text-xl)" }}>
-                    <i className="bi bi-gem text-primary"></i>
-                    {profile.tierName || profile.tierCode || "Azure Bay Privilege"}
-                  </div>
+                  <strong>AZURE BAY</strong>
+                  <small>ĐẶC QUYỀN HỘI VIÊN</small>
                 </div>
-                <span className="hc-badge hc-badge-primary">
-                  {profile.nextTierName ? `Còn ${fmtNumber(profile.pointsToNextTier)} điểm để lên hạng ${profile.nextTierName}` : "Cảm ơn bạn đã đồng hành cùng Azure Bay"}
-                </span>
+              </div>
+              <span className="guest-vip-tier-badge">
+                <i className="bi bi-shield-check"></i>
+                {profile.tierName || profile.tierCode || "HỘI VIÊN"}
+              </span>
+            </div>
+
+            <div className="guest-vip-chip"></div>
+
+            <div className="guest-vip-holder">
+              <div>
+                <div className="guest-vip-holder-name">
+                  {user?.fullName || profile.customerName || user?.username || "Thành viên quý"}
+                </div>
+                <div className="guest-vip-member-since">
+                  Thành viên từ: {profile.memberSince ? new Date(profile.memberSince).toLocaleDateString("vi-VN") : "Hôm nay"}
+                </div>
+              </div>
+
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Điểm khả dụng</div>
+                <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--hc-secondary)", fontFamily: "Times New Roman, serif" }}>
+                  {fmtNumber(currentScore)}
+                </div>
               </div>
             </div>
-            <div className="hc-card-body">
-              <div className="guest-stats">
-                {stats.map((item) => (
-                  <div className="hc-stat-card" key={item.label} style={{ padding: "16px" }}>
-                    <div className="hc-stat-icon" style={TONE[item.tone]}>
-                      <i className={`bi ${item.icon}`}></i>
-                    </div>
-                    <div>
-                      <div className="hc-stat-value">{item.value}</div>
-                      <div className="hc-stat-label">{item.label}</div>
-                    </div>
-                  </div>
-                ))}
+
+            <div className="guest-vip-progress-box">
+              <div className="guest-vip-progress-head">
+                <span>
+                  {profile.nextTierName ? (
+                    <>Cần tích lũy thêm <strong>{fmtNumber(nextTierPoints)} điểm</strong> để đạt hạng <strong>{profile.nextTierName}</strong></>
+                  ) : (
+                    "Bạn đang ở hạng thẻ cao cấp nhất. Trân trọng cảm ơn sự gắn bó của quý khách!"
+                  )}
+                </span>
+                <span>{progressPercent}%</span>
+              </div>
+              <div className="guest-vip-progress-bar">
+                <div className="guest-vip-progress-fill" style={{ width: `${progressPercent}%` }}></div>
               </div>
             </div>
           </div>
 
-          {/* Benefits */}
+          {/* 4 Stats Grid */}
+          <div className="guest-stats-grid">
+            <div className="guest-stat-card">
+              <div className="guest-stat-icon" style={TONE.primary}>
+                <i className="bi bi-stars"></i>
+              </div>
+              <div className="guest-stat-content">
+                <div className="guest-stat-val">{fmtNumber(profile.currentScore)}</div>
+                <div className="guest-stat-lbl">Điểm thưởng hiện có</div>
+              </div>
+            </div>
+
+            <div className="guest-stat-card">
+              <div className="guest-stat-icon" style={TONE.info}>
+                <i className="bi bi-moon-stars"></i>
+              </div>
+              <div className="guest-stat-content">
+                <div className="guest-stat-val">{profile.totalStayDays || 0}</div>
+                <div className="guest-stat-lbl">Đêm lưu trú tích lũy</div>
+              </div>
+            </div>
+
+            <div className="guest-stat-card">
+              <div className="guest-stat-icon" style={TONE.success}>
+                <i className="bi bi-wallet2"></i>
+              </div>
+              <div className="guest-stat-content">
+                <div className="guest-stat-val">{formatVND(profile.totalSpent || 0)}</div>
+                <div className="guest-stat-lbl">Tổng chi tiêu</div>
+              </div>
+            </div>
+
+            <div className="guest-stat-card">
+              <div className="guest-stat-icon" style={TONE.warning}>
+                <i className="bi bi-trophy"></i>
+              </div>
+              <div className="guest-stat-content">
+                <div className="guest-stat-val">{profile.nextTierName || "Hạng tối đa"}</div>
+                <div className="guest-stat-lbl">Hạng mục tiêu</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Benefits Table */}
           <div className="hc-card">
             <div className="hc-card-header">
               <div className="guest-toolbar">
                 <div className="guest-toolbar-title">
-                  <i className="bi bi-gift text-primary"></i> Quyền lợi theo hạng
+                  <i className="bi bi-gift text-primary"></i> Quyền lợi theo hạng của bạn
+                  <span className="hc-badge hc-badge-primary" style={{ marginLeft: "6px", fontSize: "11px" }}>
+                    {benefits.length} quyền lợi
+                  </span>
                 </div>
-                <span className="hc-badge hc-badge-primary">{benefits.length} quyền lợi</span>
               </div>
             </div>
             <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
               {benefits.length === 0 ? (
-                <div className="hc-empty-state">
-                  <i className="bi bi-gift"></i>
-                  <p>Chưa có quyền lợi khả dụng cho hạng hiện tại.</p>
+                <div className="svc-empty-loyalty-box" style={{ margin: "24px 20px" }}>
+                  <div className="svc-empty-loyalty-icon">
+                    <i className="bi bi-shield-lock"></i>
+                  </div>
+                  <h5>Hạng {profile.tierName || "Sò Biển (Seashell)"} — Hạng thành viên khởi đầu</h5>
+                  <p>
+                    Quý khách đang ở hạng thẻ khởi đầu (0 điểm). Hạng này chưa tích hợp sẵn các đặc quyền trực tiếp. Hãy tích lũy điểm qua các lần đặt phòng và sử dụng dịch vụ tại resort để mở khóa các đặc quyền cao cấp bên dưới!
+                  </p>
+                  <div className="svc-tier-unlock-preview">
+                    <div className="svc-tier-unlock-item">
+                      <span className="hc-badge hc-badge-info">Hạng Sao Biển (10 điểm)</span>
+                      <span>Giảm 5% giá phòng đặt trực tiếp</span>
+                    </div>
+                    <div className="svc-tier-unlock-item">
+                      <span className="hc-badge hc-badge-warning">Hạng San Hô (30 điểm)</span>
+                      <span>Giảm 10% phòng &amp; Miễn phí giặt ủi 2 lần/năm</span>
+                    </div>
+                    <div className="svc-tier-unlock-item">
+                      <span className="hc-badge hc-badge-primary">Hạng Ngọc Trai (80 điểm)</span>
+                      <span>Giảm 15% phòng VIP &amp; Tặng 1 đêm nghỉ miễn phí</span>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <table className="hc-table">
                   <thead>
                     <tr>
-                      <th>Quyền lợi</th>
-                      <th>Mô tả</th>
-                      <th style={{ textAlign: "right" }}>Còn lại</th>
+                      <th>Tên quyền lợi</th>
+                      <th>Chi tiết ưu đãi</th>
+                      <th style={{ textAlign: "right" }}>Số lượt áp dụng</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -155,8 +246,10 @@ export default function GuestLoyaltyPage() {
                         <td>
                           <strong>{benefit.benefitName}</strong>
                         </td>
-                        <td>{benefit.description || (benefit.discountPercent ? `Giảm ${benefit.discountPercent}%` : benefit.benefitType)}</td>
-                        <td style={{ textAlign: "right" }}>{benefit.remainingQuota ?? <span className="hc-badge hc-badge-success">Không giới hạn</span>}</td>
+                        <td>{benefit.description || (benefit.discountPercent ? `Giảm ${benefit.discountPercent}% chi phí dịch vụ` : benefit.benefitType)}</td>
+                        <td style={{ textAlign: "right" }}>
+                          {benefit.remainingQuota ?? <span className="hc-badge hc-badge-success">Không giới hạn</span>}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -165,37 +258,61 @@ export default function GuestLoyaltyPage() {
             </div>
           </div>
 
-          {/* Points history */}
+          {/* Points Transactions History */}
           <div className="hc-card">
             <div className="hc-card-header">
               <div className="guest-toolbar">
-                <div className="guest-search">
-                  <i className="bi bi-search"></i>
-                  <input type="text" className="hc-input" placeholder="Tìm theo loại, ghi chú..." aria-label="Tìm giao dịch điểm" value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} />
+                <div className="guest-toolbar-title">
+                  <i className="bi bi-clock-history text-primary"></i> Lịch sử biến động điểm
+                  {filteredTransactions.length > 0 && (
+                    <span className="hc-badge hc-badge-primary" style={{ marginLeft: "6px", fontSize: "11px" }}>
+                      {filteredTransactions.length} giao dịch
+                    </span>
+                  )}
                 </div>
-                <select className="hc-select guest-select" aria-label="Lọc loại giao dịch" value={txnType} onChange={(e) => setTxnType(e.target.value)}>
-                  <option value="ALL">Tất cả loại giao dịch</option>
-                  {txnTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
+
+                <div className="guest-toolbar-controls">
+                  <div className="guest-search">
+                    <i className="bi bi-search"></i>
+                    <input
+                      type="text"
+                      className="hc-input"
+                      placeholder="Tìm theo loại, nội dung ghi chú..."
+                      aria-label="Tìm giao dịch điểm"
+                      value={txnSearch}
+                      onChange={(e) => setTxnSearch(e.target.value)}
+                    />
+                  </div>
+                  <select
+                    className="hc-select guest-select"
+                    aria-label="Lọc loại giao dịch"
+                    value={txnType}
+                    onChange={(e) => setTxnType(e.target.value)}
+                  >
+                    <option value="ALL">Tất cả loại giao dịch</option>
+                    {txnTypes.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
+
             <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
               {filteredTransactions.length === 0 ? (
                 <div className="hc-empty-state">
-                  <i className="bi bi-clock-history"></i>
-                  <p>{transactions.length === 0 ? "Chưa có giao dịch điểm thưởng." : "Không có giao dịch nào khớp với bộ lọc."}</p>
+                  <i className="bi bi-inbox"></i>
+                  <p>{transactions.length === 0 ? "Chưa có giao dịch tích lũy điểm thưởng nào." : "Không tìm thấy giao dịch nào khớp với bộ lọc."}</p>
                 </div>
               ) : (
                 <table className="hc-table">
                   <thead>
                     <tr>
                       <th>Thời gian</th>
-                      <th>Loại</th>
-                      <th style={{ textAlign: "right" }}>Điểm</th>
+                      <th>Loại giao dịch</th>
+                      <th style={{ textAlign: "right" }}>Biến động điểm</th>
                       <th>Ghi chú</th>
                     </tr>
                   </thead>
@@ -209,7 +326,7 @@ export default function GuestLoyaltyPage() {
                           <td>
                             <span className="hc-badge hc-badge-primary">{item.txnType}</span>
                           </td>
-                          <td style={{ textAlign: "right", fontWeight: 600, color }}>
+                          <td style={{ textAlign: "right", fontWeight: 700, color, fontSize: "14px" }}>
                             {score > 0 ? "+" : ""}
                             {fmtNumber(score)}
                           </td>

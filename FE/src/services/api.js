@@ -147,7 +147,14 @@ export function formatDateTime(dateTimeStr) {
 export function getCategoryName(category) {
   if (!category) return 'Khác';
   if (typeof category === 'string') return category;
-  if (typeof category === 'object' && category.categoryName) return category.categoryName;
+  if (typeof category === 'object') {
+    if (category.categoryName) return category.categoryName;
+    if (category.category && typeof category.category === 'object' && category.category.categoryName) {
+      return category.category.categoryName;
+    }
+    if (typeof category.category === 'string') return category.category;
+    if (category.name) return category.name;
+  }
   return 'Khác';
 }
 

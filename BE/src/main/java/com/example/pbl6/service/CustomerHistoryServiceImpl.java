@@ -158,6 +158,15 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        if (depositPaid.compareTo(BigDecimal.ZERO) == 0 &&
+                (BookingStatus.CONFIRMED.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_IN.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_OUT.name().equalsIgnoreCase(booking.getStatus()))) {
+            if (booking.getDepositRequired() != null && booking.getDepositRequired().compareTo(BigDecimal.ZERO) > 0) {
+                depositPaid = booking.getDepositRequired();
+            }
+        }
+
         BigDecimal settlementPaid = payments.stream()
                 .filter(p -> PaymentType.SETTLEMENT.name().equalsIgnoreCase(p.getType()))
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
@@ -216,6 +225,7 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
                 .build()).collect(Collectors.toList());
 
         BigDecimal serviceCharge = usages.stream()
+                .filter(u -> !"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus()))
                 .map(u -> u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
@@ -239,6 +249,15 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
                 .filter(p -> PaymentType.DEPOSIT.name().equalsIgnoreCase(p.getType()))
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        if (depositPaid.compareTo(BigDecimal.ZERO) == 0 &&
+                (BookingStatus.CONFIRMED.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_IN.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_OUT.name().equalsIgnoreCase(booking.getStatus()))) {
+            if (booking.getDepositRequired() != null && booking.getDepositRequired().compareTo(BigDecimal.ZERO) > 0) {
+                depositPaid = booking.getDepositRequired();
+            }
+        }
 
         BigDecimal settlementPaid = payments.stream()
                 .filter(p -> PaymentType.SETTLEMENT.name().equalsIgnoreCase(p.getType()))
@@ -271,14 +290,28 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         }
 
         Customer customer = booking.getCustomer();
+        String customerPhone = "N/A";
+        String customerEmail = "N/A";
+        if (customer != null) {
+            if (StringUtils.hasText(customer.getPhone())) {
+                customerPhone = customer.getPhone();
+            } else if (customer.getAccount() != null && StringUtils.hasText(customer.getAccount().getPhone())) {
+                customerPhone = customer.getAccount().getPhone();
+            }
+            if (StringUtils.hasText(customer.getEmail())) {
+                customerEmail = customer.getEmail();
+            } else if (customer.getAccount() != null && StringUtils.hasText(customer.getAccount().getEmail())) {
+                customerEmail = customer.getAccount().getEmail();
+            }
+        }
 
         return CustomerBookingHistoryDetailResponse.builder()
                 .bookingCode(booking.getBookingCode())
                 .bookingStatus(booking.getStatus())
                 .createdAt(booking.getCreatedAt())
                 .customerName(customer != null ? customer.getFullName() : "N/A")
-                .customerPhone(customer != null ? customer.getPhone() : "N/A")
-                .customerEmail(customer != null ? customer.getEmail() : "N/A")
+                .customerPhone(customerPhone)
+                .customerEmail(customerEmail)
                 .roomNumber(roomNumber)
                 .floor(floor)
                 .roomTypeName(roomTypeName)

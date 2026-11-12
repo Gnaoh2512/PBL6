@@ -49,4 +49,13 @@ public class CustomerBillingController {
         LiveFolioResponse folio = billingService.getLiveFolio(bookingCode);
         return ResponseEntity.ok(ApiResponse.ok("Tra cứu hóa đơn lưu trú thành công", folio));
     }
+
+    @PatchMapping("/services/usages/{usageId}/status")
+    public ResponseEntity<ApiResponse<ServiceUsageResponse>> updateServiceUsageStatus(
+            @PathVariable Integer usageId,
+            @RequestParam String status
+    ) {
+        ServiceUsageResponse response = billingService.updateServiceUsageStatus(usageId, status);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái dịch vụ thành công", response));
+    }
 }

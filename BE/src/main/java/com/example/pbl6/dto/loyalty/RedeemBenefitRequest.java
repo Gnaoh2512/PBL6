@@ -17,5 +17,7 @@ public class RedeemBenefitRequest {
 
     private Integer bookingId;
 
+    private String bookingCode;
+
     private String note;
 }

@@ -23,10 +23,20 @@ public class CustomerBookingHistoryDetailResponse {
     private String bookingStatus;
     private LocalDateTime createdAt;
 
+    @JsonProperty("status")
+    public String getStatus() {
+        return bookingStatus;
+    }
+
     // Thông tin khách hàng
     private String customerName;
     private String customerPhone;
     private String customerEmail;
+
+    @JsonProperty("phone")
+    public String getPhone() {
+        return customerPhone;
+    }
 
     // Thông tin phòng
     private String roomNumber;
@@ -54,6 +64,17 @@ public class CustomerBookingHistoryDetailResponse {
     // Thanh toán
     private BigDecimal depositRequired;
     private BigDecimal depositPaid;
+
+    @JsonProperty("depositAmount")
+    public BigDecimal getDepositAmount() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
+    @JsonProperty("depositApplied")
+    public BigDecimal getDepositApplied() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
     private BigDecimal settlementPaid;
     private BigDecimal remainingBalance;
 

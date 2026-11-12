@@ -547,3 +547,37 @@ UPDATE room r
 JOIN booking_room br ON br.room_id = r.room_id
 JOIN booking b ON b.booking_id = br.booking_id AND b.booking_code = 'BK-CUSTOMER1-DEMO'
 SET r.status = 'OCCUPIED';
+
+-- 6.13. Seed data for service_request & service_usage to populate Staff Requests page
+INSERT INTO service_request (booking_id, room_id, service_id, customer_id, quantity, fee_amount, status, note, requested_at)
+SELECT b.booking_id, r.room_id, s.service_id, c.customer_id, 2, s.unit_price * 2, 'PENDING', 'Khách phòng 101 gọi nước khoáng lên phòng', CURRENT_TIMESTAMP - INTERVAL 15 MINUTE
+FROM booking b
+JOIN room r ON r.room_number = '101'
+JOIN customer c ON c.customer_id = b.customer_id
+JOIN service s ON s.service_name = 'Nước khoáng Lavie 500ml'
+WHERE b.booking_code = 'BK-CUSTOMER1-DEMO'
+  AND NOT EXISTS (SELECT 1 FROM service_request sr WHERE sr.booking_id = b.booking_id AND sr.service_id = s.service_id);
+
+INSERT INTO service_request (booking_id, room_id, service_id, customer_id, quantity, fee_amount, status, note, requested_at)
+SELECT b.booking_id, r.room_id, s.service_id, c.customer_id, 1, s.unit_price, 'DELIVERING', 'Khách order buffet sáng phục vụ tại phòng', CURRENT_TIMESTAMP - INTERVAL 35 MINUTE
+FROM booking b
+JOIN room r ON r.room_number = '101'
+JOIN customer c ON c.customer_id = b.customer_id
+JOIN service s ON s.service_name = 'Bữa sáng Buffet'
+WHERE b.booking_code = 'BK-CUSTOMER1-DEMO'
+  AND NOT EXISTS (SELECT 1 FROM service_request sr WHERE sr.booking_id = b.booking_id AND sr.service_id = s.service_id);
+
+INSERT INTO service_usage (booking_id, service_id, quantity, unit_price_applied, discount_amount, total_price, status, used_at)
+SELECT b.booking_id, s.service_id, 2, s.unit_price, 0, s.unit_price * 2, 'PENDING', CURRENT_TIMESTAMP - INTERVAL 15 MINUTE
+FROM booking b
+JOIN service s ON s.service_name = 'Nước khoáng Lavie 500ml'
+WHERE b.booking_code = 'BK-CUSTOMER1-DEMO'
+  AND NOT EXISTS (SELECT 1 FROM service_usage su WHERE su.booking_id = b.booking_id AND su.service_id = s.service_id);
+
+INSERT INTO service_usage (booking_id, service_id, quantity, unit_price_applied, discount_amount, total_price, status, used_at)
+SELECT b.booking_id, s.service_id, 1, s.unit_price, 0, s.unit_price, 'DELIVERING', CURRENT_TIMESTAMP - INTERVAL 35 MINUTE
+FROM booking b
+JOIN service s ON s.service_name = 'Bữa sáng Buffet'
+WHERE b.booking_code = 'BK-CUSTOMER1-DEMO'
+  AND NOT EXISTS (SELECT 1 FROM service_usage su WHERE su.booking_id = b.booking_id AND su.service_id = s.service_id);
+

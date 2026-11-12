@@ -27,6 +27,7 @@ const TASK_STATUS = {
   PENDING: { label: "Chờ xử lý", badge: "hc-badge-warning" },
   OPEN: { label: "Chờ xử lý", badge: "hc-badge-warning" },
   IN_PROGRESS: { label: "Đang xử lý", badge: "hc-badge-info" },
+  DELIVERING: { label: "Đang giao", badge: "hc-badge-info" },
   DONE: { label: "Đã sửa xong", badge: "hc-badge-primary" },
   COMPLETED: { label: "Hoàn tất", badge: "hc-badge-success" },
   CONFIRMED: { label: "Đã nghiệm thu", badge: "hc-badge-success" },

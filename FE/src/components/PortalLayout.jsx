@@ -10,7 +10,7 @@ const portalLinks = {
     { to: "/guest", label: "Tổng quan", icon: "bi-grid" },
     { to: "/guest/bookings", label: "Lịch sử đặt phòng", icon: "bi-calendar-check" },
     { to: "/guest/services", label: "Dịch vụ khách sạn", icon: "bi-stars" },
-    { to: "/guest/loyalty", label: "Azure Bay Privilege", icon: "bi-gem" },
+    { to: "/guest/loyalty", label: "Đặc quyền hội viên", icon: "bi-gem" },
     { to: "/guest/profile", label: "Hồ sơ", icon: "bi-person-circle" },
   ],
   staff: [

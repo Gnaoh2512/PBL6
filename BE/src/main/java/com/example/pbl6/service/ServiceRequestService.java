@@ -12,4 +12,5 @@ public interface ServiceRequestService {
     List<ServiceRequestResponse> getAllRequests(String status);
     ServiceRequestResponse assignRequest(Integer requestId, String staffUsername);
     ServiceRequestResponse completeRequest(Integer requestId, String staffUsername);
+    ServiceRequestResponse updateStatus(Integer requestId, String status, String staffUsername);
 }

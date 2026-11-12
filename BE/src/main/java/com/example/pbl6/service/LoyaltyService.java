@@ -10,6 +10,7 @@ public interface LoyaltyService {
     LoyaltyProfileResponse getProfile(String username);
     List<LoyaltyTransactionResponse> getTransactions(String username);
     List<TierBenefitResponse> getAvailableBenefits(String username);
+    TierBenefitResponse redeemBenefit(RedeemBenefitRequest req, String username);
     void recordStayAndEarnPoints(Invoice invoice);
     LoyaltyProfileResponse adjustPoints(AdjustPointsRequest req, String adminUsername);
     List<LoyaltyTier> getAllTiers();

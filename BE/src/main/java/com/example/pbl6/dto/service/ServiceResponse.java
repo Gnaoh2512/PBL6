@@ -1,5 +1,6 @@
 package com.example.pbl6.dto.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,4 +19,9 @@ public class ServiceResponse {
     private BigDecimal unitPrice;
     private String unit;
     private Boolean isActive;
+
+    @JsonProperty("category")
+    public String getCategory() {
+        return categoryName;
+    }
 }
