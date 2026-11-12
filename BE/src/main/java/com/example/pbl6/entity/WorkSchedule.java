@@ -6,7 +6,10 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "work_schedule")
+@Table(
+        name = "work_schedule",
+        uniqueConstraints = @UniqueConstraint(name = "uq_staff_work_date", columnNames = {"account_id", "work_date"})
+)
 @Data
 @Builder
 @NoArgsConstructor
@@ -28,6 +31,11 @@ public class WorkSchedule {
 
     @Column(name = "work_date")
     private LocalDate workDate;
+
+    /** SCHEDULED | COMPLETED | ABSENT | OFF (see ScheduleStatus). Null is treated as SCHEDULED. */
+    @Builder.Default
+    @Column(name = "status", length = 30, columnDefinition = "varchar(30) default 'SCHEDULED'")
+    private String status = "SCHEDULED";
 
     @Column(name = "notes", columnDefinition = "text")
     private String notes;

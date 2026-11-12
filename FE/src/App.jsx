@@ -24,6 +24,7 @@ import "./pages/commerce-redesign.css";
 // Staff Section
 import StaffLayout from "./pages/staff/StaffLayout";
 import StaffShiftsPage from "./pages/staff/StaffShiftsPage";
+import StaffSchedulesPage from "./pages/staff/StaffSchedulesPage";
 import StaffRoomsPage from "./pages/staff/StaffRoomsPage";
 import StaffWalkInPage from "./pages/staff/StaffWalkInPage";
 
@@ -147,6 +148,14 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={["RECEPTIONIST", "MANAGER", "ADMIN"]}>
                     <StaffShiftsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="schedules"
+                element={
+                  <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "SERVICE_STAFF", "MAINTENANCE"]}>
+                    <StaffSchedulesPage />
                   </ProtectedRoute>
                 }
               />

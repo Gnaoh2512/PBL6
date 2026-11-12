@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "../../components/Modal";
 import SelectMenu from "../../components/SelectMenu";
 import { apiCall, formatDate } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import "./AdminSchedulesPage.css";
+
+const pad = (v) => String(v).padStart(2, "0");
+const toISO = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+const monthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+const monthEnd = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
 const roleCodeOf = (role) => {
   if (!role) return "";
@@ -10,39 +16,59 @@ const roleCodeOf = (role) => {
   return role?.roleCode || role?.code || role?.roleName || "";
 };
 
-const formatTimeOnly = (t) => {
-  if (!t) return "";
-  if (Array.isArray(t)) {
-    return `${String(t[0]).padStart(2, "0")}:${String(t[1] || 0).padStart(2, "0")}`;
-  }
-  const s = String(t);
-  return s.length >= 5 ? s.slice(0, 5) : s;
+const formatTime = (value) => {
+  if (!value) return "";
+  if (Array.isArray(value)) return `${pad(value[0])}:${pad(value[1] || 0)}`;
+  const text = String(value);
+  return text.length >= 5 ? text.slice(0, 5) : text;
+};
+
+const getStaffName = (item) => item.fullName || item.accountFullName || item.username || item.accountUsername || "Staff member";
+
+const getShiftName = (item) => item.shiftName || item.shift?.shiftName || (item.shiftId ? `Shift #${item.shiftId}` : "Work shift");
+
+const getTimeRange = (item) => {
+  const start = formatTime(item.startTime || item.shift?.startTime);
+  const end = formatTime(item.endTime || item.shift?.endTime);
+  if (!start && !end) return "Time not specified";
+  const overnight = Boolean(item.overnight) || (start && end && end < start);
+  return `${start || "--:--"} – ${end || "--:--"}${overnight ? " (+1 day)" : ""}`;
+};
+
+const statusClass = (status) =>
+  ({
+    SCHEDULED: "scheduled",
+    COMPLETED: "completed",
+    ABSENT: "absent",
+    OFF: "off",
+  })[status] || "scheduled";
+
+const unwrap = (response) => {
+  const data = response?.data ?? (Array.isArray(response) ? response : []);
+  return Array.isArray(data) ? data : [];
 };
 
 export default function AdminSchedulesPage() {
   const { addToast } = useToast();
-
-  const [activeTab, setActiveTab] = useState("SCHEDULES"); // SCHEDULES | SHIFTS
-  const [shifts, setShifts] = useState([]);
+  const [activeTab, setActiveTab] = useState("SCHEDULES");
+  const [visibleMonth, setVisibleMonth] = useState(() => monthStart(new Date()));
   const [schedules, setSchedules] = useState([]);
+  const [shifts, setShifts] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Filters & Search
   const [searchQuery, setSearchQuery] = useState("");
   const [shiftFilter, setShiftFilter] = useState("ALL");
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
 
-  // Assign Schedule Modal
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [assignForm, setAssignForm] = useState({
     accountId: "",
     shiftId: "",
-    workDate: new Date().toISOString().split("T")[0],
+    workDate: toISO(new Date()),
     notes: "",
   });
   const [submittingSchedule, setSubmittingSchedule] = useState(false);
 
-  // Shift Modal (Create / Edit Shift definition)
   const [shiftModalOpen, setShiftModalOpen] = useState(false);
   const [editShiftId, setEditShiftId] = useState(null);
   const [shiftForm, setShiftForm] = useState({
@@ -53,90 +79,133 @@ export default function AdminSchedulesPage() {
   });
   const [submittingShift, setSubmittingShift] = useState(false);
 
-  useEffect(() => {
-    loadAll();
-  }, [activeTab]);
+  const from = toISO(monthStart(visibleMonth));
+  const to = toISO(monthEnd(visibleMonth));
 
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [shiftsRes, accountsRes, schedulesRes] = await Promise.allSettled([
+      const [scheduleRes, shiftRes, accountRes] = await Promise.all([
+        apiCall(`/api/admin/schedules?from=${from}&to=${to}`, { silentError: true }),
         apiCall("/api/admin/shifts", { silentError: true }),
-        apiCall("/api/admin/accounts", { silentError: true }),
-        apiCall("/api/admin/schedules", { silentError: true }),
+        apiCall("/api/admin/schedules/staff", { silentError: true }),
       ]);
-
-      if (shiftsRes.status === "fulfilled" && shiftsRes.value) {
-        const d = shiftsRes.value.data ?? (Array.isArray(shiftsRes.value) ? shiftsRes.value : []);
-        setShifts(Array.isArray(d) ? d : []);
-      }
-      if (accountsRes.status === "fulfilled" && accountsRes.value) {
-        const d = accountsRes.value.data ?? (Array.isArray(accountsRes.value) ? accountsRes.value : []);
-        const staffList = (Array.isArray(d) ? d : []).filter((a) => roleCodeOf(a.role) !== "ROLE_CUSTOMER");
-        setAccounts(staffList);
-      }
-      if (schedulesRes.status === "fulfilled" && schedulesRes.value) {
-        const d = schedulesRes.value.data ?? (Array.isArray(schedulesRes.value) ? schedulesRes.value : []);
-        setSchedules(Array.isArray(d) ? d : []);
-      }
-    } catch (err) {
-      console.warn("Error loading schedules:", err);
+      setSchedules(unwrap(scheduleRes));
+      setShifts(unwrap(shiftRes));
+      setAccounts(unwrap(accountRes));
+    } catch (error) {
+      addToast(error?.message || "Unable to load schedule data.", "error");
     } finally {
       setLoading(false);
     }
+  }, [addToast, from, to]);
+
+  useEffect(() => {
+    loadAll();
+  }, [loadAll]);
+
+  const calendarDays = useMemo(() => {
+    const first = monthStart(visibleMonth);
+    const last = monthEnd(visibleMonth);
+    const offset = (first.getDay() + 6) % 7;
+    const start = new Date(first);
+    start.setDate(first.getDate() - offset);
+    const count = Math.ceil((offset + last.getDate()) / 7) * 7;
+    return Array.from({ length: count }, (_, index) => {
+      const day = new Date(start);
+      day.setDate(start.getDate() + index);
+      return day;
+    });
+  }, [visibleMonth]);
+
+  const filteredSchedules = useMemo(
+    () =>
+      schedules.filter((item) => {
+        const query = searchQuery.trim().toLowerCase();
+        const staffMatch = !query || getStaffName(item).toLowerCase().includes(query) || (item.notes || "").toLowerCase().includes(query);
+        const shiftMatch = shiftFilter === "ALL" || String(item.shiftId) === String(shiftFilter);
+        return staffMatch && shiftMatch;
+      }),
+    [schedules, searchQuery, shiftFilter],
+  );
+
+  const schedulesByDate = useMemo(() => {
+    const grouped = new Map();
+    filteredSchedules.forEach((item) => {
+      if (!item.workDate) return;
+      const list = grouped.get(item.workDate) || [];
+      list.push(item);
+      grouped.set(item.workDate, list);
+    });
+    grouped.forEach((items) => items.sort((a, b) => formatTime(a.startTime || a.shift?.startTime).localeCompare(formatTime(b.startTime || b.shift?.startTime))));
+    return grouped;
+  }, [filteredSchedules]);
+
+  const staffOptions = accounts.map((account) => ({
+    value: String(account.accountId || account.id),
+    label: `${account.fullName || account.username} (${roleCodeOf(account.role).replace("ROLE_", "") || "STAFF"})`,
+  }));
+  const shiftOptions = shifts.map((shift) => ({
+    value: String(shift.shiftId),
+    label: `${shift.shiftName || `Shift #${shift.shiftId}`} (${formatTime(shift.startTime)}–${formatTime(shift.endTime)})`,
+  }));
+  const shiftFilterOptions = [{ value: "ALL", label: "All shifts" }, ...shifts.map((shift) => ({ value: String(shift.shiftId), label: shift.shiftName || `Shift #${shift.shiftId}` }))];
+
+  const openAssignModal = (date = toISO(new Date())) => {
+    setAssignForm({
+      accountId: String(accounts[0]?.accountId || accounts[0]?.id || ""),
+      shiftId: String(shifts[0]?.shiftId || ""),
+      workDate: date,
+      notes: "",
+    });
+    setScheduleModalOpen(true);
   };
 
-  const handleAssignSchedule = async (e) => {
-    e.preventDefault();
+  const handleAssignSchedule = async (event) => {
+    event.preventDefault();
     if (!assignForm.accountId || !assignForm.shiftId || !assignForm.workDate) {
-      addToast("Vui lòng chọn nhân viên, ca làm việc và ngày phân công!", "warning");
+      addToast("Select a staff member, shift, and work date.", "warning");
       return;
     }
-
     setSubmittingSchedule(true);
     try {
-      const res = await apiCall("/api/admin/schedules", {
+      await apiCall("/api/admin/schedules", {
         method: "POST",
         body: {
-          accountId: parseInt(assignForm.accountId),
-          shiftId: parseInt(assignForm.shiftId),
+          accountId: Number(assignForm.accountId),
+          shiftId: Number(assignForm.shiftId),
           workDate: assignForm.workDate,
           notes: assignForm.notes.trim() || null,
         },
       });
-
-      if (res && res.success) {
-        addToast("Phân ca làm việc cho nhân viên thành công!", "success");
-        setScheduleModalOpen(false);
-        loadAll();
-      }
-    } catch (err) {
-      addToast(err.message || "Lỗi phân ca làm việc", "error");
+      addToast("Work shift assigned.", "success");
+      setScheduleModalOpen(false);
+      await loadAll();
+    } catch (error) {
+      addToast(error?.message || "Unable to assign this shift.", "error");
     } finally {
       setSubmittingSchedule(false);
     }
   };
 
   const handleDeleteSchedule = async (scheduleId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn hủy phân ca này?")) return;
+    if (!window.confirm("Cancel this staff assignment?")) return;
     try {
-      const res = await apiCall(`/api/admin/schedules/${scheduleId}`, { method: "DELETE" });
-      if (res && res.success) {
-        addToast("Đã xóa phân ca thành công!", "success");
-        loadAll();
-      }
-    } catch (err) {
-      addToast(err.message || "Lỗi xóa phân ca", "error");
+      await apiCall(`/api/admin/schedules/${scheduleId}`, { method: "DELETE" });
+      addToast("Schedule assignment removed.", "success");
+      setSelectedSchedule(null);
+      await loadAll();
+    } catch (error) {
+      addToast(error?.message || "Unable to remove this assignment.", "error");
     }
   };
 
-  const handleSaveShift = async (e) => {
-    e.preventDefault();
+  const handleSaveShift = async (event) => {
+    event.preventDefault();
     if (!shiftForm.shiftName.trim()) {
-      addToast("Vui lòng nhập tên ca làm việc!", "warning");
+      addToast("Enter a shift name.", "warning");
       return;
     }
-
     setSubmittingShift(true);
     const payload = {
       shiftName: shiftForm.shiftName.trim(),
@@ -144,396 +213,352 @@ export default function AdminSchedulesPage() {
       endTime: shiftForm.endTime,
       description: shiftForm.description.trim() || null,
     };
-
     try {
-      let res;
-      if (editShiftId) {
-        res = await apiCall(`/api/admin/shifts/${editShiftId}`, { method: "PUT", body: payload });
-      } else {
-        res = await apiCall("/api/admin/shifts", { method: "POST", body: payload });
-      }
-
-      if (res && res.success) {
-        addToast(`${editShiftId ? "Cập nhật" : "Thêm"} ca làm việc thành công!`, "success");
-        setShiftModalOpen(false);
-        loadAll();
-      }
-    } catch (err) {
-      addToast(err.message || "Lỗi lưu ca làm việc", "error");
+      await apiCall(editShiftId ? `/api/admin/shifts/${editShiftId}` : "/api/admin/shifts", {
+        method: editShiftId ? "PUT" : "POST",
+        body: payload,
+      });
+      addToast(editShiftId ? "Shift updated." : "Shift created.", "success");
+      setShiftModalOpen(false);
+      await loadAll();
+    } catch (error) {
+      addToast(error?.message || "Unable to save shift.", "error");
     } finally {
       setSubmittingShift(false);
     }
   };
 
   const handleDeleteShift = async (shiftId) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa ca làm việc này?")) return;
+    if (!window.confirm("Delete this shift definition?")) return;
     try {
-      const res = await apiCall(`/api/admin/shifts/${shiftId}`, { method: "DELETE" });
-      if (res && res.success) {
-        addToast("Đã xóa ca thành công!", "success");
-        loadAll();
-      }
-    } catch (err) {
-      addToast(err.message || "Lỗi xóa ca làm việc", "error");
+      await apiCall(`/api/admin/shifts/${shiftId}`, { method: "DELETE" });
+      addToast("Shift deleted.", "success");
+      await loadAll();
+    } catch (error) {
+      addToast(error?.message || "Unable to delete shift.", "error");
     }
   };
 
-  // Options mapping for SelectMenu components
-  const shiftFilterOptions = [{ value: "ALL", label: "Tất cả ca trực" }, ...shifts.map((s) => ({ value: String(s.shiftId), label: s.shiftName || `Ca #${s.shiftId}` }))];
-
-  const staffFormOptions = accounts.map((a) => ({
-    value: String(a.accountId || a.id),
-    label: `${a.fullName || a.username} (${roleCodeOf(a.role).replace("ROLE_", "") || "—"})`,
-  }));
-
-  const shiftFormOptions = shifts.map((s) => ({
-    value: String(s.shiftId),
-    label: `${s.shiftName || `Ca #${s.shiftId}`} (${formatTimeOnly(s.startTime)} - ${formatTimeOnly(s.endTime)})`,
-  }));
-
-  // Filtering lists
-  const filteredSchedules = schedules.filter((sch) => {
-    const matchShift = shiftFilter === "ALL" || String(sch.shiftId) === String(shiftFilter);
-    const query = searchQuery.toLowerCase();
-    const staffName = (sch.fullName || sch.accountFullName || sch.username || sch.accountUsername || "").toLowerCase();
-    const notes = (sch.notes || "").toLowerCase();
-    const matchSearch = !query || staffName.includes(query) || notes.includes(query);
-    return matchShift && matchSearch;
-  });
-
-  const filteredShifts = shifts.filter((s) => {
-    const query = searchQuery.toLowerCase();
-    const name = (s.shiftName || "").toLowerCase();
-    const desc = (s.description || "").toLowerCase();
-    return !query || name.includes(query) || desc.includes(query);
-  });
+  const monthLabel = visibleMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const today = toISO(new Date());
 
   return (
-    <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+    <div className="ops-page admin-schedules-page">
+      <div className="hc-page-title admin-schedule-heading">
         <div>
-          <h2>Phân Ca & Lịch Làm Việc</h2>
-          <p>Quản lý danh mục ca trực và phân công lịch làm việc cho nhân viên.</p>
+          <h2>Staff Schedules</h2>
+          <p>Manage staff assignments and shift definitions.</p>
         </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
-          {activeTab === "SCHEDULES" ? (
-            <button
-              type="button"
-              className="hc-btn hc-btn-primary"
-              onClick={() => {
-                setAssignForm({
-                  accountId: accounts[0]?.accountId || accounts[0]?.id || "",
-                  shiftId: shifts[0]?.shiftId || "",
-                  workDate: new Date().toISOString().split("T")[0],
-                  notes: "",
-                });
-                setScheduleModalOpen(true);
-              }}
-            >
-              <i className="bi bi-person-check-fill"></i> Phân Ca Cho Nhân Viên
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="hc-btn hc-btn-primary"
-              onClick={() => {
-                setEditShiftId(null);
-                setShiftForm({ shiftName: "", startTime: "06:00", endTime: "14:00", description: "" });
-                setShiftModalOpen(true);
-              }}
-            >
-              <i className="bi bi-plus-lg"></i> Thêm Ca Mới
-            </button>
-          )}
-        </div>
+        {activeTab === "SCHEDULES" ? (
+          <button className="hc-btn hc-btn-primary" type="button" onClick={() => openAssignModal()}>
+            <i className="bi bi-person-plus" /> Assign shift
+          </button>
+        ) : (
+          <button
+            className="hc-btn hc-btn-primary"
+            type="button"
+            onClick={() => {
+              setEditShiftId(null);
+              setShiftForm({ shiftName: "", startTime: "06:00", endTime: "14:00", description: "" });
+              setShiftModalOpen(true);
+            }}
+          >
+            <i className="bi bi-plus-lg" /> Add shift
+          </button>
+        )}
       </div>
 
-      <div className="hc-tab-group" style={{ marginBottom: "24px" }}>
-        <button className={`hc-tab-btn ${activeTab === "SCHEDULES" ? "active" : ""}`} onClick={() => setActiveTab("SCHEDULES")}>
-          <i className="bi bi-calendar3"></i> Lịch Phân Công Nhân Viên ({schedules.length})
+      <div className="hc-tab-group admin-schedule-tabs">
+        <button type="button" className={`hc-tab-btn ${activeTab === "SCHEDULES" ? "active" : ""}`} onClick={() => setActiveTab("SCHEDULES")}>
+          <i className="bi bi-calendar3" /> Staff calendar ({schedules.length})
         </button>
-        <button className={`hc-tab-btn ${activeTab === "SHIFTS" ? "active" : ""}`} onClick={() => setActiveTab("SHIFTS")}>
-          <i className="bi bi-clock"></i> Danh Mục Ca Làm Việc ({shifts.length})
+        <button type="button" className={`hc-tab-btn ${activeTab === "SHIFTS" ? "active" : ""}`} onClick={() => setActiveTab("SHIFTS")}>
+          <i className="bi bi-clock" /> Shift definitions ({shifts.length})
         </button>
       </div>
 
       {activeTab === "SCHEDULES" ? (
-        /* Schedules Table Card */
-        <div className="hc-card">
-          <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
-            <input
-              type="search"
-              className="hc-input"
-              style={{ flex: "1 1 280px" }}
-              placeholder="Tìm theo tên nhân viên, ghi chú..."
-              aria-label="Tìm lịch làm việc"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div style={{ flex: "0 0 220px" }}>
-              <SelectMenu value={shiftFilter} onChange={setShiftFilter} options={shiftFilterOptions} ariaLabel="Lọc ca trực" icon="bi-funnel" />
+        <>
+          <div className="admin-schedule-filters">
+            <input className="hc-input" type="search" placeholder="Search staff or notes…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            <div className="admin-schedule-filter-select">
+              <SelectMenu value={shiftFilter} onChange={setShiftFilter} options={shiftFilterOptions} ariaLabel="Filter by shift" icon="bi-funnel" />
             </div>
+            <button type="button" className="hc-btn hc-btn-outline" onClick={loadAll} disabled={loading}>
+              <i className={`bi bi-arrow-clockwise${loading ? " admin-schedule-spin" : ""}`} /> Refresh
+            </button>
           </div>
 
-          {loading ? (
-            <div className="hc-loading-spinner">
-              <div className="hc-spinner"></div>
+          <section className="hc-card admin-calendar-card">
+            <div className="hc-card-header admin-calendar-toolbar">
+              <div>
+                <h3 className="hc-card-title">{monthLabel}</h3>
+                <span>{filteredSchedules.length} assignments in this month</span>
+              </div>
+              <div className="admin-calendar-actions">
+                <button className="hc-btn hc-btn-outline hc-btn-sm" type="button" onClick={() => setVisibleMonth(monthStart(new Date()))}>
+                  Today
+                </button>
+                <button className="hc-btn hc-btn-outline hc-btn-sm" type="button" aria-label="Previous month" onClick={() => setVisibleMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}>
+                  <i className="bi bi-chevron-left" />
+                </button>
+                <button className="hc-btn hc-btn-outline hc-btn-sm" type="button" aria-label="Next month" onClick={() => setVisibleMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}>
+                  <i className="bi bi-chevron-right" />
+                </button>
+              </div>
             </div>
-          ) : filteredSchedules.length === 0 ? (
-            <div className="hc-empty-state">
-              <i className="bi bi-calendar-x"></i>
-              <p>Không tìm thấy lịch phân công nào.</p>
+            <div className="admin-calendar-legend">
+              <span>
+                <i className="admin-calendar-dot scheduled" /> Scheduled
+              </span>
+              <span>
+                <i className="admin-calendar-dot completed" /> Completed
+              </span>
+              <span>
+                <i className="admin-calendar-dot absent" /> Absent
+              </span>
+              <span>
+                <i className="admin-calendar-dot off" /> Day off
+              </span>
             </div>
-          ) : (
-            <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Ngày làm việc</th>
-                    <th>Nhân viên</th>
-                    <th>Vai trò</th>
-                    <th>Ca trực</th>
-                    <th>Thời gian</th>
-                    <th>Ghi chú</th>
-                    <th style={{ textAlign: "right" }}>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSchedules.map((sch) => {
-                    const empName = sch.fullName || sch.accountFullName || sch.username || sch.accountUsername || "Nhân viên";
-                    const rawRole = sch.role || sch.roleCode || sch.roleName || sch.account?.role;
-                    const roleDisplay = roleCodeOf(rawRole).replace("ROLE_", "") || "NHÂN VIÊN";
-                    const shiftName = sch.shiftName || sch.shift?.shiftName || (sch.shiftId ? `Ca #${sch.shiftId}` : "Ca trực");
-                    const start = sch.startTime || sch.shift?.startTime;
-                    const end = sch.endTime || sch.shift?.endTime;
-                    const timeRange = start && end ? `${formatTimeOnly(start)} - ${formatTimeOnly(end)}` : start ? formatTimeOnly(start) : "---";
-
+            {loading ? (
+              <div className="hc-loading-spinner">
+                <div className="hc-spinner" />
+              </div>
+            ) : (
+              <div className="admin-calendar-scroll">
+                <div className="admin-calendar-grid">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => (
+                    <div className="admin-calendar-weekday" key={day}>
+                      {day}
+                    </div>
+                  ))}
+                  {calendarDays.map((date) => {
+                    const key = toISO(date);
+                    const dayItems = schedulesByDate.get(key) || [];
+                    const inMonth = date.getMonth() === visibleMonth.getMonth();
                     return (
-                      <tr key={sch.scheduleId}>
-                        <td>
-                          <strong>{formatDate(sch.workDate)}</strong>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <i className="bi bi-person-circle text-primary"></i>
-                            <strong>{empName}</strong>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-primary">{roleDisplay}</span>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-warning">{shiftName}</span>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info" style={{ fontWeight: 500 }}>
-                            <i className="bi bi-clock" style={{ marginRight: "4px" }}></i>
-                            {timeRange}
-                          </span>
-                        </td>
-                        <td style={{ color: "var(--hc-text-secondary)", fontSize: "13px" }}>{sch.notes || "---"}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" style={{ color: "var(--hc-error)" }} onClick={() => handleDeleteSchedule(sch.scheduleId)}>
-                            <i className="bi bi-trash"></i> Hủy
+                      <div key={key} className={`admin-calendar-day ${!inMonth ? "outside-month" : ""} ${key === today ? "is-today" : ""}`}>
+                        <div className="admin-calendar-day-head">
+                          <span>{date.getDate()}</span>
+                          <button type="button" title={`Assign shift on ${key}`} onClick={() => openAssignModal(key)}>
+                            <i className="bi bi-plus" />
                           </button>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="admin-calendar-events">
+                          {dayItems.slice(0, 3).map((item) => (
+                            <button type="button" key={item.scheduleId} className={`admin-calendar-event ${statusClass(item.status)}`} onClick={() => setSelectedSchedule(item)}>
+                              <strong>{getStaffName(item)}</strong>
+                              <span>
+                                {getShiftName(item)} · {getTimeRange(item)}
+                              </span>
+                            </button>
+                          ))}
+                          {dayItems.length > 3 && <span className="admin-calendar-more">+{dayItems.length - 3} more</span>}
+                        </div>
+                      </div>
                     );
                   })}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </div>
+            )}
+            {!loading && filteredSchedules.length === 0 && (
+              <div className="admin-calendar-empty">
+                <i className="bi bi-calendar2-x" />
+                <strong>No assignments found</strong>
+                <span>Try another month or adjust the filters.</span>
+              </div>
+            )}
+          </section>
+          {selectedSchedule && (
+            <section className="hc-card admin-schedule-detail">
+              <div className="hc-card-header">
+                <div>
+                  <h3 className="hc-card-title">Assignment details</h3>
+                  <span>{formatDate(selectedSchedule.workDate)}</span>
+                </div>
+                <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" onClick={() => setSelectedSchedule(null)} aria-label="Close details">
+                  <i className="bi bi-x-lg" />
+                </button>
+              </div>
+              <div className="admin-schedule-detail-grid">
+                <div>
+                  <small>Staff member</small>
+                  <strong>{getStaffName(selectedSchedule)}</strong>
+                </div>
+                <div>
+                  <small>Role</small>
+                  <strong>{roleCodeOf(selectedSchedule.role || selectedSchedule.roleCode).replace("ROLE_", "") || "—"}</strong>
+                </div>
+                <div>
+                  <small>Shift</small>
+                  <strong>{getShiftName(selectedSchedule)}</strong>
+                </div>
+                <div>
+                  <small>Working hours</small>
+                  <strong>{getTimeRange(selectedSchedule)}</strong>
+                </div>
+                <div>
+                  <small>Status</small>
+                  <span className={`admin-calendar-status ${statusClass(selectedSchedule.status)}`}>{selectedSchedule.status || "SCHEDULED"}</span>
+                </div>
+                <div className="admin-schedule-notes">
+                  <small>Notes</small>
+                  <span>{selectedSchedule.notes || "No notes."}</span>
+                </div>
+              </div>
+              <div className="admin-schedule-detail-actions">
+                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => handleDeleteSchedule(selectedSchedule.scheduleId)}>
+                  <i className="bi bi-trash" /> Cancel assignment
+                </button>
+              </div>
+            </section>
           )}
-        </div>
+        </>
       ) : (
-        /* Shifts Definition Table Card */
-        <div className="hc-card">
-          <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
-            <input
-              type="search"
-              className="hc-input"
-              style={{ flex: "1 1 280px" }}
-              placeholder="Tìm theo tên ca làm việc..."
-              aria-label="Tìm ca làm việc"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-
+        <section className="hc-card">
           {loading ? (
             <div className="hc-loading-spinner">
-              <div className="hc-spinner"></div>
+              <div className="hc-spinner" />
             </div>
-          ) : filteredShifts.length === 0 ? (
+          ) : shifts.length === 0 ? (
             <div className="hc-empty-state">
-              <i className="bi bi-clock"></i>
-              <p>Không tìm thấy ca làm việc nào.</p>
+              <i className="bi bi-clock" />
+              <p>No shift definitions found.</p>
             </div>
           ) : (
             <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
               <table className="hc-table">
                 <thead>
                   <tr>
-                    <th>Tên ca</th>
-                    <th>Giờ bắt đầu</th>
-                    <th>Giờ kết thúc</th>
-                    <th>Mô tả ca trực</th>
-                    <th style={{ textAlign: "right" }}>Thao tác</th>
+                    <th>Shift</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Description</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredShifts.map((s) => {
-                    const sName = s.shiftName || `Ca #${s.shiftId}`;
-                    const sStart = formatTimeOnly(s.startTime);
-                    const sEnd = formatTimeOnly(s.endTime);
-                    return (
-                      <tr key={s.shiftId}>
-                        <td>
-                          <strong>{sName}</strong>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info">{sStart}</span>
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info">{sEnd}</span>
-                        </td>
-                        <td style={{ color: "var(--hc-text-secondary)" }}>{s.description || "---"}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <div style={{ display: "inline-flex", gap: "6px" }}>
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              onClick={() => {
-                                setEditShiftId(s.shiftId);
-                                setShiftForm({
-                                  shiftName: s.shiftName || "",
-                                  startTime: sStart,
-                                  endTime: sEnd,
-                                  description: s.description || "",
-                                });
-                                setShiftModalOpen(true);
-                              }}
-                            >
-                              <i className="bi bi-pencil"></i> Sửa
-                            </button>
-                            <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" style={{ color: "var(--hc-error)" }} onClick={() => handleDeleteShift(s.shiftId)}>
-                              <i className="bi bi-trash"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {shifts.map((shift) => (
+                    <tr key={shift.shiftId}>
+                      <td>
+                        <strong>{shift.shiftName || `Shift #${shift.shiftId}`}</strong>
+                      </td>
+                      <td>{formatTime(shift.startTime)}</td>
+                      <td>{formatTime(shift.endTime)}</td>
+                      <td>{shift.description || "—"}</td>
+                      <td>
+                        <div className="admin-shift-actions">
+                          <button
+                            type="button"
+                            className="hc-btn hc-btn-outline hc-btn-sm"
+                            onClick={() => {
+                              setEditShiftId(shift.shiftId);
+                              setShiftForm({
+                                shiftName: shift.shiftName || "",
+                                startTime: formatTime(shift.startTime) || "06:00",
+                                endTime: formatTime(shift.endTime) || "14:00",
+                                description: shift.description || "",
+                              });
+                              setShiftModalOpen(true);
+                            }}
+                          >
+                            <i className="bi bi-pencil" /> Edit
+                          </button>
+                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" onClick={() => handleDeleteShift(shift.shiftId)}>
+                            <i className="bi bi-trash" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           )}
-        </div>
+        </section>
       )}
 
-      {/* Assign Schedule Modal */}
       <Modal
         isOpen={scheduleModalOpen}
         onClose={() => setScheduleModalOpen(false)}
-        title="Phân Ca Làm Việc"
-        subtitle="Chọn nhân viên và gán lịch làm việc"
+        title="Assign work shift"
+        subtitle="Choose a staff member, shift, and date."
         icon="bi-person-check"
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="admin-modal-actions">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setScheduleModalOpen(false)}>
-              Hủy
+              Cancel
             </button>
-            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={handleAssignSchedule} disabled={submittingSchedule}>
-              {submittingSchedule ? "Đang phân ca..." : "Lưu lịch trực"}
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={submittingSchedule} onClick={handleAssignSchedule}>
+              {submittingSchedule ? "Saving…" : "Save assignment"}
             </button>
           </div>
         }
       >
         <form onSubmit={handleAssignSchedule}>
           <div className="hc-form-group">
-            <label className="hc-label">
-              Nhân viên <span style={{ color: "var(--hc-error)" }}>*</span>
-            </label>
-            <SelectMenu value={assignForm.accountId} onChange={(value) => setAssignForm({ ...assignForm, accountId: value })} options={staffFormOptions} ariaLabel="Chọn nhân viên" icon="bi-person" />
+            <label className="hc-label">Staff member *</label>
+            <SelectMenu
+              value={assignForm.accountId}
+              onChange={(value) => setAssignForm((current) => ({ ...current, accountId: value }))}
+              options={staffOptions}
+              ariaLabel="Choose staff member"
+              icon="bi-person"
+            />
           </div>
-
           <div className="hc-form-group">
-            <label className="hc-label">
-              Ca trực <span style={{ color: "var(--hc-error)" }}>*</span>
-            </label>
-            <SelectMenu value={assignForm.shiftId} onChange={(value) => setAssignForm({ ...assignForm, shiftId: value })} options={shiftFormOptions} ariaLabel="Chọn ca trực" icon="bi-clock" />
+            <label className="hc-label">Shift *</label>
+            <SelectMenu value={assignForm.shiftId} onChange={(value) => setAssignForm((current) => ({ ...current, shiftId: value }))} options={shiftOptions} ariaLabel="Choose shift" icon="bi-clock" />
           </div>
-
           <div className="hc-form-group">
-            <label className="hc-label">
-              Ngày làm việc <span style={{ color: "var(--hc-error)" }}>*</span>
-            </label>
-            <input type="date" className="hc-input" value={assignForm.workDate} onChange={(e) => setAssignForm({ ...assignForm, workDate: e.target.value })} required />
+            <label className="hc-label">Work date *</label>
+            <input className="hc-input" type="date" value={assignForm.workDate} onChange={(e) => setAssignForm((current) => ({ ...current, workDate: e.target.value }))} required />
           </div>
-
           <div className="hc-form-group">
-            <label className="hc-label">Ghi chú phân công</label>
-            <input type="text" className="hc-input" placeholder="Ví dụ: Trực quầy chính sảnh..." value={assignForm.notes} onChange={(e) => setAssignForm({ ...assignForm, notes: e.target.value })} />
+            <label className="hc-label">Notes</label>
+            <input className="hc-input" value={assignForm.notes} onChange={(e) => setAssignForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Optional assignment notes" />
           </div>
         </form>
       </Modal>
 
-      {/* Shift Definition Modal */}
       <Modal
         isOpen={shiftModalOpen}
         onClose={() => setShiftModalOpen(false)}
-        title={editShiftId ? "Chỉnh Sửa Ca Làm Việc" : "Thêm Ca Làm Việc Mới"}
-        subtitle={editShiftId ? `Cập nhật thông tin ca ${shiftForm.shiftName}` : "Định nghĩa ca trực mới trong hệ thống"}
-        icon={editShiftId ? "bi-pencil-square" : "bi-clock-history"}
+        title={editShiftId ? "Edit shift" : "Create shift"}
+        subtitle="Define the shift's working hours."
+        icon="bi-clock-history"
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="admin-modal-actions">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setShiftModalOpen(false)}>
-              Hủy
+              Cancel
             </button>
-            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={handleSaveShift} disabled={submittingShift}>
-              {submittingShift ? "Đang lưu..." : editShiftId ? "Lưu thông tin" : "Tạo ca"}
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={submittingShift} onClick={handleSaveShift}>
+              {submittingShift ? "Saving…" : "Save shift"}
             </button>
           </div>
         }
       >
         <form onSubmit={handleSaveShift}>
           <div className="hc-form-group">
-            <label className="hc-label">
-              Tên ca làm việc <span style={{ color: "var(--hc-error)" }}>*</span>
-            </label>
-            <input
-              type="text"
-              className="hc-input"
-              placeholder="ví dụ: Ca Sáng, Ca Chiều, Ca Đêm..."
-              value={shiftForm.shiftName}
-              onChange={(e) => setShiftForm({ ...shiftForm, shiftName: e.target.value })}
-              required
-            />
+            <label className="hc-label">Shift name *</label>
+            <input className="hc-input" value={shiftForm.shiftName} onChange={(e) => setShiftForm((current) => ({ ...current, shiftName: e.target.value }))} required />
           </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div className="admin-shift-time-fields">
             <div className="hc-form-group">
-              <label className="hc-label">Giờ bắt đầu</label>
-              <input type="time" className="hc-input" value={shiftForm.startTime} onChange={(e) => setShiftForm({ ...shiftForm, startTime: e.target.value })} required />
+              <label className="hc-label">Start time</label>
+              <input className="hc-input" type="time" value={shiftForm.startTime} onChange={(e) => setShiftForm((current) => ({ ...current, startTime: e.target.value }))} required />
             </div>
             <div className="hc-form-group">
-              <label className="hc-label">Giờ kết thúc</label>
-              <input type="time" className="hc-input" value={shiftForm.endTime} onChange={(e) => setShiftForm({ ...shiftForm, endTime: e.target.value })} required />
+              <label className="hc-label">End time</label>
+              <input className="hc-input" type="time" value={shiftForm.endTime} onChange={(e) => setShiftForm((current) => ({ ...current, endTime: e.target.value }))} required />
             </div>
           </div>
-
           <div className="hc-form-group">
-            <label className="hc-label">Mô tả nhiệm vụ</label>
-            <textarea
-              className="hc-textarea"
-              rows="2"
-              placeholder="Mô tả công việc trong ca..."
-              value={shiftForm.description}
-              onChange={(e) => setShiftForm({ ...shiftForm, description: e.target.value })}
-            ></textarea>
+            <label className="hc-label">Description</label>
+            <textarea className="hc-textarea" rows="3" value={shiftForm.description} onChange={(e) => setShiftForm((current) => ({ ...current, description: e.target.value }))} />
           </div>
         </form>
       </Modal>

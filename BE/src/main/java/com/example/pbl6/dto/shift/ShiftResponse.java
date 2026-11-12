@@ -19,14 +19,20 @@ public class ShiftResponse {
     private LocalTime endTime;
     private String description;
 
+    /** True when the shift runs past midnight (end time is before start time). */
+    private boolean overnight;
+
     public static ShiftResponse fromEntity(Shift shift) {
         if (shift == null) return null;
+        boolean overnight = shift.getStartTime() != null && shift.getEndTime() != null
+                && shift.getEndTime().isBefore(shift.getStartTime());
         return ShiftResponse.builder()
                 .shiftId(shift.getShiftId())
                 .shiftName(shift.getShiftName())
                 .startTime(shift.getStartTime())
                 .endTime(shift.getEndTime())
                 .description(shift.getDescription())
+                .overnight(overnight)
                 .build();
     }
 }
