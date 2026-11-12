@@ -13,7 +13,15 @@ import java.util.List;
 @Repository
 public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Integer> {
 
-    List<WorkSchedule> findByWorkDate(LocalDate workDate);
+    @Query("""
+            select ws from WorkSchedule ws
+              join fetch ws.account a
+              left join fetch a.role r
+              join fetch ws.shift s
+            where ws.workDate = :workDate
+            order by s.startTime asc, a.fullName asc
+            """)
+    List<WorkSchedule> findByWorkDate(@Param("workDate") LocalDate workDate);
 
     List<WorkSchedule> findByAccount_AccountId(Integer accountId);
 

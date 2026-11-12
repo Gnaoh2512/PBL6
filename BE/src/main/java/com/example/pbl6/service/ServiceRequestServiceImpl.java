@@ -27,9 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -47,6 +50,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final InvoiceRepository invoiceRepository;
     private final ServiceUsageRepository serviceUsageRepository;
     private final FinancialCalculator financialCalculator;
+    private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
 
     @Override
@@ -55,14 +59,15 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
 
-        Customer customer = customerRepository.findByEmail(account.getEmail())
-                .orElseGet(() -> customerRepository.findAll().stream()
-                        .filter(c -> c.getAccount() != null && c.getAccount().getAccountId().equals(account.getAccountId()))
-                        .findFirst()
-                        .orElseThrow(() -> new ResourceNotFoundException("Tài khoản chưa được liên kết thông tin khách hàng")));
-
         Booking booking = bookingRepository.findById(dto.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin đặt phòng: " + dto.getBookingId()));
+
+        Customer customer = booking.getCustomer();
+        if (customer == null) {
+            customer = customerRepository.findByEmail(account.getEmail())
+                    .orElseGet(() -> customerRepository.findByAccount_AccountId(account.getAccountId())
+                            .orElseThrow(() -> new ResourceNotFoundException("Tài khoản chưa được liên kết thông tin khách hàng")));
+        }
 
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông tin phòng: " + dto.getRoomId()));
@@ -71,23 +76,34 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ: " + dto.getServiceId()));
 
         int qty = dto.getQuantity() != null && dto.getQuantity() > 0 ? dto.getQuantity() : 1;
-        BigDecimal fee = service.getUnitPrice() != null 
-                ? service.getUnitPrice().multiply(BigDecimal.valueOf(qty)) 
+        BigDecimal fee = service.getUnitPrice() != null
+                ? service.getUnitPrice().multiply(BigDecimal.valueOf(qty))
                 : BigDecimal.ZERO;
+
+        Account assignedStaff = null;
+        if (dto.getAssignedToId() != null) {
+            assignedStaff = accountRepository.findById(dto.getAssignedToId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên phục vụ #" + dto.getAssignedToId()));
+            validateShiftIfScheduledDataExists(assignedStaff);
+        }
+
+        // Luồng trạng thái: Nếu được phân công nhân viên (assigned_to != null), đổi trạng thái thành DELIVERING ngay
+        String initialStatus = assignedStaff != null ? "DELIVERING" : "PENDING";
 
         ServiceRequest request = ServiceRequest.builder()
                 .booking(booking)
                 .room(room)
                 .service(service)
                 .customer(customer)
+                .assignedTo(assignedStaff)
                 .quantity(qty)
                 .feeAmount(fee)
-                .status("PENDING")
+                .status(initialStatus)
                 .note(dto.getNote())
                 .build();
 
         ServiceRequest saved = serviceRequestRepository.save(request);
-        log.info("Created service request #{} for room {}", saved.getServiceRequestId(), room.getRoomNumber());
+        log.info("Created service request #{} for room {} with status {}", saved.getServiceRequestId(), room.getRoomNumber(), initialStatus);
 
         auditLogService.log(account, "YÊU CẦU DỊCH VỤ", "ORDER", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Đặt dịch vụ: " + service.getServiceName() + " x" + qty + " cho phòng " + room.getRoomNumber() + " (Đơn đặt: " + booking.getBookingCode() + ")");
@@ -102,8 +118,11 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
 
         return serviceRequestRepository.findAll().stream()
-                .filter(r -> r.getCustomer() != null && r.getCustomer().getAccount() != null 
-                        && r.getCustomer().getAccount().getAccountId().equals(account.getAccountId()))
+                .filter(r -> r.getCustomer() != null && (
+                        (r.getCustomer().getAccount() != null && r.getCustomer().getAccount().getAccountId().equals(account.getAccountId()))
+                        || (account.getEmail() != null && account.getEmail().equalsIgnoreCase(r.getCustomer().getEmail()))
+                ))
+                .sorted(Comparator.comparing(ServiceRequest::getServiceRequestId, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(ServiceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
     }
@@ -176,6 +195,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         if (staff != null) {
             request.setAssignedTo(staff);
         }
+        // Khi assigned_to != null -> đổi trạng thái thành DELIVERING
         request.setStatus("DELIVERING");
         ServiceRequest saved = serviceRequestRepository.save(request);
         updateMatchingServiceUsageStatus(saved, "DELIVERING");
@@ -183,6 +203,33 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         String staffDisplay = staff != null ? (staff.getFullName() + " (" + staffUsername + ")") : staffUsername;
         auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Nhân viên " + staffDisplay + " tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
+
+        return ServiceRequestResponse.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse assignRequestToStaff(Integer requestId, Integer staffAccountId, String actorUsername) {
+        if (staffAccountId == null) {
+            return assignRequest(requestId, actorUsername);
+        }
+
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
+
+        Account staff = accountRepository.findById(staffAccountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên phục vụ #" + staffAccountId));
+
+        validateShiftIfScheduledDataExists(staff);
+
+        request.setAssignedTo(staff);
+        // Khi được phân công nhân viên (assigned_to != null), đổi trạng thái thành DELIVERING
+        request.setStatus("DELIVERING");
+        ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "DELIVERING");
+
+        auditLogService.log("YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Phân công nhân viên " + staff.getFullName() + " phục vụ yêu cầu dịch vụ #" + requestId + " (bởi " + actorUsername + ")");
 
         return ServiceRequestResponse.fromEntity(saved);
     }
@@ -223,9 +270,13 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
 
         String upper = (newStatus != null && !newStatus.isBlank()) ? newStatus.trim().toUpperCase() : "PENDING";
+        if ("IN_PROGRESS".equalsIgnoreCase(upper)) {
+            upper = "DELIVERING";
+        }
         request.setStatus(upper);
 
-        if (StringUtils.hasText(staffUsername) && request.getAssignedTo() == null) {
+        if (StringUtils.hasText(staffUsername) && request.getAssignedTo() == null
+                && ("DELIVERING".equalsIgnoreCase(upper) || "COMPLETED".equalsIgnoreCase(upper))) {
             accountRepository.findByUsername(staffUsername).ifPresent(request::setAssignedTo);
         }
 
@@ -245,6 +296,74 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 "Đổi trạng thái yêu cầu #" + requestId + " sang " + upper + " bởi " + staffUsername);
 
         return ServiceRequestResponse.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public List<ServiceRequestResponse> getRequestsByCustomerId(Integer customerId) {
+        try {
+            syncServiceUsagesToRequests();
+        } catch (Exception ignored) {
+        }
+        return serviceRequestRepository.findByCustomer_CustomerId(customerId).stream()
+                .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(ServiceRequestResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public List<ServiceRequestResponse> getRequestsByAccountId(Integer accountId) {
+        try {
+            syncServiceUsagesToRequests();
+        } catch (Exception ignored) {
+        }
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản #" + accountId));
+
+        Optional<Customer> custOpt = customerRepository.findByAccount_AccountId(accountId);
+        if (custOpt.isEmpty() && StringUtils.hasText(account.getEmail())) {
+            custOpt = customerRepository.findByEmail(account.getEmail());
+        }
+        if (custOpt.isEmpty() && StringUtils.hasText(account.getPhone())) {
+            custOpt = customerRepository.findByPhone(account.getPhone());
+        }
+
+        if (custOpt.isPresent()) {
+            return getRequestsByCustomerId(custOpt.get().getCustomerId());
+        }
+        return List.of();
+    }
+
+    @Override
+    @Transactional
+    public List<ServiceRequestResponse> getRequestsByBookingId(Integer bookingId) {
+        try {
+            syncServiceUsagesToRequests();
+        } catch (Exception ignored) {
+        }
+        return serviceRequestRepository.findByBooking_BookingId(bookingId).stream()
+                .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(ServiceRequestResponse::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public List<ServiceRequestResponse> getRequestsByBookingCode(String bookingCode) {
+        Booking booking = bookingRepository.findByBookingCode(bookingCode.trim().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
+        return getRequestsByBookingId(booking.getBookingId());
+    }
+
+    private void validateShiftIfScheduledDataExists(Account staff) {
+        var availableStaff = workScheduleService.getAvailableStaffInShift(LocalDate.now(), LocalTime.now(), "ROLE_SERVICE_STAFF");
+        if (!availableStaff.isEmpty()) {
+            boolean inShift = availableStaff.stream().anyMatch(s -> s.getAccountId().equals(staff.getAccountId()));
+            if (!inShift) {
+                throw new IllegalArgumentException("Nhân viên " + staff.getFullName() + " hiện không có trong lịch trực ca phục vụ dịch vụ!");
+            }
+        }
     }
 
     private void syncServiceUsagesToRequests() {
@@ -289,6 +408,8 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                     String initialStatus = (u.getStatus() != null && !u.getStatus().isBlank()) ? u.getStatus().toUpperCase() : "PENDING";
                     if ("CHARGED_TO_ROOM".equalsIgnoreCase(initialStatus)) {
                         initialStatus = "PENDING";
+                    } else if ("IN_PROGRESS".equalsIgnoreCase(initialStatus)) {
+                        initialStatus = "DELIVERING";
                     }
 
                     ServiceRequest req = ServiceRequest.builder()

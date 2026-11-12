@@ -23,6 +23,7 @@ public class ServiceRequestResponse {
     private String serviceName;
     private Integer customerId;
     private String customerName;
+    private Integer assignedToId;
     private String assignedToStaff;
     private Integer quantity;
     private BigDecimal feeAmount;
@@ -45,6 +46,7 @@ public class ServiceRequestResponse {
                 .serviceName(entity.getService() != null ? entity.getService().getServiceName() : null)
                 .customerId(entity.getCustomer() != null ? entity.getCustomer().getCustomerId() : null)
                 .customerName(entity.getCustomer() != null ? entity.getCustomer().getFullName() : null)
+                .assignedToId(entity.getAssignedTo() != null ? entity.getAssignedTo().getAccountId() : null)
                 .assignedToStaff(entity.getAssignedTo() != null ? entity.getAssignedTo().getFullName() : null)
                 .quantity(entity.getQuantity())
                 .feeAmount(entity.getFeeAmount())

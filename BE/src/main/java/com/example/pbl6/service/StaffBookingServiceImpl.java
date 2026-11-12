@@ -34,7 +34,7 @@ public class StaffBookingServiceImpl implements StaffBookingService {
     private final AccountRepository accountRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
-    private final CashierShiftRepository cashierShiftRepository;
+    private final CashierShiftService cashierShiftService;
 
     private final FinancialCalculator financialCalculator;
     private final BankConfig bankConfig;
@@ -89,21 +89,13 @@ public class StaffBookingServiceImpl implements StaffBookingService {
         BigDecimal amountPaid = request.getAmountPaid() != null ? request.getAmountPaid() : BigDecimal.ZERO;
         String paymentMethod = StringUtils.hasText(request.getPaymentMethod()) ? request.getPaymentMethod().toUpperCase() : "CASH";
 
-        // Kiểm tra ca thu ngân nếu thu tiền mặt tại quầy
-        CashierShift activeShift = null;
-        if (staffAccount != null) {
-            List<CashierShift> shifts = cashierShiftRepository.findByAccount_AccountId(staffAccount.getAccountId());
-            activeShift = shifts.stream()
-                    .filter(cs -> "OPEN".equalsIgnoreCase(cs.getStatus()))
-                    .findFirst()
-                    .orElse(null);
-
-            if (amountPaid.compareTo(BigDecimal.ZERO) > 0 && "CASH".equalsIgnoreCase(paymentMethod) && activeShift == null) {
-                throw new IllegalArgumentException("Nhân viên thu tiền mặt tại quầy nhưng chưa mở Ca thu ngân (Cashier Shift). Vui lòng mở ca trước khi nhận tiền mặt!");
-            }
+        // Kiểm tra ca thu ngân chung (OPEN) của ngày/ca hôm nay nếu thu tiền mặt tại quầy
+        CashierShift activeShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
+        if (amountPaid.compareTo(BigDecimal.ZERO) > 0 && "CASH".equalsIgnoreCase(paymentMethod) && activeShift == null) {
+            throw new IllegalArgumentException("Hiện chưa có Ca thu ngân chung (Cashier Shift) nào đang mở. Vui lòng mở ca trước khi nhận tiền mặt tại quầy!");
         }
 
-        // Tìm hoặc tạo hồ sơ khách hàng vãng lai
+        // Tìm hoặc tạo hồ sơ khách hàng vãng lai (account_id = null)
         Customer customer = findOrCreateCustomer(request);
 
         // Tính toán tài chính
@@ -201,7 +193,7 @@ public class StaffBookingServiceImpl implements StaffBookingService {
                     .booking(savedBooking)
                     .invoice(savedInvoice)
                     .cashierShift(activeShift)
-                    .type(checkInImmediately ? PaymentType.DEPOSIT.name() : PaymentType.DEPOSIT.name())
+                    .type(PaymentType.DEPOSIT.name())
                     .method(paymentMethod)
                     .amount(amountPaid)
                     .receivedBy(staffAccount)

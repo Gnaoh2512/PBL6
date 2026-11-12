@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/staff/service-requests")
@@ -31,10 +32,29 @@ public class StaffServiceRequestController {
     @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> assignRequest(
             @PathVariable Integer id,
+            @RequestParam(required = false) Integer staffId,
+            @RequestParam(required = false) Integer assignedToId,
+            @RequestBody(required = false) Map<String, Object> body,
             Authentication authentication
     ) {
-        ServiceRequestResponse response = serviceRequestService.assignRequest(id, authentication != null ? authentication.getName() : "staff");
-        return ResponseEntity.ok(ApiResponse.ok("Đã nhận xử lý yêu cầu dịch vụ", response));
+        String actorUsername = authentication != null ? authentication.getName() : "staff";
+        Integer targetStaffId = staffId != null ? staffId : assignedToId;
+        if (targetStaffId == null && body != null) {
+            Object val = body.getOrDefault("assignedToId", body.get("staffId"));
+            if (val instanceof Number n) {
+                targetStaffId = n.intValue();
+            } else if (val != null) {
+                try {
+                    targetStaffId = Integer.parseInt(val.toString().trim());
+                } catch (NumberFormatException ignored) {
+                }
+            }
+        }
+
+        ServiceRequestResponse response = targetStaffId != null
+                ? serviceRequestService.assignRequestToStaff(id, targetStaffId, actorUsername)
+                : serviceRequestService.assignRequest(id, actorUsername);
+        return ResponseEntity.ok(ApiResponse.ok("Đã phân công xử lý yêu cầu dịch vụ (Trạng thái: DELIVERING)", response));
     }
 
     @PostMapping("/{id}/complete")
@@ -44,7 +64,7 @@ public class StaffServiceRequestController {
             Authentication authentication
     ) {
         ServiceRequestResponse response = serviceRequestService.completeRequest(id, authentication != null ? authentication.getName() : "staff");
-        return ResponseEntity.ok(ApiResponse.ok("Đã hoàn tất yêu cầu dịch vụ phòng", response));
+        return ResponseEntity.ok(ApiResponse.ok("Đã hoàn tất yêu cầu dịch vụ phòng (Trạng thái: COMPLETED)", response));
     }
 
     @PostMapping("/{id}/cancel")

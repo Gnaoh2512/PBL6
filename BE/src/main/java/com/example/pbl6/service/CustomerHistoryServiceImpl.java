@@ -7,6 +7,7 @@ import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
 import com.example.pbl6.dto.history.PaymentHistoryResponse;
 import com.example.pbl6.dto.service.ServiceUsageResponse;
+import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.*;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.*;
@@ -19,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +37,7 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final ServiceUsageRepository serviceUsageRepository;
+    private final ServiceRequestRepository serviceRequestRepository;
     private final FinancialCalculator financialCalculator;
     private final VietQrService vietQrService;
 
@@ -74,7 +75,6 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         // Kiểm tra quyền sở hữu đơn đặt phòng của tài khoản thành viên
         Integer customerId = resolveCustomerId(account);
         if (booking.getCustomer() == null || !booking.getCustomer().getCustomerId().equals(customerId)) {
-            // Trường hợp tài khoản khớp qua SĐT hoặc Email
             boolean matchPhone = StringUtils.hasText(account.getPhone()) &&
                     account.getPhone().equals(booking.getCustomer() != null ? booking.getCustomer().getPhone() : null);
             boolean matchEmail = StringUtils.hasText(account.getEmail()) &&
@@ -116,7 +116,6 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         Booking booking = bookingRepository.findByBookingCode(bookingCode.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng với mã: " + bookingCode));
 
-        // Kiểm tra đối soát bảo mật: Số điện thoại phải khớp với hồ sơ khách của đơn
         Customer customer = booking.getCustomer();
         if (customer == null || !phone.trim().equals(customer.getPhone() != null ? customer.getPhone().trim() : "")) {
             throw new IllegalArgumentException("Số điện thoại không trùng khớp với thông tin đơn đặt phòng");
@@ -126,6 +125,9 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
     }
 
     private Integer resolveCustomerId(Account account) {
+        Optional<Customer> byAcc = customerRepository.findByAccount_AccountId(account.getAccountId());
+        if (byAcc.isPresent()) return byAcc.get().getCustomerId();
+
         if (StringUtils.hasText(account.getEmail())) {
             Optional<Customer> custOpt = customerRepository.findByEmail(account.getEmail());
             if (custOpt.isPresent()) return custOpt.get().getCustomerId();
@@ -206,7 +208,7 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         long nights = financialCalculator.calculateNights(booking.getCheckInDate(), booking.getCheckOutDate());
         BigDecimal roomCharge = financialCalculator.calculateTotalRoomCharge(basePrice, nights);
 
-        // Lấy dịch vụ đã sử dụng
+        // Lấy dịch vụ đã sử dụng (service_usage & service_request)
         List<ServiceUsage> usages = serviceUsageRepository.findByBooking_BookingId(booking.getBookingId());
         List<ServiceUsageResponse> servicesUsed = usages.stream().map(u -> ServiceUsageResponse.builder()
                 .usageId(u.getUsageId())
@@ -224,15 +226,26 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
                 .usedAt(u.getUsedAt())
                 .build()).collect(Collectors.toList());
 
+        List<ServiceRequestResponse> serviceRequests = serviceRequestRepository.findByBooking_BookingId(booking.getBookingId())
+                .stream()
+                .map(ServiceRequestResponse::fromEntity)
+                .collect(Collectors.toList());
+
         BigDecimal serviceCharge = usages.stream()
                 .filter(u -> !"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus()))
                 .map(u -> u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        // Lấy hóa đơn nếu có
+        List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
+        Invoice invoice = invoices.isEmpty() ? null : invoices.get(0);
+
         BigDecimal subtotal = roomCharge.add(serviceCharge);
         BigDecimal taxAmount = financialCalculator.calculateTax(subtotal);
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount);
+        BigDecimal discountAmount = (invoice != null && invoice.getDiscountAmount() != null)
+                ? invoice.getDiscountAmount()
+                : BigDecimal.ZERO;
+        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount).max(BigDecimal.ZERO);
 
         // Lấy lịch sử giao dịch thanh toán
         List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
@@ -277,10 +290,6 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         boolean isFullySettled = BookingStatus.CHECKED_OUT.name().equalsIgnoreCase(booking.getStatus()) ||
                 remainingBalance.compareTo(BigDecimal.ZERO) <= 0;
 
-        // Lấy hóa đơn nếu có
-        List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
-        Invoice invoice = invoices.isEmpty() ? null : invoices.get(0);
-
         // Mã VietQR nếu đơn còn cần thanh toán
         BankTransferQrResponse qrCode = null;
         if (BookingStatus.PENDING_DEPOSIT.name().equalsIgnoreCase(booking.getStatus())) {
@@ -306,6 +315,7 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         }
 
         return CustomerBookingHistoryDetailResponse.builder()
+                .bookingId(booking.getBookingId())
                 .bookingCode(booking.getBookingCode())
                 .bookingStatus(booking.getStatus())
                 .createdAt(booking.getCreatedAt())
@@ -335,6 +345,7 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
                 .remainingBalance(remainingBalance)
                 .isFullySettled(isFullySettled)
                 .servicesUsed(servicesUsed)
+                .serviceRequests(serviceRequests)
                 .paymentTransactions(paymentTransactions)
                 .invoiceNumber(invoice != null ? invoice.getInvoiceNumber() : null)
                 .invoiceStatus(invoice != null ? invoice.getStatus() : null)

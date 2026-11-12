@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -53,6 +52,8 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     private final LoyaltyTierRepository loyaltyTierRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final CustomerRepository customerRepository;
+    private final CashierShiftService cashierShiftService;
+    private final RoomCleaningRequestRepository roomCleaningRequestRepository;
     private final AuditLogService auditLogService;
 
     @Override
@@ -230,10 +231,18 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .map(u -> u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
+        Invoice activeInvoice = invoices.stream()
+                .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
+                .findFirst()
+                .orElse(null);
+
         BigDecimal subtotal = roomCharge.add(serviceCharge);
         BigDecimal taxAmount = financialCalculator.calculateTax(subtotal);
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount);
+        BigDecimal discountAmount = activeInvoice != null && activeInvoice.getDiscountAmount() != null
+                ? activeInvoice.getDiscountAmount()
+                : BigDecimal.ZERO;
+        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount).max(BigDecimal.ZERO);
 
         // Tiền cọc đã nộp và tiền tất toán đã nộp
         List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
@@ -241,13 +250,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .filter(p -> PaymentType.DEPOSIT.name().equalsIgnoreCase(p.getType()))
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        // Fallback: nếu chưa có bản ghi Payment type DEPOSIT, kiểm tra invoice đã áp dụng cọc hoặc depositRequired
-        List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
-        Invoice activeInvoice = invoices.stream()
-                .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
-                .findFirst()
-                .orElse(null);
 
         if (depositPaid.compareTo(BigDecimal.ZERO) == 0 && activeInvoice != null && activeInvoice.getDepositApplied() != null && activeInvoice.getDepositApplied().compareTo(BigDecimal.ZERO) > 0) {
             depositPaid = activeInvoice.getDepositApplied();
@@ -379,9 +381,12 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     ? request.getPaymentMethod()
                     : PaymentMethod.CASH.name();
 
+            CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
+
             Payment payment = Payment.builder()
                     .booking(booking)
                     .invoice(invoice)
+                    .cashierShift(openShift)
                     .type(PaymentType.SETTLEMENT.name())
                     .method(method)
                     .amount(paymentAmount)
@@ -421,16 +426,27 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         booking.setStatus(BookingStatus.CHECKED_OUT.name());
         bookingRepository.save(booking);
 
-        // Cập nhật BookingRoom sang CHECKED_OUT và Room sang CLEANING
+        // Cập nhật BookingRoom sang CHECKED_OUT, Room sang CLEANING và tự động tạo RoomCleaningRequest cho bộ phận Housekeeping
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
         for (BookingRoom br : bookingRooms) {
             br.setStatus(BookingStatus.CHECKED_OUT.name());
+            br.setActualCheckout(LocalDateTime.now());
             bookingRoomRepository.save(br);
 
             Room room = br.getRoom();
             if (room != null) {
                 room.setStatus(RoomStatus.CLEANING.name());
                 roomRepository.save(room);
+
+                RoomCleaningRequest cleaningReq = RoomCleaningRequest.builder()
+                        .room(room)
+                        .booking(booking)
+                        .requestedBy(cashierAccount)
+                        .priority("HIGH")
+                        .status("PENDING")
+                        .note("Khách trả phòng (Check-out đơn " + booking.getBookingCode() + ") - Cần dọn phòng đón khách mới")
+                        .build();
+                roomCleaningRequestRepository.save(cleaningReq);
             }
         }
 
@@ -452,7 +468,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     @Override
     @Transactional
     public boolean processSettlementWebhook(String bookingCode, BigDecimal amount, String referenceCode) {
-        log.info("Xử lý webhook tất toán: bookingCode={}, amount={}, ref={}", bookingCode, amount, referenceCode);
+        log.info("Xử lý webhook tất toán SePay: bookingCode={}, amount={}, ref={}", bookingCode, amount, referenceCode);
         Optional<Booking> optBooking = bookingRepository.findByBookingCode(bookingCode);
         if (optBooking.isEmpty()) {
             log.warn("Không tìm thấy đơn khi xử lý webhook tất toán: {}", bookingCode);
@@ -460,9 +476,38 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         }
 
         Booking booking = optBooking.get();
+        LiveFolioResponse folio = getLiveFolio(booking.getBookingCode());
+        BigDecimal remaining = folio.getRemainingBalance() != null ? folio.getRemainingBalance() : BigDecimal.ZERO;
+        BigDecimal transferAmount = amount != null ? amount : BigDecimal.ZERO;
+
+        // Kiểm tra khớp số tiền: Nếu số tiền chuyển vào nhỏ hơn số dư cần thanh toán thì chỉ ghi nhận Payment một phần, chưa tự động Check-out
+        if (transferAmount.compareTo(remaining) < 0) {
+            CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
+            Invoice activeInvoice = invoiceRepository.findByBooking_BookingId(booking.getBookingId()).stream()
+                    .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
+                    .findFirst()
+                    .orElse(null);
+
+            Payment partialPayment = Payment.builder()
+                    .booking(booking)
+                    .invoice(activeInvoice)
+                    .cashierShift(openShift)
+                    .type(PaymentType.SETTLEMENT.name())
+                    .method(PaymentMethod.BANK_TRANSFER.name())
+                    .amount(transferAmount)
+                    .note("Thanh toán một phần qua SePay Webhook (Ref: " + referenceCode + ")")
+                    .paidAt(LocalDateTime.now())
+                    .build();
+            paymentRepository.save(partialPayment);
+
+            log.warn("Đơn {} nhận tất toán {}đ qua SePay nhưng số dư cần trả là {}đ. Đã ghi nhận thanh toán một phần, chờ trả đủ.",
+                    booking.getBookingCode(), transferAmount, remaining);
+            return true;
+        }
+
         SettlementRequest request = SettlementRequest.builder()
                 .paymentMethod(PaymentMethod.BANK_TRANSFER.name())
-                .amount(amount)
+                .amount(transferAmount)
                 .note("Tất toán tự động qua SePay Webhook (Ref: " + referenceCode + ")")
                 .build();
 
@@ -551,7 +596,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         if (depositPaid.compareTo(BigDecimal.ZERO) <= 0) {
             messageDetail = "Đơn chưa thanh toán tiền cọc, hủy phòng thành công mà không phát sinh hoàn tiền/bảo lưu.";
         } else if ("CREDIT_VOUCHER".equalsIgnoreCase(option)) {
-            // Tùy chọn 1: Bảo lưu 100% cọc thành Voucher nghỉ dưỡng 6 tháng
             refundPercentage = 100;
             refundAmount = depositPaid;
             penaltyFee = BigDecimal.ZERO;
@@ -582,7 +626,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     depositPaid, creditVoucherCode);
 
         } else if ("LOYALTY_POINTS".equalsIgnoreCase(option)) {
-            // Tùy chọn 2: Quy đổi 100% cọc sang Điểm thưởng Coastal Bay Club (Tỷ lệ: 100.000đ = 1.0 điểm)
             refundPercentage = 100;
             refundAmount = depositPaid;
             penaltyFee = BigDecimal.ZERO;
@@ -592,7 +635,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 throw new IllegalArgumentException("Đơn đặt phòng này không liên kết với hồ sơ hội viên để quy đổi điểm thưởng");
             }
 
-            // Quy đổi: 100.000 VNĐ cọc = 1.00 điểm Loyalty
             loyaltyPointsCredited = depositPaid.divide(BigDecimal.valueOf(100_000), 2, RoundingMode.HALF_UP);
 
             CustomerLoyalty loyalty = customerLoyaltyRepository.findByCustomer_CustomerId(customer.getCustomerId())
@@ -620,7 +662,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
 
             loyalty.setTotalScore(loyalty.getTotalScore().add(loyaltyPointsCredited));
 
-            // Tự động thăng hạng nếu đủ điểm
             List<LoyaltyTier> tiers = loyaltyTierRepository.findAll();
             tiers.sort((a, b) -> b.getTierLevel().compareTo(a.getTierLevel()));
             for (LoyaltyTier tier : tiers) {
@@ -639,7 +680,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     depositPaid, loyaltyPointsCredited);
 
         } else {
-            // Tùy chọn 3: Hoàn tiền mặt/chuyển khoản theo chính sách thời gian (>=3 ngày: 100%, 1-2 ngày: 50%, 0 ngày: 0%)
             option = "CASH_REFUND";
             refundPercentage = financialCalculator.calculateRefundPercentage(booking.getCheckInDate(), LocalDate.now());
             refundAmount = depositPaid.multiply(BigDecimal.valueOf(refundPercentage))
@@ -647,8 +687,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             penaltyFee = depositPaid.subtract(refundAmount);
 
             if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
                 Payment refundPayment = Payment.builder()
                         .booking(booking)
+                        .cashierShift(openShift)
                         .type(PaymentType.REFUND.name())
                         .method(PaymentMethod.BANK_TRANSFER.name())
                         .amount(refundAmount)
@@ -664,14 +706,12 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     refundPercentage, refundAmount, penaltyFee);
         }
 
-        // Cập nhật trạng thái Booking sang CANCELED
         booking.setStatus(BookingStatus.CANCELED.name());
         booking.setCancelReason(reason + " [Chính sách: " + option + "]");
         booking.setCanceledBy(userAccount);
         booking.setCanceledAt(LocalDateTime.now());
         bookingRepository.save(booking);
 
-        // Cập nhật trạng thái BookingRoom sang CANCELED và giải phóng phòng thành AVAILABLE
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
         for (BookingRoom br : bookingRooms) {
             br.setStatus(BookingStatus.CANCELED.name());
@@ -684,7 +724,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             }
         }
 
-        // Hủy các hóa đơn liên quan nếu có
         List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
         for (Invoice inv : invoices) {
             inv.setStatus(InvoiceStatus.CANCELED.name());
@@ -718,6 +757,9 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ đã gọi với mã: " + usageId));
 
         String upperStatus = (status != null && !status.isBlank()) ? status.trim().toUpperCase() : "PENDING";
+        if ("IN_PROGRESS".equalsIgnoreCase(upperStatus)) {
+            upperStatus = "DELIVERING";
+        }
         usage.setStatus(upperStatus);
         ServiceUsage saved = serviceUsageRepository.save(usage);
 

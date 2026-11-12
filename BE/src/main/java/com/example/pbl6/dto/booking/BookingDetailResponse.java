@@ -1,6 +1,8 @@
 package com.example.pbl6.dto.booking;
 
 import com.example.pbl6.dto.room.RoomTypeResponse;
+import com.example.pbl6.dto.service.ServiceUsageResponse;
+import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +11,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Builder
@@ -44,6 +48,13 @@ public class BookingDetailResponse {
     private BigDecimal totalRoomCharge;
     private BigDecimal depositRequired;
     private BigDecimal depositPaid;
+
+    // Danh sách dịch vụ chi tiết gắn liền với lượt đặt phòng (Guest Portal)
+    @Builder.Default
+    private List<ServiceUsageResponse> servicesUsed = new ArrayList<>();
+
+    @Builder.Default
+    private List<ServiceRequestResponse> serviceRequests = new ArrayList<>();
 
     // Mã VietQR chuyển khoản (nếu đang ở trạng thái PENDING_DEPOSIT)
     private BankTransferQrResponse qrInfo;

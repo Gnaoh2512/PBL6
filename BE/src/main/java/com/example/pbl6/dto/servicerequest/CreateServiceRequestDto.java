@@ -21,6 +21,8 @@ public class CreateServiceRequestDto {
     @NotNull(message = "Mã dịch vụ (serviceId) không được để trống")
     private Integer serviceId;
 
+    private Integer assignedToId; // Nếu có truyền assignedToId ngay lúc tạo thì tự động sang DELIVERING
+
     @Builder.Default
     private Integer quantity = 1;
 

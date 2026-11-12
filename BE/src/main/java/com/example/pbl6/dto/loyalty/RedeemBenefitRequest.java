@@ -19,5 +19,9 @@ public class RedeemBenefitRequest {
 
     private String bookingCode;
 
+    private Integer serviceUsageId;
+
+    private Integer serviceRequestId;
+
     private String note;
 }

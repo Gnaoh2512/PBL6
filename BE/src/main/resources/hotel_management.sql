@@ -581,3 +581,65 @@ JOIN service s ON s.service_name = 'Bữa sáng Buffet'
 WHERE b.booking_code = 'BK-CUSTOMER1-DEMO'
   AND NOT EXISTS (SELECT 1 FROM service_usage su WHERE su.booking_id = b.booking_id AND su.service_id = s.service_id);
 
+
+-- ====================================================================
+-- 7. BẢNG YÊU CẦU DỌN PHÒNG (roomcleaning_request) & VIEW ĐẶC QUYỀN HỘI VIÊN
+-- ====================================================================
+
+CREATE TABLE IF NOT EXISTS roomcleaning_request (
+    cleaning_id INT AUTO_INCREMENT PRIMARY KEY,
+    room_id INT NOT NULL,
+    booking_id INT NULL,
+    requested_by INT NULL COMMENT 'account requesting cleaning',
+    assigned_to INT NULL COMMENT 'account (ROLE_HOUSEKEEPING)',
+    priority VARCHAR(50) DEFAULT 'MEDIUM' COMMENT 'LOW | MEDIUM | HIGH | URGENT',
+    status VARCHAR(50) DEFAULT 'PENDING' COMMENT 'PENDING | IN_PROGRESS | COMPLETED | CANCELED',
+    note TEXT,
+    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    started_at DATETIME NULL,
+    completed_at DATETIME NULL,
+    FOREIGN KEY (room_id) REFERENCES room(room_id) ON DELETE RESTRICT,
+    FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE SET NULL,
+    FOREIGN KEY (requested_by) REFERENCES account(account_id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to) REFERENCES account(account_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE OR REPLACE VIEW v_customer_benefit_availability AS
+SELECT 
+    cl.customer_id,
+    c.full_name AS customer_name,
+    lt.tier_id AS current_tier_id,
+    lt.tier_code AS current_tier_code,
+    lt.tier_name AS current_tier_name,
+    lt.tier_level AS current_tier_level,
+    tb.tier_benefit_id,
+    tb.benefit_type,
+    tb.benefit_name,
+    tb.discount_percent,
+    tb.quota,
+    tb.period_type,
+    tb.service_id,
+    tb.room_type_id,
+    tb.description,
+    COUNT(br.redemption_id) AS used_count,
+    CASE 
+        WHEN tb.quota IS NULL THEN NULL
+        ELSE GREATEST(0, tb.quota - COUNT(br.redemption_id))
+    END AS remaining_quota
+FROM customer_loyalty cl
+JOIN customer c ON c.customer_id = cl.customer_id
+JOIN loyalty_tier lt ON lt.tier_id = cl.tier_id
+JOIN loyalty_tier bt ON bt.tier_level <= lt.tier_level
+JOIN tier_benefit tb ON tb.tier_id = bt.tier_id AND tb.is_active = TRUE
+LEFT JOIN benefit_redemption br ON br.customer_id = cl.customer_id 
+    AND br.tier_benefit_id = tb.tier_benefit_id
+    AND (
+        (tb.period_type = 'YEAR' AND YEAR(br.redeemed_at) = YEAR(CURRENT_DATE))
+        OR (tb.period_type = 'MONTH' AND YEAR(br.redeemed_at) = YEAR(CURRENT_DATE) AND MONTH(br.redeemed_at) = MONTH(CURRENT_DATE))
+        OR (tb.period_type = 'DAY' AND DATE(br.redeemed_at) = CURRENT_DATE)
+        OR tb.period_type IS NULL
+    )
+GROUP BY 
+    cl.customer_id, c.full_name, lt.tier_id, lt.tier_code, lt.tier_name, lt.tier_level,
+    tb.tier_benefit_id, tb.benefit_type, tb.benefit_name, tb.discount_percent,
+    tb.quota, tb.period_type, tb.service_id, tb.room_type_id, tb.description;
