@@ -58,12 +58,6 @@
   gap: 14px;
   margin-bottom: 6px;
 }
-.bk-title-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
 
 /* ---------- Page width = navbar content width ----------
    --bk-content-width / --bk-content-offset are measured from the navbar in BookingPage.jsx,
@@ -79,16 +73,6 @@ main.booking-experience > .hc-container {
 }
 
 /* ---------- Layout helpers ---------- */
-.bk-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-.bk-icon-gap {
-  margin-right: 8px;
-}
 .bk-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -98,18 +82,6 @@ main.booking-experience > .hc-container {
   display: grid;
   grid-template-columns: 1fr 2fr;
   gap: 16px;
-}
-.bk-center {
-  text-align: center;
-}
-.bk-mb-16 {
-  margin-bottom: 16px;
-}
-.bk-required {
-  color: var(--hc-error);
-}
-.bk-muted {
-  color: var(--hc-text-secondary);
 }
 
 /* ---------- Form ---------- */
@@ -349,17 +321,17 @@ main.booking-experience > .hc-container {
     margin-right: auto;
   }
 
-  .bk-title-row {
+  .booking-experience .hc-title-row {
     align-items: flex-start;
     gap: var(--hc-space-4);
   }
 
-  .bk-title-actions {
+  .booking-experience .hc-title-actions {
     width: 100%;
     gap: var(--hc-space-2);
   }
 
-  .bk-title-actions .hc-btn {
+  .booking-experience .hc-title-actions .hc-btn {
     min-height: 40px;
   }
 
@@ -406,18 +378,18 @@ main.booking-experience > .hc-container {
     width: var(--bk-content-width, calc(100% - 28px));
   }
 
-  .bk-title-row {
+  .booking-experience .hc-title-row {
     flex-direction: column;
     align-items: stretch;
     gap: var(--hc-space-3);
   }
 
-  .bk-title-actions {
+  .booking-experience .hc-title-actions {
     display: grid;
     grid-template-columns: 1fr;
   }
 
-  .bk-title-actions .hc-btn {
+  .booking-experience .hc-title-actions .hc-btn {
     width: 100%;
     justify-content: center;
   }

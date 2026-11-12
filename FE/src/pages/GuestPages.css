@@ -1,0 +1,317 @@
+/* =========================================================
+   Shared layout for customer pages
+   Mirrors the AdminAccountsPage look: big title + divider,
+   toolbar inside the card header, flush table below.
+   ========================================================= */
+
+.guest-page .hc-page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  text-align: left;
+  border-bottom: 1px solid var(--hc-border);
+}
+.guest-page .hc-page-title h2 {
+  margin: 0 0 6px;
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+.guest-page .hc-page-title p {
+  margin: 0;
+  font-size: var(--hc-text-sm);
+  color: var(--hc-text-secondary);
+}
+.guest-title-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.guest-card + .guest-card,
+.guest-stack > * + * {
+  margin-top: 20px;
+}
+
+/* Toolbar inside .hc-card-header: search left, select right */
+.guest-toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+.guest-toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--hc-font-heading);
+  font-size: var(--hc-text-lg);
+  font-weight: 600;
+}
+.guest-search {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+}
+.guest-search > i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--hc-text-muted);
+  pointer-events: none;
+}
+.guest-search > .hc-input {
+  padding-left: 36px;
+  height: 38px;
+  font-size: 13px;
+}
+.guest-select {
+  width: 200px;
+  max-width: 100%;
+  height: 38px;
+  font-size: 13px;
+}
+
+.guest-cell-sub {
+  font-size: 12px;
+  color: var(--hc-text-muted);
+}
+
+/* Stat tiles (loyalty) */
+.guest-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+/* Title always sits at the top of the content area, same on every page */
+.guest-page > .hc-page-title:first-child {
+  margin-top: 0;
+}
+
+/* ---------- Dashboard ---------- */
+.guest-stay {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.guest-stay-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  object-fit: cover;
+  border-radius: var(--hc-radius-md);
+  border: 1px solid var(--hc-border-light);
+}
+.guest-stay-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.guest-stay-name {
+  margin: 0;
+  font-size: var(--hc-text-2xl);
+  font-weight: 500;
+}
+.guest-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  background: var(--hc-bg);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+}
+.guest-facts span {
+  display: block;
+  font-size: 12px;
+  color: var(--hc-text-secondary);
+}
+.guest-facts b {
+  display: block;
+  margin-top: 2px;
+  font-weight: 600;
+}
+.guest-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.guest-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.guest-sum-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: var(--hc-text-sm);
+  border-bottom: 1px solid var(--hc-border-light);
+}
+.guest-sum-row > span {
+  color: var(--hc-text-secondary);
+}
+.guest-balance {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 14px 16px;
+  background: var(--hc-primary-subtle);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+  font-weight: 600;
+}
+.guest-balance b {
+  font-family: var(--hc-font-heading);
+  font-size: var(--hc-text-2xl);
+  color: var(--hc-primary);
+}
+
+.guest-link-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px var(--hc-space-6);
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--hc-border-light);
+  transition: background var(--hc-duration-fast) var(--hc-ease);
+}
+.guest-link-row:last-child {
+  border-bottom: 0;
+}
+.guest-link-row:hover {
+  background: var(--hc-surface-hover);
+}
+.guest-link-row .hc-stat-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 1.1rem;
+}
+.guest-link-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.guest-link-row b {
+  display: block;
+  font-weight: 600;
+}
+.guest-link-row small {
+  color: var(--hc-text-muted);
+  font-size: 12px;
+}
+.guest-link-row > i {
+  color: var(--hc-text-muted);
+}
+
+.guest-note {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.guest-note > div {
+  flex: 1 1 240px;
+}
+.guest-note b {
+  display: block;
+}
+.guest-note p {
+  margin: 2px 0 0;
+  font-size: var(--hc-text-sm);
+  color: var(--hc-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .guest-stay,
+  .guest-two-col {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .guest-stay-photo {
+    min-height: 0;
+    height: 220px;
+  }
+}
+
+/* Numbers: plain serif with lining figures instead of Playfair's old-style digits */
+.guest-page .hc-stat-value,
+.guest-page .guest-balance b,
+.guest-page .guest-num {
+  font-family: "Times New Roman", Times, "Liberation Serif", serif;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* ---------- Profile ---------- */
+.guest-profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 24px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--hc-border-light);
+}
+.guest-avatar {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: grid;
+  place-items: center;
+  color: var(--hc-text-on-primary);
+  background: var(--hc-primary);
+  border-radius: 50%;
+  font-size: var(--hc-text-xl);
+  font-weight: 700;
+}
+.guest-profile-hero h3 {
+  margin: 0 0 6px;
+  font-size: var(--hc-text-2xl);
+  font-weight: 500;
+}
+.guest-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.guest-field {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--hc-border-light);
+  min-width: 0;
+}
+.guest-field:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+.guest-field > span {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12px;
+  color: var(--hc-text-secondary);
+}
+.guest-field > strong {
+  display: block;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .guest-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .guest-field:nth-last-child(2) {
+    border-bottom: 1px solid var(--hc-border-light);
+  }
+}

@@ -5,6 +5,7 @@ import Footer from "../components/Footer";
 import Modal from "../components/Modal";
 import { apiCall, formatVND, formatDateTime, getCategoryName } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
+import "./GuestPages.css";
 import "./ServicesPage.css";
 
 // "Cà phê" -> "ca phe", so searching works with or without Vietnamese accents.
@@ -15,6 +16,16 @@ const normalizeText = (value = "") =>
     .replace(/đ/gi, "d")
     .toLowerCase()
     .trim();
+
+function PageShell({ portal, children }) {
+  return portal ? (
+    <div className="ops-page guest-page">{children}</div>
+  ) : (
+    <main className="hc-page services-experience">
+      <div className="hc-container guest-page">{children}</div>
+    </main>
+  );
+}
 
 export default function ServicesPage({ portal = false }) {
   const [searchParams] = useSearchParams();
@@ -85,7 +96,7 @@ export default function ServicesPage({ portal = false }) {
     }
   }, [queryCode, loadFolio]);
 
-  const categories = ["ALL", ...Array.from(new Set(services.map((s) => getCategoryName(s.category)).filter(Boolean)))];
+  const categoryNames = Array.from(new Set(services.map((s) => getCategoryName(s.category)).filter(Boolean)));
 
   const normalizedSearch = normalizeText(searchTerm);
   const filteredServices = services.filter((s) => {
@@ -137,265 +148,223 @@ export default function ServicesPage({ portal = false }) {
     <>
       {!portal && <Navbar />}
 
-      <main className={`hc-page services-experience ${portal ? "portal-commerce" : ""}`}>
-        <div className="hc-container">
-          <div className={`hc-page-title ${portal ? "" : "svc-title-row"}`}>
-            <div>
-              <h2>Dịch Vụ Lưu Trú & Hóa Đơn Trực Tiếp</h2>
-              <p>Gọi món ăn, nước uống, giặt ủi và theo dõi chi tiết hóa đơn phòng theo thời gian thực</p>
-            </div>
-            {!portal && (
-              <Link to="/" className="hc-btn hc-btn-outline hc-btn-sm">
+      <PageShell portal={portal}>
+        <div className="hc-page-title">
+          <div>
+            <h2>Dịch Vụ Lưu Trú &amp; Hóa Đơn</h2>
+            <p>Gọi món ăn, nước uống, giặt ủi và theo dõi chi tiết hóa đơn phòng theo thời gian thực.</p>
+          </div>
+          {!portal && (
+            <div className="guest-title-actions">
+              <Link to="/" className="hc-btn hc-btn-outline">
                 <i className="bi bi-house-door"></i> Trở về trang chủ
               </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Booking code bar */}
+        <div className="hc-card" style={{ marginBottom: "24px" }}>
+          <div className="hc-card-body svc-code-bar">
+            <div className="svc-code-field">
+              <label className="hc-label" htmlFor="svc-booking-code">
+                Mã đơn đặt phòng
+              </label>
+              <div className="svc-input-icon">
+                <i className="bi bi-search"></i>
+                <input
+                  id="svc-booking-code"
+                  type="text"
+                  className="hc-input svc-code-input"
+                  placeholder="Ví dụ: BK-20261012-ABCD"
+                  value={bookingCode}
+                  onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") loadFolio();
+                  }}
+                />
+              </div>
+            </div>
+            <button type="button" className="hc-btn hc-btn-primary" onClick={() => loadFolio()} disabled={loadingFolio} style={{ minHeight: "44px" }}>
+              {loadingFolio ? "Đang tải..." : "Xem hóa đơn phòng"}
+            </button>
+          </div>
+        </div>
+
+        <div className="svc-layout">
+          {/* Left: service menu */}
+          <div className="hc-card">
+            <div className="hc-card-header">
+              <div className="guest-toolbar">
+                <div className="guest-search">
+                  <i className="bi bi-search"></i>
+                  <input type="text" className="hc-input" placeholder="Tìm món, dịch vụ..." aria-label="Tìm trong menu dịch vụ" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                </div>
+                <select className="hc-select guest-select" aria-label="Lọc danh mục dịch vụ" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
+                  <option value="ALL">Tất cả danh mục</option>
+                  {categoryNames.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {loadingServices ? (
+              <div className="hc-loading-spinner">
+                <div className="hc-spinner"></div>
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <div className="hc-empty-state">
+                <i className="bi bi-cup-hot"></i>
+                <p>{searchTerm.trim() ? `Không tìm thấy dịch vụ nào khớp với "${searchTerm.trim()}".` : "Chưa có dịch vụ nào trong danh mục này."}</p>
+              </div>
+            ) : (
+              <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+                <table className="hc-table">
+                  <thead>
+                    <tr>
+                      <th>Dịch vụ</th>
+                      <th>Danh mục</th>
+                      <th>Đơn giá</th>
+                      <th style={{ textAlign: "right" }}>Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredServices.map((s) => {
+                      const categoryName = getCategoryName(s.category);
+                      return (
+                        <tr key={s.serviceId}>
+                          <td>
+                            <strong>{s.serviceName}</strong>
+                          </td>
+                          <td>{categoryName ? <span className="hc-badge hc-badge-info">{categoryName}</span> : "—"}</td>
+                          <td>
+                            <span className="svc-price">{formatVND(s.unitPrice)}</span>
+                            <div className="guest-cell-sub">/ {s.unit || "Lần"}</div>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => handleOpenOrder(s)}>
+                              <i className="bi bi-plus-lg"></i> Thêm vào phòng
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
-          {/* Booking code input bar */}
-          <div className="hc-card" style={{ marginBottom: "32px" }}>
-            <div className="hc-card-body">
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
-                <div style={{ flex: 1, minWidth: "260px" }}>
-                  <label className="hc-label">Mã đơn đặt phòng (Booking Code)</label>
-                  <div style={{ position: "relative" }}>
-                    <i className="bi bi-search" style={{ position: "absolute", left: "12px", top: "12px", color: "var(--hc-text-muted)" }}></i>
-                    <input
-                      type="text"
-                      className="hc-input"
-                      style={{ paddingLeft: "38px", textTransform: "uppercase" }}
-                      placeholder="Ví dụ: BK-20261012-ABCD"
-                      value={bookingCode}
-                      onChange={(e) => setBookingCode(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") loadFolio();
-                      }}
-                    />
-                  </div>
-                </div>
-                <button type="button" className="hc-btn hc-btn-primary" onClick={() => loadFolio()} disabled={loadingFolio} style={{ minHeight: "44px" }}>
-                  {loadingFolio ? "Đang tải..." : "Xem hóa đơn phòng"}
+          {/* Right: folio */}
+          <div className="hc-card">
+            <div className="hc-card-header">
+              <div className="hc-card-title">
+                <i className="bi bi-receipt text-primary" style={{ marginRight: "8px" }}></i>
+                Bảng kê hóa đơn
+              </div>
+              {folio && (
+                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => loadFolio()} disabled={loadingFolio} title="Làm mới hóa đơn">
+                  <i className="bi bi-arrow-clockwise"></i> Làm mới
                 </button>
-              </div>
+              )}
             </div>
-          </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(360px, 1fr)", gap: "32px" }}>
-            {/* Left: Services Menu */}
-            <div>
-              <div className="hc-card">
-                <div className="hc-card-header">
-                  <div className="hc-card-title">
-                    <i className="bi bi-card-list text-primary" style={{ marginRight: "8px" }}></i>
-                    Menu Dịch Vụ Khách Sạn
+            {loadingFolio && !folio ? (
+              <div className="hc-loading-spinner">
+                <div className="hc-spinner"></div>
+              </div>
+            ) : !folio ? (
+              <div className="hc-empty-state">
+                <i className="bi bi-receipt-cutoff"></i>
+                <p style={{ maxWidth: "320px", margin: "0 auto" }}>Nhập mã đơn đặt phòng ở trên rồi bấm "Xem hóa đơn phòng" để tải bảng kê chi phí.</p>
+              </div>
+            ) : (
+              <div className="hc-card-body">
+                <div className="svc-folio-banner">
+                  <div className="svc-folio-banner-head">
+                    <span className="svc-folio-code">{folio.bookingCode}</span>
+                    <span className={`hc-badge hc-badge-booking-${folio.bookingStatus || "CONFIRMED"}`}>{folio.bookingStatus || "LƯU TRÚ"}</span>
                   </div>
-                  <span className="hc-badge hc-badge-primary">{filteredServices.length} dịch vụ</span>
+                  <div className="svc-folio-meta">
+                    Khách hàng: <strong>{folio.customerName || "---"}</strong>
+                    <span style={{ margin: "0 8px" }}>|</span>
+                    Phòng: <strong>{folio.roomNumber || "---"}</strong>
+                  </div>
                 </div>
 
-                <div className="hc-card-body">
-                  {/* Category filter pills (left) + menu search (right) */}
-                  <div className="svc-filter-bar">
-                    {categories.length > 1 && (
-                      <div className="hc-tab-group">
-                        {categories.map((c) => (
-                          <button key={c} className={`hc-tab-btn ${selectedCategory === c ? "active" : ""}`} onClick={() => setSelectedCategory(c)}>
-                            {c === "ALL" ? "Tất cả" : c}
-                          </button>
+                <div className="svc-folio-section-title">Dịch vụ phát sinh</div>
+                {!folio.serviceUsages || folio.serviceUsages.length === 0 ? (
+                  <div className="svc-folio-empty">Chưa có dịch vụ phát sinh nào</div>
+                ) : (
+                  <div style={{ overflowX: "auto", margin: "0 calc(var(--hc-space-6) * -1)" }}>
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Dịch vụ</th>
+                          <th style={{ textAlign: "center" }}>SL</th>
+                          <th style={{ textAlign: "right" }}>Đơn giá</th>
+                          <th style={{ textAlign: "right" }}>Thành tiền</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {folio.serviceUsages.map((u, idx) => (
+                          <tr key={u.usageId || idx}>
+                            <td>
+                              <strong>{u.serviceName}</strong>
+                              <div className="guest-cell-sub">{formatDateTime(u.orderTime)}</div>
+                            </td>
+                            <td style={{ textAlign: "center" }}>{u.quantity}</td>
+                            <td style={{ textAlign: "right" }}>{formatVND(u.unitPrice)}</td>
+                            <td style={{ textAlign: "right", fontWeight: 600 }}>{formatVND(u.totalAmount)}</td>
+                          </tr>
                         ))}
-                      </div>
-                    )}
-                    <div className="svc-search">
-                      <i className="bi bi-search svc-search-icon" aria-hidden="true"></i>
-                      <input
-                        type="search"
-                        className="hc-input svc-search-input"
-                        placeholder="Tìm món, dịch vụ..."
-                        aria-label="Tìm trong menu dịch vụ"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                      {searchTerm && (
-                        <button type="button" className="svc-search-clear" aria-label="Xóa tìm kiếm" onClick={() => setSearchTerm("")}>
-                          <i className="bi bi-x-lg"></i>
-                        </button>
-                      )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                <div className="svc-sum">
+                  <div className="svc-sum-row">
+                    <span>Tiền phòng</span>
+                    <strong>{formatVND(folio.roomCharge)}</strong>
+                  </div>
+                  <div className="svc-sum-row">
+                    <span>Tiền dịch vụ</span>
+                    <strong>{formatVND(folio.serviceCharge)}</strong>
+                  </div>
+                  {folio.discountAmount > 0 && (
+                    <div className="svc-sum-row is-discount">
+                      <span>Giảm giá voucher</span>
+                      <strong>- {formatVND(folio.discountAmount)}</strong>
                     </div>
+                  )}
+                  <div className="svc-sum-row">
+                    <span>Thuế GTGT (VAT 10%)</span>
+                    <strong>{formatVND(folio.taxAmount)}</strong>
+                  </div>
+                  <hr className="hc-divider" style={{ margin: "10px 0" }} />
+                  <div className="svc-sum-row is-total">
+                    <span>Tổng chi phí</span>
+                    <span>{formatVND(folio.totalAmount)}</span>
+                  </div>
+                  <div className="svc-sum-row is-deposit">
+                    <span>Tiền cọc đã trả</span>
+                    <strong>- {formatVND(folio.depositApplied)}</strong>
                   </div>
 
-                  {loadingServices ? (
-                    <div className="hc-loading-spinner">
-                      <div className="hc-spinner"></div>
-                    </div>
-                  ) : filteredServices.length === 0 ? (
-                    <div className="hc-empty-state">
-                      <i className="bi bi-cup-hot"></i>
-                      <p>{searchTerm.trim() ? `Không tìm thấy dịch vụ nào khớp với "${searchTerm.trim()}".` : "Chưa có dịch vụ nào trong danh mục này."}</p>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                      {filteredServices.map((s) => (
-                        <div
-                          key={s.serviceId}
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            padding: "14px 16px",
-                            background: "var(--hc-bg)",
-                            borderRadius: "var(--hc-radius-md)",
-                            border: "1px solid var(--hc-border)",
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 600, color: "var(--hc-text)", fontSize: "15px" }}>{s.serviceName}</div>
-                            <div style={{ fontSize: "12px", color: "var(--hc-text-muted)" }}>
-                              Đơn vị: {s.unit || "Lần"} {getCategoryName(s.category) ? `• ${getCategoryName(s.category)}` : ""}
-                            </div>
-                            <div style={{ fontSize: "15px", fontWeight: 700, color: "var(--hc-secondary-dark)", marginTop: "4px" }}>{formatVND(s.unitPrice)}</div>
-                          </div>
-
-                          <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => handleOpenOrder(s)}>
-                            <i className="bi bi-plus-lg"></i> Thêm vào phòng
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Folio breakdown */}
-            <div>
-              <div className="hc-card">
-                <div className="hc-card-header">
-                  <div className="hc-card-title">
-                    <i className="bi bi-receipt text-primary" style={{ marginRight: "8px" }}></i>
-                    Bảng Kê Hóa Đơn
+                  <div className="svc-balance">
+                    <span>Số tiền còn lại</span>
+                    <span className="svc-balance-amount">{formatVND(folio.finalBalance ?? folio.balanceDue ?? 0)}</span>
                   </div>
-                  {folio && (
-                    <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" onClick={() => loadFolio()} title="Làm mới hóa đơn">
-                      <i className="bi bi-arrow-clockwise"></i> Làm mới
-                    </button>
-                  )}
-                </div>
-
-                <div className="hc-card-body">
-                  {!folio ? (
-                    <div className="hc-empty-state">
-                      <i className="bi bi-receipt-cutoff"></i>
-                      <h4>Chưa chọn đơn đặt phòng</h4>
-                      <p style={{ maxWidth: "320px", margin: "0 auto" }}>Vui lòng nhập Mã đơn đặt phòng ở phía trên và bấm "Xem hóa đơn phòng" để tải bảng kê chi phí thời gian thực.</p>
-                    </div>
-                  ) : (
-                    <div>
-                      {/* Booking meta banner */}
-                      <div style={{ background: "var(--hc-primary-subtle)", padding: "14px 16px", borderRadius: "var(--hc-radius-md)", marginBottom: "16px", border: "1px solid var(--hc-border)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                          <span style={{ fontWeight: 700, color: "var(--hc-primary)", fontSize: "15px" }}>{folio.bookingCode}</span>
-                          <span className={`hc-badge hc-badge-booking-${folio.bookingStatus || "CONFIRMED"}`}>{folio.bookingStatus || "LƯU TRÚ"}</span>
-                        </div>
-                        <div style={{ fontSize: "13px", color: "var(--hc-text-secondary)" }}>
-                          Khách hàng: <strong style={{ color: "var(--hc-text)" }}>{folio.customerName || "---"}</strong>
-                          <span style={{ margin: "0 8px" }}>|</span>
-                          Phòng: <strong style={{ color: "var(--hc-text)" }}>{folio.roomNumber || "---"}</strong>
-                        </div>
-                      </div>
-
-                      {/* Services incurred list */}
-                      <div style={{ marginBottom: "16px" }}>
-                        <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: "8px", color: "var(--hc-text-secondary)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                          Dịch Vụ Phát Sinh:
-                        </div>
-                        {!folio.serviceUsages || folio.serviceUsages.length === 0 ? (
-                          <div style={{ textAlign: "center", padding: "16px", color: "var(--hc-text-muted)", fontSize: "13px", background: "var(--hc-bg)", borderRadius: "var(--hc-radius-sm)" }}>
-                            Chưa có dịch vụ phát sinh nào
-                          </div>
-                        ) : (
-                          <table className="hc-table" style={{ fontSize: "13px" }}>
-                            <thead>
-                              <tr>
-                                <th>Dịch vụ</th>
-                                <th style={{ textAlign: "center" }}>SL</th>
-                                <th style={{ textAlign: "right" }}>Đơn giá</th>
-                                <th style={{ textAlign: "right" }}>Thành tiền</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {folio.serviceUsages.map((u, idx) => (
-                                <tr key={u.usageId || idx}>
-                                  <td>
-                                    <strong>{u.serviceName}</strong>
-                                    <div style={{ fontSize: "11px", color: "var(--hc-text-muted)" }}>{formatDateTime(u.orderTime)}</div>
-                                  </td>
-                                  <td style={{ textAlign: "center" }}>{u.quantity}</td>
-                                  <td style={{ textAlign: "right" }}>{formatVND(u.unitPrice)}</td>
-                                  <td style={{ textAlign: "right", fontWeight: 600 }}>{formatVND(u.totalAmount)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        )}
-                      </div>
-
-                      {/* Financial breakdown */}
-                      <div style={{ borderTop: "1px solid var(--hc-border)", paddingTop: "16px", fontSize: "14px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                          <span style={{ color: "var(--hc-text-secondary)" }}>Tiền phòng:</span>
-                          <strong>{formatVND(folio.roomCharge)}</strong>
-                        </div>
-
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                          <span style={{ color: "var(--hc-text-secondary)" }}>Tiền dịch vụ:</span>
-                          <strong>{formatVND(folio.serviceCharge)}</strong>
-                        </div>
-
-                        {folio.discountAmount > 0 && (
-                          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "var(--hc-success)" }}>
-                            <span>Giảm giá Voucher:</span>
-                            <strong>- {formatVND(folio.discountAmount)}</strong>
-                          </div>
-                        )}
-
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                          <span style={{ color: "var(--hc-text-secondary)" }}>Thuế GTGT (VAT 10%):</span>
-                          <strong>{formatVND(folio.taxAmount)}</strong>
-                        </div>
-
-                        <hr className="hc-divider" style={{ margin: "10px 0" }} />
-
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontWeight: 700 }}>
-                          <span>Tổng chi phí:</span>
-                          <span style={{ color: "var(--hc-text)" }}>{formatVND(folio.totalAmount)}</span>
-                        </div>
-
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "14px", color: "var(--hc-secondary-dark)" }}>
-                          <span>Tiền cọc đã trả:</span>
-                          <strong>- {formatVND(folio.depositApplied)}</strong>
-                        </div>
-
-                        <div
-                          style={{
-                            background: "var(--hc-error-bg)",
-                            border: "1px solid #fecaca",
-                            borderRadius: "var(--hc-radius-md)",
-                            padding: "14px 16px",
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                          }}
-                        >
-                          <span style={{ fontWeight: 700, color: "var(--hc-error)" }}>Số tiền còn lại (Balance Due):</span>
-                          <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--hc-error)" }}>{formatVND(folio.finalBalance ?? folio.balanceDue ?? 0)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
-      </main>
+      </PageShell>
 
       {/* Order Service Modal */}
       <Modal
@@ -416,13 +385,13 @@ export default function ServicesPage({ portal = false }) {
       >
         {selectedService && (
           <form onSubmit={handleSubmitOrder}>
-            <div style={{ background: "var(--hc-bg)", padding: "14px", borderRadius: "var(--hc-radius-md)", marginBottom: "16px", border: "1px solid var(--hc-border)" }}>
-              <div style={{ fontSize: "16px", fontWeight: 700, color: "var(--hc-text)" }}>{selectedService.serviceName}</div>
-              <div style={{ fontSize: "14px", color: "var(--hc-secondary-dark)", fontWeight: 600, marginTop: "4px" }}>
+            <div className="svc-order-summary">
+              <strong style={{ fontSize: "16px" }}>{selectedService.serviceName}</strong>
+              <div className="svc-price" style={{ marginTop: "4px" }}>
                 {formatVND(selectedService.unitPrice)} / {selectedService.unit || "Lần"}
               </div>
-              <div style={{ fontSize: "12px", color: "var(--hc-text-muted)", marginTop: "4px" }}>
-                Phòng đặt: <strong>{bookingCode}</strong>
+              <div className="guest-cell-sub" style={{ marginTop: "4px" }}>
+                Mã đặt phòng: <strong>{bookingCode}</strong>
               </div>
             </div>
 

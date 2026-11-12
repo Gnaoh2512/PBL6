@@ -28,15 +28,15 @@ import StaffRoomsPage from "./pages/staff/StaffRoomsPage";
 import StaffWalkInPage from "./pages/staff/StaffWalkInPage";
 
 // Admin Section
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminAccountsPage from './pages/admin/AdminAccountsPage';
-import AdminActivityLogPage from './pages/admin/AdminActivityLogPage';
-import AdminRoomsPage from './pages/admin/AdminRoomsPage';
-import AdminServicesPage from './pages/admin/AdminServicesPage';
-import AdminSchedulesPage from './pages/admin/AdminSchedulesPage';
-import AdminVouchersPage from './pages/admin/AdminVouchersPage';
-import AdminEquipmentPage from './pages/admin/AdminEquipmentPage';
-import AdminLoyaltyPage from './pages/admin/AdminLoyaltyPage';
+import AdminLayout from "./pages/admin/AdminLayout";
+import AdminAccountsPage from "./pages/admin/AdminAccountsPage";
+import AdminActivityLogPage from "./pages/admin/AdminActivityLogPage";
+import AdminRoomsPage from "./pages/admin/AdminRoomsPage";
+import AdminServicesPage from "./pages/admin/AdminServicesPage";
+import AdminSchedulesPage from "./pages/admin/AdminSchedulesPage";
+import AdminVouchersPage from "./pages/admin/AdminVouchersPage";
+import AdminEquipmentPage from "./pages/admin/AdminEquipmentPage";
+import AdminLoyaltyPage from "./pages/admin/AdminLoyaltyPage";
 
 const STAFF_ROLES = ["RECEPTIONIST", "HOUSEKEEPING", "SERVICE_STAFF", "MAINTENANCE", "MANAGER", "ADMIN"];
 
