@@ -50,6 +50,7 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             initVouchers();
         }
+        ensureShiftNames();
         repairSampleAccountRoles();
         ensureDemoStaffAccounts();
         ensureCustomerServiceDemoBooking();
@@ -428,14 +429,17 @@ public class DataInitializer implements CommandLineRunner {
 
         List<Shift> shifts = List.of(
                 Shift.builder()
+                        .shiftName("Ca sáng")
                         .startTime(LocalTime.of(6, 0))
                         .endTime(LocalTime.of(14, 0))
                         .build(),
                 Shift.builder()
+                        .shiftName("Ca chiều")
                         .startTime(LocalTime.of(14, 0))
                         .endTime(LocalTime.of(22, 0))
                         .build(),
                 Shift.builder()
+                        .shiftName("Ca đêm")
                         .startTime(LocalTime.of(22, 0))
                         .endTime(LocalTime.of(6, 0))
                         .build()
@@ -443,6 +447,26 @@ public class DataInitializer implements CommandLineRunner {
 
         shiftRepository.saveAll(shifts);
         log.info("Đã tạo {} ca làm việc mẫu (Sáng, Chiều, Đêm)", shifts.size());
+    }
+
+    /** Older databases were seeded with unnamed shifts, which the calendar cannot label. */
+    private void ensureShiftNames() {
+        List<Shift> unnamed = shiftRepository.findAll().stream()
+                .filter(shift -> shift.getShiftName() == null || shift.getShiftName().isBlank())
+                .toList();
+        if (unnamed.isEmpty()) return;
+        unnamed.forEach(shift -> shift.setShiftName(defaultShiftName(shift)));
+        shiftRepository.saveAll(unnamed);
+        log.info("Đã đặt tên cho {} ca làm việc chưa có tên", unnamed.size());
+    }
+
+    private String defaultShiftName(Shift shift) {
+        LocalTime start = shift.getStartTime();
+        LocalTime end = shift.getEndTime();
+        if (LocalTime.of(6, 0).equals(start) && LocalTime.of(14, 0).equals(end)) return "Ca sáng";
+        if (LocalTime.of(14, 0).equals(start) && LocalTime.of(22, 0).equals(end)) return "Ca chiều";
+        if (LocalTime.of(22, 0).equals(start) && LocalTime.of(6, 0).equals(end)) return "Ca đêm";
+        return "Ca " + start + "-" + end;
     }
 
     private void initVouchers() {

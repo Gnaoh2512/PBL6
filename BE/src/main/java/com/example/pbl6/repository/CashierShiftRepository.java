@@ -10,4 +10,5 @@ import java.util.List;
 public interface CashierShiftRepository extends JpaRepository<CashierShift, Integer> {
     List<CashierShift> findByAccount_AccountId(Integer accountId);
     List<CashierShift> findByStatus(String status);
+    boolean existsByWorkSchedule_ScheduleId(Integer scheduleId);
 }

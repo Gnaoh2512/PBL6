@@ -17,4 +17,7 @@ public class WorkScheduleRequest {
     private LocalDate workDate;
 
     private String notes;
+
+    /** Optional: SCHEDULED (default) | COMPLETED | ABSENT | OFF */
+    private String status;
 }

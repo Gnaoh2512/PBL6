@@ -19,6 +19,7 @@ const portalLinks = {
     { to: "/staff/bookings", label: "Đặt phòng", icon: "bi-calendar-check", roles: ["RECEPTIONIST", "MANAGER", "ADMIN"] },
     { to: "/staff/walkin", label: "Khách vãng lai", icon: "bi-person-plus", roles: ["RECEPTIONIST", "MANAGER", "ADMIN"] },
     { to: "/staff/shifts", label: "Ca thu ngân", icon: "bi-cash-coin", roles: ["RECEPTIONIST", "MANAGER", "ADMIN"] },
+    { to: "/staff/schedules", label: "Lịch làm việc của tôi", icon: "bi-calendar-week", roles: ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "SERVICE_STAFF", "MAINTENANCE"] },
     { to: "/staff/requests", label: "Yêu cầu dịch vụ", icon: "bi-bell", roles: ["SERVICE_STAFF", "RECEPTIONIST", "MANAGER", "ADMIN"] },
     { to: "/staff/maintenance", label: "Bảo trì", icon: "bi-tools", roles: ["MAINTENANCE", "HOUSEKEEPING", "RECEPTIONIST", "MANAGER", "ADMIN"] },
     { to: "/staff/profile", label: "Hồ sơ", icon: "bi-person-circle", roles: ["MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "SERVICE_STAFF", "MAINTENANCE"] },

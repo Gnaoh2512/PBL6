@@ -10,6 +10,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Data
@@ -36,6 +37,14 @@ public class WorkScheduleResponse {
     private LocalDate workDate;
     private String notes;
 
+    /** SCHEDULED | COMPLETED | ABSENT | OFF */
+    private String status;
+
+    /** Full start/end for calendar rendering. For an overnight shift, endDateTime is the next day. */
+    private LocalDateTime startDateTime;
+    private LocalDateTime endDateTime;
+    private boolean overnight;
+
     public static WorkScheduleResponse fromEntity(WorkSchedule ws) {
         if (ws == null) return null;
         Account acc = ws.getAccount();
@@ -45,6 +54,19 @@ public class WorkScheduleResponse {
         String empUsername = acc != null ? acc.getUsername() : null;
         String roleStr = (acc != null && acc.getRole() != null) ? acc.getRole().getRoleCode() : null;
         String roleNameStr = (acc != null && acc.getRole() != null) ? acc.getRole().getRoleName() : null;
+
+        boolean overnight = s != null && s.getStartTime() != null && s.getEndTime() != null
+                && s.getEndTime().isBefore(s.getStartTime());
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+        if (s != null && ws.getWorkDate() != null) {
+            if (s.getStartTime() != null) {
+                start = ws.getWorkDate().atTime(s.getStartTime());
+            }
+            if (s.getEndTime() != null) {
+                end = (overnight ? ws.getWorkDate().plusDays(1) : ws.getWorkDate()).atTime(s.getEndTime());
+            }
+        }
 
         return WorkScheduleResponse.builder()
                 .scheduleId(ws.getScheduleId())
@@ -63,6 +85,10 @@ public class WorkScheduleResponse {
                 .endTime(s != null ? s.getEndTime() : null)
                 .workDate(ws.getWorkDate())
                 .notes(ws.getNotes())
+                .status(ws.getStatus() == null || ws.getStatus().isBlank() ? "SCHEDULED" : ws.getStatus())
+                .startDateTime(start)
+                .endDateTime(end)
+                .overnight(overnight)
                 .build();
     }
 }
