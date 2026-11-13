@@ -2,6 +2,14 @@
 
 Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
+## D1 Task 1 — provider, 2026-11-13
+
+- Gemini REST adapter cho gemini-3.1-flash-lite; HTTPX chuyển sang runtime, không thêm SDK.
+- Interface provider/retrieval và budget tích lũy; response cap 256 KiB, không retry, lỗi không phản chiếu upstream.
+- Kiểm tra: `python -B -m pytest -q -p no:cacheprovider`: 48 pass, 1 cảnh báo Starlette/HTTPX; Ruff check/format các file mới qua.
+- FTS5 có sẵn. Process không có GEMINI_API_KEY; chưa gọi Gemini thật. Provider chưa gắn lifecycle/API; readiness vẫn 503.
+- Tiếp theo: ingestion/index synthetic tách biệt. D1 chưa hoàn thành.
+
 ## Bước 2 — khung FastAPI, 2026-11-13
 
 - Nhánh riêng: feature/assistant-fastapi-foundation, tạo theo yêu cầu commit từng bước; không push/deploy. Phạm vi commit gồm foundation, test, cấu hình cài đặt, hướng dẫn và hợp đồng API mà contract tests sử dụng. Staging và thay đổi ngoài bước được giữ nguyên.

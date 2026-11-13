@@ -309,6 +309,6 @@ Profile v1 là faq: cấu hình service auth hợp lệ, LLM sẵn sàng và ind
 
 Bước 1 chỉ đặc tả tài liệu. Bước 2 hiện thực khung FastAPI/schema request, auth service và health/readiness; xem [README](../README.md) và [STATUS](STATUS.md) để biết kiểm thử và lệnh chạy. Chưa có Spring assistant controller, provider/model/index, tool execution hoặc final response. Resume hợp lệ trả 409 CONTINUATION_NOT_FOUND vì runtime chưa cấp continuation; production readiness luôn 503 khi thiếu LLM/retrieval. Các phần còn lại của hợp đồng chưa được coi là đã triển khai.
 
-## D1 ? quy?t ??nh tri?n khai
+## D1 — quyết định triển khai
 
-Gemini REST gemini-3.1-flash-lite, JSON schema; SQLite FTS5/BM25 local, kh?ng embedding. Nghi?m thu b?ng demo_synthetic; production kh?ng n?p knowledge pending_review. Ch? search_knowledge, t?i ?a hai generation calls, kh?ng retry; budget t?ch l?y nh? m?c 2. Provider adapter ?? c?; c?c b??c c?n l?i xem STATUS.
+Gemini REST gemini-3.1-flash-lite, JSON schema; SQLite FTS5/BM25 local, không embedding. Nghiệm thu bằng demo_synthetic; production không nạp knowledge pending_review. Chỉ search_knowledge, tối đa hai generation calls, không retry; budget tích lũy như mục 2. Provider adapter đã có; các bước còn lại xem STATUS.

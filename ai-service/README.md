@@ -72,6 +72,6 @@ Test paths chỉ gồm tests/unit và tests/integration của bước mới. Kh�
 
 Knowledge giữ approved=false; không đọc hoặc index chúng trong startup. Các chỉ số retrieval/grounding/latency của AI chưa đo.
 
-## D1 ?ang tri?n khai
+## D1 đang triển khai
 
-Adapter Gemini REST v? budget ?? c?, ch?a g?n v?o route. GEMINI_API_KEY c?u h?nh ngo?i Git; GEMINI_MODEL m?c ??nh gemini-3.1-flash-lite. Kh?ng d?ng SDK Gemini. HTTPX l? dependency runtime. Source corpus th?t ch?a ???c duy?t; kh?ng t? b?t demo khi thi?u ngu?n. Xem STATUS cho b?ng ch?ng t?ng b??c.
+Adapter Gemini REST và budget đã có, chưa gắn vào route. GEMINI_API_KEY cấu hình ngoài Git; GEMINI_MODEL mặc định gemini-3.1-flash-lite. Không dùng SDK Gemini. HTTPX là dependency runtime. Source corpus thật chưa được duyệt; không tự bật demo khi thiếu nguồn. Xem STATUS cho bằng chứng từng bước.
