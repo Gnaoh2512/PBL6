@@ -74,4 +74,7 @@ Knowledge giữ approved=false; không đọc hoặc index chúng trong startup.
 
 ## D1 đang triển khai
 
+Build demo index offline từ `ai-service`: `.\.venv\Scripts\python.exe -m app.ingestion.snapshot --mode demo_synthetic`.
+Lệnh in đường dẫn snapshot để đặt `AI_INDEX_PATH`; đặt rõ `AI_CORPUS_MODE=demo_synthetic`. Output trong `.local/assistant-index/` đã ignore. Production không chấp nhận snapshot demo hoặc bản nháp chưa duyệt.
+
 Adapter Gemini REST và budget đã có, chưa gắn vào route. GEMINI_API_KEY cấu hình ngoài Git; GEMINI_MODEL mặc định gemini-3.1-flash-lite. Không dùng SDK Gemini. HTTPX là dependency runtime. Source corpus thật chưa được duyệt; không tự bật demo khi thiếu nguồn. Xem STATUS cho bằng chứng từng bước.

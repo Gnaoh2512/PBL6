@@ -4,6 +4,12 @@ Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
 ## D1 Task 1 — provider, 2026-11-13
 
+Task 2 hoàn thành sau Task 1 trên nhánh feature/assistant-d1-ingestion:
+- Có build snapshot offline theo allowlist, metadata/approval/hiệu lực; SQLite FTS5/BM25, manifest/checksum và evidence typed. Corpus synthetic riêng, không đổi knowledge người dùng.
+- Thêm PyYAML 6.0.3 vào virtualenv/lockfile; không cài vector service hoặc embedding model.
+- `python -B -m pytest -q -p no:cacheprovider`: 57 pass, 1 warning. Ruff các module mới và `pip check` qua. Đã sửa connection SQLite không đóng trên Windows; tests kiểm tra build lặp và checksum/nguồn bị rút.
+- Production build từ draft bị từ chối. Retrieval/LLM thật chưa nghiệm thu; bước tiếp theo là orchestration.
+
 - Gemini REST adapter cho gemini-3.1-flash-lite; HTTPX chuyển sang runtime, không thêm SDK.
 - Interface provider/retrieval và budget tích lũy; response cap 256 KiB, không retry, lỗi không phản chiếu upstream.
 - Kiểm tra: `python -B -m pytest -q -p no:cacheprovider`: 48 pass, 1 cảnh báo Starlette/HTTPX; Ruff check/format các file mới qua.

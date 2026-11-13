@@ -3,6 +3,7 @@
 !.env.example
 
 .venv/
+.local/assistant-index/
 venv/
 
 __pycache__/
