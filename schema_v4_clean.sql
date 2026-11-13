@@ -1,5 +1,5 @@
 -- =====================================================================
--- PBL6 HOTEL MANAGEMENT - CLEAN INSTALL SCHEMA (V4 FINAL)
+-- PBL6 HOTEL MANAGEMENT - CLEAN INSTALL SCHEMA (V4 FINAL - NO FREE_NIGHT)
 -- Integrates Room Cleaning Requests, Shift Schedules, Loyalty V3 & Triggers.
 --
 -- DESTRUCTIVE: DROP DATABASE permanently deletes existing database.
@@ -146,8 +146,7 @@ CREATE TABLE IF NOT EXISTS tier_benefit (
     tier_benefit_id INT AUTO_INCREMENT PRIMARY KEY,
     tier_id INT NOT NULL,
     service_id INT NULL COMMENT 'nullable, for FREE_SERVICE',
-    room_type_id INT NULL COMMENT 'nullable, FREE_NIGHT up to this room type',
-    benefit_type VARCHAR(50) NOT NULL COMMENT 'ROOM_DISCOUNT | FREE_SERVICE | FREE_NIGHT',
+    benefit_type VARCHAR(50) NOT NULL COMMENT 'ROOM_DISCOUNT | FREE_SERVICE',
     benefit_name VARCHAR(150) NOT NULL,
     discount_percent DECIMAL(5, 2) NULL COMMENT 'for ROOM_DISCOUNT',
     quota INT NULL COMMENT 'uses per period, null = unlimited',
@@ -156,11 +155,10 @@ CREATE TABLE IF NOT EXISTS tier_benefit (
     description TEXT,
     FOREIGN KEY (tier_id) REFERENCES loyalty_tier(tier_id) ON DELETE CASCADE,
     FOREIGN KEY (service_id) REFERENCES service(service_id) ON DELETE SET NULL,
-    FOREIGN KEY (room_type_id) REFERENCES room_type(room_type_id) ON DELETE SET NULL,
     CONSTRAINT uq_tier_benefit_name UNIQUE (tier_id, benefit_name),
     CONSTRAINT ck_tb_period_type CHECK (period_type IS NULL OR period_type IN ('DAY','MONTH','YEAR')),
     CONSTRAINT ck_tb_quota_period CHECK (quota IS NULL OR (quota > 0 AND period_type IS NOT NULL)),
-    CONSTRAINT ck_tb_benefit_type CHECK (benefit_type IN ('ROOM_DISCOUNT','FREE_SERVICE','FREE_NIGHT')),
+    CONSTRAINT ck_tb_benefit_type CHECK (benefit_type IN ('ROOM_DISCOUNT','FREE_SERVICE')),
     CONSTRAINT ck_tb_discount CHECK (benefit_type <> 'ROOM_DISCOUNT' OR (discount_percent IS NOT NULL AND discount_percent > 0 AND discount_percent <= 100))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -234,7 +232,6 @@ CREATE TABLE IF NOT EXISTS booking (
 CREATE TABLE IF NOT EXISTS maintenance_request (
     request_id INT AUTO_INCREMENT PRIMARY KEY,
     room_id INT NOT NULL,
-    equipment_id INT NULL,
     reported_by INT NOT NULL COMMENT 'account',
     assigned_to INT NULL COMMENT 'account, maintenance staff',
     confirmed_by INT NULL COMMENT 'account confirming completion',
@@ -248,7 +245,6 @@ CREATE TABLE IF NOT EXISTS maintenance_request (
     completed_at DATETIME NULL,
     confirmed_at DATETIME NULL,
     FOREIGN KEY (room_id) REFERENCES room(room_id) ON DELETE RESTRICT,
-    FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE SET NULL,
     FOREIGN KEY (reported_by) REFERENCES account(account_id) ON DELETE RESTRICT,
     FOREIGN KEY (assigned_to) REFERENCES account(account_id) ON DELETE SET NULL,
     FOREIGN KEY (confirmed_by) REFERENCES account(account_id) ON DELETE SET NULL
@@ -454,7 +450,7 @@ CREATE TABLE IF NOT EXISTS benefit_usage_counter (
 
 DELIMITER $$
 
--- Loyalty Benefit Triggers
+-- Loyalty Benefit Triggers (No tier inheritance, no FREE_NIGHT)
 DROP TRIGGER IF EXISTS trg_benefit_redemption_bi$$
 CREATE TRIGGER trg_benefit_redemption_bi BEFORE INSERT ON benefit_redemption
 FOR EACH ROW
@@ -465,7 +461,6 @@ BEGIN
     DECLARE v_period VARCHAR(50);
     DECLARE v_active TINYINT(1);
     DECLARE v_service INT;
-    DECLARE v_room_type INT;
     DECLARE v_benefit_level INT;
     DECLARE v_customer_level INT;
     DECLARE v_used INT;
@@ -474,8 +469,8 @@ BEGIN
     SET NEW.redeemed_at = v_at;
     IF NEW.status IS NULL THEN SET NEW.status = 'APPLIED'; END IF;
 
-    SELECT tb.benefit_type, tb.quota, tb.period_type, tb.is_active, tb.service_id, tb.room_type_id, bt.tier_level
-      INTO v_type, v_quota, v_period, v_active, v_service, v_room_type, v_benefit_level
+    SELECT tb.benefit_type, tb.quota, tb.period_type, tb.is_active, tb.service_id, bt.tier_level
+      INTO v_type, v_quota, v_period, v_active, v_service, v_benefit_level
       FROM tier_benefit tb
       JOIN loyalty_tier bt ON bt.tier_id = tb.tier_id
      WHERE tb.tier_benefit_id = NEW.tier_benefit_id;
@@ -495,14 +490,11 @@ BEGIN
         IF v_active IS NULL OR v_active = 0 THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Đặc quyền này hiện đang tạm ngưng';
         END IF;
-        IF v_customer_level < v_benefit_level THEN
-            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Hạng thành viên hiện tại chưa đủ để dùng đặc quyền này';
+        IF v_customer_level <> v_benefit_level THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Đặc quyền này không thuộc hạng thành viên hiện tại của khách';
         END IF;
         IF v_type = 'FREE_SERVICE' AND v_service IS NULL THEN
             SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Đặc quyền miễn phí dịch vụ chưa được gắn với dịch vụ cụ thể';
-        END IF;
-        IF v_type = 'FREE_NIGHT' AND v_room_type IS NULL THEN
-            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Đặc quyền đêm miễn phí chưa được gắn với loại phòng';
         END IF;
 
         SET NEW.period_start = CASE v_period
@@ -635,7 +627,7 @@ END$$
 
 DELIMITER ;
 
--- View View Customer Benefits
+-- View Customer Benefits (No tier inheritance: bt.tier_level = ct.tier_level)
 CREATE OR REPLACE VIEW v_customer_benefit_availability AS
 SELECT
     cl.customer_id,
@@ -644,7 +636,6 @@ SELECT
     tb.benefit_name,
     tb.discount_percent,
     tb.service_id,
-    tb.room_type_id,
     tb.quota,
     tb.period_type,
     p.period_start,
@@ -653,7 +644,7 @@ SELECT
     CASE WHEN tb.quota IS NULL OR COALESCE(u.used, 0) < tb.quota THEN 1 ELSE 0 END AS can_use_now
 FROM customer_loyalty cl
 JOIN loyalty_tier ct ON ct.tier_id = cl.tier_id
-JOIN loyalty_tier bt ON bt.tier_level <= ct.tier_level
+JOIN loyalty_tier bt ON bt.tier_level = ct.tier_level
 JOIN tier_benefit tb ON tb.tier_id = bt.tier_id AND tb.is_active = 1
 JOIN (SELECT tier_benefit_id,
              CASE period_type

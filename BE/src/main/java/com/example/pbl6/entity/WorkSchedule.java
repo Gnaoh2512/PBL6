@@ -37,6 +37,6 @@ public class WorkSchedule {
     @Column(name = "status", length = 30, columnDefinition = "varchar(30) default 'SCHEDULED'")
     private String status = "SCHEDULED";
 
-    @Column(name = "notes", columnDefinition = "text")
+    @Column(name = "note", columnDefinition = "text")
     private String notes;
 }

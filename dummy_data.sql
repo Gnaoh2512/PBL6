@@ -1,5 +1,5 @@
 -- =====================================================================
--- PBL6 HOTEL MANAGEMENT - DUMMY / DEMO DATA (V4 REFACTORED)
+-- PBL6 HOTEL MANAGEMENT - DUMMY / DEMO DATA (V4 REFACTORED - NO FREE_NIGHT)
 -- Run AFTER schema_v4_clean.sql.
 -- Password for all accounts: Pbl6Demo@123
 -- =====================================================================
@@ -78,11 +78,25 @@ INSERT INTO room (room_id,room_number,room_type_id,floor,status,note) VALUES
 (6,'401',4,4,'MAINTENANCE','Temporarily unavailable');
 
 INSERT INTO service (service_id,category_id,service_name,unit_price,unit,is_active) VALUES
+-- 1. Food and Beverage
 (1,1,'Breakfast Set',180000.00,'person',1),
-(2,3,'Airport Transfer',350000.00,'trip',1),
+(5,1,'In-room Dining',250000.00,'order',1),
+(6,1,'Welcome Drink & Fruit Basket',150000.00,'set',1),
+(7,1,'Afternoon Tea Set',220000.00,'set',1),
+(8,1,'Minibar Refreshment Package',160000.00,'package',1),
+-- 2. Laundry
 (3,2,'Express Laundry 3kg',120000.00,'package',1),
+(9,2,'Suit & Evening Dress Dry Cleaning',150000.00,'piece',1),
+(10,2,'Steam Ironing Service',60000.00,'piece',1),
+-- 3. Transportation
+(2,3,'Airport Transfer',350000.00,'trip',1),
+(11,3,'Motorbike Rental (Full Day)',150000.00,'day',1),
+(12,3,'Private City Tour Car (4 Hours)',800000.00,'trip',1),
+-- 4. Wellness
 (4,4,'Spa Session',500000.00,'session',1),
-(5,1,'In-room Dining',250000.00,'order',1);
+(13,4,'Foot & Neck Massage (45 mins)',300000.00,'session',1),
+(14,4,'Sauna & Jacuzzi Access',200000.00,'person',1),
+(15,4,'Yoga & Meditation Morning Class',180000.00,'session',1);
 
 -- Expanded work schedules for calendar views (November 2026)
 INSERT INTO work_schedule (schedule_id, account_id, shift_id, work_date, status, note) VALUES
@@ -122,18 +136,27 @@ VALUES
 (1,3,4,'2026-11-11 06:00:00','2026-11-11 14:00:00',5000000.00,6350000.00,'CLOSED',2,'Shift handed over to manager');
 
 -- ---------------------------------------------------------------------
--- 4. Loyalty benefits
+-- 4. Loyalty benefits (No tier inheritance, no FREE_NIGHT)
 -- ---------------------------------------------------------------------
 INSERT INTO tier_benefit
-(tier_benefit_id,tier_id,service_id,room_type_id,benefit_type,benefit_name,discount_percent,quota,period_type,is_active,description)
+(tier_benefit_id,tier_id,service_id,benefit_type,benefit_name,discount_percent,quota,period_type,is_active,description)
 VALUES
-(1,2,NULL,NULL,'ROOM_DISCOUNT','Starfish room discount',5.00,NULL,'YEAR',1,'5 percent room discount, unlimited per calendar year'),
-(2,3,NULL,NULL,'ROOM_DISCOUNT','Coral room discount',10.00,NULL,'YEAR',1,'10 percent room discount, unlimited per calendar year'),
-(3,3,3,NULL,'FREE_SERVICE','Coral annual laundry allowance',NULL,2,'YEAR',1,'Two express laundry packages per calendar year'),
-(4,4,NULL,NULL,'ROOM_DISCOUNT','Pearl room discount',15.00,NULL,'YEAR',1,'15 percent room discount, unlimited per calendar year'),
-(5,4,NULL,2,'FREE_NIGHT','Pearl annual free night',NULL,1,'YEAR',1,'One free night in a Deluxe room or lower'),
-(6,2,1,NULL,'FREE_SERVICE','Starfish daily breakfast',NULL,1,'DAY',1,'One breakfast set per calendar day'),
-(7,3,3,NULL,'FREE_SERVICE','Coral monthly laundry allowance',NULL,1,'MONTH',1,'One express laundry package per calendar month');
+-- Tier 1: SEASHELL
+(1,1,6,'FREE_SERVICE','Seashell welcome drink',NULL,1,'YEAR',1,'1 Welcome Drink & Fruit Basket per calendar year'),
+-- Tier 2: STARFISH
+(2,2,NULL,'ROOM_DISCOUNT','Starfish room discount',5.00,NULL,'YEAR',1,'5 percent room discount, unlimited per calendar year'),
+(3,2,1,'FREE_SERVICE','Starfish daily breakfast',NULL,1,'DAY',1,'1 complimentary Breakfast Set per calendar day'),
+-- Tier 3: CORAL
+(4,3,NULL,'ROOM_DISCOUNT','Coral room discount',10.00,NULL,'YEAR',1,'10 percent room discount, unlimited per calendar year'),
+(5,3,1,'FREE_SERVICE','Coral daily breakfast',NULL,1,'DAY',1,'1 complimentary Breakfast Set per calendar day'),
+(6,3,3,'FREE_SERVICE','Coral monthly laundry allowance',NULL,1,'MONTH',1,'1 Express Laundry 3kg package per calendar month'),
+(7,3,14,'FREE_SERVICE','Coral sauna & jacuzzi pass',NULL,2,'MONTH',1,'2 Sauna & Jacuzzi passes per calendar month'),
+-- Tier 4: PEARL
+(8,4,NULL,'ROOM_DISCOUNT','Pearl room discount',15.00,NULL,'YEAR',1,'15 percent room discount, unlimited per calendar year'),
+(9,4,1,'FREE_SERVICE','Pearl daily breakfast',NULL,2,'DAY',1,'2 complimentary Breakfast Sets per calendar day'),
+(10,4,3,'FREE_SERVICE','Pearl monthly laundry allowance',NULL,2,'MONTH',1,'2 Express Laundry 3kg packages per calendar month'),
+(11,4,2,'FREE_SERVICE','Pearl airport transfer',NULL,2,'YEAR',1,'2 complimentary Airport Transfers per calendar year'),
+(12,4,4,'FREE_SERVICE','Pearl annual spa session',NULL,1,'YEAR',1,'1 complimentary Spa Session per calendar year');
 
 INSERT INTO customer_loyalty
 (customer_id,tier_id,total_stay_days,total_spent,total_score,tier_updated_at,joined_at)
@@ -150,7 +173,7 @@ INSERT INTO booking
 (booking_id,booking_code,customer_id,created_by,check_in_date,check_out_date,guest_count,status,deposit_required,source,note,created_at)
 VALUES
 (1,'BK-2026-0001',1,3,'2026-10-01','2026-10-04',2,'CHECKED_OUT',1000000.00,'DIRECT','Pearl member stay','2026-09-20 09:00:00'),
-(2,'BK-2026-0002',1,3,'2026-10-15','2026-10-17',2,'CHECKED_OUT',1000000.00,'ONLINE','Pearl free-night test booking','2026-10-01 10:00:00'),
+(2,'BK-2026-0002',1,3,'2026-10-15','2026-10-17',2,'CHECKED_OUT',1000000.00,'ONLINE','Pearl member second stay','2026-10-01 10:00:00'),
 (3,'BK-2026-0003',2,3,'2026-11-05','2026-11-08',2,'CHECKED_OUT',1500000.00,'DIRECT','Coral member stay','2026-10-25 11:00:00'),
 (4,'BK-2026-0004',3,3,'2026-11-20','2026-11-22',1,'CONFIRMED',800000.00,'ONLINE','Starfish member upcoming stay','2026-11-01 12:00:00');
 
@@ -166,7 +189,7 @@ INSERT INTO invoice
 (invoice_id,invoice_number,booking_id,issued_by,discount_approved_by,room_charge,service_charge,tax_amount,discount_amount,deposit_applied,total_amount,status,issued_at)
 VALUES
 (1,'INV-2026-0001',1,3,2,3750000.00,360000.00,411000.00,562500.00,1000000.00,2958500.00,'PAID','2026-10-04 11:30:00'),
-(2,'INV-2026-0002',2,3,2,2500000.00,0.00,250000.00,0.00,1000000.00,1750000.00,'PAID','2026-10-17 11:30:00'),
+(2,'INV-2026-0002',2,3,2,2500000.00,0.00,250000.00,375000.00,1000000.00,1375000.00,'PAID','2026-10-17 11:30:00'),
 (3,'INV-2026-0003',3,3,NULL,7200000.00,120000.00,732000.00,720000.00,1500000.00,5832000.00,'PAID','2026-11-08 11:30:00');
 
 INSERT INTO service_usage
@@ -196,7 +219,7 @@ VALUES
 (1,1,NULL,1,'DEPOSIT','CASH',1000000.00,3,2,'Booking deposit','2026-09-20 09:05:00'),
 (2,1,1,1,'PAYMENT','CARD',2958500.00,3,2,'Final invoice payment','2026-10-04 11:35:00'),
 (3,2,NULL,1,'DEPOSIT','BANK_TRANSFER',1000000.00,3,2,'Booking deposit','2026-10-01 10:05:00'),
-(4,2,2,1,'PAYMENT','BANK_TRANSFER',1750000.00,3,2,'Final invoice payment','2026-10-17 11:35:00'),
+(4,2,2,1,'PAYMENT','BANK_TRANSFER',1375000.00,3,2,'Final invoice payment','2026-10-17 11:35:00'),
 (5,3,NULL,1,'DEPOSIT','CASH',1500000.00,3,2,'Booking deposit','2026-10-25 11:05:00'),
 (6,3,3,1,'PAYMENT','CARD',5832000.00,3,2,'Final invoice payment','2026-11-08 11:35:00');
 
@@ -210,10 +233,10 @@ VALUES
 
 -- Maintenance Requests (Assigned to ROLE_MAINTENANCE account 5)
 INSERT INTO maintenance_request
-(request_id,room_id,equipment_id,reported_by,assigned_to,confirmed_by,title,description,priority,status,resolution_note,reported_at,started_at,completed_at,confirmed_at)
+(request_id,room_id,reported_by,assigned_to,confirmed_by,title,description,priority,status,resolution_note,reported_at,started_at,completed_at,confirmed_at)
 VALUES
-(1,6,3,4,5,2,'Water heater not heating','Guest room water heater does not produce hot water','HIGH','CONFIRMED','Heating element replaced and tested','2026-11-08 08:00:00','2026-11-08 09:00:00','2026-11-08 11:00:00','2026-11-08 11:30:00'),
-(2,3,2,4,5,NULL,'TV remote not responding','Replace remote batteries','LOW','IN_PROGRESS',NULL,'2026-11-10 09:00:00','2026-11-10 10:00:00',NULL,NULL);
+(1,6,4,5,2,'Water heater not heating','Guest room water heater does not produce hot water','HIGH','CONFIRMED','Heating element replaced and tested','2026-11-08 08:00:00','2026-11-08 09:00:00','2026-11-08 11:00:00','2026-11-08 11:30:00'),
+(2,3,4,5,NULL,'TV remote not responding','Replace remote batteries','LOW','IN_PROGRESS',NULL,'2026-11-10 09:00:00','2026-11-10 10:00:00',NULL,NULL);
 
 -- Room Cleaning Requests (Assigned to ROLE_HOUSEKEEPING account 4)
 INSERT INTO roomcleaning_request
@@ -229,16 +252,16 @@ INSERT INTO loyalty_transaction
 (txn_id,customer_id,invoice_id,created_by,txn_type,stay_days,amount_spent,score_earned,note,created_at)
 VALUES
 (1,1,1,NULL,'EARN',3,2958500.00,29.59,'Points earned from invoice 1','2026-10-04 11:40:00'),
-(2,1,2,NULL,'EARN',2,1750000.00,17.50,'Points earned from invoice 2','2026-10-17 11:40:00'),
+(2,1,2,NULL,'EARN',2,1375000.00,13.75,'Points earned from invoice 2','2026-10-17 11:40:00'),
 (3,2,3,NULL,'EARN',3,5832000.00,58.32,'Points earned from invoice 3','2026-11-08 11:40:00'),
 (4,3,NULL,2,'ADJUST',0,0.00,2.00,'Manual loyalty adjustment','2026-11-09 09:00:00');
 
 INSERT INTO benefit_redemption
 (redemption_id,customer_id,tier_benefit_id,booking_id,invoice_id,service_usage_id,approved_by,value_amount,note,redeemed_at)
 VALUES
-(1,1,4,1,1,NULL,2,562500.00,'Pearl 15 percent room discount','2026-10-04 11:45:00'),
-(2,1,5,2,2,NULL,2,1250000.00,'Pearl free night','2026-10-17 11:45:00'),
-(3,2,3,3,3,1,2,120000.00,'Coral annual laundry allowance','2026-11-08 11:45:00');
+(1,1,8,1,1,NULL,2,562500.00,'Pearl 15 percent room discount','2026-10-04 11:45:00'),
+(2,1,8,2,2,NULL,2,375000.00,'Pearl 15 percent room discount','2026-10-17 11:45:00'),
+(3,2,6,3,3,1,2,120000.00,'Coral monthly laundry allowance','2026-11-08 11:45:00');
 
 -- Insert audit_log values as standard text / formatted JSON strings
 INSERT INTO audit_log

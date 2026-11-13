@@ -1,9 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import classicThemePlugin from "@fullcalendar/react/themes/classic";
 import dayGridPlugin from "@fullcalendar/react/daygrid";
-import timeGridPlugin from "@fullcalendar/react/timegrid";
-import listPlugin from "@fullcalendar/react/list";
 import interactionPlugin from "@fullcalendar/react/interaction";
 import viLocale from "@fullcalendar/react/locales/vi";
 
@@ -13,6 +11,8 @@ import "@fullcalendar/react/themes/classic/palette.css";
 
 import Modal from "../../components/Modal";
 import SelectMenu from "../../components/SelectMenu";
+import DatePicker from "../../components/DatePicker";
+import TimePicker from "../../components/TimePicker";
 import { apiCall, formatDate } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import "./AdminSchedulesPage.css";
@@ -75,10 +75,165 @@ const statusMeta = (status) => {
   }
 };
 
+const STATUS_OPTIONS = ["SCHEDULED", "COMPLETED", "ABSENT", "OFF"].map((st) => ({ value: st, label: statusMeta(st).label }));
+
+const BULK_ROLE_OPTIONS = [
+  { value: "ALL", label: "Tất cả bộ phận" },
+  { value: "RECEPTIONIST", label: "Lễ tân" },
+  { value: "HOUSEKEEPING", label: "Buồng phòng" },
+  { value: "SERVICE_STAFF", label: "Phục vụ" },
+  { value: "MAINTENANCE", label: "Kỹ thuật" },
+];
+
 const unwrap = (response) => {
   const data = response?.data ?? (Array.isArray(response) ? response : []);
   return Array.isArray(data) ? data : [];
 };
+
+// ----- Day slots: M (morning) / A (afternoon) / N (night) -----
+const SLOTS = [
+  { key: "M", order: 1, label: "Ca sáng" },
+  { key: "A", order: 2, label: "Ca chiều" },
+  { key: "N", order: 3, label: "Ca đêm" },
+];
+const SLOT_BY_KEY = Object.fromEntries(SLOTS.map((s) => [s.key, s]));
+
+// Decide M / A / N from the shift name first, then from the start hour.
+const slotKeyOf = (shiftName, startTime) => {
+  const name = (shiftName || "").toLowerCase();
+  if (/đêm|tối|night/.test(name)) return "N";
+  if (/chiều|afternoon/.test(name)) return "A";
+  if (/sáng|morning/.test(name)) return "M";
+  const hour = parseInt(formatTime(startTime).slice(0, 2), 10);
+  if (Number.isNaN(hour)) return "M";
+  if (hour >= 5 && hour < 12) return "M";
+  if (hour >= 12 && hour < 18) return "A";
+  return "N";
+};
+
+const dateOfSchedule = (item) => {
+  const v = item.workDate;
+  if (!v) return "";
+  if (Array.isArray(v)) return `${v[0]}-${pad(v[1])}-${pad(v[2])}`;
+  return String(v).slice(0, 10);
+};
+
+const addDays = (date, n) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+};
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+const weekStartOf = (date) => addDays(startOfDay(date), -((date.getDay() + 6) % 7)); // Monday
+const fmtShort = (d) => `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+const WEEKDAY_SHORT = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+const toMinutes = (value) => {
+  const f = formatTime(value);
+  if (!f) return null;
+  const [h, m] = f.split(":").map(Number);
+  return h * 60 + (m || 0);
+};
+
+const STATUS_ICON = { completed: "bi-check-circle-fill", absent: "bi-x-circle-fill", off: "bi-pause-circle-fill" };
+
+const compactHM = (min) => {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return m ? `${h}:${pad(m)}` : `${h}`;
+};
+
+/**
+ * Staff x time timeline used by the "Tuần" and "Ngày" views.
+ * Every staff row is ONE continuous track covering the whole visible range, so a shift
+ * (including overnight ones) is a single bar positioned by its absolute start/end time.
+ * Day view: 24 columns of 1h.  Week view: 7 days, each split into 4h cells.
+ */
+function ScheduleTimeline({ view, timeline, now, onOpenDay }) {
+  const { days, rows, total } = timeline;
+  const isDay = view === "day";
+  const todayISO = toISO(now);
+  const todayIdx = days.findIndex((x) => x.date === todayISO);
+  const nowPct = todayIdx >= 0 ? ((todayIdx * 1440 + now.getHours() * 60 + now.getMinutes()) / total) * 100 : null;
+  const columns = isDay ? "var(--tl-name-w) minmax(1344px, 1fr)" : "var(--tl-name-w) repeat(7, minmax(240px, 1fr))";
+
+  // Empty area of a track -> open the day that was clicked
+  const handleTrackClick = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const idx = Math.min(days.length - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * days.length)));
+    onOpenDay(days[idx].date);
+  };
+
+  return (
+    <div className="tl-scroll">
+      <div className={`tl-grid ${isDay ? "is-day" : "is-week"}`} style={{ gridTemplateColumns: columns }}>
+        <div className="tl-corner">Nhân viên ({rows.length})</div>
+        {isDay ? (
+          <div className="tl-hours">
+            {HOURS.map((h) => (
+              <span key={h}>{pad(h)}:00</span>
+            ))}
+          </div>
+        ) : (
+          days.map(({ date, d }) => (
+            <div key={date} className={`tl-dayhead${date === todayISO ? " is-today" : ""}`}>
+              <div>
+                <strong>{WEEKDAY_SHORT[d.getDay()]}</strong> <span>{fmtShort(d)}</span>
+              </div>
+              <div className="tl-ticks">
+                {[0, 4, 8, 12, 16, 20].map((h) => (
+                  <i key={h}>{h}h</i>
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+
+        {rows.length === 0 && (
+          <div className="tl-empty">
+            <i className="bi bi-calendar-x" /> Không có ca làm việc nào trong khoảng thời gian này.
+          </div>
+        )}
+
+        {rows.map((row) => (
+          <React.Fragment key={row.key}>
+            <div className="tl-name">
+              <strong title={row.name}>{row.name}</strong>
+              <small>{row.role}</small>
+            </div>
+            <div className="tl-track" style={{ gridColumn: "2 / -1" }} onClick={handleTrackClick}>
+              {todayIdx >= 0 && <i className="tl-today-col" style={{ left: `${(todayIdx / days.length) * 100}%`, width: `${100 / days.length}%` }} />}
+              {nowPct != null && <i className="tl-now" style={{ left: `${nowPct}%` }} />}
+              {row.segs.map((sg, i) => {
+                const meta = statusMeta(sg.item.status);
+                const range = getTimeRange(sg.item);
+                const label = isDay ? (sg.clipStart ? "tiếp ca đêm" : range) : `${compactHM(sg.rawFrom)}–${compactHM(sg.rawTo)}h`;
+                return (
+                  <button
+                    key={`${sg.item.scheduleId}-${i}`}
+                    type="button"
+                    className={`tl-bar slot-${sg.slot} st-${meta.cls}${sg.clipStart ? " is-cont" : ""}${sg.clipEnd ? " is-spill" : ""}`}
+                    style={{ left: `${(sg.from / total) * 100}%`, width: `${((sg.to - sg.from) / total) * 100}%` }}
+                    title={`${row.name} · ${getShiftName(sg.item)} · ${range} · ${meta.label}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenDay(dateOfSchedule(sg.item));
+                    }}
+                  >
+                    <b>{sg.slot}</b>
+                    <span>{label}</span>
+                    {STATUS_ICON[meta.cls] && <i className={`bi ${STATUS_ICON[meta.cls]} tl-bar-status`} />}
+                  </button>
+                );
+              })}
+            </div>
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const DAYS_OF_WEEK = [
   { key: "MONDAY", label: "T2", fullName: "Thứ Hai" },
@@ -92,13 +247,17 @@ const DAYS_OF_WEEK = [
 
 export default function AdminSchedulesPage() {
   const { addToast } = useToast();
-  const calendarRef = useRef(null);
 
   const [activeTab, setActiveTab] = useState("SCHEDULES");
   const [schedules, setSchedules] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Calendar navigation (custom toolbar): month | week | day
+  const [view, setView] = useState("month");
+  const [cursor, setCursor] = useState(() => new Date());
+  const [now, setNow] = useState(() => new Date());
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -114,9 +273,11 @@ export default function AdminSchedulesPage() {
     };
   });
 
-  // Schedule detail drawer/modal
-  const [selectedSchedule, setSelectedSchedule] = useState(null);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
+  // Day detail modal (opened by clicking a calendar day)
+  const [selectedDay, setSelectedDay] = useState(null); // "YYYY-MM-DD"
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ shiftId: "", status: "SCHEDULED", notes: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Single Assign Modal State
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -159,10 +320,7 @@ export default function AdminSchedulesPage() {
     let active = true;
     const loadPrerequisites = async () => {
       try {
-        const [shiftRes, accountRes] = await Promise.all([
-          apiCall("/api/admin/shifts", { silentError: true }),
-          apiCall("/api/admin/schedules/staff", { silentError: true }),
-        ]);
+        const [shiftRes, accountRes] = await Promise.all([apiCall("/api/admin/shifts", { silentError: true }), apiCall("/api/admin/schedules/staff", { silentError: true })]);
         if (!active) return;
         const shiftsData = unwrap(shiftRes);
         const accountsData = unwrap(accountRes);
@@ -207,6 +365,34 @@ export default function AdminSchedulesPage() {
     loadSchedules(dateRange.from, dateRange.to);
   }, [dateRange.from, dateRange.to, loadSchedules]);
 
+  // Month view reports its own range via datesSet; week/day compute it here.
+  // One extra day before the range so overnight shifts from the previous day show up.
+  useEffect(() => {
+    if (view === "month") return;
+    const start = view === "week" ? weekStartOf(cursor) : startOfDay(cursor);
+    const end = view === "week" ? addDays(start, 6) : start;
+    setDateRange({ from: toISO(addDays(start, -1)), to: toISO(end) });
+  }, [view, cursor]);
+
+  // Keep the "now" line fresh in week/day views
+  useEffect(() => {
+    if (view === "month") return undefined;
+    const t = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(t);
+  }, [view]);
+
+  const shiftCursor = (dir) => setCursor((c) => (view === "month" ? new Date(c.getFullYear(), c.getMonth() + dir, 1) : addDays(c, dir * (view === "week" ? 7 : 1))));
+
+  const toolbarTitle = useMemo(() => {
+    if (view === "month") return `Tháng ${cursor.getMonth() + 1} năm ${cursor.getFullYear()}`;
+    if (view === "week") {
+      const ws = weekStartOf(cursor);
+      const we = addDays(ws, 6);
+      return `Tuần ${fmtShort(ws)} – ${fmtShort(we)}/${we.getFullYear()}`;
+    }
+    return cursor.toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+  }, [view, cursor]);
+
   // FullCalendar datesSet callback
   const handleDatesSet = (dateInfo) => {
     const fromStr = toISO(dateInfo.start);
@@ -217,18 +403,13 @@ export default function AdminSchedulesPage() {
     }
   };
 
-  // Calendar date click handler -> Quick single assign
-  const handleDateClick = (arg) => {
-    openAssignModal(arg.dateStr);
+  // Clicking a day (or its M/A/N rows) opens the day detail modal
+  const openDay = (dateStr) => {
+    setEditingId(null);
+    setSelectedDay(String(dateStr).slice(0, 10));
   };
-
-  // Calendar event click handler -> Show detail
-  const handleEventClick = (info) => {
-    const sched = info.event.extendedProps;
-    if (sched) {
-      setSelectedSchedule(sched);
-    }
-  };
+  const handleDateClick = (arg) => openDay(arg.dateStr);
+  const handleEventClick = (info) => openDay(info.event.extendedProps.date);
 
   // Filtered schedules for calendar rendering
   const filteredSchedules = useMemo(() => {
@@ -247,60 +428,118 @@ export default function AdminSchedulesPage() {
     });
   }, [schedules, searchQuery, shiftFilter, roleFilter]);
 
-  // Convert to FullCalendar events
-  const calendarEvents = useMemo(() => {
-    return filteredSchedules.map((item) => {
-      const staff = getStaffName(item);
-      const shift = getShiftName(item);
-      const meta = statusMeta(item.status);
+  // Lookups
+  const shiftsById = useMemo(() => Object.fromEntries(shifts.map((sh) => [String(sh.shiftId), sh])), [shifts]);
+  const accountsById = useMemo(() => Object.fromEntries(accounts.map((a) => [String(a.accountId || a.id), a])), [accounts]);
 
-      let startIso = item.workDate;
-      let endIso = undefined;
+  const slotOfSchedule = useCallback(
+    (item) => {
+      const sh = shiftsById[String(item.shiftId)];
+      return slotKeyOf(item.shiftName || item.shift?.shiftName || sh?.shiftName, item.startTime || item.shift?.startTime || sh?.startTime);
+    },
+    [shiftsById],
+  );
 
-      if (item.startDateTime) {
-        startIso = item.startDateTime;
-      } else if (item.workDate && item.startTime) {
-        startIso = `${item.workDate}T${formatTime(item.startTime)}:00`;
-      }
+  const getPhone = (item) => {
+    const acc = accountsById[String(item.accountId)];
+    return item.phone || item.phoneNumber || item.accountPhone || item.staffPhone || acc?.phone || acc?.phoneNumber || "—";
+  };
 
-      if (item.endDateTime) {
-        endIso = item.endDateTime;
-      } else if (item.workDate && item.endTime) {
-        endIso = `${item.workDate}T${formatTime(item.endTime)}:00`;
-      }
-
-      return {
-        id: String(item.scheduleId),
-        title: `${staff} · ${shift}`,
-        start: startIso,
-        end: endIso,
-        allDay: false,
-        backgroundColor: meta.bg,
-        borderColor: meta.color,
-        textColor: "#1e293b",
-        classNames: [`fc-shift-event`, `fc-status-${meta.cls}`],
-        extendedProps: item,
-      };
+  // Schedules grouped by day (respects the search / shift / role filters)
+  const schedulesByDate = useMemo(() => {
+    const map = {};
+    filteredSchedules.forEach((item) => {
+      const d = dateOfSchedule(item);
+      if (!d) return;
+      (map[d] = map[d] || []).push(item);
     });
+    return map;
   }, [filteredSchedules]);
 
-  // Custom event renderer in FullCalendar
-  const renderEventContent = (eventInfo) => {
-    const item = eventInfo.event.extendedProps;
-    const meta = statusMeta(item.status);
-    const timeDisplay = getTimeRange(item);
-    const staff = getStaffName(item);
-    const shift = getShiftName(item);
+  // One all-day calendar event per day per slot: "M: Name, Name +n more"
+  const calendarEvents = useMemo(() => {
+    const groups = new Map();
+    filteredSchedules.forEach((item) => {
+      const date = dateOfSchedule(item);
+      if (!date) return;
+      const slot = slotOfSchedule(item);
+      const key = `${date}|${slot}`;
+      if (!groups.has(key)) groups.set(key, { date, slot, names: [] });
+      groups.get(key).names.push(getStaffName(item));
+    });
+    return [...groups.values()].map((g) => {
+      const meta = SLOT_BY_KEY[g.slot];
+      const names = g.names.sort((a, b) => a.localeCompare(b, "vi"));
+      return {
+        id: `${g.date}-${g.slot}`,
+        // "1." / "2." / "3." prefix keeps M, A, N in order inside each day
+        title: `${meta.order}. ${meta.label}: ${names.join(", ")}`,
+        start: g.date,
+        allDay: true,
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        extendedProps: { date: g.date, slot: g.slot, names },
+      };
+    });
+  }, [filteredSchedules, slotOfSchedule]);
 
+  // Staff rows + shift bars for the week / day timeline.
+  // Bars use absolute minutes from the first visible day, so overnight shifts stay one piece.
+  const timeline = useMemo(() => {
+    if (view === "month") return null;
+    const start = view === "week" ? weekStartOf(cursor) : startOfDay(cursor);
+    const days = Array.from({ length: view === "week" ? 7 : 1 }, (_, i) => {
+      const d = addDays(start, i);
+      return { date: toISO(d), d };
+    });
+    const total = days.length * 1440;
+    const firstUTC = Date.parse(days[0].date);
+    const rowsMap = new Map();
+
+    filteredSchedules.forEach((item) => {
+      const date = dateOfSchedule(item);
+      if (!date) return;
+      const sh = shiftsById[String(item.shiftId)];
+      const from = toMinutes(item.startTime || item.shift?.startTime || sh?.startTime);
+      const to = toMinutes(item.endTime || item.shift?.endTime || sh?.endTime);
+      if (from == null || to == null) return;
+
+      const dayIdx = Math.round((Date.parse(date) - firstUTC) / 86400000);
+      const absStart = dayIdx * 1440 + from;
+      const absEnd = absStart + (to > from ? to - from : to + 1440 - from); // overnight => runs into next day
+      const clippedStart = Math.max(absStart, 0);
+      const clippedEnd = Math.min(absEnd, total);
+      if (clippedEnd <= clippedStart) return;
+
+      const key = String(item.accountId ?? item.username ?? getStaffName(item));
+      if (!rowsMap.has(key)) rowsMap.set(key, { key, name: getStaffName(item), role: roleLabelOf(item.role || item.roleCode), segs: [] });
+      rowsMap.get(key).segs.push({
+        item,
+        slot: slotOfSchedule(item),
+        from: clippedStart,
+        to: clippedEnd,
+        rawFrom: from,
+        rawTo: to,
+        clipStart: absStart < 0,
+        clipEnd: absEnd > total,
+      });
+    });
+
+    const rows = [...rowsMap.values()].sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    return { days, rows, total };
+  }, [view, cursor, filteredSchedules, shiftsById, slotOfSchedule]);
+
+  // Custom event renderer: [M] Name, Name +n more
+  const renderEventContent = (eventInfo) => {
+    const { slot, names } = eventInfo.event.extendedProps;
+    const meta = SLOT_BY_KEY[slot];
+    const shown = names.slice(0, 2);
+    const rest = names.length - shown.length;
     return (
-      <div className={`fc-event-custom-pill ${meta.cls}`} title={`${staff} (${shift}) - ${timeDisplay}`}>
-        <span className="fc-event-dot" style={{ backgroundColor: meta.color }} />
-        <div className="fc-event-details">
-          <strong className="fc-event-staff">{staff}</strong>
-          <span className="fc-event-meta">
-            {shift} · {timeDisplay}
-          </span>
-        </div>
+      <div className={`fc-slot-row slot-${slot}`} title={`${meta.label}: ${names.join(", ")}`}>
+        <span className="fc-slot-badge">{slot}</span>
+        <span className="fc-slot-names">{shown.join(", ")}</span>
+        {rest > 0 && <span className="fc-slot-more">+{rest} more</span>}
       </div>
     );
   };
@@ -325,10 +564,7 @@ export default function AdminSchedulesPage() {
     [shifts],
   );
 
-  const shiftFilterOptions = useMemo(
-    () => [{ value: "ALL", label: "Tất cả các ca trực" }, ...shifts.map((s) => ({ value: String(s.shiftId), label: s.shiftName || `Ca #${s.shiftId}` }))],
-    [shifts],
-  );
+  const shiftFilterOptions = useMemo(() => [{ value: "ALL", label: "Tất cả các ca trực" }, ...shifts.map((s) => ({ value: String(s.shiftId), label: s.shiftName || `Ca #${s.shiftId}` }))], [shifts]);
 
   const roleFilterOptions = [
     { value: "ALL", label: "Tất cả bộ phận / vai trò" },
@@ -515,21 +751,38 @@ export default function AdminSchedulesPage() {
   // ==========================================
   // SCHEDULE STATUS UPDATE & DELETE
   // ==========================================
-  const handleUpdateStatus = async (newStatus) => {
-    if (!selectedSchedule) return;
-    setUpdatingStatus(true);
+  const startEdit = (item) => {
+    setEditingId(item.scheduleId);
+    setEditForm({
+      shiftId: String(item.shiftId ?? ""),
+      status: (item.status || "SCHEDULED").toUpperCase(),
+      notes: item.notes || "",
+    });
+  };
+
+  // Changes only this schedule row, i.e. this person on this day.
+  const handleSaveEdit = async (item) => {
+    if (!editForm.shiftId) {
+      addToast("Vui lòng chọn ca làm việc.", "warning");
+      return;
+    }
+    setSavingEdit(true);
     try {
-      await apiCall(`/api/admin/schedules/${selectedSchedule.scheduleId}`, {
+      await apiCall(`/api/admin/schedules/${item.scheduleId}`, {
         method: "PUT",
-        body: { status: newStatus },
+        body: {
+          shiftId: Number(editForm.shiftId),
+          status: editForm.status,
+          notes: editForm.notes.trim() || null,
+        },
       });
-      addToast(`Đã cập nhật trạng thái: ${statusMeta(newStatus).label}`, "success");
-      setSelectedSchedule((prev) => ({ ...prev, status: newStatus }));
+      addToast("Đã cập nhật ca làm việc trong ngày.", "success");
+      setEditingId(null);
       await loadSchedules(dateRange.from, dateRange.to);
     } catch (error) {
-      addToast(error?.message || "Không thể cập nhật trạng thái.", "error");
+      addToast(error?.message || "Không thể cập nhật ca làm việc.", "error");
     } finally {
-      setUpdatingStatus(false);
+      setSavingEdit(false);
     }
   };
 
@@ -538,12 +791,24 @@ export default function AdminSchedulesPage() {
     try {
       await apiCall(`/api/admin/schedules/${scheduleId}`, { method: "DELETE" });
       addToast("Đã hủy phân công ca làm việc.", "success");
-      setSelectedSchedule(null);
+      setEditingId(null);
       await loadSchedules(dateRange.from, dateRange.to);
     } catch (error) {
       addToast(error?.message || "Không thể hủy phân công ca trực này.", "error");
     }
   };
+
+  // Rows shown in the day modal, ordered M -> A -> N then by name
+  const dayRows = useMemo(() => {
+    if (!selectedDay) return [];
+    return [...(schedulesByDate[selectedDay] || [])].sort((x, y) => {
+      const sx = SLOT_BY_KEY[slotOfSchedule(x)].order;
+      const sy = SLOT_BY_KEY[slotOfSchedule(y)].order;
+      return sx - sy || getStaffName(x).localeCompare(getStaffName(y), "vi");
+    });
+  }, [selectedDay, schedulesByDate, slotOfSchedule]);
+
+  const selectedDayLabel = selectedDay ? new Date(`${selectedDay}T00:00:00`).toLocaleDateString("vi-VN", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" }) : "";
 
   // ==========================================
   // SHIFT MANAGEMENT HANDLERS
@@ -623,29 +888,23 @@ export default function AdminSchedulesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="hc-tab-group admin-schedule-tabs">
-        <button type="button" className={`hc-tab-btn ${activeTab === "SCHEDULES" ? "active" : ""}`} onClick={() => setActiveTab("SCHEDULES")}>
-          <i className="bi bi-calendar-week" /> Lịch làm việc ({schedules.length} ca trong khoảng xem)
-        </button>
-        <button type="button" className={`hc-tab-btn ${activeTab === "SHIFTS" ? "active" : ""}`} onClick={() => setActiveTab("SHIFTS")}>
-          <i className="bi bi-clock-history" /> Định nghĩa ca trực ({shifts.length})
-        </button>
-      </div>
+      {/* Tabs + filters on one row */}
+      <div className="admin-schedule-toolbar">
+        <div className="hc-tab-group admin-schedule-tabs">
+          <button type="button" className={`hc-tab-btn ${activeTab === "SCHEDULES" ? "active" : ""}`} onClick={() => setActiveTab("SCHEDULES")}>
+            <i className="bi bi-calendar-week" /> Lịch làm việc
+          </button>
+          <button type="button" className={`hc-tab-btn ${activeTab === "SHIFTS" ? "active" : ""}`} onClick={() => setActiveTab("SHIFTS")}>
+            <i className="bi bi-clock-history" /> Định nghĩa ca trực
+          </button>
+        </div>
 
-      {activeTab === "SCHEDULES" ? (
-        <>
-          {/* Filters Bar */}
+        {/* Filters (same row as the tab switcher) */}
+        {activeTab === "SCHEDULES" && (
           <div className="admin-schedule-filters">
             <div className="admin-filter-search">
               <i className="bi bi-search" />
-              <input
-                className="hc-input"
-                type="search"
-                placeholder="Tìm nhân viên, ca trực hoặc ghi chú…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <input className="hc-input" type="search" placeholder="Tìm nhân viên, ca trực hoặc ghi chú…" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
             </div>
 
             <div className="admin-schedule-filter-select">
@@ -656,136 +915,247 @@ export default function AdminSchedulesPage() {
               <SelectMenu value={roleFilter} onChange={setRoleFilter} options={roleFilterOptions} ariaLabel="Lọc theo vai trò" icon="bi-people" />
             </div>
 
-            <button
-              type="button"
-              className="hc-btn hc-btn-outline"
-              onClick={() => loadSchedules(dateRange.from, dateRange.to)}
-              disabled={loading}
-              title="Làm mới dữ liệu lịch"
-            >
+            <button type="button" className="hc-btn hc-btn-outline" onClick={() => loadSchedules(dateRange.from, dateRange.to)} disabled={loading} title="Làm mới dữ liệu lịch">
               <i className={`bi bi-arrow-clockwise${loading ? " admin-schedule-spin" : ""}`} /> Làm mới
             </button>
           </div>
+        )}
+      </div>
 
+      {activeTab === "SCHEDULES" ? (
+        <>
           {/* FullCalendar Card */}
           <section className="hc-card admin-calendar-card">
-            {/* Status Legend */}
+            {/* Slot Legend */}
             <div className="admin-calendar-legend">
-              <span className="legend-item">
-                <i className="admin-calendar-dot scheduled" /> Đã lên lịch
-              </span>
-              <span className="legend-item">
-                <i className="admin-calendar-dot completed" /> Đã hoàn thành
-              </span>
-              <span className="legend-item">
-                <i className="admin-calendar-dot absent" /> Vắng mặt
-              </span>
-              <span className="legend-item">
-                <i className="admin-calendar-dot off" /> Nghỉ phép
-              </span>
+              {SLOTS.map((slot) => (
+                <span key={slot.key} className="legend-item">
+                  <i className={`legend-slot-badge slot-${slot.key}`}>{slot.key}</i> {slot.label}
+                </span>
+              ))}
               <span className="legend-tip">
-                <i className="bi bi-info-circle" /> Nhấp vào ngày bất kỳ để gán ca lẻ, nhấp vào ca trực để xem chi tiết.
+                <i className="bi bi-info-circle" /> Nhấp vào một ngày để xem danh sách nhân viên và chỉnh ca trong ngày đó.
               </span>
             </div>
 
             <div className="admin-calendar-wrapper">
-              <FullCalendar
-                ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin, classicThemePlugin]}
-                initialView="dayGridMonth"
-                locales={[viLocale]}
-                locale="vi"
-                headerToolbar={{
-                  left: "prev,next today",
-                  center: "title",
-                  right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
-                }}
-                buttonText={{
-                  today: "Hôm nay",
-                  month: "Tháng",
-                  week: "Tuần",
-                  day: "Ngày",
-                  list: "Danh sách",
-                }}
-                dayMaxEvents={3}
-                moreLinkClick="popover"
-                nowIndicator={true}
-                height="auto"
-                aspectRatio={1.65}
-                datesSet={handleDatesSet}
-                dateClick={handleDateClick}
-                eventClick={handleEventClick}
-                eventContent={renderEventContent}
-                events={calendarEvents}
-              />
+              {/* Toolbar (shared by month / week / day) */}
+              <div className="admin-cal-toolbar">
+                <div className="admin-cal-btn-group is-nav">
+                  <button type="button" className="admin-cal-btn" aria-label="Trước" onClick={() => shiftCursor(-1)}>
+                    <i className="bi bi-chevron-left" />
+                  </button>
+                  <button type="button" className="admin-cal-btn" aria-label="Sau" onClick={() => shiftCursor(1)}>
+                    <i className="bi bi-chevron-right" />
+                  </button>
+                  <button type="button" className="admin-cal-btn" onClick={() => setCursor(new Date())}>
+                    Hôm nay
+                  </button>
+                </div>
+
+                <h3 className="admin-cal-title">{toolbarTitle}</h3>
+
+                <div className="admin-cal-btn-group is-views">
+                  {[
+                    ["month", "Tháng"],
+                    ["week", "Tuần"],
+                    ["day", "Ngày"],
+                  ].map(([key, label]) => (
+                    <button key={key} type="button" className={`admin-cal-btn is-view${view === key ? " is-selected" : ""}`} onClick={() => setView(key)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {view === "month" ? (
+                <FullCalendar
+                  key={`${cursor.getFullYear()}-${cursor.getMonth()}`}
+                  plugins={[dayGridPlugin, interactionPlugin, classicThemePlugin]}
+                  initialView="dayGridMonth"
+                  initialDate={cursor}
+                  locales={[viLocale]}
+                  locale="vi"
+                  headerToolbar={false}
+                  dayMaxEvents={false}
+                  eventOrder="title"
+                  height="auto"
+                  aspectRatio={6}
+                  dayRowClass="admin-cal-dayrow"
+                  dayCellClass="admin-cal-daycell"
+                  dayHeaderRowClass="admin-cal-dayheader-row"
+                  dayHeaderClass="admin-cal-dayheader-cell"
+                  dayHeaderInnerClass="admin-cal-dayheader"
+                  dayCellTopInnerClass={(info) => `admin-cal-daynum${info.isToday ? " is-today" : ""}`}
+                  eventClass="admin-cal-event"
+                  datesSet={handleDatesSet}
+                  dateClick={handleDateClick}
+                  eventClick={handleEventClick}
+                  eventContent={renderEventContent}
+                  events={calendarEvents}
+                />
+              ) : (
+                <ScheduleTimeline view={view} timeline={timeline} now={now} onOpenDay={openDay} />
+              )}
             </div>
           </section>
 
-          {/* Schedule Detail Drawer / Modal */}
-          {selectedSchedule && (
+          {/* Day detail modal */}
+          {selectedDay && (
             <Modal
-              isOpen={Boolean(selectedSchedule)}
-              onClose={() => setSelectedSchedule(null)}
-              title="Chi tiết ca làm việc"
-              subtitle={`Ngày trực: ${formatDate(selectedSchedule.workDate)}`}
+              isOpen={Boolean(selectedDay)}
+              onClose={() => {
+                setSelectedDay(null);
+                setEditingId(null);
+              }}
+              title={`Lịch làm việc ngày ${formatDate(selectedDay)}`}
+              subtitle={`${selectedDayLabel} · ${dayRows.length} ca làm việc`}
               icon="bi-calendar-check"
-              maxWidth="520px"
+              maxWidth="1100px"
               footer={
                 <div className="admin-modal-actions" style={{ justifyContent: "space-between", width: "100%" }}>
-                  <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => handleDeleteSchedule(selectedSchedule.scheduleId)}>
-                    <i className="bi bi-trash" /> Hủy ca này
+                  <button
+                    type="button"
+                    className="hc-btn hc-btn-outline hc-btn-sm"
+                    onClick={() => {
+                      const day = selectedDay;
+                      setSelectedDay(null);
+                      openAssignModal(day);
+                    }}
+                  >
+                    <i className="bi bi-person-plus" /> Thêm nhân viên vào ngày này
                   </button>
-                  <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={() => setSelectedSchedule(null)}>
+                  <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={() => setSelectedDay(null)}>
                     Đóng
                   </button>
                 </div>
               }
             >
-              <div className="admin-schedule-detail-grid">
-                <div>
-                  <small>Nhân viên</small>
-                  <strong>{getStaffName(selectedSchedule)}</strong>
-                  <span className="admin-subtext">@{selectedSchedule.accountUsername || selectedSchedule.username || "—"}</span>
+              {dayRows.length === 0 ? (
+                <div className="hc-empty-state">
+                  <i className="bi bi-calendar-x" />
+                  <p>Chưa có nhân viên nào được xếp ca trong ngày này.</p>
                 </div>
-                <div>
-                  <small>Bộ phận / Vai trò</small>
-                  <strong>{roleLabelOf(selectedSchedule.role || selectedSchedule.roleCode)}</strong>
+              ) : (
+                <div className="admin-day-table-wrap">
+                  <table className="hc-table admin-day-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: 44 }}>#</th>
+                        <th>Nhân viên</th>
+                        <th>Số điện thoại</th>
+                        <th>Vai trò</th>
+                        <th>Ca</th>
+                        <th>Giờ làm việc</th>
+                        <th>Trạng thái</th>
+                        <th style={{ textAlign: "right", width: 110 }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dayRows.map((item, index) => {
+                        const slot = slotOfSchedule(item);
+                        const meta = statusMeta(item.status);
+                        const isEditing = editingId === item.scheduleId;
+                        return (
+                          <React.Fragment key={item.scheduleId}>
+                            <tr className={isEditing ? "is-editing" : ""}>
+                              <td>{index + 1}</td>
+                              <td>
+                                <strong>{getStaffName(item)}</strong>
+                                <div className="admin-subtext">@{item.accountUsername || item.username || "—"}</div>
+                              </td>
+                              <td>{getPhone(item)}</td>
+                              <td>{roleLabelOf(item.role || item.roleCode)}</td>
+                              <td>
+                                <span className={`day-slot-chip slot-${slot}`}>
+                                  <b>{slot}</b> {getShiftName(item)}
+                                </span>
+                              </td>
+                              <td style={{ whiteSpace: "nowrap" }}>{getTimeRange(item)}</td>
+                              <td>
+                                <span className={`admin-calendar-status ${meta.cls}`}>{meta.label}</span>
+                              </td>
+                              <td style={{ textAlign: "right" }}>
+                                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => (isEditing ? setEditingId(null) : startEdit(item))}>
+                                  <i className={`bi ${isEditing ? "bi-x-lg" : "bi-pencil"}`} /> {isEditing ? "Đóng" : "Sửa"}
+                                </button>
+                              </td>
+                            </tr>
+
+                            {isEditing && (
+                              <tr className="admin-day-edit-row">
+                                <td colSpan={8}>
+                                  <div className="admin-day-edit">
+                                    <div className="hc-form-group">
+                                      <label className="hc-label">Chuyển sang ca (chỉ áp dụng cho ngày này)</label>
+                                      <div className="admin-slot-picker">
+                                        {shifts.map((sh) => {
+                                          const k = slotKeyOf(sh.shiftName, sh.startTime);
+                                          const active = String(sh.shiftId) === editForm.shiftId;
+                                          return (
+                                            <button
+                                              key={sh.shiftId}
+                                              type="button"
+                                              className={`admin-slot-option slot-${k}${active ? " active" : ""}`}
+                                              onClick={() => setEditForm((f) => ({ ...f, shiftId: String(sh.shiftId) }))}
+                                            >
+                                              <b>{k}</b>
+                                              <span>{sh.shiftName || `Ca #${sh.shiftId}`}</span>
+                                              <small>
+                                                {formatTime(sh.startTime)} – {formatTime(sh.endTime)}
+                                              </small>
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+
+                                    <div className="admin-day-edit-fields">
+                                      <div className="hc-form-group mb-0">
+                                        <label className="hc-label">Trạng thái</label>
+                                        <SelectMenu
+                                          value={editForm.status}
+                                          onChange={(value) => setEditForm((f) => ({ ...f, status: value }))}
+                                          options={STATUS_OPTIONS}
+                                          ariaLabel="Chọn trạng thái"
+                                          icon="bi-flag"
+                                        />
+                                      </div>
+                                      <div className="hc-form-group mb-0">
+                                        <label className="hc-label">Ghi chú</label>
+                                        <input
+                                          className="hc-input"
+                                          value={editForm.notes}
+                                          onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                                          placeholder="Ghi chú cho ca này (tùy chọn)"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="admin-day-edit-actions">
+                                      <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm text-danger" onClick={() => handleDeleteSchedule(item.scheduleId)}>
+                                        <i className="bi bi-trash" /> Hủy ca này
+                                      </button>
+                                      <div style={{ display: "flex", gap: 8 }}>
+                                        <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setEditingId(null)}>
+                                          Hủy bỏ
+                                        </button>
+                                        <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={savingEdit} onClick={() => handleSaveEdit(item)}>
+                                          {savingEdit ? "Đang lưu…" : "Lưu thay đổi"}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                <div>
-                  <small>Ca làm việc</small>
-                  <strong>{getShiftName(selectedSchedule)}</strong>
-                </div>
-                <div>
-                  <small>Khung giờ làm</small>
-                  <strong>{getTimeRange(selectedSchedule)}</strong>
-                </div>
-                <div className="admin-schedule-status-box">
-                  <small>Trạng thái hiện tại</small>
-                  <div className="admin-status-picker">
-                    <span className={`admin-calendar-status ${statusMeta(selectedSchedule.status).cls}`}>
-                      {statusMeta(selectedSchedule.status).label}
-                    </span>
-                    <div className="admin-status-quick-btns">
-                      {["SCHEDULED", "COMPLETED", "ABSENT", "OFF"].map((st) => (
-                        <button
-                          key={st}
-                          type="button"
-                          className={`hc-btn hc-btn-sm ${selectedSchedule.status === st ? "hc-btn-primary" : "hc-btn-outline"}`}
-                          disabled={updatingStatus || selectedSchedule.status === st}
-                          onClick={() => handleUpdateStatus(st)}
-                          title={`Chuyển sang ${statusMeta(st).label}`}
-                        >
-                          {statusMeta(st).label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="admin-schedule-notes">
-                  <small>Ghi chú</small>
-                  <span>{selectedSchedule.notes || "Không có ghi chú."}</span>
-                </div>
-              </div>
+              )}
             </Modal>
           )}
         </>
@@ -793,9 +1163,11 @@ export default function AdminSchedulesPage() {
         /* SHIFTS DEFINITION TAB */
         <section className="hc-card">
           <div className="hc-card-header">
-            <div>
+            <div className="admin-card-head-row">
               <h3 className="hc-card-title">Danh sách ca làm việc</h3>
-              <span>Cấu hình các khung giờ làm việc chuẩn để xếp lịch nhân sự.</span>
+              <span className="legend-tip">
+                <i className="bi bi-info-circle" /> Cấu hình các khung giờ làm việc chuẩn để xếp lịch nhân sự.
+              </span>
             </div>
           </div>
           {loading ? (
@@ -865,12 +1237,7 @@ export default function AdminSchedulesPage() {
                           >
                             <i className="bi bi-pencil" /> Sửa
                           </button>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-ghost hc-btn-sm text-danger"
-                            onClick={() => handleDeleteShift(shift.shiftId)}
-                            title="Xóa ca này"
-                          >
+                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm text-danger" onClick={() => handleDeleteShift(shift.shiftId)} title="Xóa ca này">
                             <i className="bi bi-trash" />
                           </button>
                         </div>
@@ -899,12 +1266,7 @@ export default function AdminSchedulesPage() {
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setBulkModalOpen(false)}>
               Hủy bỏ
             </button>
-            <button
-              type="button"
-              className="hc-btn hc-btn-primary hc-btn-sm"
-              disabled={submittingBulk || bulkForm.accountIds.length === 0}
-              onClick={handleBulkSubmit}
-            >
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={submittingBulk || bulkForm.accountIds.length === 0} onClick={handleBulkSubmit}>
               {submittingBulk ? (
                 <>
                   <i className="bi bi-arrow-clockwise admin-schedule-spin" /> Đang phân công…
@@ -924,13 +1286,7 @@ export default function AdminSchedulesPage() {
             <label className="hc-label">
               Ca làm việc áp dụng <span className="text-danger">*</span>
             </label>
-            <SelectMenu
-              value={bulkForm.shiftId}
-              onChange={(value) => setBulkForm((prev) => ({ ...prev, shiftId: value }))}
-              options={shiftOptions}
-              ariaLabel="Chọn ca làm việc"
-              icon="bi-clock"
-            />
+            <SelectMenu value={bulkForm.shiftId} onChange={(value) => setBulkForm((prev) => ({ ...prev, shiftId: value }))} options={shiftOptions} ariaLabel="Chọn ca làm việc" icon="bi-clock" />
           </div>
 
           {/* 2. Chọn Nhân viên (Multi-Select Checklist) */}
@@ -952,24 +1308,10 @@ export default function AdminSchedulesPage() {
 
             {/* Bộ lọc nhân viên nhanh */}
             <div className="bulk-staff-search-row">
-              <input
-                className="hc-input hc-input-sm"
-                type="search"
-                placeholder="Tìm nhanh theo tên nhân viên…"
-                value={bulkStaffSearch}
-                onChange={(e) => setBulkStaffSearch(e.target.value)}
-              />
-              <select
-                className="hc-input hc-input-sm bulk-staff-role-filter"
-                value={bulkStaffRole}
-                onChange={(e) => setBulkStaffRole(e.target.value)}
-              >
-                <option value="ALL">Tất cả bộ phận</option>
-                <option value="RECEPTIONIST">Lễ tân</option>
-                <option value="HOUSEKEEPING">Buồng phòng</option>
-                <option value="SERVICE_STAFF">Phục vụ</option>
-                <option value="MAINTENANCE">Kỹ thuật</option>
-              </select>
+              <input className="hc-input hc-input-sm" type="search" placeholder="Tìm nhanh theo tên nhân viên…" value={bulkStaffSearch} onChange={(e) => setBulkStaffSearch(e.target.value)} />
+              <div className="bulk-staff-role-filter">
+                <SelectMenu value={bulkStaffRole} onChange={setBulkStaffRole} options={BULK_ROLE_OPTIONS} ariaLabel="Lọc theo bộ phận" icon="bi-people" />
+              </div>
             </div>
 
             {/* Danh sách checkbox nhân viên */}
@@ -1002,26 +1344,17 @@ export default function AdminSchedulesPage() {
               <label className="hc-label">
                 Từ ngày <span className="text-danger">*</span>
               </label>
-              <input
-                className="hc-input"
-                type="date"
+              <DatePicker
                 value={bulkForm.startDate}
-                onChange={(e) => setBulkForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                required
+                onChange={(value) => setBulkForm((prev) => ({ ...prev, startDate: value, endDate: prev.endDate && prev.endDate < value ? value : prev.endDate }))}
+                ariaLabel="Từ ngày"
               />
             </div>
             <div className="hc-form-group">
               <label className="hc-label">
                 Đến ngày <span className="text-danger">*</span>
               </label>
-              <input
-                className="hc-input"
-                type="date"
-                value={bulkForm.endDate}
-                min={bulkForm.startDate}
-                onChange={(e) => setBulkForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                required
-              />
+              <DatePicker value={bulkForm.endDate} min={bulkForm.startDate} onChange={(value) => setBulkForm((prev) => ({ ...prev, endDate: value }))} ariaLabel="Đến ngày" />
             </div>
           </div>
 
@@ -1049,13 +1382,7 @@ export default function AdminSchedulesPage() {
               {DAYS_OF_WEEK.map((day) => {
                 const isActive = bulkForm.daysOfWeek.includes(day.key);
                 return (
-                  <button
-                    key={day.key}
-                    type="button"
-                    className={`bulk-weekday-pill ${isActive ? "active" : ""}`}
-                    onClick={() => toggleDayOfWeek(day.key)}
-                    title={day.fullName}
-                  >
+                  <button key={day.key} type="button" className={`bulk-weekday-pill ${isActive ? "active" : ""}`} onClick={() => toggleDayOfWeek(day.key)} title={day.fullName}>
                     <span>{day.label}</span>
                     <small>{day.fullName.replace("Thứ ", "T.")}</small>
                   </button>
@@ -1070,11 +1397,7 @@ export default function AdminSchedulesPage() {
           {/* 5. Tùy chọn Ghi đè & Ghi chú */}
           <div className="bulk-options-row">
             <label className="bulk-checkbox-label">
-              <input
-                type="checkbox"
-                checked={bulkForm.overwrite}
-                onChange={(e) => setBulkForm((prev) => ({ ...prev, overwrite: e.target.checked }))}
-              />
+              <input type="checkbox" checked={bulkForm.overwrite} onChange={(e) => setBulkForm((prev) => ({ ...prev, overwrite: e.target.checked }))} />
               <span>
                 <strong>Ghi đè ca nếu nhân viên đã có lịch trong ngày</strong>
                 <small>Nếu tắt, các ngày nhân viên đã có lịch sẽ được tự động bỏ qua.</small>
@@ -1084,12 +1407,7 @@ export default function AdminSchedulesPage() {
 
           <div className="hc-form-group mb-0">
             <label className="hc-label">Ghi chú phân công (tùy chọn)</label>
-            <input
-              className="hc-input"
-              value={bulkForm.notes}
-              onChange={(e) => setBulkForm((prev) => ({ ...prev, notes: e.target.value }))}
-              placeholder="VD: Phân ca tăng cường tuần lễ du lịch..."
-            />
+            <input className="hc-input" value={bulkForm.notes} onChange={(e) => setBulkForm((prev) => ({ ...prev, notes: e.target.value }))} placeholder="VD: Phân ca tăng cường tuần lễ du lịch..." />
           </div>
         </form>
       </Modal>
@@ -1132,34 +1450,17 @@ export default function AdminSchedulesPage() {
             <label className="hc-label">
               Ca làm việc <span className="text-danger">*</span>
             </label>
-            <SelectMenu
-              value={assignForm.shiftId}
-              onChange={(value) => setAssignForm((current) => ({ ...current, shiftId: value }))}
-              options={shiftOptions}
-              ariaLabel="Chọn ca"
-              icon="bi-clock"
-            />
+            <SelectMenu value={assignForm.shiftId} onChange={(value) => setAssignForm((current) => ({ ...current, shiftId: value }))} options={shiftOptions} ariaLabel="Chọn ca" icon="bi-clock" />
           </div>
           <div className="hc-form-group">
             <label className="hc-label">
               Ngày làm việc <span className="text-danger">*</span>
             </label>
-            <input
-              className="hc-input"
-              type="date"
-              value={assignForm.workDate}
-              onChange={(e) => setAssignForm((current) => ({ ...current, workDate: e.target.value }))}
-              required
-            />
+            <DatePicker value={assignForm.workDate} onChange={(value) => setAssignForm((current) => ({ ...current, workDate: value }))} ariaLabel="Ngày làm việc" />
           </div>
           <div className="hc-form-group">
             <label className="hc-label">Ghi chú</label>
-            <input
-              className="hc-input"
-              value={assignForm.notes}
-              onChange={(e) => setAssignForm((current) => ({ ...current, notes: e.target.value }))}
-              placeholder="Ghi chú phân công tùy chọn"
-            />
+            <input className="hc-input" value={assignForm.notes} onChange={(e) => setAssignForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Ghi chú phân công tùy chọn" />
           </div>
         </form>
       </Modal>
@@ -1201,23 +1502,11 @@ export default function AdminSchedulesPage() {
           <div className="admin-shift-time-fields">
             <div className="hc-form-group">
               <label className="hc-label">Giờ bắt đầu</label>
-              <input
-                className="hc-input"
-                type="time"
-                value={shiftForm.startTime}
-                onChange={(e) => setShiftForm((current) => ({ ...current, startTime: e.target.value }))}
-                required
-              />
+              <TimePicker value={shiftForm.startTime} onChange={(value) => setShiftForm((current) => ({ ...current, startTime: value }))} ariaLabel="Giờ bắt đầu" />
             </div>
             <div className="hc-form-group">
               <label className="hc-label">Giờ kết thúc</label>
-              <input
-                className="hc-input"
-                type="time"
-                value={shiftForm.endTime}
-                onChange={(e) => setShiftForm((current) => ({ ...current, endTime: e.target.value }))}
-                required
-              />
+              <TimePicker value={shiftForm.endTime} onChange={(value) => setShiftForm((current) => ({ ...current, endTime: value }))} ariaLabel="Giờ kết thúc" />
             </div>
           </div>
           <div className="hc-form-group">

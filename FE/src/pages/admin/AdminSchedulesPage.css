@@ -23,8 +23,18 @@
   flex-wrap: wrap;
 }
 
-.admin-schedule-tabs {
+/* Tab switcher + filters share one row */
+.admin-schedule-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px 16px;
+  flex-wrap: wrap;
   margin-bottom: 20px;
+}
+
+.admin-schedule-tabs {
+  flex: 0 0 auto;
+  margin-bottom: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -35,7 +45,9 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  flex: 1 1 520px;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 .admin-filter-search {
@@ -125,194 +137,554 @@
   gap: 5px;
 }
 
+/* Card header row: title on the left, hint on the far right */
+.admin-card-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.admin-card-head-row .hc-card-title {
+  margin: 0;
+}
+
 /* --------------------------------------------------------------------------
-   FullCalendar Container & Theme Overrides
+   Slot colours (M / A / N) - shared by legend, calendar rows and day modal
+   -------------------------------------------------------------------------- */
+:root {
+  --slot-M-bg: #fef3c7;
+  --slot-M-fg: #b45309;
+  --slot-M-border: #fde68a;
+  --slot-A-bg: #dbeafe;
+  --slot-A-fg: #1d4ed8;
+  --slot-A-border: #bfdbfe;
+  --slot-N-bg: #e0e7ff;
+  --slot-N-fg: #4338ca;
+  --slot-N-border: #c7d2fe;
+}
+
+.slot-M {
+  --slot-bg: var(--slot-M-bg);
+  --slot-fg: var(--slot-M-fg);
+  --slot-border: var(--slot-M-border);
+}
+.slot-A {
+  --slot-bg: var(--slot-A-bg);
+  --slot-fg: var(--slot-A-fg);
+  --slot-border: var(--slot-A-border);
+}
+.slot-N {
+  --slot-bg: var(--slot-N-bg);
+  --slot-fg: var(--slot-N-fg);
+  --slot-border: var(--slot-N-border);
+}
+
+.legend-slot-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--slot-bg);
+  color: var(--slot-fg);
+  border: 1px solid var(--slot-border);
+}
+
+/* --------------------------------------------------------------------------
+   FullCalendar (v7) - styled through the class hooks passed in the JSX
+   (toolbarTitleClass, buttonClass, buttonGroupClass, dayCellTopInnerClass...)
    -------------------------------------------------------------------------- */
 .admin-calendar-wrapper {
   padding: 16px 20px 24px;
   min-height: 650px;
+
+  /* Re-point the classic theme palette to the app colours */
+  --fc-classic-primary: var(--hc-primary, #0284c7);
+  --fc-classic-border: var(--hc-border-light, #e2e8f0);
+  --fc-classic-foreground: var(--hc-text-primary, #0f172a);
+  --fc-classic-today: rgba(2, 132, 199, 0.05);
 }
 
-/* Toolbar styling */
-.admin-calendar-wrapper .fc-header-toolbar {
-  margin-bottom: 1.25rem !important;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.admin-calendar-wrapper .fc-toolbar-title {
-  font-size: 1.25rem !important;
-  font-weight: 700 !important;
+/* Month title: same serif face as the page header */
+.admin-calendar-wrapper .admin-cal-title {
+  font-family: var(--hc-font-heading, var(--hc-font-display, "Playfair Display")), Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--hc-text-primary, #0f172a);
-  text-transform: capitalize;
 }
 
-.admin-calendar-wrapper .fc-button {
-  font-size: 0.875rem !important;
-  font-weight: 500 !important;
-  padding: 6px 12px !important;
-  border-radius: 8px !important;
-  transition: all 0.2s ease !important;
-  box-shadow: none !important;
-}
-
-.admin-calendar-wrapper .fc-button-primary {
-  background: var(--hc-bg, #f8fafc) !important;
-  border: 1px solid var(--hc-border, #cbd5e1) !important;
-  color: var(--hc-text-primary, #1e293b) !important;
-}
-
-.admin-calendar-wrapper .fc-button-primary:hover {
-  background: #f1f5f9 !important;
-  border-color: #94a3b8 !important;
-}
-
-.admin-calendar-wrapper .fc-button-primary:not(:disabled).fc-button-active,
-.admin-calendar-wrapper .fc-button-primary:not(:disabled):active {
-  background: var(--hc-primary, #0284c7) !important;
-  border-color: var(--hc-primary, #0284c7) !important;
-  color: #ffffff !important;
-}
-
-.admin-calendar-wrapper .fc-today-button {
-  text-transform: capitalize;
-  font-weight: 600 !important;
-}
-
-/* Table grid borders & headers */
-.admin-calendar-wrapper .fc-theme-classic th,
-.admin-calendar-wrapper .fc-theme-classic td,
-.admin-calendar-wrapper .fc-scrollgrid {
-  border-color: var(--hc-border-light, #e2e8f0) !important;
-}
-
-.admin-calendar-wrapper .fc-col-header-cell {
-  background: var(--hc-bg, #f8fafc);
-  padding: 10px 0 !important;
-}
-
-.admin-calendar-wrapper .fc-col-header-cell-cushion {
-  font-size: 12px !important;
-  font-weight: 700 !important;
+.admin-calendar-wrapper .admin-cal-title::first-letter {
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--hc-text-secondary, #475569) !important;
-  text-decoration: none !important;
 }
 
-.admin-calendar-wrapper .fc-daygrid-day-number {
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  color: var(--hc-text-primary, #1e293b) !important;
-  padding: 6px 8px !important;
-  text-decoration: none !important;
-}
-
-.admin-calendar-wrapper .fc-day-today {
-  background: rgba(2, 132, 199, 0.04) !important;
-}
-
-.admin-calendar-wrapper .fc-day-today .fc-daygrid-day-number {
-  background: var(--hc-primary, #0284c7);
-  color: #ffffff !important;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
+/* Buttons: same look as the header's .hc-btn */
+.admin-calendar-wrapper .admin-cal-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin: 4px;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: none;
+  background: var(--hc-card-bg, #ffffff);
+  border: 1px solid var(--hc-border, #cbd5e1);
+  color: var(--hc-text-primary, #1e293b);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
-/* Event container override */
-.admin-calendar-wrapper .fc-daygrid-event {
+.admin-calendar-wrapper .admin-cal-btn:hover:not(:disabled):not(.is-selected) {
+  background: var(--hc-bg, #f1f5f9);
+  border-color: var(--hc-primary, #0284c7);
+  color: var(--hc-primary, #0284c7);
+}
+
+.admin-calendar-wrapper .admin-cal-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.admin-calendar-wrapper .admin-cal-btn-group.is-nav {
+  display: inline-flex;
+  gap: 6px;
+}
+
+/* View switcher (Tháng / Tuần / Ngày / ...) styled like the page tabs */
+.admin-calendar-wrapper .admin-cal-btn-group.is-views {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--hc-card-bg, #ffffff);
+  border: 1px solid var(--hc-border-light, #e2e8f0);
+  border-radius: 12px;
+}
+
+.admin-calendar-wrapper .admin-cal-btn.is-view {
+  height: 32px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--hc-text-secondary, #475569);
+}
+
+.admin-calendar-wrapper .admin-cal-btn.is-view.is-selected,
+.admin-calendar-wrapper .admin-cal-btn.is-view.is-selected:hover {
+  background: var(--hc-primary, #0284c7);
+  border-color: var(--hc-primary, #0284c7);
+  color: #ffffff;
+}
+
+/* Weekday header (T2 ... CN): same background / type as the week & day timeline header */
+.admin-calendar-wrapper .admin-cal-dayheader-row,
+.admin-calendar-wrapper .admin-cal-dayheader-cell {
+  background: var(--hc-bg, #f8fafc);
+}
+
+.admin-calendar-wrapper .admin-cal-dayheader {
+  display: block;
+  padding: 14px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--hc-text-secondary, #475569);
+  text-decoration: none;
+}
+
+.admin-calendar-wrapper .admin-cal-daynum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  margin: 2px 4px;
+  padding: 0 4px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hc-text-primary, #1e293b);
+  text-decoration: none;
+}
+
+.admin-calendar-wrapper .admin-cal-daynum.is-today {
+  background: var(--hc-primary, #0284c7);
+  color: #ffffff;
+}
+
+/* Events are rendered by our own M / A / N rows, so strip FullCalendar's chrome */
+.admin-calendar-wrapper .admin-cal-event {
   background: transparent !important;
   border: none !important;
-  margin: 2px 3px !important;
+  box-shadow: none !important;
   padding: 0 !important;
+  margin: 1px 4px !important;
   cursor: pointer;
 }
 
-/* Custom Event Pill Design */
-.fc-event-custom-pill {
+/* Month cell is tall enough for the 3 slot rows (M, A, N) plus the day number:
+   30px day number + 3 x (22px row + 2px margins) + 6px bottom padding */
+.admin-calendar-wrapper {
+  --cal-slot-row-h: 24px;
+  --cal-cell-min-h: 116px;
+}
+
+.admin-calendar-wrapper .admin-cal-dayrow,
+.admin-calendar-wrapper .admin-cal-daycell {
+  min-height: var(--cal-cell-min-h);
+}
+
+/* M / A / N row inside a day cell */
+.fc-slot-row {
   display: flex;
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 3px 6px;
+  min-width: 0;
+  box-sizing: border-box;
+  height: var(--cal-slot-row-h, 22px);
+  padding: 0 6px 0 3px;
   border-radius: 6px;
-  font-size: 11px;
-  line-height: 1.3;
-  border: 1px solid transparent;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 1.35;
+  background: var(--slot-bg);
+  border: 1px solid var(--slot-border);
+  color: var(--slot-fg);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
-.fc-event-custom-pill:hover {
+.fc-slot-row:hover {
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
-.fc-event-custom-pill.scheduled {
-  background: #eff6ff;
-  border-color: #bfdbfe;
-  color: #1e40af;
+.fc-slot-badge {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--slot-fg);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 800;
 }
 
-.fc-event-custom-pill.completed {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #166534;
-}
-
-.fc-event-custom-pill.absent {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #991b1b;
-}
-
-.fc-event-custom-pill.off {
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  color: #475569;
-}
-
-.fc-event-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.fc-event-details {
-  display: flex;
-  flex-direction: column;
+.fc-slot-names {
+  flex: 1 1 auto;
   min-width: 0;
-  overflow: hidden;
-}
-
-.fc-event-staff {
-  font-weight: 700;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 11px;
 }
 
-.fc-event-meta {
-  font-size: 9.5px;
+.fc-slot-more {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  font-weight: 700;
   opacity: 0.85;
   white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Custom toolbar (month / week / day)
+   -------------------------------------------------------------------------- */
+.admin-cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.admin-calendar-wrapper .admin-cal-toolbar .admin-cal-title {
+  margin: 0;
+  text-align: center;
+  flex: 1 1 auto;
+}
+
+/* --------------------------------------------------------------------------
+   Staff x time timeline (week / day views)
+   -------------------------------------------------------------------------- */
+.tl-scroll {
+  --tl-name-w: 190px;
+  --tl-row-h: 56px;
+  overflow: auto;
+  max-height: 640px;
+  border: 1px solid var(--hc-border-light, #e2e8f0);
+  border-radius: 10px;
+  background: var(--hc-card-bg, #ffffff);
+}
+
+.tl-grid {
+  display: grid;
+  width: 100%;
+}
+
+.tl-grid {
+  --tl-line: var(--hc-border-light, #e2e8f0);
+  --tl-line-strong: var(--hc-border, #cbd5e1);
+}
+
+/* header cells */
+.tl-corner,
+.tl-hours,
+.tl-dayhead {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--hc-bg, #f8fafc);
+  border-bottom: 1px solid var(--hc-border-light, #e2e8f0);
+  font-size: 12px;
+  color: var(--hc-text-secondary, #475569);
+}
+
+.tl-corner {
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  min-height: 44px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11.5px;
+  border-right: 1px solid var(--hc-border-light, #e2e8f0);
+}
+
+.tl-hours {
+  display: grid;
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+}
+
+.tl-hours span {
+  padding: 14px 0 14px 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-left: 1px solid var(--hc-border-light, #e2e8f0);
+}
+
+.tl-hours span:first-child {
+  border-left: none;
+}
+
+.tl-dayhead {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  border-left: 1px solid var(--hc-border, #cbd5e1);
+}
+
+.tl-dayhead strong {
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.tl-dayhead.is-today strong,
+.tl-dayhead.is-today span {
+  color: var(--hc-primary, #0284c7);
+}
+
+.tl-ticks {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  font-size: 10px;
+  color: var(--hc-text-muted, #94a3b8);
+}
+
+.tl-ticks i {
+  font-style: normal;
+}
+
+/* staff name column */
+.tl-name {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  height: var(--tl-row-h);
+  padding: 0 14px;
+  background: var(--hc-card-bg, #ffffff);
+  border-bottom: 1px solid var(--hc-border-light, #e2e8f0);
+  border-right: 1px solid var(--hc-border-light, #e2e8f0);
+}
+
+.tl-name strong {
+  font-size: 13px;
+  color: var(--hc-text-primary, #1e293b);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* More link popover */
-.admin-calendar-wrapper .fc-daygrid-more-link {
-  font-size: 11px !important;
-  font-weight: 600 !important;
-  color: var(--hc-primary, #0284c7) !important;
-  padding: 2px 4px;
+.tl-name small {
+  font-size: 11px;
+  color: var(--hc-text-muted, #64748b);
+}
+
+/* time track: ONE continuous strip per staff covering the whole visible range */
+.tl-track {
+  position: relative;
+  z-index: 0; /* own stacking context: bars can never paint over the sticky name column */
+  height: var(--tl-row-h);
+  border-bottom: 1px solid var(--tl-line);
+  cursor: pointer;
+}
+
+/* Day view: a line every hour */
+.tl-grid.is-day .tl-track {
+  background-image: repeating-linear-gradient(to right, var(--tl-line) 0, var(--tl-line) 1px, transparent 1px, transparent calc(100% / 24));
+}
+
+/* Week view: day separators + a line every 4h (each cell = 4h) */
+.tl-grid.is-week .tl-track {
+  background-image:
+    repeating-linear-gradient(to right, var(--tl-line-strong) 0, var(--tl-line-strong) 1px, transparent 1px, transparent calc(100% / 7)),
+    repeating-linear-gradient(to right, var(--tl-line) 0, var(--tl-line) 1px, transparent 1px, transparent calc(100% / 42));
+}
+
+.tl-track:hover {
+  background-color: rgba(2, 132, 199, 0.04);
+}
+
+.tl-today-col {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(2, 132, 199, 0.06);
+  pointer-events: none;
+}
+
+.tl-now {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #ef4444;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.tl-empty {
+  grid-column: 1 / -1;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--hc-text-muted, #94a3b8);
+  font-size: 13px;
+}
+
+/* shift bars */
+.tl-bar {
+  position: absolute;
+  top: 10px;
+  height: calc(var(--tl-row-h) - 20px);
+  min-width: 28px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: 8px;
+  background: var(--slot-bg);
+  border: 1px solid var(--slot-border);
+  color: var(--slot-fg);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+.tl-bar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+  z-index: 3;
+}
+
+.tl-bar b {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--slot-fg);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.tl-bar span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-bar-status {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+/* overnight shifts: open edge where the bar continues into the next/previous day */
+.tl-bar.is-spill {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right-style: dashed;
+}
+
+.tl-bar.is-cont {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left-style: dashed;
+}
+
+/* status looks */
+.tl-bar.st-completed .tl-bar-status {
+  color: #15803d;
+}
+.tl-bar.st-absent {
+  background-image: repeating-linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0 6px, transparent 6px 12px);
+  border-color: #fca5a5;
+}
+.tl-bar.st-absent .tl-bar-status {
+  color: #dc2626;
+}
+.tl-bar.st-off {
+  opacity: 0.55;
 }
 
 /* --------------------------------------------------------------------------
@@ -362,6 +734,11 @@
 
 .bulk-staff-role-filter {
   flex: 0 0 160px;
+}
+
+.bulk-staff-role-filter .fp-trigger {
+  min-height: 38px;
+  font-size: 13px;
 }
 
 /* Scrollable Staff Checklist */
@@ -546,7 +923,7 @@
   padding: 6px 0;
 }
 
-.admin-schedule-detail-grid>div {
+.admin-schedule-detail-grid > div {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -634,6 +1011,134 @@
 }
 
 /* --------------------------------------------------------------------------
+   Day modal (list of staff for one day + inline shift editing)
+   -------------------------------------------------------------------------- */
+.admin-day-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-day-table th,
+.admin-day-table td {
+  vertical-align: middle;
+}
+
+.admin-day-table tr.is-editing > td {
+  background: rgba(2, 132, 199, 0.04);
+}
+
+.day-slot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--slot-bg);
+  border: 1px solid var(--slot-border);
+  color: var(--slot-fg);
+}
+
+.day-slot-chip b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--slot-fg);
+  color: #ffffff;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.admin-day-edit-row > td {
+  padding: 0 !important;
+  background: var(--hc-bg-subtle, #f8fafc);
+}
+
+.admin-day-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+.admin-slot-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.admin-slot-option {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  grid-template-areas: "badge name" "badge time";
+  column-gap: 10px;
+  align-items: center;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--hc-border, #cbd5e1);
+  background: var(--hc-card-bg, #ffffff);
+  color: var(--hc-text-primary, #1e293b);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.admin-slot-option b {
+  grid-area: badge;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--slot-bg);
+  color: var(--slot-fg);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-slot-option span {
+  grid-area: name;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-slot-option small {
+  grid-area: time;
+  font-size: 11.5px;
+  color: var(--hc-text-muted, #64748b);
+}
+
+.admin-slot-option:hover {
+  border-color: var(--slot-fg);
+}
+
+.admin-slot-option.active {
+  border-color: var(--slot-fg);
+  background: var(--slot-bg);
+  box-shadow: 0 0 0 1px var(--slot-fg) inset;
+}
+
+.admin-day-edit-fields {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.admin-day-edit-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
    Shift Definition Table Badges & Helpers
    -------------------------------------------------------------------------- */
 .badge-time {
@@ -702,6 +1207,16 @@
   .legend-tip {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .admin-day-edit-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-calendar-wrapper .admin-cal-title {
+    font-size: 1.35rem;
   }
 }
 

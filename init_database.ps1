@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 $MySqlUser = "root"
 
-$SchemaFile = Join-Path $PSScriptRoot "schema_v3_clean.sql"
+$SchemaFile = Join-Path $PSScriptRoot "schema_v4_clean.sql"
 $DummyFile  = Join-Path $PSScriptRoot "dummy_data.sql"
 
 # Check MySQL installation
