@@ -6,7 +6,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import "./StaffMaintenance.css";
 
-const TECHNICIANS_ENDPOINT = "/api/admin/users?role=MAINTENANCE";
+const TECHNICIANS_ENDPOINT = "/api/staff/available-in-shift?roleCode=ROLE_MAINTENANCE";
 
 const STATUS_META = {
   OPEN: { label: "Chờ xử lý", badge: "hc-badge-warning" },
@@ -29,12 +29,14 @@ const PRIORITY_FORM_OPTIONS = Object.entries(PRIORITY_META).map(([value, meta]) 
 const EMPTY_FORM = { roomId: "", equipmentId: "", title: "", description: "", priority: "MEDIUM" };
 
 const toTechnician = (item) => {
-  const roleValue = item.role?.roleName ?? item.role ?? item.roleName;
-  const roles = (Array.isArray(item.roles) ? item.roles : roleValue ? [roleValue] : []).map((r) => String(r?.roleName ?? r).toUpperCase());
-  if (roles.length && !roles.includes("MAINTENANCE")) return null;
-  const id = item.staffId ?? item.userId ?? item.id;
-  const name = item.fullName ?? item.name ?? item.username ?? item.email;
-  return id == null ? null : { id: String(id), name: name || `Nhân viên #${id}` };
+  const id = item.accountId ?? item.staffId ?? item.userId ?? item.id;
+  if (!id) return null;
+  const name = item.fullName || item.name || item.username || `Nhân viên #${id}`;
+  const start = item.shiftStartTime ? String(item.shiftStartTime).slice(0, 5) : "";
+  const end = item.shiftEndTime ? String(item.shiftEndTime).slice(0, 5) : "";
+  const timeStr = start && end ? ` (${start} - ${end})` : "";
+  const shiftStr = item.shiftName ? ` — ${item.shiftName}${timeStr}` : "";
+  return { id: String(id), name: `${name}${shiftStr}` };
 };
 
 const PRIORITY_ACCENT = {
@@ -110,23 +112,25 @@ export default function StaffMaintenancePage() {
     loadData();
   }, [loadData]);
 
-  useEffect(() => {
+  const [loadingTechnicians, setLoadingTechnicians] = useState(false);
+
+  const fetchTechnicians = useCallback(async () => {
     if (!canAssign) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiCall(TECHNICIANS_ENDPOINT, { silentError: true });
-        if (cancelled) return;
-        const list = res?.success ? res.data || [] : [];
-        setTechnicians(list.map(toTechnician).filter(Boolean));
-      } catch {
-        if (!cancelled) setTechnicians([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    setLoadingTechnicians(true);
+    try {
+      const res = await apiCall(TECHNICIANS_ENDPOINT, { silentError: true });
+      const list = res?.success ? res.data || [] : [];
+      setTechnicians(list.map(toTechnician).filter(Boolean));
+    } catch {
+      setTechnicians([]);
+    } finally {
+      setLoadingTechnicians(false);
+    }
   }, [canAssign]);
+
+  useEffect(() => {
+    fetchTechnicians();
+  }, [fetchTechnicians]);
 
   const reportIssue = async (event) => {
     event.preventDefault();
@@ -156,6 +160,7 @@ export default function StaffMaintenancePage() {
     setSelectedId(request.requestId);
     setTechnicianId("");
     setResolutionNote("");
+    fetchTechnicians();
   };
   const closeModal = () => setSelectedId(null);
 
@@ -201,7 +206,17 @@ export default function StaffMaintenancePage() {
       ]
     : [{ value: "", label: "Chọn phòng trước" }];
   const roomFilterOptions = [{ value: "", label: "Tất cả phòng" }, ...rooms.map((room) => ({ value: String(room.roomId), label: `Phòng ${room.roomNumber}` }))];
-  const technicianOptions = [{ value: "", label: technicians.length ? "Chọn kỹ thuật viên" : "Chưa có kỹ thuật viên" }, ...technicians.map((t) => ({ value: t.id, label: t.name }))];
+  const technicianOptions = [
+    {
+      value: "",
+      label: loadingTechnicians
+        ? "Đang tải danh sách ca trực…"
+        : technicians.length
+        ? "Chọn kỹ thuật viên có ca trực"
+        : "Không có kỹ thuật viên trong ca trực",
+    },
+    ...technicians.map((t) => ({ value: t.id, label: t.name })),
+  ];
 
   const selected = requests.find((r) => r.requestId === selectedId) || null;
   const selectedClosed = selected ? ["DONE", "CONFIRMED"].includes(selected.status) : false;
@@ -464,14 +479,52 @@ export default function StaffMaintenancePage() {
             {showAssign && (
               <div className="mt-panel">
                 <h4 className="mt-panel-title">
-                  <i className="bi bi-person-gear"></i> Phân công kỹ thuật viên
+                  <i className="bi bi-person-gear"></i> Phân công kỹ thuật viên (Theo ca trực)
                 </h4>
-                <div className="mt-inline">
-                  <SelectMenu value={technicianId} onChange={setTechnicianId} options={technicianOptions} ariaLabel="Chọn kỹ thuật viên" icon="bi-person-badge" />
-                  <button type="button" className="hc-btn hc-btn-outline" disabled={busy || !technicianId} onClick={() => updateRequest(selected, "assign")}>
-                    {workingId === selected.requestId ? "Đang xử lý…" : "Phân công"}
-                  </button>
-                </div>
+                {loadingTechnicians ? (
+                  <div style={{ padding: "8px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
+                    <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                    Đang kiểm tra lịch trực của kỹ thuật viên...
+                  </div>
+                ) : technicians.length === 0 ? (
+                  <div
+                    style={{
+                      background: "#fffbeb",
+                      border: "1px solid #fef3c7",
+                      borderRadius: "8px",
+                      padding: "10px 14px",
+                      fontSize: "0.85rem",
+                      color: "#92400e",
+                      marginTop: "8px",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: "8px",
+                    }}
+                  >
+                    <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                    <div>
+                      <strong>Không có kỹ thuật viên trong ca trực:</strong> Hiện không có nhân viên bảo trì nào có lịch trực hoạt động trong ca hiện tại. Vui lòng phân công ca tại mục <strong>Quản lý Lịch làm việc</strong>.
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-inline" style={{ marginTop: "8px" }}>
+                    <SelectMenu
+                      value={technicianId}
+                      onChange={setTechnicianId}
+                      options={technicianOptions}
+                      ariaLabel="Chọn kỹ thuật viên có ca trực"
+                      icon="bi-person-badge"
+                    />
+                    <button
+                      type="button"
+                      className="hc-btn hc-btn-primary"
+                      disabled={busy || !technicianId}
+                      onClick={() => updateRequest(selected, "assign")}
+                    >
+                      {workingId === selected.requestId ? "Đang xử lý…" : "Phân công"}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

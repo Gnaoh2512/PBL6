@@ -212,7 +212,7 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         } else {
             // Ca đêm vắt qua 00:00 (ví dụ 22:00 -> 06:00)
             if (scheduleDate.equals(targetDate)) {
-                return !targetTime.isBefore(start) || !targetTime.isAfter(end);
+                return !targetTime.isBefore(start);
             } else if (scheduleDate.plusDays(1).equals(targetDate)) {
                 return !targetTime.isAfter(end);
             }

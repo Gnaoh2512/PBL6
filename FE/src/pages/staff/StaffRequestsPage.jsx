@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { apiCall, formatDateTime, formatVND } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import SelectMenu from "../../components/SelectMenu";
+import Modal from "../../components/Modal";
 
 const STATUS_META = {
   PENDING: { label: "PENDING (Chờ xử lý)", badge: "hc-badge-service-pending" },
@@ -28,6 +29,14 @@ export default function StaffRequestsPage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState(null);
+
+  // Assign Modal States
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [targetRequest, setTargetRequest] = useState(null);
+  const [serviceStaff, setServiceStaff] = useState([]);
+  const [selectedStaffId, setSelectedStaffId] = useState("");
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [submittingAssign, setSubmittingAssign] = useState(false);
 
   const loadRequests = useCallback(async () => {
     setLoading(true);
@@ -91,6 +100,79 @@ export default function StaffRequestsPage() {
     }
   };
 
+  const openAssignModal = async (request) => {
+    setTargetRequest(request);
+    setSelectedStaffId(request.assignedToId ? String(request.assignedToId) : "");
+    setAssignModalOpen(true);
+    setLoadingStaff(true);
+    try {
+      const res = await apiCall("/api/staff/available-in-shift?roleCode=ROLE_SERVICE_STAFF", { silentError: true });
+      const list = res?.success && Array.isArray(res.data) ? res.data : [];
+      const formatted = list.map((item) => {
+        const id = item.accountId ?? item.id;
+        const name = item.fullName || item.username || `Nhân viên #${id}`;
+        const start = item.shiftStartTime ? String(item.shiftStartTime).slice(0, 5) : "";
+        const end = item.shiftEndTime ? String(item.shiftEndTime).slice(0, 5) : "";
+        const timeStr = start && end ? ` (${start} - ${end})` : "";
+        const shiftStr = item.shiftName ? ` — ${item.shiftName}${timeStr}` : "";
+        return {
+          id: String(id),
+          name: `${name}${shiftStr}`,
+          raw: item,
+        };
+      });
+      setServiceStaff(formatted);
+      if (formatted.length > 0 && !request.assignedToId) {
+        setSelectedStaffId(formatted[0].id);
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách nhân viên phục vụ:", err);
+      setServiceStaff([]);
+    } finally {
+      setLoadingStaff(false);
+    }
+  };
+
+  const closeAssignModal = () => {
+    setAssignModalOpen(false);
+    setTargetRequest(null);
+    setSelectedStaffId("");
+  };
+
+  const handleConfirmAssign = async () => {
+    if (!targetRequest || !selectedStaffId) {
+      addToast("Vui lòng chọn nhân viên phục vụ.", "warning");
+      return;
+    }
+    setSubmittingAssign(true);
+    try {
+      const res = await apiCall(`/api/staff/service-requests/${targetRequest.serviceRequestId}/assign?staffId=${encodeURIComponent(selectedStaffId)}`, {
+        method: "POST",
+      });
+      if (res?.success) {
+        addToast("Đã phân công nhân viên phục vụ thành công! (Trạng thái: DELIVERING)", "success");
+        closeAssignModal();
+        await loadRequests();
+      }
+    } catch (error) {
+      addToast(error.message || "Không thể phân công nhân viên.", "error");
+    } finally {
+      setSubmittingAssign(false);
+    }
+  };
+
+  const staffOptions = [
+    {
+      value: "",
+      label: loadingStaff
+        ? "Đang tải nhân viên trong ca trực…"
+        : serviceStaff.length
+        ? "Chọn nhân viên phục vụ có ca trực"
+        : "Không có nhân viên trong ca trực",
+    },
+    ...serviceStaff.map((s) => ({ value: s.id, label: s.name })),
+  ];
+
   return (
     <div className="ops-page">
       <div className="hc-page-title" style={{ textAlign: "left" }}>
@@ -133,6 +215,7 @@ export default function StaffRequestsPage() {
                   <th>Phòng</th>
                   <th>Số lượng</th>
                   <th>Thành tiền</th>
+                  <th>Người phục vụ</th>
                   <th>Yêu cầu lúc</th>
                   <th>Trạng thái</th>
                   <th>Thao tác</th>
@@ -155,6 +238,18 @@ export default function StaffRequestsPage() {
                       </td>
                       <td>{request.quantity || 1}</td>
                       <td>{formatVND(request.feeAmount || 0)}</td>
+                      <td>
+                        {request.assignedToStaff ? (
+                          <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                            <i className="bi bi-person-check-fill"></i>
+                            {request.assignedToStaff}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>
+                            Chưa phân công
+                          </span>
+                        )}
+                      </td>
                       <td>{formatDateTime(request.requestedAt)}</td>
                       <td>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
@@ -181,24 +276,35 @@ export default function StaffRequestsPage() {
                               type="button"
                               className="hc-btn hc-btn-outline hc-btn-sm"
                               disabled={workingId !== null}
-                              onClick={() => updateRequest(request, "assign")}
+                              onClick={() => openAssignModal(request)}
                               style={{ borderColor: "#0284c7", color: "#0284c7", fontWeight: 600 }}
-                              title="Nhân viên tiếp nhận và tiến hành mang dịch vụ lên phòng"
+                              title="Phân công nhân viên có ca trực phục vụ"
                             >
-                              <i className="bi bi-bicycle"></i> {workingId === request.serviceRequestId ? "Đang xử lý…" : "Nhận giao món"}
+                              <i className="bi bi-person-gear"></i> Phân công
                             </button>
                           )}
                           {(request.status === "DELIVERING" || request.status === "IN_PROGRESS") && (
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-primary hc-btn-sm"
-                              disabled={workingId !== null}
-                              onClick={() => updateRequest(request, "complete")}
-                              style={{ fontWeight: 600 }}
-                              title="Xác nhận đã giao dịch vụ lên phòng khách thành công"
-                            >
-                              <i className="bi bi-check2-circle"></i> {workingId === request.serviceRequestId ? "Đang xử lý…" : "Hoàn tất giao"}
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                className="hc-btn hc-btn-primary hc-btn-sm"
+                                disabled={workingId !== null}
+                                onClick={() => updateRequest(request, "complete")}
+                                style={{ fontWeight: 600 }}
+                                title="Xác nhận đã giao dịch vụ lên phòng khách thành công"
+                              >
+                                <i className="bi bi-check2-circle"></i> {workingId === request.serviceRequestId ? "Đang xử lý…" : "Hoàn tất giao"}
+                              </button>
+                              <button
+                                type="button"
+                                className="hc-btn hc-btn-outline hc-btn-sm"
+                                disabled={workingId !== null}
+                                onClick={() => openAssignModal(request)}
+                                title="Đổi nhân viên phục vụ khác"
+                              >
+                                <i className="bi bi-arrow-repeat"></i> Đổi
+                              </button>
+                            </>
                           )}
                           {request.status !== "CANCELED" && request.status !== "CANCELLED" && request.status !== "COMPLETED" && (
                             <button
@@ -226,6 +332,112 @@ export default function StaffRequestsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal Phân công Yêu cầu Dịch vụ */}
+      <Modal
+        isOpen={assignModalOpen}
+        onClose={closeAssignModal}
+        title={`Phân công phục vụ — Yêu cầu #${targetRequest?.serviceRequestId || ""}`}
+        subtitle={targetRequest ? `${targetRequest.serviceName} · ${targetRequest.roomNumber ? `Phòng ${targetRequest.roomNumber}` : ""}` : undefined}
+        icon="bi-bell"
+        maxWidth="560px"
+      >
+        {targetRequest && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div
+              style={{
+                background: "var(--hc-bg-subtle, #f8fafc)",
+                border: "1px solid var(--hc-border-light, #e2e8f0)",
+                borderRadius: "8px",
+                padding: "14px 16px",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: "12px",
+                fontSize: "0.875rem",
+              }}
+            >
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Dịch vụ</span>
+                <strong>{targetRequest.serviceName}</strong> (SL: {targetRequest.quantity || 1})
+              </div>
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Phòng / Đặt phòng</span>
+                <strong>{targetRequest.roomNumber ? `Phòng ${targetRequest.roomNumber}` : "—"}</strong>
+                {targetRequest.bookingCode && <span style={{ color: "var(--hc-text-secondary)", marginLeft: "4px" }}>({targetRequest.bookingCode})</span>}
+              </div>
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Khách hàng</span>
+                <strong>{targetRequest.customerName || "—"}</strong>
+              </div>
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Thành tiền</span>
+                <strong style={{ color: "var(--hc-primary)" }}>{formatVND(targetRequest.feeAmount || 0)}</strong>
+              </div>
+              {targetRequest.note && (
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Ghi chú của khách</span>
+                  <p style={{ margin: "2px 0 0", fontStyle: "italic", color: "var(--hc-text-muted)" }}>{targetRequest.note}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="hc-form-group">
+              <label className="hc-label" style={{ fontWeight: 600 }}>
+                Nhân viên phục vụ (Đang trong ca trực) <span style={{ color: "var(--hc-error)" }}>*</span>
+              </label>
+
+              {loadingStaff ? (
+                <div style={{ padding: "12px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
+                  <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                  Đang kiểm tra lịch ca trực của nhân viên...
+                </div>
+              ) : serviceStaff.length === 0 ? (
+                <div
+                  style={{
+                    background: "#fffbeb",
+                    border: "1px solid #fef3c7",
+                    borderRadius: "8px",
+                    padding: "12px 14px",
+                    fontSize: "0.85rem",
+                    color: "#92400e",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                  }}
+                >
+                  <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                  <div>
+                    <strong>Không có nhân viên trong ca trực:</strong> Hiện tại không có nhân viên phục vụ dịch vụ nào có lịch trực hoạt động theo ca. Vui lòng xếp ca trực tại mục <strong>Quản lý Lịch làm việc</strong> trước khi phân công.
+                  </div>
+                </div>
+              ) : (
+                <SelectMenu
+                  value={selectedStaffId}
+                  onChange={setSelectedStaffId}
+                  options={staffOptions}
+                  ariaLabel="Chọn nhân viên phục vụ có ca trực"
+                  icon="bi-person-badge"
+                />
+              )}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <button type="button" className="hc-btn hc-btn-outline" onClick={closeAssignModal} disabled={submittingAssign}>
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="hc-btn hc-btn-primary"
+                onClick={handleConfirmAssign}
+                disabled={submittingAssign || !selectedStaffId || serviceStaff.length === 0}
+              >
+                <i className="bi bi-check2-circle"></i>
+                {submittingAssign ? "Đang lưu…" : "Xác nhận phân công"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

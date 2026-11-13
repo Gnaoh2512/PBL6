@@ -1,24 +1,32 @@
 package com.example.pbl6.service;
 
 import com.example.pbl6.dto.cashier.CashierShiftResponse;
+import com.example.pbl6.dto.cashier.CashierTransactionResponse;
 import com.example.pbl6.dto.cashier.CloseCashierShiftRequest;
 import com.example.pbl6.dto.cashier.OpenCashierShiftRequest;
 import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.Booking;
+import com.example.pbl6.entity.BookingRoom;
 import com.example.pbl6.entity.CashierShift;
+import com.example.pbl6.entity.Payment;
 import com.example.pbl6.entity.Shift;
 import com.example.pbl6.entity.WorkSchedule;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
+import com.example.pbl6.repository.BookingRoomRepository;
 import com.example.pbl6.repository.CashierShiftRepository;
+import com.example.pbl6.repository.PaymentRepository;
 import com.example.pbl6.repository.WorkScheduleRepository;
 import com.example.pbl6.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -32,6 +40,8 @@ public class CashierShiftServiceImpl implements CashierShiftService {
     private final AccountRepository accountRepository;
     private final WorkScheduleRepository workScheduleRepository;
     private final AuditLogService auditLogService;
+    private final PaymentRepository paymentRepository;
+    private final BookingRoomRepository bookingRoomRepository;
 
     @Override
     @Transactional
@@ -73,7 +83,7 @@ public class CashierShiftServiceImpl implements CashierShiftService {
         auditLogService.log(account, "THU NGÂN", "OPEN_SHIFT", "cashier_shift", Long.valueOf(saved.getCashierShiftId()),
                 "Mở ca thu ngân chung #" + saved.getCashierShiftId() + " - Tiền mặt đầu ca: " + request.getOpeningCash() + " VNĐ");
 
-        return CashierShiftResponse.fromEntity(saved);
+        return buildDetailedResponse(saved);
     }
 
     @Override
@@ -104,7 +114,7 @@ public class CashierShiftServiceImpl implements CashierShiftService {
                 "Đóng ca thu ngân #" + saved.getCashierShiftId() + " - Tiền mặt thực tế kiểm đếm: " + request.getClosingCashActual() + " VNĐ" +
                         (receivedBy != null ? " (Bàn giao cho: " + receivedBy.getFullName() + ")" : ""));
 
-        return CashierShiftResponse.fromEntity(saved);
+        return buildDetailedResponse(saved);
     }
 
     /**
@@ -115,7 +125,7 @@ public class CashierShiftServiceImpl implements CashierShiftService {
     @Transactional(readOnly = true)
     public CashierShiftResponse getActiveShift(CustomUserDetails userDetails) {
         return findSharedOpenShiftEntity()
-                .map(CashierShiftResponse::fromEntity)
+                .map(this::buildDetailedResponse)
                 .orElseThrow(() -> new ResourceNotFoundException("Active CashierShift", "status", "OPEN"));
     }
 
@@ -153,8 +163,93 @@ public class CashierShiftServiceImpl implements CashierShiftService {
     public List<CashierShiftResponse> getAllShifts() {
         return cashierShiftRepository.findAll().stream()
                 .sorted(Comparator.comparing(CashierShift::getStartTime, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(CashierShiftResponse::fromEntity)
+                .map(this::buildDetailedResponse)
                 .collect(Collectors.toList());
+    }
+
+    private CashierShiftResponse buildDetailedResponse(CashierShift cs) {
+        CashierShiftResponse resp = CashierShiftResponse.fromEntity(cs);
+        if (resp == null) return null;
+
+        LocalDateTime end = cs.getEndTime() != null ? cs.getEndTime() : LocalDateTime.now();
+        List<Payment> payments = paymentRepository.findPaymentsForShift(cs.getCashierShiftId(), cs.getStartTime(), end);
+
+        BigDecimal cashRev = BigDecimal.ZERO;
+        BigDecimal bankRev = BigDecimal.ZERO;
+        BigDecimal cardRev = BigDecimal.ZERO;
+        BigDecimal otherRev = BigDecimal.ZERO;
+        BigDecimal refund = BigDecimal.ZERO;
+
+        List<CashierTransactionResponse> txns = new ArrayList<>();
+
+        for (Payment p : payments) {
+            BigDecimal amt = p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO;
+            String type = p.getType() != null ? p.getType().toUpperCase() : "PAYMENT";
+            String method = p.getMethod() != null ? p.getMethod().toUpperCase() : "CASH";
+
+            boolean isRefund = "REFUND".equalsIgnoreCase(type);
+            if (isRefund) {
+                refund = refund.add(amt);
+                if ("CASH".equalsIgnoreCase(method)) {
+                    cashRev = cashRev.subtract(amt);
+                } else if ("BANK_TRANSFER".equalsIgnoreCase(method) || "VIETQR".equalsIgnoreCase(method) || "TRANSFER".equalsIgnoreCase(method)) {
+                    bankRev = bankRev.subtract(amt);
+                } else {
+                    cardRev = cardRev.subtract(amt);
+                }
+            } else {
+                if ("CASH".equalsIgnoreCase(method)) {
+                    cashRev = cashRev.add(amt);
+                } else if ("BANK_TRANSFER".equalsIgnoreCase(method) || "VIETQR".equalsIgnoreCase(method) || "TRANSFER".equalsIgnoreCase(method)) {
+                    bankRev = bankRev.add(amt);
+                } else if ("CREDIT_CARD".equalsIgnoreCase(method) || "CARD".equalsIgnoreCase(method)) {
+                    cardRev = cardRev.add(amt);
+                } else {
+                    otherRev = otherRev.add(amt);
+                }
+            }
+
+            Booking b = p.getBooking();
+            String bookingCode = b != null ? b.getBookingCode() : null;
+            String customerName = b != null && b.getCustomer() != null ? b.getCustomer().getFullName() : null;
+            String roomNumber = null;
+            if (b != null) {
+                List<BookingRoom> brs = bookingRoomRepository.findByBooking_BookingId(b.getBookingId());
+                if (!brs.isEmpty() && brs.get(0).getRoom() != null) {
+                    roomNumber = brs.get(0).getRoom().getRoomNumber();
+                }
+            }
+
+            txns.add(CashierTransactionResponse.builder()
+                    .paymentId(p.getPaymentId())
+                    .bookingId(b != null ? b.getBookingId() : null)
+                    .bookingCode(bookingCode)
+                    .customerName(customerName)
+                    .roomNumber(roomNumber)
+                    .type(type)
+                    .method(method)
+                    .amount(amt)
+                    .receivedById(p.getReceivedBy() != null ? p.getReceivedBy().getAccountId() : null)
+                    .receivedByFullName(p.getReceivedBy() != null ? p.getReceivedBy().getFullName() : "Hệ thống Online")
+                    .note(p.getNote())
+                    .paidAt(p.getPaidAt())
+                    .build());
+        }
+
+        BigDecimal grossRevenue = cashRev.add(bankRev).add(cardRev).add(otherRev);
+        BigDecimal openingCash = cs.getOpeningCash() != null ? cs.getOpeningCash() : BigDecimal.ZERO;
+        BigDecimal totalFund = openingCash.add(cashRev).max(BigDecimal.ZERO);
+
+        resp.setTotalCashRevenue(cashRev);
+        resp.setTotalBankRevenue(bankRev);
+        resp.setTotalCardRevenue(cardRev);
+        resp.setTotalRefund(refund);
+        resp.setTotalRevenue(grossRevenue.max(BigDecimal.ZERO));
+        resp.setTotalFund(totalFund);
+        resp.setTransactionCount(txns.size());
+        resp.setTransactions(txns);
+
+        return resp;
     }
 
     private boolean isTimeInShift(LocalTime time, LocalTime start, LocalTime end) {
