@@ -28,6 +28,8 @@ class LabeledFakeProvider:
         budget.record(10, 10)
         if self.kind == "timeout":
             raise DependencyError("DEADLINE_EXCEEDED")
+        if self.kind == "dependency":
+            raise DependencyError()
         if schema is Intent:
             return Intent(
                 intent="unavailable" if self.kind == "booking" else "faq",
@@ -71,6 +73,7 @@ def payload():
         ("booking", 200, "capability_unavailable"),
         ("citation", 502, "AI_PROTOCOL_ERROR"),
         ("timeout", 504, "DEADLINE_EXCEEDED"),
+        ("dependency", 503, "DEPENDENCY_UNAVAILABLE"),
     ],
 )
 def test_full_faq_boundary_with_labeled_fake(ready_runtime, kind, status, code):
@@ -86,6 +89,8 @@ def test_full_faq_boundary_with_labeled_fake(ready_runtime, kind, status, code):
             json=data,
             headers={"Authorization": "Bearer test-service", "X-Request-ID": data["requestId"]},
         )
+        if kind == "dependency":
+            assert client.get("/ready").status_code == 503
     assert response.status_code == status
     body = response.json()
     if status != 200:

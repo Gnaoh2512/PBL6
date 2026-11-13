@@ -2,6 +2,22 @@
 
 Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
+## D1 Task 6 — kiểm chứng và bàn giao, 2026-11-13
+
+**D1 chưa hoàn thành nghiệm thu Gemini thật.** Đã triển khai đủ đường đi FAQ và kiểm chứng với provider fake có nhãn; không đánh đồng fake E2E với model thật. Không có GEMINI_API_KEY/GOOGLE_API_KEY trong process/user/machine; live runner báo not_run. Không bật billing, không tải model hoặc triển khai cloud.
+
+- Python cuối: `python -B -m pytest -q -p no:cacheprovider`: **67 pass**, 1 warning Starlette/HTTPX. Ruff check/format app, unit/integration và evaluation runner qua; pip check không có dependency hỏng.
+- Spring: `mvnw.cmd -o -Plocal-h2 -Dassistant.build.directory=target-assistant-d1 -Dtest=AssistantControllerTest,AssistantClientTest,AssistantSessionsTest,PublicRoomControllerTest,AuthControllerTest,CustomerHistoryServiceTest package`: **19 pass**, BUILD SUCCESS. Sau chỉnh HTTP/1.1 để tránh h2c upgrade vào Uvicorn, chạy lại 8 assistant tests/package: pass. Đây là tập liên quan, không khẳng định toàn bộ BE test suite pass.
+- FE: `npm test`: **8 pass**; `npm ci --ignore-scripts` thành công; `npm run lint` exit 0 với cảnh báo nền; build riêng `dist-assistant-check` thành công, có cảnh báo bundle >500 kB. Không ghi đè BE/static.
+- `npm run test:e2e`: **3 pass** qua Vite/Spring/FastAPI thật với labeled fake provider. Kiểm tra nguồn/demo badge, thiếu evidence, capability chưa bật, JWT sai, trường identity thừa, reset và member B không dùng lại conversation A. H2 chỉ in-memory synthetic. Playwright tự dừng các tiến trình sau test; không dùng MySQL/booking thật.
+- Có ảnh desktop/mobile trong FE/test-results (ignored), đã xem trực tiếp. Kiểm tra nút đặt phòng và tìm phòng vẫn thao tác được khi panel mở; panel không tràn viewport, Escape trả focus. Component tests kiểm tra account switch/abort/late response và HTML được render như text. Chưa kiểm tra bàn phím mềm trên thiết bị mobile thật.
+- Dataset: 12 dev + 12 held-out, nhóm paraphrase không giao nhau; mỗi split có 4 FAQ có nguồn, 4 thiếu nguồn, 4 ngoài khả năng D1. `run_d1.py --retrieval-only`: evidence chuẩn xuất hiện trong top 3 cho **8/8 ca có gold evidence**, trên corpus synthetic nhỏ; không phải grounding hoặc benchmark production. Snapshot `971d9d5ef3cc285fd170ac79afcb496bd7315c4edf4076c9263289edd7e34d2d`; tokenizer v2 chuẩn hóa wifi/Wi-Fi. Grounding, latency/token/chi phí Gemini: **chưa đo**.
+- `run_d1.py --live` báo `not_run: GEMINI_API_KEY missing`; D1 không được đánh dấu done. Bước còn lại: cấu hình key/quota riêng ngoài Git, chạy live evaluation, rà từng khẳng định/citation và chạy browser với Gemini thật trước nghiệm thu.
+- Dependency mới: PyYAML 6.0.3; Vitest 4.1.12, jsdom 26.1.0, Testing Library, Playwright 1.65.0. HTTPX chuyển sang runtime. Đã cài Chromium/headless shell và helper FFmpeg/Winldd vào cache người dùng cho test, không cài service hệ thống. npm audit cuối: **0 vulnerabilities**. Không nâng Node/Python/Java.
+- Giữ nguyên staged blobs, README gốc đang sửa, 59 file xóa và 28 file untracked ban đầu; không sửa AGENTS.md hoặc knowledge. UI.md/EVALUATION.md untracked của người dùng được giữ nguyên; bằng chứng implementation D1 hiện hành nằm ở mục này. Tài liệu cũ bên dưới là lịch sử, không thay thế mốc D1 mới nhất.
+
+Giới hạn: lexical retrieval còn hạn chế paraphrase; citation hợp lệ chưa chứng minh grounding. Phiên in-memory chỉ một instance, reset chat không thu hồi JWT toàn hệ thống. Provider/index lỗi không tự fallback; dependency failure giữ not ready cho đến restart sau khắc phục. Production chưa có corpus duyệt; mặc định assistant disabled, demo chỉ local. Không có business tools, Recommendation mới, thao tác booking, OCR hoặc vector service.
+
 ## D1 Task 5 — widget, 2026-11-13
 
 - Có widget FAQ góc dưới bên phải, text/citation an toàn, badge synthetic, sáu gợi ý (nhóm chưa bật báo rõ), loading/error/cancel và Escape/focus. Chỉ hiện khi VITE_ASSISTANT_ENABLED=true; ẩn admin/staff.

@@ -9,10 +9,10 @@ export default function AssistantWidget() {
   const { pathname } = useLocation();
   if (import.meta.env.VITE_ASSISTANT_ENABLED !== 'true') return null;
   if (pathname.startsWith('/admin') || pathname.startsWith('/staff')) return null;
-  return <AssistantChat key={token || 'guest'} />;
+  return <AssistantChat key={token || 'guest'} routeKey={pathname} />;
 }
 
-export function AssistantChat() {
+export function AssistantChat({ routeKey = '' }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
@@ -22,6 +22,7 @@ export function AssistantChat() {
   const conversation = useRef(null);
   const request = useRef(null);
   const launcher = useRef(null);
+  const widget = useRef(null);
   const composer = useRef(null);
   const list = useRef(null);
   const stickToBottom = useRef(true);
@@ -33,6 +34,25 @@ export function AssistantChat() {
     return () => { active.current = false; request.current?.abort(); };
   }, []);
   useEffect(() => { if (open) composer.current?.focus(); }, [open]);
+  useEffect(() => {
+    const avoidActions = () => {
+      if (!launcher.current || !widget.current) return;
+      const box = launcher.current.getBoundingClientRect();
+      const old = parseFloat(widget.current.style.getPropertyValue('--assistant-clearance')) || 0;
+      const top = box.top + old, bottom = box.bottom + old;
+      let clearance = 0;
+      document.querySelectorAll('a[href="/booking"], .search-rooms, .booking-search-card button, .booking-customer-card button').forEach(action => {
+        const rect = action.getBoundingClientRect();
+        if (rect.width && rect.left < box.right && rect.right > box.left && rect.top < bottom && rect.bottom > top)
+          clearance = Math.max(clearance, bottom - rect.top + 12);
+      });
+      widget.current.style.setProperty('--assistant-clearance', `${clearance}px`);
+    };
+    avoidActions();
+    window.addEventListener('scroll', avoidActions, { passive: true });
+    window.addEventListener('resize', avoidActions);
+    return () => { window.removeEventListener('scroll', avoidActions); window.removeEventListener('resize', avoidActions); };
+  }, [open, routeKey]);
   useEffect(() => {
     if (!open) return undefined;
     const escape = event => {
@@ -82,7 +102,7 @@ export function AssistantChat() {
     if (label === 'FAQ' || label === 'Chính sách') { setInput(label === 'FAQ' ? 'Wi-Fi ở đâu?' : 'Có quy định gửi hành lý không?'); composer.current?.focus(); }
     else setError('Chức năng này chưa được hỗ trợ trong D1. Bạn có thể dùng màn hình nghiệp vụ hiện có.');
   }
-  return <aside className="assistant-widget" aria-label="Trợ lý khách sạn">
+  return <aside className="assistant-widget" ref={widget} aria-label="Trợ lý khách sạn">
     {open && <section id="assistant-panel" className="assistant-panel" role="region" aria-label="Hội thoại trợ lý"
       onKeyDown={event => { if (event.key === 'Escape') close(); }}>
       <header><div><strong>Trợ lý khách sạn</strong><small>Hỗ trợ FAQ có nguồn</small></div>

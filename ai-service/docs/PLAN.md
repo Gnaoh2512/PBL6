@@ -1,6 +1,6 @@
 # Lộ trình triển khai trợ lý
 
-Trạng thái hiện tại: đã có tổ chức tài liệu, hợp đồng API và khung FastAPI/auth/schemas/health/readiness được kiểm thử. D1 chưa hoàn thành vì chưa có provider/index/retrieval, Spring chat và widget chạy xuyên hệ thống. Xem STATUS.md.
+Trạng thái hiện tại: đã có foundation và implementation D1 (Gemini adapter, ingestion/index FTS5, FAQ orchestration, Spring facade và widget opt-in). D1 chưa hoàn thành: chưa nghiệm thu xuyên hệ thống với Gemini thật do thiếu key. Kiểm thử mock/browser và giới hạn hiện hành xem STATUS.md; production chưa có corpus được duyệt.
 
 ## D0 — Thiết kế và hướng dẫn
 

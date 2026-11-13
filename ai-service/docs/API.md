@@ -1,6 +1,6 @@
 # Hợp đồng API trợ lý khách sạn — v1 đề xuất
 
-Ngày khảo sát: 2026-11-13. Hợp đồng tổng thể v1 để triển khai. Bước khung FastAPI đã có /health, /ready và lớp biên/schema /internal/assistant/turn; turn chưa có provider/index/orchestration nên không trả final hoặc tool_calls thành công. POST /api/assistant/chat chưa triển khai. Không thay đổi API recommendation hiện có. Các giới hạn số dưới đây là lựa chọn thiết kế ban đầu, chưa phải kết quả đo hiệu năng.
+Ngày khảo sát: 2026-11-13. Hợp đồng tổng thể v1; phần D1 FAQ đã có implementation FastAPI và Spring chat/reset, kiểm thử mock có nhãn. Gemini thật chưa nghiệm thu; D1 chưa hoàn thành. Business tool_calls/continuation vẫn chưa triển khai. Facade Recommendation đã gỡ trong c300a5b. Các giới hạn số dưới đây là thiết kế ban đầu, chưa phải kết quả đo hiệu năng Gemini.
 
 Đọc cùng [kiến trúc](architecture.md), [lộ trình](PLAN.md), [đánh giá](EVALUATION.md) và [UI](UI.md).
 
@@ -17,7 +17,7 @@ Các liên kết dưới đây là source đã khảo sát, không phải bằng
 | GET /api/customer/bookings/my-bookings | [CustomerBookingController](../../BE/src/main/java/com/example/pbl6/controller/CustomerBookingController.java), CustomerBookingService.getMyBookings | Có code; cần sửa/kiểm chứng ownership trước khi dùng cho tool |
 | GET /api/customer/bookings/history?status=... | Cùng controller, CustomerHistoryService.getMemberHistory | Danh sách tóm tắt theo principal; vẫn cần kiểm chứng account/customer |
 | GET /api/customer/bookings/history/{bookingCode} | Cùng controller, CustomerHistoryService.getMemberBookingDetail | Chi tiết; có fallback khớp email/SĐT phải rà trước tích hợp |
-| POST /api/ai/recommendations và /api/ai/recommendations/conversation | [RecommendationAiController](../../BE/src/main/java/com/example/pbl6/controller/RecommendationAiController.java), RecommendationAiClient | Facade recommendation riêng, yêu cầu JWT; không phải chat assistant mới |
+| Recommendation cũ | Đã gỡ khỏi Spring source | Không phục hồi trong D1 |
 
 ### Báo giá đã có
 
@@ -307,7 +307,7 @@ Profile v1 là faq: cấu hình service auth hợp lệ, LLM sẵn sàng và ind
 
 ## 10. Giới hạn của bước tài liệu
 
-Bước 1 chỉ đặc tả tài liệu. Bước 2 hiện thực khung FastAPI/schema request, auth service và health/readiness; xem [README](../README.md) và [STATUS](STATUS.md) để biết kiểm thử và lệnh chạy. Chưa có Spring assistant controller, provider/model/index, tool execution hoặc final response. Resume hợp lệ trả 409 CONTINUATION_NOT_FOUND vì runtime chưa cấp continuation; production readiness luôn 503 khi thiếu LLM/retrieval. Các phần còn lại của hợp đồng chưa được coi là đã triển khai.
+Bước 1 là đặc tả; Bước 2 là foundation. Implementation D1 hiện có Spring chat/reset, Gemini adapter, index FTS5 và final FAQ, với kiểm thử mock có nhãn. Xem [README](../README.md) và [STATUS](STATUS.md) để biết bằng chứng thực tế; Gemini thật chưa nghiệm thu. Resume vẫn 409 CONTINUATION_NOT_FOUND vì D1 không cấp continuation; production readiness 503 khi thiếu LLM/index hoặc nguồn được duyệt. Tool nghiệp vụ và các phần D2–D4 của hợp đồng chưa triển khai.
 
 ## D1 — quyết định triển khai
 

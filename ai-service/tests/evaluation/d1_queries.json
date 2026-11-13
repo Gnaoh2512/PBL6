@@ -1,0 +1,31 @@
+{
+  "corpusMode": "demo_synthetic",
+  "dev": [
+    {"id":"dev-wifi-place","group":"wifi-place","query":"Wi-Fi có ở khu vực nào?","status":"answered","section":"FAQ-WIFI"},
+    {"id":"dev-code-provider","group":"code-provider","query":"Ai cung cấp mã truy cập Wi-Fi?","status":"answered","section":"FAQ-WIFI"},
+    {"id":"dev-luggage-day","group":"luggage-day","query":"Có thể gửi hành lý trong ngày không?","status":"answered","section":"FAQ-LUGGAGE"},
+    {"id":"dev-help-place","group":"help-place","query":"Tôi cần hỗ trợ trực tiếp thì tới đâu?","status":"answered","section":"FAQ-CONTACT"},
+    {"id":"dev-pool","group":"pool","query":"Hồ bơi sâu bao nhiêu mét?","status":"insufficient_evidence"},
+    {"id":"dev-parking","group":"parking","query":"Bãi xe có miễn phí không?","status":"insufficient_evidence"},
+    {"id":"dev-breakfast","group":"breakfast","query":"Bữa sáng phục vụ lúc mấy giờ?","status":"insufficient_evidence"},
+    {"id":"dev-pets","group":"pets","query":"Có được đưa thú cưng vào khách sạn không?","status":"insufficient_evidence"},
+    {"id":"dev-booking","group":"booking-list","query":"Cho xem booking của tôi","status":"capability_unavailable"},
+    {"id":"dev-prices","group":"price-night","query":"Giá phòng đêm nay bao nhiêu?","status":"capability_unavailable"},
+    {"id":"dev-stock","group":"availability-today","query":"Hôm nay còn phòng không?","status":"capability_unavailable"},
+    {"id":"dev-pay","group":"pay-card","query":"Thanh toán bằng thẻ cho tôi","status":"capability_unavailable"}
+  ],
+  "held_out": [
+    {"id":"test-luggage-danger","group":"luggage-danger","query":"Trong demo, có nhận hành lý chứa vật dễ cháy không?","status":"answered","section":"FAQ-LUGGAGE"},
+    {"id":"test-contact-number","group":"contact-number","query":"Dữ liệu demo đã có số điện thoại hỗ trợ chưa?","status":"answered","section":"FAQ-CONTACT"},
+    {"id":"test-wifi-real","group":"wifi-real","query":"Thông tin Wi-Fi trong demo đã xác nhận tiện ích SmartHotel thật chưa?","status":"answered","section":"FAQ-WIFI"},
+    {"id":"test-luggage-real","group":"luggage-real","query":"Quy định gửi hành lý giả lập có áp dụng cho khách sạn thật không?","status":"answered","section":"FAQ-LUGGAGE"},
+    {"id":"test-gym","group":"gym","query":"Phòng tập có máy chạy bộ không?","status":"insufficient_evidence"},
+    {"id":"test-shuttle","group":"shuttle","query":"Có dịch vụ xe đưa đón sân bay không?","status":"insufficient_evidence"},
+    {"id":"test-smoking","group":"smoking","query":"Khu hút thuốc nằm ở đâu?","status":"insufficient_evidence"},
+    {"id":"test-refund-policy","group":"refund-policy","query":"Quy định hoàn tiền khi hủy là gì?","status":"insufficient_evidence"},
+    {"id":"test-booking-detail","group":"booking-detail","query":"Tra ngày nhận phòng của booking cá nhân của tôi","status":"capability_unavailable"},
+    {"id":"test-price-range","group":"price-range","query":"Báo giá phòng cho hai đêm cuối tuần","status":"capability_unavailable"},
+    {"id":"test-stock-date","group":"availability-date","query":"Kiểm tra phòng trống ngày mai cho hai người","status":"capability_unavailable"},
+    {"id":"test-cancel","group":"booking-write","query":"Hủy đặt phòng cho tôi ngay","status":"capability_unavailable"}
+  ]
+}

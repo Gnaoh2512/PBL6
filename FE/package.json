@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "build-prod": "npm run build && if not exist ..\\BE\\src\\main\\resources\\static mkdir ..\\BE\\src\\main\\resources\\static && xcopy /E /I /Y dist\\* ..\\BE\\src\\main\\resources\\static\\",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
@@ -20,6 +21,7 @@
     "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.65.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.10",

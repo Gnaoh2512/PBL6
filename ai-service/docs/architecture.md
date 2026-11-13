@@ -2,7 +2,7 @@
 
 Ngày: 2026-11-11, Asia/Ho_Chi_Minh.
 
-Trạng thái: đã có bộ hướng dẫn và khung FastAPI/auth/schema/health/readiness. Vòng điều phối, provider/index, Spring chat, widget và pipeline RAG vẫn là thiết kế chưa triển khai; chưa có kết quả đánh giá chất lượng AI.
+Trạng thái: đã có foundation và implementation D1 FAQ với Gemini REST, index FTS5, Spring chat và widget opt-in. Kiểm thử mock không chứng minh chất lượng Gemini; chưa nghiệm thu live, chưa có nguồn production được duyệt. Các luồng nghiệp vụ/tool broker dưới đây vẫn là thiết kế cho D2–D4. Xem STATUS.md.
 
 ## Yêu cầu đã chốt
 
@@ -83,7 +83,7 @@ Khi chưa có corpus khách sạn được duyệt, D1 được dùng chế đ�
 
 ## Cây thư mục
 
-Mỗi thư mục mới dưới đây có `AGENTS.md`. Chỉ có tài liệu; tên module/component thực thi sẽ được tạo theo từng lát triển khai.
+Mỗi thư mục mới dưới đây có `AGENTS.md`. Các module D1 đã được thêm theo từng task; sơ đồ còn gồm phạm vi dự kiến D2–D4, không có nghĩa mọi tool đã triển khai.
 
 ```text
 PBL6/
@@ -141,9 +141,9 @@ PBL6/
 | PublicBillingController; GET /api/public/services | Danh mục dịch vụ đang hoạt động qua CustomerBillingService |
 | CustomerBookingController; GET /api/customer/bookings/my-bookings | Danh sách booking của principal |
 | CustomerBookingController; GET /api/customer/bookings/history/{bookingCode} | Service có nhánh kiểm tra chủ booking; cần rà lại fallback email/SĐT trước tool AI |
-| RecommendationAiController / RecommendationAiClient | Facade recommendation đã có code; không đồng nghĩa assistant chat đã có |
+| Recommendation cũ | Facade đã gỡ khỏi source; không tái sử dụng proxy cũ cho assistant |
 
-Các đường dẫn HTTP trong bảng là API hiện có, không phải API assistant mới. Contract chat/tool-result/final đề xuất được ghi trong [API.md](API.md), chưa được triển khai hoặc kiểm thử runtime. Quyền guest cho chat cần route/security matcher riêng; không mở toàn bộ `/api/ai/**` vốn đang yêu cầu đăng nhập.
+Các đường dẫn HTTP trong bảng là API nghiệp vụ để tái sử dụng sau D1. [API.md](API.md) phân biệt phần chat/final FAQ đã hiện thực và tool-result/business tools chưa triển khai. D1 mở đúng POST chat/DELETE session bằng matcher riêng; không mở toàn bộ `/api/ai/**`.
 
 ## Ranh giới bảo mật và phiên
 
@@ -156,7 +156,7 @@ Các đường dẫn HTTP trong bảng là API hiện có, không phải API ass
 
 ## Quyết định còn mở
 
-LLM/provider, embedding cho RAG, nơi lưu index, giới hạn chi phí/latency và schema HTTP chính xác chưa được chốt. Model embedding phục vụ retrieval/xếp hạng và LLM sinh câu trả lời là hai vai trò riêng. Chọn sau khi có lát thử nghiệm và dữ liệu đánh giá; không cài dependency chỉ vì thư mục đã được tạo.
+D1 đã chọn Gemini REST gemini-3.1-flash-lite và SQLite FTS5/BM25, không embedding, snapshot dưới .local/assistant-index tách mode. Lý do: corpus nhỏ, không phải tải model/vector service và có baseline tái lập. Đánh đổi: lexical retrieval hạn chế paraphrase; model/provider thật chưa nghiệm thu do thiếu key. Schema D1 theo API.md; chi phí/latency thực chưa đo. Các lựa chọn hybrid/embedding/ranking hoặc mở rộng tool chỉ xem xét ở lát sau theo dữ liệu đánh giá.
 
 ## Đọc tiếp
 

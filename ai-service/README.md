@@ -2,7 +2,7 @@
 
 Trợ lý hỗ trợ FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách khách sạn. Widget đặt ở **góc dưới bên phải**.
 
-**Trạng thái:** đã có khung FastAPI với health/readiness, xác thực service, schemas start/resume và lỗi có mã. Chưa có provider LLM, index, pipeline RAG, vòng điều phối hoặc widget; không trả câu trả lời AI giả.
+**Trạng thái:** có Gemini REST adapter, ingestion/index FTS5, FAQ orchestration, Spring facade và widget opt-in. Unit/integration dùng mock có nhãn; chưa nghiệm thu Gemini thật do thiếu key. D1 chưa hoàn thành và không đủ điều kiện production. Không có business tools hoặc runtime fallback sang fake.
 
 ## Cách chia trách nhiệm
 
@@ -48,16 +48,16 @@ Không cài hay kết nối MySQL, SDK LLM hoặc vector database. Chỉ bind lo
 | Request | Kết quả |
 | --- | --- |
 | GET /health | 200, status=alive |
-| GET /ready | 503, status=not_ready; llm=false, retrieval=false |
+| GET /ready | 503 khi thiếu dependency; 200 sau startup probe thật và index đúng mode hợp lệ |
 | POST /internal/assistant/turn thiếu cấu hình token | 503 AI_NOT_CONFIGURED |
 | Cùng route, có cấu hình nhưng thiếu/sai credential hoặc gửi USER_JWT | 401 UNAUTHORIZED |
-| Start hợp lệ với đúng token | 503 DEPENDENCY_UNAVAILABLE; không có answer |
+| Start hợp lệ với đúng token | 503 khi chưa sẵn sàng; khi ready chạy FAQ và trả final có nguồn hoặc trạng thái từ chối |
 | Resume đúng schema | 409 CONTINUATION_NOT_FOUND; chưa có continuation nào được cấp |
 | Payload sai/ID không khớp header | 422 VALIDATION_ERROR |
 | JSON sai cú pháp có Content-Type application/json | 400 INVALID_JSON |
 | Body nội bộ vượt 128 KiB kể cả gửi chunk | 413 PAYLOAD_TOO_LARGE |
 
-Các payload lỗi trả requestId và error.code/message/retryable, không phản chiếu nội dung đầu vào. Dữ liệu trong [API.md](docs/API.md) là hợp đồng tổng thể; trong bước này chỉ hiện thực schema request và lớp biên, chưa có success/tool execution/final output. Nếu gửi X-Request-ID thì phải khớp requestId trong body; server sinh ID nếu header thiếu, do đó request turn với body khác ID sẽ bị từ chối.
+Các payload lỗi trả requestId và error.code/message/retryable, không phản chiếu nội dung đầu vào. [API.md](docs/API.md) ghi rõ phần D1 final FAQ và các contract tool nghiệp vụ chưa triển khai. Nếu gửi X-Request-ID thì phải khớp requestId trong body; server sinh ID nếu header thiếu, do đó request turn với body khác ID sẽ bị từ chối.
 
 ## Kiểm tra
 
@@ -70,11 +70,20 @@ Các payload lỗi trả requestId và error.code/message/retryable, không ph�
 
 Test paths chỉ gồm tests/unit và tests/integration của bước mới. Không gọi DB/cloud/model, không chạy các test của source cũ đang bị xóa. Contract test đọc ví dụ start/resume trong docs/API.md. HTTPX 0.28.1 hiện gây một cảnh báo deprecation từ Starlette TestClient; các kiểm thử vẫn pass, không lọc hoặc che cảnh báo. Cần đánh giá migration test client khi nâng dependency sau này.
 
-Knowledge giữ approved=false; không đọc hoặc index chúng trong startup. Các chỉ số retrieval/grounding/latency của AI chưa đo.
+Knowledge giữ approved=false, không tự build index khi startup. Snapshot phải được build offline, đúng mode và được kiểm tra lại khi load/query. Retrieval baseline và kết quả kiểm tra hiện hành ghi trong STATUS; grounding/latency Gemini chưa đo.
 
 ## D1 đang triển khai
 
 Widget bật tường minh bằng `VITE_ASSISTANT_ENABLED=true` trong process Vite. Spring mặc định disabled; xem BE/README.local.md cho cấu hình local demo. Frontend không gọi Python trực tiếp, không có provider key trong biến VITE_*.
+
+## Kiểm chứng D1
+
+- Python: các lệnh pytest/Ruff/pip check ở trên; thêm `tests/evaluation/run_d1.py --retrieval-only` cho baseline synthetic hoặc `--live` khi có GEMINI_API_KEY. Báo cáo trong `.local/assistant-evaluation/` đã ignore; có đáp án synthetic để người đánh giá rà grounding, không chứa prompt/credential.
+- Spring: `mvnw.cmd -o -Plocal-h2 -Dassistant.build.directory=target-assistant-d1 -Dtest=AssistantControllerTest,AssistantClientTest,AssistantSessionsTest,PublicRoomControllerTest,AuthControllerTest,CustomerHistoryServiceTest package`.
+- FE: `npm ci --ignore-scripts`, `npm test`, `npm run lint`, `npm run build -- --outDir dist-assistant-check`. Không ghi đè BE/static. Dependency test khóa theo Node 20.19.4; không nâng Node trong D1.
+- E2E: sau Spring package, chạy `npm run test:e2e` từ FE. Playwright tự chạy Vite/Java/FastAPI test server trên 3000/19090/18006 và dừng chúng sau test. Nếu cổng đã có tiến trình, không tái sử dụng hoặc dừng dịch vụ của người dùng. Test provider ở tests/integration/serve_d1_fake.py có nhãn rõ và không thể bật bằng cấu hình runtime thông thường.
+- Lần đầu cần `npx playwright install chromium`; browser và helper được cài vào cache người dùng, không vào Git. Ảnh desktop/mobile trong FE/test-results đã ignore.
+- E2E fake kiểm chứng wiring/boundary/UI; không chứng minh Gemini thật hoặc grounding. `--live` thiếu key báo not_run, không đánh dấu D1 done. Chưa có corpus production được duyệt.
 
 Build demo index offline từ `ai-service`: `.\.venv\Scripts\python.exe -m app.ingestion.snapshot --mode demo_synthetic`.
 Lệnh in đường dẫn snapshot để đặt `AI_INDEX_PATH`; đặt rõ `AI_CORPUS_MODE=demo_synthetic`. Output trong `.local/assistant-index/` đã ignore. Production không chấp nhận snapshot demo hoặc bản nháp chưa duyệt.

@@ -13,6 +13,7 @@ from pathlib import Path
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+ALGORITHM = "fts5-bm25-unicode61-v2"
 SOURCES = {
     "demo_synthetic": ("tests/fixtures/d1/faq.md",),
     "production": (
@@ -31,6 +32,7 @@ def digest(data: bytes) -> str:
 def normalize(text: str) -> str:
     import unicodedata
 
+    text = re.sub(r"\bwi[ -]?fi\b", "wifi", text.lower())
     return "".join(
         c
         for c in unicodedata.normalize("NFD", text.lower().replace("đ", "d"))
@@ -94,7 +96,7 @@ def build(mode: str, today: date, root: Path = ROOT) -> Path:
     manifest = {
         "format": 1,
         "corpusMode": mode,
-        "algorithm": "fts5-bm25-unicode61-v1",
+        "algorithm": ALGORITHM,
         "chunking": "heading-complete-2000-v1",
         "sources": {name: sha for name, _, _, sha in documents},
     }

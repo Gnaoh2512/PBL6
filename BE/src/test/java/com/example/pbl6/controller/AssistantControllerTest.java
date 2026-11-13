@@ -36,10 +36,17 @@ class AssistantControllerTest {
         mvc.perform(delete("/api/assistant/session").cookie(cookie).header("Origin", "http://localhost:3000")).andExpect(status().isNoContent());
     }
     @Test void originJwtIdentityAndPayloadAreRejected() throws Exception {
+        mvc.perform(post("/api/assistant/chat").contentType(MediaType.APPLICATION_JSON).content(body(""))).andExpect(status().isForbidden());
         mvc.perform(post("/api/assistant/chat").header("Origin", "https://evil.invalid").contentType(MediaType.APPLICATION_JSON).content(body(""))).andExpect(status().isForbidden());
         mvc.perform(post("/api/assistant/chat").header("Origin", "http://localhost:3000").header("Authorization", "Bearer customer-jwt").contentType(MediaType.APPLICATION_JSON).content(body(""))).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/assistant/chat").header("Origin", "http://localhost:3000").contentType(MediaType.APPLICATION_JSON).content(body(",\"username\":\"victim\""))).andExpect(status().isUnprocessableEntity());
         mvc.perform(post("/api/assistant/chat").header("Origin", "http://localhost:3000").contentType(MediaType.APPLICATION_JSON).content("x".repeat(16385))).andExpect(status().isContentTooLarge());
+        verifyNoInteractions(client);
+    }
+    @Test void invalidJsonIdsAndOldConversationDoNotReachPython() throws Exception {
+        mvc.perform(post("/api/assistant/chat").header("Origin", "http://localhost:3000").contentType(MediaType.APPLICATION_JSON).content("{broken")).andExpect(status().isBadRequest());
+        mvc.perform(post("/api/assistant/chat").header("Origin", "http://localhost:3000").header("X-Request-ID", "bad id").contentType(MediaType.APPLICATION_JSON).content(body(""))).andExpect(status().isUnprocessableEntity());
+        mvc.perform(post("/api/assistant/chat").header("Origin", "http://localhost:3000").contentType(MediaType.APPLICATION_JSON).content(body("").replace("null", "\""+UUID.randomUUID()+"\""))).andExpect(status().isNotFound());
         verifyNoInteractions(client);
     }
 }

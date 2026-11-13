@@ -25,6 +25,7 @@ def test_snapshot_is_reproducible_and_vietnamese_query_preserves_evidence(corpus
     assert result[0].sectionId == "FAQ-WIFI"
     assert "lễ tân" in result[0].excerpt
     assert index.search("Wi-Fi sảnh", today) == result
+    assert index.search("wifi", today)[0].sectionId == "FAQ-WIFI"
     assert index.search('" OR * NOT NEAR()', today) == []
     assert index.search("astronaut rocket", today) == []
     with pytest.raises(DependencyError):
@@ -71,3 +72,16 @@ def test_management_files_corrupt_snapshot_and_wrong_root_are_rejected(corpus):
 def test_real_drafts_are_not_approved():
     with pytest.raises(ValueError):
         build("production", date(2026, 11, 13))
+
+
+def test_manifest_revision_change_is_not_silently_loaded(corpus):
+    import json
+
+    today = date(2026, 11, 13)
+    path = build("demo_synthetic", today, corpus)
+    file = path / "manifest.json"
+    manifest = json.loads(file.read_text(encoding="utf8"))
+    manifest["format"] = 999
+    file.write_text(json.dumps(manifest), encoding="utf8")
+    with pytest.raises(DependencyError):
+        KnowledgeIndex(path, "demo_synthetic", today, corpus)

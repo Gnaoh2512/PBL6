@@ -43,7 +43,10 @@ class Gemini:
                         chunks.extend(chunk)
                         if len(chunks) > 256 * 1024:
                             raise DependencyError("AI_PROTOCOL_ERROR")
-                    return json.loads(chunks)
+                    parsed = json.loads(chunks)
+                    if not isinstance(parsed, dict):
+                        raise DependencyError("AI_PROTOCOL_ERROR")
+                    return parsed
         except (TimeoutError, httpx.TimeoutException):
             raise DependencyError("DEADLINE_EXCEEDED") from None
         except (httpx.HTTPError, ValueError):
@@ -62,7 +65,6 @@ class Gemini:
                 "responseMimeType": "application/json",
                 "responseJsonSchema": schema.model_json_schema(),
                 "maxOutputTokens": budget.output_limit - budget.output_used,
-                "thinkingConfig": {"thinkingBudget": 0},
             },
         }
         count = await self._post(

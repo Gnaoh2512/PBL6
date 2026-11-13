@@ -13,7 +13,7 @@ import java.util.concurrent.*;
 public class AssistantClient {
     private final AssistantConfig config;
     private final ObjectMapper mapper = new ObjectMapper();
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3))
+    private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3))
             .followRedirects(HttpClient.Redirect.NEVER).build();
     public AssistantClient(AssistantConfig config) { this.config = config; }
 
@@ -76,6 +76,10 @@ public class AssistantClient {
         } catch (AssistantFault e) { throw e;
         } catch (TimeoutException e) { throw new AssistantFault(504, "DEADLINE_EXCEEDED");
         } catch (InterruptedException e) { Thread.currentThread().interrupt(); throw new AssistantFault(502, "AI_UNREACHABLE");
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof HttpTimeoutException) throw new AssistantFault(504, "DEADLINE_EXCEEDED");
+            if (e.getCause() instanceof java.io.IOException) throw new AssistantFault(502, "AI_UNREACHABLE");
+            throw new AssistantFault(502, "AI_PROTOCOL_ERROR");
         } catch (Exception e) { throw new AssistantFault(502, "AI_PROTOCOL_ERROR");
         } finally { if (pending != null && !pending.isDone()) pending.cancel(true); }
     }

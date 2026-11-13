@@ -4,6 +4,7 @@
 
 .venv/
 .local/assistant-index/
+.local/assistant-evaluation/
 venv/
 
 __pycache__/

@@ -7,7 +7,8 @@ import AssistantWidget, { AssistantChat } from './AssistantWidget';
 import { apiCall } from '../../services/api';
 
 vi.mock('../../services/api', () => ({ apiCall: vi.fn(), waitForAssistantSessionReset: () => Promise.resolve() }));
-vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ token: '' }) }));
+const auth = vi.hoisted(() => ({ token: '' }));
+vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
 
 const answer = { success: true, data: { status: 'answered', answer: 'Wi-Fi giả lập tại sảnh.',
   conversationId: 'conversation', corpusMode: 'demo_synthetic',
@@ -65,5 +66,32 @@ describe('FAQ widget', () => {
     vi.stubEnv('VITE_ASSISTANT_ENABLED', 'true');
     render(<MemoryRouter initialEntries={['/admin/rooms']}><AssistantWidget /></MemoryRouter>);
     expect(screen.queryByRole('button', { name: 'Trợ lý' })).not.toBeInTheDocument();
+  });
+  it('clears old messages and aborts work when account changes', async () => {
+    vi.stubEnv('VITE_ASSISTANT_ENABLED', 'true');
+    auth.token = 'account-a';
+    let resolve;
+    apiCall.mockImplementation(() => new Promise(done => { resolve = done; }));
+    const user = userEvent.setup();
+    const tree = () => <MemoryRouter><AssistantWidget /></MemoryRouter>;
+    const view = render(tree()); await open(user);
+    await user.type(screen.getByLabelText('Câu hỏi'), 'old account question');
+    await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
+    await waitFor(() => expect(apiCall).toHaveBeenCalledTimes(1));
+    const signal = apiCall.mock.calls[0][1].signal;
+    auth.token = 'account-b'; view.rerender(tree());
+    expect(signal.aborted).toBe(true);
+    resolve(answer); await open(user);
+    expect(screen.queryByText('old account question')).not.toBeInTheDocument();
+    expect(screen.queryByText(answer.data.answer)).not.toBeInTheDocument();
+    auth.token = '';
+  });
+  it('renders provider HTML as literal text', async () => {
+    apiCall.mockResolvedValue({ ...answer, data: { ...answer.data, answer: '<img src=x onerror=alert(1)>' } });
+    const user = userEvent.setup(); render(<AssistantChat />); await open(user);
+    await user.type(screen.getByLabelText('Câu hỏi'), 'wifi');
+    await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
+    expect(await screen.findByText('<img src=x onerror=alert(1)>')).toBeInTheDocument();
+    expect(document.querySelector('img')).toBeNull();
   });
 });

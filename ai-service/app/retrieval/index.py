@@ -7,7 +7,7 @@ from contextlib import closing
 from datetime import date
 from pathlib import Path
 
-from app.ingestion.snapshot import ROOT, SOURCES, digest, document, normalize
+from app.ingestion.snapshot import ALGORITHM, ROOT, SOURCES, digest, document, normalize
 from app.providers.contracts import DependencyError, Evidence
 
 
@@ -27,6 +27,17 @@ class KnowledgeIndex:
             ):
                 raise ValueError()
             manifest = json.loads((self.path / "manifest.json").read_text(encoding="utf8"))
+            identity = {
+                key: value
+                for key, value in manifest.items()
+                if key not in {"snapshotId", "databaseChecksum"}
+            }
+            if (
+                digest(json.dumps(identity, sort_keys=True).encode()) != self.snapshot_id
+                or identity.get("format") != 1
+                or identity.get("algorithm") != ALGORITHM
+            ):
+                raise ValueError()
             if manifest["corpusMode"] != self.mode or manifest["snapshotId"] != self.snapshot_id:
                 raise ValueError()
             if set(manifest["sources"]) != set(SOURCES[self.mode]):

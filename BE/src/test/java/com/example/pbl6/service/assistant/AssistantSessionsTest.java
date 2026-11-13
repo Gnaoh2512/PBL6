@@ -35,4 +35,13 @@ class AssistantSessionsTest {
         for (int i=0; i<10; i++) { store.begin(s, "id"+i, "h"); store.finish(s, "id"+i, "h", "q", Map.of("answer", "a")); }
         assertEquals(8, store.history(s).size());
     }
+    @Test void capacityAndFailedTurnAreBoundedWithoutRetry() {
+        var store = new AssistantSessions();
+        var s = store.resolve("", "guest", null);
+        store.begin(s, "failed", "hash");
+        store.fail(s, "failed", new AssistantFault(504, "DEADLINE_EXCEEDED"));
+        assertEquals(504, assertThrows(AssistantFault.class, () -> store.begin(s, "failed", "hash")).status);
+        for (int i = 1; i < 1000; i++) store.resolve("", "guest", null);
+        assertEquals(503, assertThrows(AssistantFault.class, () -> store.resolve("", "guest", null)).status);
+    }
 }

@@ -20,7 +20,7 @@ from app.settings import Settings
 
 def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
     settings = settings if settings is not None else Settings()
-    state = {"faq": faq, "provider": None}
+    state = {"faq": faq, "provider": None, "dependency_failed": False}
 
     @asynccontextmanager
     async def lifespan(app):
@@ -86,13 +86,14 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
 
     @application.get("/ready")
     async def ready():
-        active = state["faq"] is not None
-        if active:
+        retrieval = state["faq"] is not None
+        if retrieval:
             try:
                 state["faq"].index.validate(datetime.now(timezone(timedelta(hours=7))).date())
             except DependencyError:
-                active = False
-        ready = active and settings.service_token is not None
+                retrieval = False
+        llm = state["faq"] is not None and not state["dependency_failed"]
+        ready = llm and retrieval and settings.service_token is not None
         return JSONResponse(
             {
                 "status": "ready" if ready else "not_ready",
@@ -100,8 +101,8 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
                 "corpusMode": settings.corpus_mode,
                 "checks": {
                     "configuration": settings.service_token is not None,
-                    "llm": active,
-                    "retrieval": active,
+                    "llm": llm,
+                    "retrieval": retrieval,
                 },
             },
             status_code=200 if ready else 503,
@@ -114,7 +115,7 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
         if isinstance(payload, ResumeTurn):
             # No continuations can exist until orchestration is implemented.
             return error_response(request.state.request_id, 409, "CONTINUATION_NOT_FOUND")
-        if state["faq"] is not None:
+        if state["faq"] is not None and not state["dependency_failed"]:
             try:
                 return await state["faq"].run(payload)
             except TimeoutError:
@@ -122,6 +123,8 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
                     request.state.request_id, 504, "DEADLINE_EXCEEDED", retryable=True
                 )
             except DependencyError as error:
+                if error.code == "DEPENDENCY_UNAVAILABLE":
+                    state["dependency_failed"] = True
                 status = {"DEADLINE_EXCEEDED": 504, "AI_PROTOCOL_ERROR": 502}.get(error.code, 503)
                 return error_response(request.state.request_id, status, error.code, retryable=True)
         return error_response(
