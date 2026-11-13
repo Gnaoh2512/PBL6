@@ -71,3 +71,7 @@ Các payload lỗi trả requestId và error.code/message/retryable, không ph�
 Test paths chỉ gồm tests/unit và tests/integration của bước mới. Không gọi DB/cloud/model, không chạy các test của source cũ đang bị xóa. Contract test đọc ví dụ start/resume trong docs/API.md. HTTPX 0.28.1 hiện gây một cảnh báo deprecation từ Starlette TestClient; các kiểm thử vẫn pass, không lọc hoặc che cảnh báo. Cần đánh giá migration test client khi nâng dependency sau này.
 
 Knowledge giữ approved=false; không đọc hoặc index chúng trong startup. Các chỉ số retrieval/grounding/latency của AI chưa đo.
+
+## D1 ?ang tri?n khai
+
+Adapter Gemini REST v? budget ?? c?, ch?a g?n v?o route. GEMINI_API_KEY c?u h?nh ngo?i Git; GEMINI_MODEL m?c ??nh gemini-3.1-flash-lite. Kh?ng d?ng SDK Gemini. HTTPX l? dependency runtime. Source corpus th?t ch?a ???c duy?t; kh?ng t? b?t demo khi thi?u ngu?n. Xem STATUS cho b?ng ch?ng t?ng b??c.

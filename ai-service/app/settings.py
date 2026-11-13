@@ -1,5 +1,6 @@
 """Server-only configuration; dependency readiness is never an environment flag."""
 
+from pathlib import Path
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator
@@ -16,6 +17,9 @@ class Settings(BaseSettings):
     )
 
     service_token: SecretStr | None = Field(default=None, validation_alias="AI_SERVICE_AUTH_TOKEN")
+    gemini_key: SecretStr | None = Field(default=None, validation_alias="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-3.1-flash-lite", validation_alias="GEMINI_MODEL")
+    index_path: Path | None = Field(default=None, validation_alias="AI_INDEX_PATH")
     corpus_mode: Literal["production", "demo_synthetic"] = Field(
         default="production",
         validation_alias="AI_CORPUS_MODE",
