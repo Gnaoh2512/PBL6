@@ -58,14 +58,16 @@ export async function apiCall(endpoint, options = {}) {
     ...(options.headers || {})
   };
 
-  const token = getAuthToken();
+  const token = options.auth === false ? '' : getAuthToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
   const fetchOptions = {
     method: options.method || 'GET',
-    headers
+    headers,
+    ...(options.signal ? { signal: options.signal } : {}),
+    ...(options.credentials ? { credentials: options.credentials } : {})
   };
 
   if (options.body) {
@@ -76,6 +78,7 @@ export async function apiCall(endpoint, options = {}) {
   try {
     response = await fetch(url, fetchOptions);
   } catch (err) {
+    if (err.name === 'AbortError') throw err;
     if (!options.silentError) {
       console.warn('Network fetch error:', err);
     }
@@ -91,20 +94,38 @@ export async function apiCall(endpoint, options = {}) {
 
   if (response.status === 401) {
     clearAuthSession();
-    throw new Error('Unauthorized');
+    const failure = new Error('Unauthorized');
+    Object.assign(failure, { status: 401, code: result?.data?.code || 'UNAUTHORIZED', retryable: false });
+    throw failure;
   }
 
   if (response.status === 403) {
-    throw new Error('Bạn không có quyền thực hiện thao tác này (403 Forbidden)');
+    const failure = new Error('Bạn không có quyền thực hiện thao tác này (403 Forbidden)');
+    Object.assign(failure, { status: 403, code: result?.data?.code || 'FORBIDDEN', retryable: false });
+    throw failure;
   }
 
   if (!response.ok) {
     const errMessage = (result && result.message) ? result.message : `Lỗi hệ thống (${response.status})`;
-    throw new Error(errMessage);
+    const error = new Error(errMessage);
+    error.status = response.status;
+    error.code = result?.data?.code || 'HTTP_ERROR';
+    error.retryable = result?.data?.retryable === true;
+    throw error;
   }
 
   return result;
 }
+
+// Serialized resets prevent an older logout request from invalidating a newer chat.
+let assistantReset = Promise.resolve();
+export function resetAssistantSession() {
+  assistantReset = assistantReset.catch(() => {}).then(() => apiCall('/api/assistant/session', {
+    method: 'DELETE', credentials: 'same-origin', auth: false, silentError: true
+  }));
+  return assistantReset;
+}
+export function waitForAssistantSessionReset() { return assistantReset; }
 
 // Formatters
 export function formatVND(amount) {

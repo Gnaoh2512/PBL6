@@ -74,6 +74,8 @@ Knowledge giữ approved=false; không đọc hoặc index chúng trong startup.
 
 ## D1 đang triển khai
 
+Widget bật tường minh bằng `VITE_ASSISTANT_ENABLED=true` trong process Vite. Spring mặc định disabled; xem BE/README.local.md cho cấu hình local demo. Frontend không gọi Python trực tiếp, không có provider key trong biến VITE_*.
+
 Build demo index offline từ `ai-service`: `.\.venv\Scripts\python.exe -m app.ingestion.snapshot --mode demo_synthetic`.
 Lệnh in đường dẫn snapshot để đặt `AI_INDEX_PATH`; đặt rõ `AI_CORPUS_MODE=demo_synthetic`. Output trong `.local/assistant-index/` đã ignore. Production không chấp nhận snapshot demo hoặc bản nháp chưa duyệt.
 

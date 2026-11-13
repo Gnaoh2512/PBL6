@@ -2,6 +2,14 @@
 
 Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
+## D1 Task 5 — widget, 2026-11-13
+
+- Có widget FAQ góc dưới bên phải, text/citation an toàn, badge synthetic, sáu gợi ý (nhóm chưa bật báo rõ), loading/error/cancel và Escape/focus. Chỉ hiện khi VITE_ASSISTANT_ENABLED=true; ẩn admin/staff.
+- API client thêm AbortSignal/credentials/lỗi có mã; giữ convention auth cũ. Login/logout serialize reset chat, remount state theo auth token và bỏ response đến muộn. Không lưu chat vào browser storage.
+- Thêm dev dependencies Vitest 4.1.12, jsdom 26.1.0 và Testing Library tương thích Node 20.19.4. Cài với --ignore-scripts. Bản Vitest đầu chọn có advisory đã thay bằng bản vá; npm audit cuối báo 0 vulnerabilities.
+- `npm test`: 6 tests pass. FE lint exit 0 với cảnh báo có sẵn; chưa dùng lint làm bằng chứng UI/browser. Build và E2E được ghi trong Task 6.
+- Tiếp theo: E2E/browser, evaluation và cập nhật hướng dẫn. Gemini thật chưa nghiệm thu.
+
 ## D1 Task 4 — Spring facade, 2026-11-13
 
 - Có chat/reset endpoints, DTO đầu vào strict, cookie HttpOnly/SameSite, owner/phiên, TTL/capacity, idempotency và chặn publish sau reset.
