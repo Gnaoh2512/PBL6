@@ -1,4 +1,7 @@
-"""FastAPI foundation. No LLM, retrieval engine, database or fake answer provider."""
+"""Internal FAQ runtime. Never connects to the business database or accepts customer JWTs."""
+
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -6,18 +9,56 @@ from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 from app.api.boundary import FoundationBoundary, error_response
+from app.orchestration.faq import Faq
+from app.providers.contracts import DependencyError, TurnBudget
+from app.providers.gemini import Gemini
+from app.retrieval.index import KnowledgeIndex
+from app.schemas.faq import Probe
 from app.schemas.turn import ResumeTurn, TurnPayload
 from app.settings import Settings
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
     settings = settings if settings is not None else Settings()
+    state = {"faq": faq, "provider": None}
+
+    @asynccontextmanager
+    async def lifespan(app):
+        if (
+            state["faq"] is None
+            and settings.gemini_key
+            and settings.index_path
+            and settings.service_token
+        ):
+            try:
+                index = KnowledgeIndex(
+                    settings.index_path,
+                    settings.corpus_mode,
+                    datetime.now(timezone(timedelta(hours=7))).date(),
+                )
+                provider = Gemini(settings.gemini_key.get_secret_value(), settings.gemini_model)
+                state["provider"] = provider
+                probe = await provider.generate(
+                    "Return ok=true.", {}, Probe, TurnBudget(remaining_ms=5000, output_limit=100)
+                )
+                if not probe.ok:
+                    raise DependencyError()
+                state["faq"] = Faq(provider, index, settings.corpus_mode)
+            except (DependencyError, OSError, ValueError):
+                state["faq"] = None
+        try:
+            yield
+        finally:
+            if state["provider"]:
+                await state["provider"].close()
+
     application = FastAPI(
         title="Hotel Assistant Foundation",
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
         redirect_slashes=False,
+        lifespan=lifespan,
     )
     application.add_middleware(FoundationBoundary, settings=settings)
 
@@ -45,18 +86,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/ready")
     async def ready():
+        active = state["faq"] is not None
+        if active:
+            try:
+                state["faq"].index.validate(datetime.now(timezone(timedelta(hours=7))).date())
+            except DependencyError:
+                active = False
+        ready = active and settings.service_token is not None
         return JSONResponse(
             {
-                "status": "not_ready",
+                "status": "ready" if ready else "not_ready",
                 "profile": "faq",
                 "corpusMode": settings.corpus_mode,
                 "checks": {
                     "configuration": settings.service_token is not None,
-                    "llm": False,
-                    "retrieval": False,
+                    "llm": active,
+                    "retrieval": active,
                 },
             },
-            status_code=503,
+            status_code=200 if ready else 503,
         )
 
     @application.post("/internal/assistant/turn")
@@ -66,6 +114,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if isinstance(payload, ResumeTurn):
             # No continuations can exist until orchestration is implemented.
             return error_response(request.state.request_id, 409, "CONTINUATION_NOT_FOUND")
+        if state["faq"] is not None:
+            try:
+                return await state["faq"].run(payload)
+            except TimeoutError:
+                return error_response(
+                    request.state.request_id, 504, "DEADLINE_EXCEEDED", retryable=True
+                )
+            except DependencyError as error:
+                status = {"DEADLINE_EXCEEDED": 504, "AI_PROTOCOL_ERROR": 502}.get(error.code, 503)
+                return error_response(request.state.request_id, status, error.code, retryable=True)
         return error_response(
             request.state.request_id, 503, "DEPENDENCY_UNAVAILABLE", retryable=True
         )

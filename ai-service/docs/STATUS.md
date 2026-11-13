@@ -2,6 +2,13 @@
 
 Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
+## D1 Task 3 — FAQ runtime, 2026-11-13
+
+- Có orchestration FAQ: phân loại, một retrieval, trả lời từ evidence, citation registry; tối đa hai generation calls. Không có business tools hoặc continuation.
+- Startup probe Gemini có timeout khi key/index/token được cấu hình; không fake readiness. Production draft vẫn bị từ chối. Không gửi identity/credentials trong provider payload; redaction mẫu credential/contact trong văn bản.
+- `python -B -m pytest -q -p no:cacheprovider`: 64 pass, 1 warning. Ruff check/format qua. Integration test dùng provider fake có nhãn, không phải Gemini thật.
+- Chưa có key nên chưa nghiệm thu live. Tiếp theo: Spring facade và widget. D1 chưa hoàn thành.
+
 ## D1 Task 1 — provider, 2026-11-13
 
 Task 2 hoàn thành sau Task 1 trên nhánh feature/assistant-d1-ingestion:

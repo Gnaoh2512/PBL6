@@ -311,4 +311,6 @@ Bước 1 chỉ đặc tả tài liệu. Bước 2 hiện thực khung FastAPI/s
 
 ## D1 — quyết định triển khai
 
+D1 chỉ nhận `search_knowledge` cho luồng FAQ; các request foundation vẫn được validate theo schema tổng thể nhưng không thực thi tool nghiệp vụ. Khi đủ provider/index, start trả `kind=final` với evidence registry và usage; `toolCalls=[]`, `continuationId=null`, `cards=[]`. Resume vẫn 409. FAQ answered phải có citation trong registry; output model sai trả 502 AI_PROTOCOL_ERROR. Booking, dữ liệu live và thao tác ghi trả capability_unavailable cho cả guest/member trong D1, không mời đăng nhập như thể có thể mở chức năng chưa triển khai.
+
 Gemini REST gemini-3.1-flash-lite, JSON schema; SQLite FTS5/BM25 local, không embedding. Nghiệm thu bằng demo_synthetic; production không nạp knowledge pending_review. Chỉ search_knowledge, tối đa hai generation calls, không retry; budget tích lũy như mục 2. Provider adapter đã có; các bước còn lại xem STATUS.
