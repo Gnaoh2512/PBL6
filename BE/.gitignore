@@ -1,5 +1,6 @@
 HELP.md
 target/
+target-assistant-d1/
 .localdb/
 backend-local.stdout.log
 backend-local.stderr.log

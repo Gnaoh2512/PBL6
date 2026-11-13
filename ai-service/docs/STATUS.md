@@ -2,6 +2,14 @@
 
 Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
+## D1 Task 4 — Spring facade, 2026-11-13
+
+- Có chat/reset endpoints, DTO đầu vào strict, cookie HttpOnly/SameSite, owner/phiên, TTL/capacity, idempotency và chặn publish sau reset.
+- JWT sai ở assistant bị từ chối; Origin allowlist/CORS riêng, không mở /api/ai/**. Python chỉ nhận service credential và nội dung tối thiểu, không nhận JWT/principal/cookie.
+- Client giới hạn response/deadline, kiểm tra ID/schema/mode/evidence/citation và từ chối mọi business tool call. Mặc định assistant disabled; demo chỉ local.
+- `mvnw.cmd -o -Dassistant.build.directory=target-assistant-d1 -Dtest=AssistantControllerTest,AssistantClientTest,AssistantSessionsTest test`: 6 tests pass, BUILD SUCCESS. Test có upstream HTTP stub, không dùng LLM/booking thật. Còn cảnh báo Lombok/Mockito/deprecated APIs.
+- Build directory riêng tránh class Recommendation cũ trong target; không xóa artifact người dùng. Chưa có widget/live Gemini; D1 chưa hoàn thành.
+
 ## D1 Task 3 — FAQ runtime, 2026-11-13
 
 - Có orchestration FAQ: phân loại, một retrieval, trả lời từ evidence, citation registry; tối đa hai generation calls. Không có business tools hoặc continuation.

@@ -1,5 +1,18 @@
 # Run the Spring backend locally
 
+## D1 assistant opt-in (local demo only)
+
+Set process variables `AI_ASSISTANT_ENABLED=true`, `AI_CORPUS_MODE=demo_synthetic`,
+`AI_SERVICE_AUTH_TOKEN` to the same private token as Python, and `AI_SERVICE_URL=http://127.0.0.1:8006`.
+Never use a customer JWT as this token. Start Spring with `--spring.profiles.active=local`.
+The assistant is disabled by default; no business tools are registered in D1.
+
+To avoid stale Recommendation classes in existing build output, use a separate directory:
+`./mvnw.cmd -o -Plocal-h2 -Dassistant.build.directory=target-assistant-d1 -DskipTests package`.
+Run `java -jar target-assistant-d1/pbl6-0.0.1-SNAPSHOT.jar --spring.profiles.active=local`.
+Browser requests use an allowlisted Origin (localhost/127.0.0.1 on 3000 or 9090).
+`DELETE /api/assistant/session` invalidates the chat session, not the customer JWT.
+
 The default profile uses MySQL. For a local setup without MySQL or Docker, use the `local-h2`
 Maven profile with Spring's `local` profile. This keeps a development database in `BE/.localdb/`
 and seeds three synthetic room types and three available rooms. The directory is ignored by Git.

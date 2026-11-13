@@ -33,6 +33,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
+            boolean assistant = request.getRequestURI().startsWith("/api/assistant/");
+            if (assistant && request.getHeader("Authorization") != null
+                    && (!StringUtils.hasText(jwt) || !jwtTokenProvider.validateToken(jwt))) {
+                rejectAssistant(response); return;
+            }
+
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
 
@@ -44,10 +50,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception ex) {
+            if (request.getRequestURI().startsWith("/api/assistant/")) {
+                rejectAssistant(response); return;
+            }
             log.error("Could not set user authentication in security context", ex);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void rejectAssistant(HttpServletResponse response) throws IOException {
+        String id = java.util.UUID.randomUUID().toString();
+        response.setStatus(401); response.setContentType("application/json");
+        response.setHeader("X-Request-ID", id);
+        response.getWriter().write("{\"success\":false,\"message\":\"Unauthorized\",\"data\":{\"code\":\"UNAUTHORIZED\",\"requestId\":\"" + id + "\",\"retryable\":false}}");
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {
