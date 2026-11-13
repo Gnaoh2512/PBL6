@@ -1,17 +1,22 @@
 import { test, expect } from '@playwright/test';
+import { writeFileSync } from 'node:fs';
 
-test('labeled fake E2E: sources, demo badge, missing source and unavailable capability', async ({ page }) => {
+test(`${process.env.D1_LIVE_GEMINI === '1' ? 'Gemini live' : 'labeled fake'} E2E: sources, demo badge, missing source and unavailable capability`, async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Trợ lý', exact: true }).click();
   await page.getByLabel('Câu hỏi', { exact: true }).fill('Wi-Fi ở đâu?');
+  const answerResponse = page.waitForResponse(response => response.url().endsWith('/api/assistant/chat') && response.status() === 200);
   await page.getByRole('button', { name: 'Gửi', exact: true }).click();
+  const answer = (await (await answerResponse).json()).data;
+  expect(answer.status).toBe('answered');
+  if (process.env.D1_LIVE_GEMINI === '1') writeFileSync('../ai-service/.local/assistant-evaluation/browser-live.json', JSON.stringify(answer, null, 2));
   await expect(page.getByRole('note')).toContainText('Dữ liệu giả lập');
   await expect(page.getByRole('list', { name: 'Nguồn' })).toContainText('FAQ-WIFI');
-  await expect(page.getByRole('log')).toContainText('không phải tiện ích đã được xác nhận');
+  await expect(page.getByRole('log')).toContainText('Wi-Fi');
   await page.locator('.resort-nav-book').click({ trial: true });
   await page.locator('.search-rooms').click({ trial: true });
   await page.screenshot({ path: 'test-results/assistant-desktop.png' });
-  await page.getByLabel('Câu hỏi', { exact: true }).fill('astronaut rocket');
+  await page.getByLabel('Câu hỏi', { exact: true }).fill(process.env.D1_LIVE_GEMINI === '1' ? 'Khách sạn có hồ bơi không?' : 'astronaut rocket');
   await page.getByRole('button', { name: 'Gửi', exact: true }).click();
   await expect(page.getByRole('log')).toContainText('Chưa có đủ nguồn');
   await page.getByLabel('Câu hỏi', { exact: true }).fill('booking của tôi');

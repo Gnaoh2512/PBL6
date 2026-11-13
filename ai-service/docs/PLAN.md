@@ -1,6 +1,6 @@
 # Lộ trình triển khai trợ lý
 
-Trạng thái hiện tại: đã có foundation và implementation D1 (Gemini adapter, ingestion/index FTS5, FAQ orchestration, Spring facade và widget opt-in). D1 chưa hoàn thành: chưa nghiệm thu xuyên hệ thống với Gemini thật do thiếu key. Kiểm thử mock/browser và giới hạn hiện hành xem STATUS.md; production chưa có corpus được duyệt.
+Trạng thái hiện tại: đã có foundation và implementation D1; FAQ có nguồn đã chạy xuyên hệ thống với Gemini thật (3 E2E pass). Chưa đóng nghiệm thu D1: batch live 24 ca chỉ 15 hoàn tất đúng trạng thái, còn 7 timeout và 2 lỗi dependency. Xem STATUS.md cho số đo/giới hạn; production chưa có corpus được duyệt. Việc tiếp theo là điều tra độ ổn định live, không mở rộng sang D2.
 
 ## D0 — Thiết kế và hướng dẫn
 

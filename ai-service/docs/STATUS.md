@@ -2,6 +2,20 @@
 
 Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
 
+## D1 — kiểm chứng Gemini thật, 2026-11-13
+
+- Người dùng đã cấu hình key riêng trong ai-service/.env (ignored). Không in key, không đưa key vào command, Git hoặc prompt. Không thay nội dung file .env của người dùng.
+- Live probe phát hiện Gemini trả `thoughtSignature` kèm text: adapter cũ từ chối metadata hợp lệ. Đã cho phép rồi bỏ qua signature, không lưu/forward; vẫn từ chối functionCall/tool parts. Regression tests: **68 pass**, 1 warning Starlette/HTTPX; Ruff qua.
+- `tests/evaluation/run_d1.py --live`: **24 ca, 15 trả đúng trạng thái, 7 DEADLINE_EXCEEDED, 2 DEPENDENCY_UNAVAILABLE**. Không sửa prompt/ngưỡng bằng held-out set, không tự retry hoặc nâng deadline 20 giây. Chưa xác định nguyên nhân upstream của hai lỗi dependency; không kết luận sai key/quota chỉ từ mã tổng hợp.
+- Model/version trả về: gemini-3.1-flash-lite; corpus demo_synthetic, snapshot `971d9d5ef3cc285fd170ac79afcb496bd7315c4edf4076c9263289edd7e34d2d`, prompt d1-faq-1. Trên **15 ca thành công**: p50 6747.78 ms; p95 nearest-rank 13965.50 ms. Usage quan sát được ở 15 ca này: 8677 input / 981 output tokens; không bao gồm probe, browser hoặc request lỗi, không phải tổng chi phí.
+- Đã rà hai đáp án answered trong batch (Wi-Fi demo và quy định hành lý demo): citation đúng section, các khẳng định có căn cứ. Các ca lỗi không được tính đạt grounding. Không suy chất lượng production từ corpus giả lập.
+- Bổ sung entrypoint live acceptance riêng `tests/integration/serve_d1_live.py`: dùng factory/lifecycle/provider thật và snapshot synthetic, không inject fake, không sửa cấu hình production hoặc .env. Khóa chỉ được Settings đọc trong process Python.
+- Từ FE, `$env:D1_LIVE_GEMINI='1'` rồi `npm run test:e2e`: **3/3 pass với Gemini thật**, qua browser/Spring/FastAPI, gồm nguồn + badge demo + thiếu evidence + capability chưa bật, JWT sai/reset và member B không tái dùng conversation A. Đã xem ảnh desktop; câu trả lời Wi-Fi có căn cứ và UI gắn nhãn dữ liệu giả lập. Trace tắt để không lưu test JWT; server tạm được Playwright dừng.
+- Lần E2E đầu có assertion sai: câu ngoài phạm vi astronaut được model từ chối bằng capability_unavailable đúng thiết kế; đã thay ca thiếu nguồn bằng câu FAQ về hồ bơi. Thời gian chờ test browser live đủ bao phủ các lượt tuần tự; **deadline runtime vẫn 20 giây**, không có retry/fake fallback. Lần đầu còn có 503, lần chạy lại 3/3 pass; không che các lỗi của batch.
+- Kết luận: đã chứng minh **một FAQ có nguồn chạy end-to-end bằng Gemini thật**. D1 chưa được đánh dấu nghiệm thu toàn bộ: batch chỉ 15/24 hoàn tất, cần điều tra độ ổn định dependency/latency trước đóng bước. Production vẫn chưa có corpus duyệt và assistant mặc định disabled. Không thêm dependency/model/service hệ thống, không push/deploy.
+
+Artifact local đã ignore: `.local/assistant-evaluation/live.json`, `live-review.json`, `browser-live.json`; ảnh live trong FE/test-results. Các mốc "thiếu key" bên dưới là lịch sử trước lượt này.
+
 ## D1 Task 6 — kiểm chứng và bàn giao, 2026-11-13
 
 **D1 chưa hoàn thành nghiệm thu Gemini thật.** Đã triển khai đủ đường đi FAQ và kiểm chứng với provider fake có nhãn; không đánh đồng fake E2E với model thật. Không có GEMINI_API_KEY/GOOGLE_API_KEY trong process/user/machine; live runner báo not_run. Không bật billing, không tải model hoặc triển khai cloud.

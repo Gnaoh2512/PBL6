@@ -1,6 +1,6 @@
 # Hợp đồng API trợ lý khách sạn — v1 đề xuất
 
-Ngày khảo sát: 2026-11-13. Hợp đồng tổng thể v1; phần D1 FAQ đã có implementation FastAPI và Spring chat/reset, kiểm thử mock có nhãn. Gemini thật chưa nghiệm thu; D1 chưa hoàn thành. Business tool_calls/continuation vẫn chưa triển khai. Facade Recommendation đã gỡ trong c300a5b. Các giới hạn số dưới đây là thiết kế ban đầu, chưa phải kết quả đo hiệu năng Gemini.
+Ngày khảo sát: 2026-11-13. Hợp đồng tổng thể v1; D1 FAQ đã có implementation và 3 E2E pass với Gemini thật. Batch live còn 9/24 ca timeout/dependency nên chưa đóng nghiệm thu D1; xem STATUS cho số đo và giới hạn. Business tool_calls/continuation vẫn chưa triển khai. Facade Recommendation đã gỡ trong c300a5b. Các giới hạn số dưới đây là thiết kế, không phải cam kết hiệu năng.
 
 Đọc cùng [kiến trúc](architecture.md), [lộ trình](PLAN.md), [đánh giá](EVALUATION.md) và [UI](UI.md).
 
@@ -307,7 +307,7 @@ Profile v1 là faq: cấu hình service auth hợp lệ, LLM sẵn sàng và ind
 
 ## 10. Giới hạn của bước tài liệu
 
-Bước 1 là đặc tả; Bước 2 là foundation. Implementation D1 hiện có Spring chat/reset, Gemini adapter, index FTS5 và final FAQ, với kiểm thử mock có nhãn. Xem [README](../README.md) và [STATUS](STATUS.md) để biết bằng chứng thực tế; Gemini thật chưa nghiệm thu. Resume vẫn 409 CONTINUATION_NOT_FOUND vì D1 không cấp continuation; production readiness 503 khi thiếu LLM/index hoặc nguồn được duyệt. Tool nghiệp vụ và các phần D2–D4 của hợp đồng chưa triển khai.
+Bước 1 là đặc tả; Bước 2 là foundation. D1 hiện có Spring chat/reset, Gemini adapter, FTS5 và final FAQ; có cả kiểm thử mock có nhãn và E2E Gemini thật. Xem [README](../README.md) và [STATUS](STATUS.md) cho kết quả còn lỗi của batch live. Resume vẫn 409 vì D1 không cấp continuation; production readiness 503 khi thiếu LLM/index hoặc nguồn được duyệt. Tool nghiệp vụ và D2–D4 chưa triển khai.
 
 ## D1 — quyết định triển khai
 

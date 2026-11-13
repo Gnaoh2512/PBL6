@@ -1,11 +1,12 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './e2e', workers: 1, timeout: 45000,
+  testDir: './e2e', workers: 1, timeout: process.env.D1_LIVE_GEMINI === '1' ? 120000 : 45000,
+  expect: { timeout: process.env.D1_LIVE_GEMINI === '1' ? 25000 : 5000 },
   // Auth scenarios use signed synthetic JWTs; do not retain headers in traces.
   use: { baseURL: 'http://127.0.0.1:3000', trace: 'off' },
   webServer: [
-    { command: '.venv\\Scripts\\python.exe tests/integration/serve_d1_fake.py', cwd: '../ai-service',
+    { command: `.venv\\Scripts\\python.exe tests/integration/serve_d1_${process.env.D1_LIVE_GEMINI === '1' ? 'live' : 'fake'}.py`, cwd: '../ai-service',
       url: 'http://127.0.0.1:18006/health', reuseExistingServer: false, timeout: 30000 },
     { command: 'java -jar target-assistant-d1/pbl6-0.0.1-SNAPSHOT.jar --spring.profiles.active=local --server.port=19090 --spring.datasource.url=jdbc:h2:mem:d1e2e',
       cwd: '../BE', url: 'http://127.0.0.1:19090/api/public/rooms/room-types', timeout: 120000,

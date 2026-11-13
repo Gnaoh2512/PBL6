@@ -90,7 +90,9 @@ class Gemini:
             if candidate["finishReason"] != "STOP":
                 raise ValueError()
             parts = candidate["content"]["parts"]
-            if any(set(part) - {"text"} for part in parts):
+            # Gemini 3 can attach opaque metadata to ordinary answer text.
+            # Calls are independent in D1: discard it, never persist or expose it.
+            if any(set(part) - {"text", "thoughtSignature"} for part in parts):
                 raise ValueError()
             text = "".join(part["text"] for part in parts)
             parsed = schema.model_validate_json(text)

@@ -2,7 +2,7 @@
 
 Ngày: 2026-11-11, Asia/Ho_Chi_Minh.
 
-Trạng thái: đã có foundation và implementation D1 FAQ với Gemini REST, index FTS5, Spring chat và widget opt-in. Kiểm thử mock không chứng minh chất lượng Gemini; chưa nghiệm thu live, chưa có nguồn production được duyệt. Các luồng nghiệp vụ/tool broker dưới đây vẫn là thiết kế cho D2–D4. Xem STATUS.md.
+Trạng thái: có implementation D1 FAQ với Gemini REST, FTS5, Spring chat và widget opt-in; 3 E2E live pass. Batch Gemini còn timeout/dependency errors nên chưa đóng nghiệm thu toàn bộ; production chưa có nguồn duyệt. Các luồng nghiệp vụ/tool broker dưới đây vẫn là thiết kế D2–D4. Xem STATUS.md.
 
 ## Yêu cầu đã chốt
 
@@ -156,7 +156,7 @@ Các đường dẫn HTTP trong bảng là API nghiệp vụ để tái sử d�
 
 ## Quyết định còn mở
 
-D1 đã chọn Gemini REST gemini-3.1-flash-lite và SQLite FTS5/BM25, không embedding, snapshot dưới .local/assistant-index tách mode. Lý do: corpus nhỏ, không phải tải model/vector service và có baseline tái lập. Đánh đổi: lexical retrieval hạn chế paraphrase; model/provider thật chưa nghiệm thu do thiếu key. Schema D1 theo API.md; chi phí/latency thực chưa đo. Các lựa chọn hybrid/embedding/ranking hoặc mở rộng tool chỉ xem xét ở lát sau theo dữ liệu đánh giá.
+D1 chọn Gemini REST gemini-3.1-flash-lite và SQLite FTS5/BM25, không embedding, snapshot dưới .local/assistant-index tách mode. Lý do: corpus nhỏ, không tải model/vector service, baseline tái lập. Đánh đổi: lexical retrieval hạn chế paraphrase; live batch còn lỗi dependency/deadline. Schema theo API.md; latency/usage quan sát được ghi trong STATUS, chưa đo tổng chi phí. Hybrid/embedding/ranking hoặc business tools chỉ xem xét ở lát sau.
 
 ## Đọc tiếp
 

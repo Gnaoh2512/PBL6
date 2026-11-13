@@ -17,7 +17,17 @@ class Answer(BaseModel):
 def response():
     return {
         "candidates": [
-            {"finishReason": "STOP", "content": {"parts": [{"text": '{"answer":"synthetic"}'}]}}
+            {
+                "finishReason": "STOP",
+                "content": {
+                    "parts": [
+                        {
+                            "text": '{"answer":"synthetic"}',
+                            "thoughtSignature": "test-only-opaque-signature",
+                        }
+                    ]
+                },
+            }
         ],
         "usageMetadata": {"promptTokenCount": 20, "candidatesTokenCount": 5},
     }
@@ -51,7 +61,9 @@ def test_success_accounts_cumulative_budget_and_keeps_key_out_of_payload(caplog)
     assert "private-test-key" not in caplog.text
 
 
-@pytest.mark.parametrize("failure", ["auth", "quota", "timeout", "json", "huge", "schema", "usage"])
+@pytest.mark.parametrize(
+    "failure", ["auth", "quota", "timeout", "json", "huge", "schema", "usage", "tool"]
+)
 def test_provider_failures_are_safe(failure):
     def handler(request):
         if request.url.path.endswith(":countTokens"):
@@ -65,6 +77,9 @@ def test_provider_failures_are_safe(failure):
         if failure == "huge":
             return httpx.Response(200, text="x" * (256 * 1024 + 1))
         result = response()
+        if failure == "tool":
+            result["candidates"][0]["content"]["parts"][0]["functionCall"] = {"name": "execute_sql"}
+            return httpx.Response(200, json=result)
         if failure == "schema":
             result["candidates"][0]["content"]["parts"][0]["text"] = json.dumps({"wrong": 1})
         else:
