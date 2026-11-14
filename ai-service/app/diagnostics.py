@@ -62,6 +62,11 @@ _lock = Lock()
 LOGGER = logging.getLogger("ai_service.diagnostics")
 
 
+def diagnostic_identity() -> tuple[str, str]:
+    """Internal correlation only; never use request/account identifiers."""
+    return _id.get() or str(uuid4()), _operation.get().value
+
+
 def configure():
     """Own one stderr handler; do not configure root or third-party loggers."""
     with _lock:
