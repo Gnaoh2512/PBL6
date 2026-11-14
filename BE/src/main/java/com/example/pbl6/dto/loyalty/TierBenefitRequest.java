@@ -22,7 +22,7 @@ public class TierBenefitRequest {
 
     private Integer roomTypeId;
 
-    @NotBlank(message = "Loại đặc quyền (benefitType) không được để trống (ROOM_DISCOUNT | FREE_SERVICE | FREE_NIGHT)")
+    @NotBlank(message = "Loại đặc quyền (benefitType) không được để trống (ROOM_DISCOUNT | FREE_SERVICE)")
     private String benefitType;
 
     @NotBlank(message = "Tên đặc quyền (benefitName) không được để trống")

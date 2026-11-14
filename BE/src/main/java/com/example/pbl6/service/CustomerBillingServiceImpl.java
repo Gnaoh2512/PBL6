@@ -874,19 +874,11 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
-        List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
-        Integer bookedRoomTypeId = bookingRooms.stream()
-                .filter(br -> br.getRoom() != null && br.getRoom().getRoomType() != null)
-                .map(br -> br.getRoom().getRoomType().getRoomTypeId())
-                .findFirst().orElse(null);
-
         BigDecimal highestPercent = tierBenefitRepository
                 .findByTier_TierIdAndIsActiveTrue(loyalty.getTier().getTierId()).stream()
                 .filter(b -> "ROOM_DISCOUNT".equalsIgnoreCase(b.getBenefitType()))
                 .filter(b -> b.getDiscountPercent() != null
                         && b.getDiscountPercent().compareTo(BigDecimal.ZERO) > 0)
-                .filter(b -> b.getRoomType() == null || (bookedRoomTypeId != null
-                        && bookedRoomTypeId.equals(b.getRoomType().getRoomTypeId())))
                 .map(TierBenefit::getDiscountPercent)
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);

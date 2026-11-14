@@ -2,22 +2,34 @@ package com.example.pbl6.service;
 
 import com.example.pbl6.dto.adminroom.RoomRequest;
 import com.example.pbl6.dto.adminroom.RoomTypeRequest;
+import com.example.pbl6.dto.booking.BookingDetailResponse;
+import com.example.pbl6.dto.room.RoomTypeResponse;
+import com.example.pbl6.entity.Booking;
+import com.example.pbl6.entity.BookingRoom;
+import com.example.pbl6.entity.Customer;
 import com.example.pbl6.entity.Room;
 import com.example.pbl6.entity.RoomType;
 import com.example.pbl6.exception.ResourceNotFoundException;
+import com.example.pbl6.repository.BookingRoomRepository;
 import com.example.pbl6.repository.RoomRepository;
 import com.example.pbl6.repository.RoomTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class RoomAdminServiceImpl implements RoomAdminService {
 
     private final RoomRepository roomRepository;
+    private final BookingRoomRepository bookingRoomRepository;
     private final RoomTypeRepository roomTypeRepository;
     private final AuditLogService auditLogService;
 
@@ -135,5 +147,66 @@ public class RoomAdminServiceImpl implements RoomAdminService {
     @Transactional(readOnly = true)
     public List<Room> getAllRooms() {
         return roomRepository.findAll();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BookingDetailResponse> getRoomBookings(Integer roomId) {
+        if (!roomRepository.existsById(roomId)) {
+            throw new ResourceNotFoundException("Room", "id", roomId);
+        }
+
+        // Build a room-inspection response directly. Do not call the general booking
+        // detail mapper here: it also loads service usages/requests and payment data,
+        // none of which is needed to inspect the guests assigned to a room.
+        return bookingRoomRepository.findByRoom_RoomId(roomId).stream()
+                .filter(Objects::nonNull)
+                .filter(bookingRoom -> bookingRoom.getBooking() != null)
+                .map(this::toRoomBookingDetail)
+                .sorted(Comparator.comparing(
+                        BookingDetailResponse::getCheckInDate,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .collect(Collectors.toList());
+    }
+
+    private BookingDetailResponse toRoomBookingDetail(BookingRoom bookingRoom) {
+        Booking booking = bookingRoom.getBooking();
+        Room room = bookingRoom.getRoom();
+        Customer customer = booking.getCustomer();
+
+        long nights = booking.getCheckInDate() != null && booking.getCheckOutDate() != null
+                ? ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate())
+                : 0L;
+        BigDecimal pricePerNight = bookingRoom.getPriceApplied() != null
+                ? bookingRoom.getPriceApplied()
+                : (room != null && room.getRoomType() != null && room.getRoomType().getBasePrice() != null
+                    ? room.getRoomType().getBasePrice() : BigDecimal.ZERO);
+
+        return BookingDetailResponse.builder()
+                .bookingId(booking.getBookingId())
+                .bookingCode(booking.getBookingCode())
+                .status(booking.getStatus())
+                .customerId(customer != null ? customer.getCustomerId() : null)
+                .customerName(customer != null ? customer.getFullName() : null)
+                .customerPhone(customer != null ? customer.getPhone() : null)
+                .customerEmail(customer != null ? customer.getEmail() : null)
+                .idNumber(customer != null ? customer.getIdNumber() : null)
+                .roomId(room != null ? room.getRoomId() : null)
+                .roomNumber(room != null ? room.getRoomNumber() : null)
+                .floor(room != null ? room.getFloor() : null)
+                .roomType(room != null && room.getRoomType() != null
+                        ? RoomTypeResponse.fromEntity(room.getRoomType()) : null)
+                .checkInDate(booking.getCheckInDate())
+                .checkOutDate(booking.getCheckOutDate())
+                .nights(nights)
+                .guestCount(booking.getGuestCount())
+                .note(booking.getNote())
+                .priceAppliedPerNight(pricePerNight)
+                .totalRoomCharge(pricePerNight.multiply(BigDecimal.valueOf(nights)))
+                .depositRequired(booking.getDepositRequired())
+                .depositPaid(BigDecimal.ZERO)
+                .createdAt(booking.getCreatedAt())
+                .build();
     }
 }

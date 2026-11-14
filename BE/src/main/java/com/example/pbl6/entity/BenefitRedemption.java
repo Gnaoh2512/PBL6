@@ -40,10 +40,8 @@ public class BenefitRedemption {
     @JoinColumn(name = "service_usage_id")
     private ServiceUsage serviceUsage;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_request_id", unique = true)
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_request_id")
     private ServiceRequest serviceRequest;
 
     @ManyToOne(fetch = FetchType.LAZY)

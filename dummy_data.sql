@@ -1,7 +1,7 @@
 -- =====================================================================
 -- PBL6 HOTEL MANAGEMENT - DUMMY / DEMO DATA (V4 REFACTORED - NO FREE_NIGHT)
 -- Run AFTER schema_v4_clean.sql.
--- Password for all accounts: Pbl6Demo@123
+-- Password for all accounts: 123456 (BCrypt hashed)
 -- =====================================================================
 
 USE hotel_management;
@@ -56,15 +56,23 @@ VALUES
 (5,'maintenance1','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Maintenance One','maintenance1@pbl6.local','0900000005',5,'ACTIVE','2026-01-01 08:00:00'),
 (6,'service1','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Service Staff One','service1@pbl6.local','0900000006',6,'ACTIVE','2026-01-01 08:00:00'),
 (7,'customer1','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Nguyen Minh Anh','customer1@pbl6.local','0910000001',7,'ACTIVE','2026-01-02 08:00:00'),
-(8,'customer2','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Tran Bao Ngoc','customer2@pbl6.local','0910000002',7,'ACTIVE','2026-01-03 08:00:00');
+(8,'customer2','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Tran Bao Ngoc','customer2@pbl6.local','0910000002',7,'ACTIVE','2026-01-03 08:00:00'),
+(9,'customer3','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Le Quoc Bao','bao@example.local','0910000003',7,'ACTIVE','2026-01-04 08:00:00'),
+(10,'customer4','$2a$10$XQvafm9hfGEnTeeDuQKiFOf9uz09XklV15FUCfPv0PQTAu3mjYn9W','Pham Thu Ha','ha@example.local','0910000004',7,'ACTIVE','2026-01-05 08:00:00');
 
 INSERT INTO customer
 (customer_id,account_id,full_name,id_type,id_number,id_issue_date,id_issue_place,phone,email,nationality,created_at)
 VALUES
 (1,7,'Nguyen Minh Anh','CCCD','079201000001','2021-06-10','Da Nang','0910000001','customer1@pbl6.local','Vietnamese','2026-01-02 08:00:00'),
 (2,8,'Tran Bao Ngoc','CCCD','079201000002','2021-07-11','Ho Chi Minh City','0910000002','customer2@pbl6.local','Vietnamese','2026-01-03 08:00:00'),
-(3,NULL,'Le Quoc Bao (Walk-in)','PASSPORT','P1234567','2020-02-12','Hanoi','0910000003','bao@example.local','Vietnamese','2026-01-04 08:00:00'),
-(4,NULL,'Pham Thu Ha (Walk-in)','PASSPORT','P7654321','2020-03-13','Hue','0910000004','ha@example.local','Vietnamese','2026-01-05 08:00:00');
+(3,9,'Le Quoc Bao','PASSPORT','P1234567','2020-02-12','Hanoi','0910000003','bao@example.local','Vietnamese','2026-01-04 08:00:00'),
+(4,10,'Pham Thu Ha','PASSPORT','P7654321','2020-03-13','Hue','0910000004','ha@example.local','Vietnamese','2026-01-05 08:00:00');
+
+-- All demo accounts use password 123456 (BCrypt, cost 10).
+-- The same encoded value is safe to reuse; BCrypt verifies the password using its embedded salt.
+UPDATE account
+SET password_hash = '$2a$10$wGzABiH1g54StaNI2m/1VenZnthQLk6zm/23zfyzH9eRpwRT0NYw6'
+WHERE account_id BETWEEN 1 AND 10;
 
 -- ---------------------------------------------------------------------
 -- 3. Rooms, services, work schedules, equipment, cashier shift
@@ -72,7 +80,7 @@ VALUES
 INSERT INTO room (room_id,room_number,room_type_id,floor,status,note) VALUES
 (1,'101',1,1,'AVAILABLE','Near elevator'),
 (2,'102',1,1,'AVAILABLE',NULL),
-(3,'201',2,2,'OCCUPIED',NULL),
+(3,'201',2,2,'AVAILABLE',NULL),
 (4,'202',2,2,'AVAILABLE','Sea view'),
 (5,'301',3,3,'AVAILABLE',NULL),
 (6,'401',4,4,'MAINTENANCE','Temporarily unavailable');
@@ -188,6 +196,21 @@ VALUES
 (4,4,1,'2026-11-20','2026-11-22','RESERVED',NULL,NULL,850000.00),
 (5,5,2,'2026-11-13','2026-11-16','CHECKED_IN','2026-11-13 14:00:00',NULL,850000.00),
 (6,6,5,'2026-11-25','2026-11-27','RESERVED',NULL,NULL,2400000.00);
+
+-- Customer1 has two separate simultaneous bookings for two different rooms.
+-- Stay: 2026-11-14 through 2027-01-14 (checkout date is exclusive).
+-- Rooms 201 (room_id=3) and 202 (room_id=4) are available and have no overlapping reservations.
+INSERT INTO booking
+(booking_id,booking_code,customer_id,created_by,check_in_date,check_out_date,guest_count,status,deposit_required,source,note,created_at)
+VALUES
+(7,'BK-CUSTOMER1-20261114-A',1,3,'2026-11-14','2027-01-14',2,'CONFIRMED',0.00,'DEMO','Customer1 simultaneous reservation A - room 201','2026-11-14 13:00:00'),
+(8,'BK-CUSTOMER1-20261114-B',1,3,'2026-11-14','2027-01-14',2,'CONFIRMED',0.00,'DEMO','Customer1 simultaneous reservation B - room 202','2026-11-14 13:00:00');
+
+INSERT INTO booking_room
+(booking_room_id,booking_id,room_id,planned_checkin,planned_checkout,status,actual_checkin,actual_checkout,price_applied)
+VALUES
+(7,7,3,'2026-11-14','2027-01-14','RESERVED',NULL,NULL,1250000.00),
+(8,8,4,'2026-11-14','2027-01-14','RESERVED',NULL,NULL,1250000.00);
 
 -- Room 102 is occupied by customer1's active demo booking (BK-2026-0005).
 UPDATE room SET status = 'OCCUPIED' WHERE room_id = 2;

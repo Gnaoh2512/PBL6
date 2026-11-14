@@ -26,10 +26,6 @@ public class TierBenefit {
     @JoinColumn(name = "service_id")
     private com.example.pbl6.entity.Service service;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "room_type_id")
-    private RoomType roomType;
-
     @Column(name = "benefit_type", nullable = false, length = 50)
     private String benefitType; // ROOM_DISCOUNT | FREE_SERVICE | FREE_NIGHT
 

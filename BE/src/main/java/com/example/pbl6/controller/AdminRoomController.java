@@ -3,6 +3,7 @@ package com.example.pbl6.controller;
 import com.example.pbl6.common.ApiResponse;
 import com.example.pbl6.dto.adminroom.RoomRequest;
 import com.example.pbl6.dto.adminroom.RoomTypeRequest;
+import com.example.pbl6.dto.booking.BookingDetailResponse;
 import com.example.pbl6.entity.Room;
 import com.example.pbl6.entity.RoomType;
 import com.example.pbl6.service.RoomAdminService;
@@ -22,6 +23,12 @@ public class AdminRoomController {
     @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'HOUSEKEEPING')")
     public ApiResponse<java.util.List<Room>> getAllRooms() {
         return ApiResponse.ok(roomAdminService.getAllRooms());
+    }
+
+    @GetMapping("/rooms/{roomId}/bookings")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST', 'HOUSEKEEPING')")
+    public ApiResponse<java.util.List<BookingDetailResponse>> getRoomBookings(@PathVariable Integer roomId) {
+        return ApiResponse.ok(roomAdminService.getRoomBookings(roomId));
     }
 
     @PostMapping("/room-types")

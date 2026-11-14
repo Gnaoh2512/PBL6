@@ -3,7 +3,6 @@ package com.example.pbl6.service;
 import com.example.pbl6.dto.servicerequest.CreateServiceRequestDto;
 import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.Account;
-import com.example.pbl6.entity.BenefitRedemption;
 import com.example.pbl6.entity.Booking;
 import com.example.pbl6.entity.BookingRoom;
 import com.example.pbl6.entity.Customer;
@@ -13,7 +12,6 @@ import com.example.pbl6.entity.ServiceUsage;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
 import com.example.pbl6.repository.BookingRepository;
-import com.example.pbl6.repository.BenefitRedemptionRepository;
 import com.example.pbl6.repository.BookingRoomRepository;
 import com.example.pbl6.repository.CustomerRepository;
 import com.example.pbl6.repository.InvoiceRepository;
@@ -43,7 +41,6 @@ import java.util.stream.Collectors;
 public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private final ServiceRequestRepository serviceRequestRepository;
-    private final BenefitRedemptionRepository benefitRedemptionRepository;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
     private final RoomRepository roomRepository;
@@ -111,7 +108,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log(account, "YÊU CẦU DỊCH VỤ", "ORDER", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Đặt dịch vụ: " + service.getServiceName() + " x" + qty + " cho phòng " + room.getRoomNumber() + " (Đơn đặt: " + booking.getBookingCode() + ")");
 
-        return toResponse(saved);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -126,7 +123,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                         || (account.getEmail() != null && account.getEmail().equalsIgnoreCase(r.getCustomer().getEmail()))
                 ))
                 .sorted(Comparator.comparing(ServiceRequest::getServiceRequestId, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(this::toResponse)
+                .map(ServiceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -147,7 +144,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hủy yêu cầu dịch vụ #" + requestId + " bởi " + username);
 
-        return toResponse(saved);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -174,9 +171,13 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
 
         return list.stream()
-                .sorted(Comparator.comparing(ServiceRequest::getRequestedAt,
-                        Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(this::toResponse)
+                .sorted((a, b) -> {
+                    if (a.getServiceRequestId() != null && b.getServiceRequestId() != null) {
+                        return b.getServiceRequestId().compareTo(a.getServiceRequestId());
+                    }
+                    return 0;
+                })
+                .map(ServiceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -203,7 +204,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Nhân viên " + staffDisplay + " tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
 
-        return toResponse(saved);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -230,7 +231,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Phân công nhân viên " + staff.getFullName() + " phục vụ yêu cầu dịch vụ #" + requestId + " (bởi " + actorUsername + ")");
 
-        return toResponse(saved);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -259,7 +260,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "COMPLETE", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " bởi nhân viên " + staffUsername);
 
-        return toResponse(saved);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -294,7 +295,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "UPDATE_STATUS", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Đổi trạng thái yêu cầu #" + requestId + " sang " + upper + " bởi " + staffUsername);
 
-        return toResponse(saved);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     @Override
@@ -306,7 +307,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
         return serviceRequestRepository.findByCustomer_CustomerId(customerId).stream()
                 .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(this::toResponse)
+                .map(ServiceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -343,7 +344,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
         return serviceRequestRepository.findByBooking_BookingId(bookingId).stream()
                 .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(this::toResponse)
+                .map(ServiceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
     }
 
@@ -353,23 +354,6 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         Booking booking = bookingRepository.findByBookingCode(bookingCode.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
         return getRequestsByBookingId(booking.getBookingId());
-    }
-
-    private ServiceRequestResponse toResponse(ServiceRequest request) {
-        BenefitRedemption redemption = benefitRedemptionRepository
-                .findFirstByServiceRequest_ServiceRequestId(request.getServiceRequestId())
-                .orElseGet(() -> request.getServiceUsage() == null ? null
-                        : benefitRedemptionRepository.findFirstByServiceUsage_UsageId(request.getServiceUsage().getUsageId()).orElse(null));
-        return ServiceRequestResponse.fromEntity(request, redemption);
-    }
-
-    private void linkUsageRedemption(ServiceRequest request, ServiceUsage usage) {
-        benefitRedemptionRepository.findFirstByServiceUsage_UsageId(usage.getUsageId()).ifPresent(redemption -> {
-            if (redemption.getServiceRequest() == null) {
-                redemption.setServiceRequest(request);
-                benefitRedemptionRepository.save(redemption);
-            }
-        });
     }
 
     private void validateShiftIfScheduledDataExists(Account staff) {
@@ -385,109 +369,107 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private void syncServiceUsagesToRequests() {
         List<ServiceUsage> usages = serviceUsageRepository.findAll();
         List<ServiceRequest> existingRequests = serviceRequestRepository.findAll();
+        java.util.Set<Integer> claimedRequestIds = new java.util.HashSet<>();
 
-        for (ServiceUsage u : usages) {
-            if (u.getBooking() == null || u.getService() == null) continue;
-
-            List<ServiceRequest> matchingRequests = existingRequests.stream().filter(r -> {
-                try {
-                    return r.getBooking() != null && u.getBooking() != null
-                            && r.getBooking().getBookingId().equals(u.getBooking().getBookingId())
-                            && r.getService() != null && u.getService() != null
-                            && r.getService().getServiceId().equals(u.getService().getServiceId());
-                } catch (Exception ignored) {
-                    return false;
-                }
-            }).toList();
-            boolean exists = !matchingRequests.isEmpty();
-
-            if (matchingRequests.size() == 1 && matchingRequests.get(0).getServiceUsage() == null) {
-                ServiceRequest matched = matchingRequests.get(0);
-                matched.setServiceUsage(u);
-                serviceRequestRepository.save(matched);
-                linkUsageRedemption(matched, u);
+        for (ServiceUsage usage : usages) {
+            if (usage.getBooking() == null || usage.getService() == null || usage.getUsageId() == null) {
+                continue;
             }
 
-            if (!exists) {
-                Room room = null;
-                List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(u.getBooking().getBookingId());
-                for (BookingRoom br : bookingRooms) {
-                    if (br.getRoom() != null) {
-                        room = br.getRoom();
-                        break;
-                    }
-                }
-                if (room == null) {
-                    room = roomRepository.findAll().stream().findFirst().orElse(null);
-                }
-
-                Customer customer = u.getBooking().getCustomer();
-                if (customer == null) {
-                    customer = customerRepository.findAll().stream().findFirst().orElse(null);
-                }
-
-                if (room != null && customer != null) {
-                    int qty = u.getQuantity() != null && u.getQuantity() > 0 ? u.getQuantity() : 1;
-                    BigDecimal fee = u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO;
-                    String initialStatus = (u.getStatus() != null && !u.getStatus().isBlank()) ? u.getStatus().toUpperCase() : "PENDING";
-                    if ("CHARGED_TO_ROOM".equalsIgnoreCase(initialStatus)) {
-                        initialStatus = "PENDING";
-                    } else if ("IN_PROGRESS".equalsIgnoreCase(initialStatus)) {
-                        initialStatus = "DELIVERING";
-                    }
-
-                    ServiceRequest req = ServiceRequest.builder()
-                            .booking(u.getBooking())
-                            .room(room)
-                            .service(u.getService())
-                            .customer(customer)
-                            .quantity(qty)
-                            .feeAmount(fee)
-                            .status(initialStatus)
-                            .note("Yêu cầu dịch vụ phòng")
-                            .invoice(u.getInvoice())
-                            .serviceUsage(u)
-                            .requestedAt(u.getUsedAt() != null ? u.getUsedAt() : LocalDateTime.now())
-                            .build();
-
-                    ServiceRequest saved = serviceRequestRepository.save(req);
-                    existingRequests.add(saved);
-                    linkUsageRedemption(saved, u);
-                    log.info("Tự động đồng bộ ServiceUsage #{} sang ServiceRequest #{}", u.getUsageId(), saved.getServiceRequestId());
-                }
+            List<ServiceRequest> linked = serviceRequestRepository.findByServiceUsage_UsageId(usage.getUsageId());
+            if (!linked.isEmpty()) {
+                linked.forEach(r -> claimedRequestIds.add(r.getServiceRequestId()));
+                continue;
             }
+
+            // One-time compatibility link for legacy requests created before service_usage_id
+            // was populated. Exact booking/service/quantity/amount matching prevents unrelated
+            // free-benefit requests from consuming a paid usage row. Nearest timestamp resolves
+            // repeated orders for the same service.
+            ServiceRequest legacyMatch = existingRequests.stream()
+                    .filter(r -> r.getServiceRequestId() != null && !claimedRequestIds.contains(r.getServiceRequestId()))
+                    .filter(r -> r.getServiceUsage() == null)
+                    .filter(r -> r.getBooking() != null
+                            && usage.getBooking().getBookingId().equals(r.getBooking().getBookingId()))
+                    .filter(r -> r.getService() != null
+                            && usage.getService().getServiceId().equals(r.getService().getServiceId()))
+                    .filter(r -> java.util.Objects.equals(
+                            r.getQuantity() != null ? r.getQuantity() : 1,
+                            usage.getQuantity() != null ? usage.getQuantity() : 1))
+                    .filter(r -> r.getFeeAmount() != null && usage.getTotalPrice() != null
+                            && r.getFeeAmount().compareTo(usage.getTotalPrice()) == 0)
+                    .filter(r -> r.getRequestedAt() != null && usage.getUsedAt() != null
+                            && Math.abs(java.time.temporal.ChronoUnit.MINUTES.between(usage.getUsedAt(), r.getRequestedAt())) <= 30)
+                    .min(Comparator.comparingLong(r -> {
+                        if (r.getRequestedAt() == null || usage.getUsedAt() == null) return Long.MAX_VALUE;
+                        return Math.abs(java.time.temporal.ChronoUnit.MILLIS.between(usage.getUsedAt(), r.getRequestedAt()));
+                    }))
+                    .orElse(null);
+
+            if (legacyMatch != null) {
+                legacyMatch.setServiceUsage(usage);
+                ServiceRequest saved = serviceRequestRepository.save(legacyMatch);
+                claimedRequestIds.add(saved.getServiceRequestId());
+                log.info("Linked legacy ServiceRequest #{} to ServiceUsage #{}", saved.getServiceRequestId(), usage.getUsageId());
+                continue;
+            }
+
+            List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(usage.getBooking().getBookingId());
+            Room room = bookingRooms.stream()
+                    .filter(br -> br.getRoom() != null && "CHECKED_IN".equalsIgnoreCase(br.getStatus()))
+                    .sorted(Comparator.comparing(br -> br.getRoom().getRoomId()))
+                    .map(BookingRoom::getRoom)
+                    .findFirst()
+                    .orElseGet(() -> bookingRooms.stream()
+                            .filter(br -> br.getRoom() != null)
+                            .sorted(Comparator.comparing(br -> br.getRoom().getRoomId()))
+                            .map(BookingRoom::getRoom)
+                            .findFirst().orElse(null));
+            Customer customer = usage.getBooking().getCustomer();
+
+            // Never fabricate a room/customer by selecting the first unrelated database row.
+            if (room == null || customer == null) {
+                log.warn("Skipping ServiceUsage #{} sync: booking has no resolvable room/customer", usage.getUsageId());
+                continue;
+            }
+
+            int qty = usage.getQuantity() != null && usage.getQuantity() > 0 ? usage.getQuantity() : 1;
+            BigDecimal fee = usage.getTotalPrice() != null ? usage.getTotalPrice() : BigDecimal.ZERO;
+            String initialStatus = (usage.getStatus() != null && !usage.getStatus().isBlank())
+                    ? usage.getStatus().toUpperCase() : "PENDING";
+            if ("CHARGED_TO_ROOM".equalsIgnoreCase(initialStatus)) {
+                initialStatus = "PENDING";
+            } else if ("IN_PROGRESS".equalsIgnoreCase(initialStatus)) {
+                initialStatus = "DELIVERING";
+            }
+
+            ServiceRequest saved = serviceRequestRepository.save(ServiceRequest.builder()
+                    .booking(usage.getBooking())
+                    .room(room)
+                    .service(usage.getService())
+                    .customer(customer)
+                    .serviceUsage(usage)
+                    .quantity(qty)
+                    .feeAmount(fee)
+                    .status(initialStatus)
+                    .note("Yêu cầu dịch vụ phòng")
+                    .invoice(usage.getInvoice())
+                    .requestedAt(usage.getUsedAt() != null ? usage.getUsedAt() : LocalDateTime.now())
+                    .build());
+            existingRequests.add(saved);
+            claimedRequestIds.add(saved.getServiceRequestId());
+            log.info("Synced ServiceUsage #{} to ServiceRequest #{}", usage.getUsageId(), saved.getServiceRequestId());
         }
     }
 
     private void updateMatchingServiceUsageStatus(ServiceRequest req, String status) {
         try {
-            if (req.getBooking() != null && req.getService() != null) {
-                List<ServiceUsage> usages = serviceUsageRepository.findByBooking_BookingId(req.getBooking().getBookingId());
-                ServiceUsage target = null;
-                for (ServiceUsage u : usages) {
-                    if (u.getService() != null && u.getService().getServiceId().equals(req.getService().getServiceId())
-                            && !"SETTLED".equalsIgnoreCase(u.getStatus())) {
-                        if (!status.equalsIgnoreCase(u.getStatus())) {
-                            target = u;
-                            break;
-                        }
-                    }
-                }
-                if (target == null && !usages.isEmpty()) {
-                    for (ServiceUsage u : usages) {
-                        if (u.getService() != null && u.getService().getServiceId().equals(req.getService().getServiceId())) {
-                            target = u;
-                            break;
-                        }
-                    }
-                }
-                if (target != null) {
-                    target.setStatus(status);
-                    serviceUsageRepository.save(target);
-                    log.info("Đã đồng bộ ServiceUsage #{} sang trạng thái {}", target.getUsageId(), status);
-                    recalculateActiveInvoice(req.getBooking());
-                }
-            }
+            ServiceUsage usage = req.getServiceUsage();
+            if (usage == null) return;
+            usage.setStatus(status);
+            serviceUsageRepository.save(usage);
+            log.info("Đã đồng bộ ServiceUsage #{} sang trạng thái {}", usage.getUsageId(), status);
+            recalculateActiveInvoice(req.getBooking());
         } catch (Exception e) {
             log.warn("Không thể cập nhật ServiceUsage đồng bộ: {}", e.getMessage());
         }

@@ -29,33 +29,23 @@ const getRequestTime = (request) => request?.requestedAt ?? request?.reqTime ?? 
 // Only explicit backend loyalty metadata classifies a request as a loyalty benefit.
 // A zero fee alone is not sufficient: regular services can also be waived.
 const isLoyaltyBenefitRequest = (request) => {
-  // Trust the explicit backend classification before inspecting optional metadata.
-  if (typeof request?.isLoyaltyBenefit === "boolean") return request.isLoyaltyBenefit;
-  if (request?.loyaltyBenefit === true || request?.freeByLoyalty === true) return true;
-  if (request?.loyaltyBenefit === false || request?.freeByLoyalty === false) return false;
+  if (request?.isLoyaltyBenefit === true || request?.loyaltyBenefit === true || request?.freeByLoyalty === true) return true;
 
   const marker = [request?.benefitType, request?.requestType, request?.serviceSource, request?.source, request?.benefitCode].filter(Boolean).join(" ").toUpperCase();
 
-  if (marker.includes("LOYALTY") || marker.includes("TIER_BENEFIT") || marker.includes("FREE_SERVICE") || request?.benefitRedemptionId || request?.tierBenefitId || request?.loyaltyBenefitId)
-    return true;
+  if (marker.includes("LOYALTY") || marker.includes("TIER_BENEFIT") || request?.benefitRedemptionId || request?.tierBenefitId || request?.loyaltyBenefitId) return true;
 
-  if (marker.includes("NORMAL") || marker.includes("REGULAR") || marker.includes("STANDARD")) {
-    return false;
-  }
+  if (request?.isLoyaltyBenefit === false || request?.loyaltyBenefit === false || marker.includes("NORMAL") || marker.includes("REGULAR") || marker.includes("STANDARD")) return false;
 
-  // The updated API always supplies isLoyaltyBenefit. Older responses default to regular.
-  return false;
+  return null;
 };
 
-const toRequestTimestamp = (value) => {
-  if (Array.isArray(value)) {
-    const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nanos = 0] = value;
-    return new Date(year, month - 1, day, hour, minute, second, Math.floor(nanos / 1_000_000)).getTime();
-  }
-  return Date.parse(value || "") || 0;
-};
-
-const sortRequestsNewestFirst = (items) => [...items].sort((a, b) => toRequestTimestamp(getRequestTime(b)) - toRequestTimestamp(getRequestTime(a)));
+const sortRequestsNewestFirst = (items) =>
+  [...items].sort((a, b) => {
+    const timeA = Date.parse(getRequestTime(a) || "") || 0;
+    const timeB = Date.parse(getRequestTime(b) || "") || 0;
+    return timeB - timeA;
+  });
 
 export default function StaffRequestsPage() {
   const { addToast } = useToast();
@@ -261,7 +251,6 @@ export default function StaffRequestsPage() {
                     <tr key={request.serviceRequestId}>
                       <td>
                         <strong>{request.serviceName || "Yêu cầu dịch vụ"}</strong>
-                        {isLoyaltyBenefit && request.benefitName && <div style={{ fontSize: "12px", color: "var(--hc-success, #16a34a)", marginTop: "2px" }}>{request.benefitName}</div>}
                         {request.note && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.note}</div>}
                       </td>
                       <td>
@@ -410,13 +399,7 @@ export default function StaffRequestsPage() {
               </div>
               <div>
                 <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Loại dịch vụ</span>
-                <strong>
-                  {isLoyaltyBenefitRequest(targetRequest) === true
-                    ? `Ưu đãi hội viên${targetRequest.benefitName ? ` — ${targetRequest.benefitName}` : ""}`
-                    : isLoyaltyBenefitRequest(targetRequest) === false
-                      ? "Dịch vụ thường"
-                      : "Chưa xác định"}
-                </strong>
+                <strong>{isLoyaltyBenefitRequest(targetRequest) === true ? "Ưu đãi hội viên" : isLoyaltyBenefitRequest(targetRequest) === false ? "Dịch vụ thường" : "Chưa xác định"}</strong>
               </div>
               <div>
                 <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Thành tiền</span>
