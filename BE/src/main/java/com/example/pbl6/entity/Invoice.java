@@ -39,6 +39,11 @@ public class Invoice {
     @Column(name = "discount_amount", precision = 15, scale = 2)
     private BigDecimal discountAmount;
 
+    /** Loyalty room discount stored separately from voucher/manual discounts. */
+    @Builder.Default
+    @Column(name = "loyalty_discount_amount", precision = 15, scale = 2)
+    private BigDecimal loyaltyDiscountAmount = BigDecimal.ZERO;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "discount_approved_by")
     private Account discountApprovedBy;

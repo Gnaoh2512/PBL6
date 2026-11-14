@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { apiCall, formatVND } from "../../services/api";
+import { apiCall, formatVND, getRoomTypeName, getRoomBasePrice } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import DatePicker from "../../components/DatePicker";
 import SelectMenu from "../../components/SelectMenu";
@@ -33,6 +33,7 @@ export default function StaffWalkInPage() {
   const [idType, setIdType] = useState("CCCD");
   const [idNumber, setIdNumber] = useState("");
   const [checkInImmediately, setCheckInImmediately] = useState(true);
+  const [createAccount, setCreateAccount] = useState(true);
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("CASH");
   const [note, setNote] = useState("");
@@ -68,10 +69,14 @@ export default function StaffWalkInPage() {
     if (checkOutDate <= iso) setCheckOutDate(addDays(iso, 1));
   };
 
+  // Same helpers StaffRoomsPage uses; pricePerNight is the fallback from AvailableRoomResponse
+  const getTypeName = (r) => getRoomTypeName(r) || r?.roomType?.typeName || "Chưa rõ loại phòng";
+  const getPrice = (r) => Number(getRoomBasePrice(r)) || Number(r?.pricePerNight) || 0;
+
   const roomOptions = availableRooms.length
     ? availableRooms.map((r) => ({
         value: String(r.roomId),
-        label: `Phòng ${r.roomNumber} - ${r.roomTypeName} (${formatVND(r.basePrice)}/đêm)`,
+        label: `Phòng ${r.roomNumber} - ${getTypeName(r)} (${formatVND(getPrice(r))}/đêm)`,
       }))
     : [{ value: "", label: loadingRooms ? "Đang tải..." : "Không có phòng trống" }];
 
@@ -91,7 +96,7 @@ export default function StaffWalkInPage() {
 
   const selectedRoom = availableRooms.find((r) => String(r.roomId) === String(roomId));
   const nights = Math.max(1, Math.round((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)) || 1);
-  const roomPrice = selectedRoom ? selectedRoom.basePrice || 500000 : 500000;
+  const roomPrice = selectedRoom ? getPrice(selectedRoom) : 0;
   const totalAmount = roomPrice * nights;
 
   const handleSubmitWalkIn = async (e) => {
@@ -103,6 +108,20 @@ export default function StaffWalkInPage() {
     if (!fullName.trim() || !phone.trim()) {
       addToast("Vui lòng điền họ tên và số điện thoại khách hàng!", "warning");
       return;
+    }
+    if (createAccount) {
+      if (!email.trim()) {
+        addToast("Cần nhập email để tạo tài khoản cho khách!", "warning");
+        return;
+      }
+      if (email.trim().length > 50) {
+        addToast("Email quá dài (tối đa 50 ký tự) để dùng làm tên đăng nhập!", "warning");
+        return;
+      }
+      if (phone.trim().length < 6) {
+        addToast("Số điện thoại phải có ít nhất 6 ký tự để làm mật khẩu mặc định!", "warning");
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -118,6 +137,7 @@ export default function StaffWalkInPage() {
       idType,
       idNumber: idNumber.trim() || null,
       checkInImmediately,
+      createAccount,
       amountPaid: amountPaid ? parseFloat(amountPaid) : 0,
       paymentMethod: amountPaid && parseFloat(amountPaid) > 0 ? paymentMethod : "CASH",
       note: note.trim() || null,
@@ -130,7 +150,12 @@ export default function StaffWalkInPage() {
       });
 
       if (res && res.success) {
-        addToast(`Đặt phòng Walk-in thành công cho khách ${fullName} (Mã: ${res.data.bookingCode})!`, "success");
+        addToast(
+          createAccount
+            ? `Đặt phòng Walk-in thành công cho khách ${fullName} (Mã: ${res.data.bookingCode}). Đã tạo tài khoản ${email.trim()}, mật khẩu mặc định là số điện thoại.`
+            : `Đặt phòng Walk-in thành công cho khách ${fullName} (Mã: ${res.data.bookingCode})!`,
+          "success",
+        );
         navigate("/staff/rooms");
       }
     } catch (err) {
@@ -199,8 +224,8 @@ export default function StaffWalkInPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="hc-form-group">
-                  <label className="hc-label">Email</label>
-                  <input type="email" className="hc-input" placeholder="khach@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  <label className="hc-label">Email {createAccount && <span style={{ color: "var(--hc-error)" }}>*</span>}</label>
+                  <input type="email" className="hc-input" placeholder="khach@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required={createAccount} />
                 </div>
                 <div className="hc-form-group">
                   <label className="hc-label">Quốc tịch</label>
@@ -226,6 +251,17 @@ export default function StaffWalkInPage() {
                   <div>
                     <strong>Nhận phòng ngay (Check-in tức thì)</strong>
                     <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Tự động chuyển trạng thái phòng sang ĐANG Ở (OCCUPIED) ngay khi lưu đơn.</div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Create Account Switch */}
+              <div style={{ background: "var(--hc-bg)", padding: "14px 18px", borderRadius: "var(--hc-radius-md)", marginBottom: "20px", border: "1px solid var(--hc-border)" }}>
+                <label className="hc-switch">
+                  <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} />
+                  <div>
+                    <strong>Tạo tài khoản cho khách</strong>
+                    <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Tên đăng nhập là email, mật khẩu mặc định là số điện thoại. Bắt buộc nhập email.</div>
                   </div>
                 </label>
               </div>
@@ -266,7 +302,7 @@ export default function StaffWalkInPage() {
             <div className="hc-card-body">
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
                 <span style={{ color: "var(--hc-text-secondary)" }}>Phòng:</span>
-                <strong>{selectedRoom ? `Phòng ${selectedRoom.roomNumber} (${selectedRoom.roomTypeName})` : "Chưa chọn"}</strong>
+                <strong>{selectedRoom ? `Phòng ${selectedRoom.roomNumber} (${getTypeName(selectedRoom)})` : "Chưa chọn"}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
                 <span style={{ color: "var(--hc-text-secondary)" }}>Đơn giá:</span>

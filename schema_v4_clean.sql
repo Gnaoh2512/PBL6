@@ -146,6 +146,7 @@ CREATE TABLE IF NOT EXISTS tier_benefit (
     tier_benefit_id INT AUTO_INCREMENT PRIMARY KEY,
     tier_id INT NOT NULL,
     service_id INT NULL COMMENT 'nullable, for FREE_SERVICE',
+    room_type_id INT NULL,
     benefit_type VARCHAR(50) NOT NULL COMMENT 'ROOM_DISCOUNT | FREE_SERVICE',
     benefit_name VARCHAR(150) NOT NULL,
     discount_percent DECIMAL(5, 2) NULL COMMENT 'for ROOM_DISCOUNT',
@@ -153,13 +154,23 @@ CREATE TABLE IF NOT EXISTS tier_benefit (
     period_type VARCHAR(50) NULL COMMENT 'DAY | MONTH | YEAR (calendar quota period)',
     is_active BOOLEAN DEFAULT TRUE,
     description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (tier_id) REFERENCES loyalty_tier(tier_id) ON DELETE CASCADE,
     FOREIGN KEY (service_id) REFERENCES service(service_id) ON DELETE SET NULL,
+    CONSTRAINT fk_tier_benefit_room_type FOREIGN KEY (room_type_id) REFERENCES room_type(room_type_id) ON DELETE SET NULL,
+
+    INDEX idx_tb_type_service (benefit_type, service_id),
+
     CONSTRAINT uq_tier_benefit_name UNIQUE (tier_id, benefit_name),
-    CONSTRAINT ck_tb_period_type CHECK (period_type IS NULL OR period_type IN ('DAY','MONTH','YEAR')),
+    CONSTRAINT ck_tb_period_type CHECK (period_type IS NULL OR period_type IN ('DAY', 'MONTH', 'YEAR')),
     CONSTRAINT ck_tb_quota_period CHECK (quota IS NULL OR (quota > 0 AND period_type IS NOT NULL)),
-    CONSTRAINT ck_tb_benefit_type CHECK (benefit_type IN ('ROOM_DISCOUNT','FREE_SERVICE')),
-    CONSTRAINT ck_tb_discount CHECK (benefit_type <> 'ROOM_DISCOUNT' OR (discount_percent IS NOT NULL AND discount_percent > 0 AND discount_percent <= 100))
+    CONSTRAINT ck_tb_benefit_type CHECK (benefit_type IN ('ROOM_DISCOUNT', 'FREE_SERVICE')),
+    CONSTRAINT ck_tb_discount CHECK (
+        (benefit_type = 'ROOM_DISCOUNT' AND discount_percent IS NOT NULL AND discount_percent > 0 AND discount_percent <= 100)
+        OR (benefit_type = 'FREE_SERVICE' AND discount_percent IS NULL)
+    )
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS voucher (
@@ -251,24 +262,21 @@ CREATE TABLE IF NOT EXISTS maintenance_request (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS roomcleaning_request (
-    request_id INT AUTO_INCREMENT PRIMARY KEY,
+    cleaning_id INT AUTO_INCREMENT PRIMARY KEY,
     room_id INT NOT NULL,
-    reported_by INT NOT NULL COMMENT 'account',
+    booking_id INT NULL,
+    requested_by INT NULL COMMENT 'account',
     assigned_to INT NULL COMMENT 'account, housekeeping staff',
-    confirmed_by INT NULL COMMENT 'account confirming completion',
-    title VARCHAR(200) NOT NULL DEFAULT 'Yêu cầu dọn phòng',
-    description TEXT,
     priority VARCHAR(50) DEFAULT 'MEDIUM' COMMENT 'LOW | MEDIUM | HIGH | URGENT',
-    status VARCHAR(50) DEFAULT 'OPEN' COMMENT 'OPEN | IN_PROGRESS | DONE | CONFIRMED | CANCELED',
+    status VARCHAR(50) DEFAULT 'PENDING' COMMENT 'PENDING | IN_PROGRESS | COMPLETED | CANCELED',
     note TEXT,
-    reported_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     started_at DATETIME NULL,
     completed_at DATETIME NULL,
-    confirmed_at DATETIME NULL,
     FOREIGN KEY (room_id) REFERENCES room(room_id) ON DELETE RESTRICT,
-    FOREIGN KEY (reported_by) REFERENCES account(account_id) ON DELETE RESTRICT,
-    FOREIGN KEY (assigned_to) REFERENCES account(account_id) ON DELETE SET NULL,
-    FOREIGN KEY (confirmed_by) REFERENCES account(account_id) ON DELETE SET NULL
+    FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE SET NULL,
+    FOREIGN KEY (requested_by) REFERENCES account(account_id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to) REFERENCES account(account_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS booking_room (
@@ -292,21 +300,25 @@ CREATE TABLE IF NOT EXISTS invoice (
     issued_by INT,
     discount_approved_by INT,
     canceled_by INT,
-    room_charge DECIMAL(15, 2),
-    service_charge DECIMAL(15, 2),
-    tax_amount DECIMAL(15, 2),
-    discount_amount DECIMAL(15, 2),
-    deposit_applied DECIMAL(15, 2),
-    total_amount DECIMAL(15, 2),
+    applied_tier_benefit_id INT NULL COMMENT 'Tracks which tier ROOM_DISCOUNT was auto-applied',
+    room_charge DECIMAL(15, 2) DEFAULT 0.00,
+    service_charge DECIMAL(15, 2) DEFAULT 0.00,
+    tax_amount DECIMAL(15, 2) DEFAULT 0.00,
+    discount_amount DECIMAL(15, 2) DEFAULT 0.00 COMMENT 'Manual/promo discount',
+    loyalty_discount_amount DECIMAL(15, 2) NOT NULL DEFAULT 0.00 COMMENT 'Auto-applied highest current-tier room discount',
+    deposit_applied DECIMAL(15, 2) DEFAULT 0.00,
+    total_amount DECIMAL(15, 2) DEFAULT 0.00,
     status VARCHAR(50),
     cancel_reason TEXT,
     canceled_at DATETIME,
     issued_at DATETIME,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
     FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE CASCADE,
     FOREIGN KEY (discount_approved_by) REFERENCES account(account_id) ON DELETE SET NULL,
     FOREIGN KEY (canceled_by) REFERENCES account(account_id) ON DELETE SET NULL,
-    FOREIGN KEY (issued_by) REFERENCES account(account_id) ON DELETE SET NULL
+    FOREIGN KEY (issued_by) REFERENCES account(account_id) ON DELETE SET NULL,
+    FOREIGN KEY (applied_tier_benefit_id) REFERENCES tier_benefit(tier_benefit_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS service_usage (
@@ -354,18 +366,22 @@ CREATE TABLE IF NOT EXISTS service_request (
     customer_id INT NOT NULL COMMENT 'guest who made the request',
     assigned_to INT NULL COMMENT 'account, service staff handling it',
     invoice_id INT NULL COMMENT 'nullable until invoiced',
+    service_usage_id INT NULL COMMENT 'source service usage when synchronized',
     quantity INT DEFAULT 1,
     fee_amount DECIMAL(15, 2) NOT NULL COMMENT 'fee charged for this request, VND',
     status VARCHAR(50) DEFAULT 'PENDING' COMMENT 'PENDING | DELIVERING | COMPLETED | CANCELED',
     note TEXT,
     requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     completed_at DATETIME NULL,
+
     FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE CASCADE,
     FOREIGN KEY (room_id) REFERENCES room(room_id) ON DELETE RESTRICT,
     FOREIGN KEY (service_id) REFERENCES service(service_id) ON DELETE RESTRICT,
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT,
     FOREIGN KEY (assigned_to) REFERENCES account(account_id) ON DELETE SET NULL,
-    FOREIGN KEY (invoice_id) REFERENCES invoice(invoice_id) ON DELETE SET NULL
+    FOREIGN KEY (invoice_id) REFERENCES invoice(invoice_id) ON DELETE SET NULL,
+    CONSTRAINT fk_service_request_service_usage FOREIGN KEY (service_usage_id) REFERENCES service_usage(usage_id) ON DELETE SET NULL,
+    CONSTRAINT uq_service_request_service_usage UNIQUE (service_usage_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS voucher_redemption (
@@ -405,6 +421,8 @@ CREATE TABLE IF NOT EXISTS benefit_redemption (
     booking_id INT NULL,
     invoice_id INT NULL,
     service_usage_id INT NULL COMMENT 'nullable, for FREE_SERVICE',
+    service_request_id INT NULL COMMENT 'exact service request redeemed with FREE_SERVICE',
+    idempotency_key VARCHAR(64) NULL,
     approved_by INT NULL COMMENT 'account, nullable',
     value_amount DECIMAL(15, 2) NOT NULL COMMENT 'VND discounted or waived',
     note TEXT,
@@ -418,15 +436,21 @@ CREATE TABLE IF NOT EXISTS benefit_redemption (
     room_discount_booking_id INT GENERATED ALWAYS AS (
         IF(status = 'APPLIED' AND benefit_type = 'ROOM_DISCOUNT', booking_id, NULL)
     ) VIRTUAL,
+
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT,
     FOREIGN KEY (tier_benefit_id) REFERENCES tier_benefit(tier_benefit_id) ON DELETE RESTRICT,
     FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE SET NULL,
     FOREIGN KEY (invoice_id) REFERENCES invoice(invoice_id) ON DELETE SET NULL,
     FOREIGN KEY (service_usage_id) REFERENCES service_usage(usage_id) ON DELETE SET NULL,
+    CONSTRAINT fk_benefit_redemption_service_request FOREIGN KEY (service_request_id) REFERENCES service_request(service_request_id) ON DELETE SET NULL,
     FOREIGN KEY (approved_by) REFERENCES account(account_id) ON DELETE SET NULL,
     CONSTRAINT fk_redemption_voided_by FOREIGN KEY (voided_by) REFERENCES account(account_id) ON DELETE SET NULL,
+
     CONSTRAINT ck_redemption_status CHECK (status IN ('APPLIED','VOIDED')),
     CONSTRAINT uq_one_room_discount_per_booking UNIQUE (room_discount_booking_id),
+    CONSTRAINT uq_benefit_redemption_service_request UNIQUE (service_request_id),
+    CONSTRAINT uq_benefit_redemption_customer_idempotency UNIQUE (customer_id, idempotency_key),
+
     INDEX idx_redemption_quota (customer_id, tier_benefit_id, status, period_start),
     INDEX idx_redemption_booking (booking_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

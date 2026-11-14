@@ -5,7 +5,6 @@ import Footer from "../components/Footer";
 import Modal from "../components/Modal";
 import { apiCall, formatVND, formatDate, formatDateTime, getAuthUser } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
-import "./GuestPages.css";
 
 const BOOKING_STATUS_LABEL = {
   PENDING: "Chờ xác nhận",
@@ -27,13 +26,6 @@ const STATUS_FILTER_OPTIONS = [
   { value: "CHECKED_OUT", label: "Đã trả phòng" },
   { value: "CANCELED", label: "Đã hủy" },
 ];
-
-const TONE = {
-  primary: { background: "var(--hc-primary-subtle)", color: "var(--hc-primary)" },
-  info: { background: "var(--hc-info-bg)", color: "var(--hc-info)" },
-  success: { background: "var(--hc-success-bg)", color: "var(--hc-success)" },
-  warning: { background: "var(--hc-warning-bg)", color: "var(--hc-warning)" },
-};
 
 const renderServiceStatusBadge = (status) => {
   const norm = (status || "PENDING").toUpperCase();
@@ -85,6 +77,7 @@ export default function HistoryPage({ portal = false }) {
   const [activeTab, setActiveTab] = useState(authUser ? "MEMBER" : "PHONE");
   const [phoneInput, setPhoneInput] = useState(authUser?.phone || "");
   const [bookings, setBookings] = useState([]);
+  const [paidInvoiceTotals, setPaidInvoiceTotals] = useState({});
   const [loading, setLoading] = useState(false);
 
   // Filters (applied to the loaded list)
@@ -95,6 +88,7 @@ export default function HistoryPage({ portal = false }) {
   const [selectedBookingCode, setSelectedBookingCode] = useState("");
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [bookingDetail, setBookingDetail] = useState(null);
+  const [billingFolio, setBillingFolio] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   useEffect(() => {
@@ -103,6 +97,23 @@ export default function HistoryPage({ portal = false }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  const loadPaidInvoiceTotals = async (bookingList) => {
+    const paidBookings = (bookingList || []).filter((booking) => getBookingStatus(booking) === "CHECKED_OUT" && booking.bookingCode);
+    if (paidBookings.length === 0) {
+      setPaidInvoiceTotals({});
+      return;
+    }
+
+    const results = await Promise.allSettled(paidBookings.map((booking) => apiCall(`/api/public/bookings/${encodeURIComponent(booking.bookingCode)}/folio`, { silentError: true })));
+    const totals = {};
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value?.success && result.value.data?.totalAmount != null) {
+        totals[paidBookings[index].bookingCode] = result.value.data.totalAmount;
+      }
+    });
+    setPaidInvoiceTotals(totals);
+  };
 
   const loadPhoneHistory = async () => {
     if (!phoneInput.trim()) {
@@ -115,6 +126,7 @@ export default function HistoryPage({ portal = false }) {
       const res = await apiCall(`/api/public/history/lookup?phone=${encodeURIComponent(phoneInput.trim())}`);
       if (res && res.success) {
         setBookings(res.data || []);
+        loadPaidInvoiceTotals(res.data || []);
         if (res.data.length === 0) {
           addToast("Không tìm thấy đơn đặt phòng nào với số điện thoại này", "info");
         }
@@ -135,6 +147,7 @@ export default function HistoryPage({ portal = false }) {
       const res = await apiCall("/api/customer/bookings/history");
       if (res && res.success) {
         setBookings(res.data || []);
+        loadPaidInvoiceTotals(res.data || []);
       } else {
         setBookings([]);
       }
@@ -154,23 +167,28 @@ export default function HistoryPage({ portal = false }) {
     setSelectedBookingCode(code);
     setDetailModalOpen(true);
     setLoadingDetail(true);
+    setBookingDetail(null);
+    setBillingFolio(null);
 
     try {
-      let endpoint = "";
-      if (activeTab === "MEMBER") {
-        endpoint = `/api/customer/bookings/history/${code}`;
-      } else {
-        endpoint = `/api/public/history/lookup/${code}?phone=${encodeURIComponent(phoneInput.trim())}`;
-      }
+      const endpoint =
+        activeTab === "MEMBER" ? `/api/customer/bookings/history/${encodeURIComponent(code)}` : `/api/public/history/lookup/${encodeURIComponent(code)}?phone=${encodeURIComponent(phoneInput.trim())}`;
 
-      const res = await apiCall(endpoint);
-      if (res && res.success) {
-        setBookingDetail(res.data);
+      // History provides guest/service details. The folio endpoint provides
+      // the calculated discount and payable total.
+      const [detailResult, folioResult] = await Promise.allSettled([apiCall(endpoint), apiCall(`/api/public/bookings/${encodeURIComponent(code)}/folio`, { silentError: true })]);
+
+      if (detailResult.status === "fulfilled" && detailResult.value?.success) {
+        setBookingDetail(detailResult.value.data);
       } else {
         setBookingDetail(null);
       }
+      if (folioResult.status === "fulfilled" && folioResult.value?.success) {
+        setBillingFolio(folioResult.value.data);
+      }
     } catch (err) {
       setBookingDetail(null);
+      setBillingFolio(null);
       addToast(err.message || "Không thể tải chi tiết đơn", "error");
     } finally {
       setLoadingDetail(false);
@@ -181,21 +199,11 @@ export default function HistoryPage({ portal = false }) {
     const currentStatus = getBookingStatus(b);
     const matchStatus = statusFilter === "ALL" || currentStatus === statusFilter;
     const query = searchQuery.trim().toLowerCase();
-    const matchSearch =
-      !query ||
-      `${b.bookingCode || ""} ${b.roomNumber || ""} ${b.roomTypeName || ""} ${b.customerName || b.fullName || ""}`
-        .toLowerCase()
-        .includes(query);
+    const matchSearch = !query || `${b.bookingCode || ""} ${b.roomNumber || ""} ${b.roomTypeName || ""} ${b.customerName || b.fullName || ""}`.toLowerCase().includes(query);
     return matchStatus && matchSearch;
   });
 
   const hasFilter = statusFilter !== "ALL" || searchQuery.trim() !== "";
-
-  // Stat calculations
-  const totalCount = bookings.length;
-  const inStayCount = bookings.filter((b) => getBookingStatus(b) === "CHECKED_IN").length;
-  const confirmedCount = bookings.filter((b) => getBookingStatus(b) === "CONFIRMED").length;
-  const completedCount = bookings.filter((b) => getBookingStatus(b) === "CHECKED_OUT").length;
 
   const navigateServices = (code) => {
     const target = portal ? `/guest/services?bookingCode=${encodeURIComponent(code)}` : `/services?bookingCode=${encodeURIComponent(code)}`;
@@ -218,57 +226,9 @@ export default function HistoryPage({ portal = false }) {
             <Link to="/booking" className="hc-btn hc-btn-primary">
               <i className="bi bi-calendar-plus"></i> Đặt thêm phòng
             </Link>
-            <button
-              type="button"
-              className="hc-btn hc-btn-outline"
-              onClick={handleRefresh}
-              disabled={loading || (activeTab === "PHONE" && !phoneInput.trim())}
-            >
+            <button type="button" className="hc-btn hc-btn-outline" onClick={handleRefresh} disabled={loading || (activeTab === "PHONE" && !phoneInput.trim())}>
               <i className="bi bi-arrow-clockwise"></i> Làm mới
             </button>
-          </div>
-        </div>
-
-        {/* Stats Strip */}
-        <div className="guest-stats-grid">
-          <div className="guest-stat-card">
-            <div className="guest-stat-icon" style={TONE.primary}>
-              <i className="bi bi-journal-check"></i>
-            </div>
-            <div className="guest-stat-content">
-              <div className="guest-stat-val">{totalCount}</div>
-              <div className="guest-stat-lbl">Tổng số đơn</div>
-            </div>
-          </div>
-
-          <div className="guest-stat-card">
-            <div className="guest-stat-icon" style={TONE.info}>
-              <i className="bi bi-door-open"></i>
-            </div>
-            <div className="guest-stat-content">
-              <div className="guest-stat-val">{inStayCount}</div>
-              <div className="guest-stat-lbl">Đang lưu trú</div>
-            </div>
-          </div>
-
-          <div className="guest-stat-card">
-            <div className="guest-stat-icon" style={TONE.warning}>
-              <i className="bi bi-calendar-heart"></i>
-            </div>
-            <div className="guest-stat-content">
-              <div className="guest-stat-val">{confirmedCount}</div>
-              <div className="guest-stat-lbl">Đã xác nhận</div>
-            </div>
-          </div>
-
-          <div className="guest-stat-card">
-            <div className="guest-stat-icon" style={TONE.success}>
-              <i className="bi bi-check-circle"></i>
-            </div>
-            <div className="guest-stat-content">
-              <div className="guest-stat-val">{completedCount}</div>
-              <div className="guest-stat-lbl">Đã hoàn tất</div>
-            </div>
           </div>
         </div>
 
@@ -288,8 +248,8 @@ export default function HistoryPage({ portal = false }) {
               )}
 
               {activeTab === "PHONE" && (
-                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
-                  <div className="guest-search" style={{ flex: "1 1 320px", width: "auto" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "nowrap" }}>
+                  <div className="guest-search" style={{ flex: 1, width: "auto" }}>
                     <i className="bi bi-telephone"></i>
                     <input
                       type="tel"
@@ -303,7 +263,7 @@ export default function HistoryPage({ portal = false }) {
                       }}
                     />
                   </div>
-                  <button type="button" className="hc-btn hc-btn-primary" onClick={loadPhoneHistory} disabled={loading}>
+                  <button type="button" className="hc-btn hc-btn-primary" style={{ whiteSpace: "nowrap" }} onClick={loadPhoneHistory} disabled={loading}>
                     <i className="bi bi-search"></i> {loading ? "Đang tra cứu..." : "Tìm đơn"}
                   </button>
                 </div>
@@ -314,19 +274,34 @@ export default function HistoryPage({ portal = false }) {
 
         {/* Bookings Card */}
         <div className="hc-card guest-card">
-          <div className="hc-card-header">
-            <div className="guest-toolbar">
-              <div className="guest-toolbar-title">
+          <div className="hc-card-header" style={{ paddingLeft: "20px", paddingRight: "20px" }}>
+            <div
+              className="guest-toolbar"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                flexWrap: "nowrap",
+                width: "100%",
+                overflowX: "auto",
+              }}
+            >
+              <div className="guest-toolbar-title" style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
                 <i className="bi bi-list-check text-primary"></i> Danh sách đơn đặt phòng
-                {filteredBookings.length > 0 && (
-                  <span className="hc-badge hc-badge-primary" style={{ marginLeft: "6px", fontSize: "11px" }}>
-                    {filteredBookings.length} đơn
-                  </span>
-                )}
               </div>
 
-              <div className="guest-toolbar-controls">
-                <div className="guest-search">
+              <div
+                className="guest-toolbar-controls"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  flexWrap: "nowrap",
+                  marginLeft: "auto",
+                }}
+              >
+                <div className="guest-search" style={{ minWidth: "240px" }}>
                   <i className="bi bi-search"></i>
                   <input
                     type="text"
@@ -337,7 +312,13 @@ export default function HistoryPage({ portal = false }) {
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <select className="hc-select guest-select" aria-label="Lọc trạng thái đơn" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <select
+                  className="hc-select guest-select"
+                  style={{ width: "auto", minWidth: "175px", flexShrink: 0 }}
+                  aria-label="Lọc trạng thái đơn"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
                   {STATUS_FILTER_OPTIONS.map((o) => (
                     <option key={o.value} value={o.value}>
                       {o.label}
@@ -360,8 +341,8 @@ export default function HistoryPage({ portal = false }) {
                   {hasFilter
                     ? "Không tìm thấy đơn đặt phòng nào khớp với bộ lọc."
                     : activeTab === "PHONE"
-                    ? 'Nhập số điện thoại và bấm "Tìm đơn" để xem các đơn đặt phòng.'
-                    : "Bạn chưa có đơn đặt phòng nào. Hãy khám phá và đặt phòng nghỉ dưỡng tại Azure Bay ngay hôm nay!"}
+                      ? 'Nhập số điện thoại và bấm "Tìm đơn" để xem các đơn đặt phòng.'
+                      : "Bạn chưa có đơn đặt phòng nào. Hãy khám phá và đặt phòng nghỉ dưỡng tại Azure Bay ngay hôm nay!"}
                 </p>
                 {!hasFilter && (
                   <Link to="/booking" className="hc-btn hc-btn-primary" style={{ marginTop: "14px" }}>
@@ -370,82 +351,88 @@ export default function HistoryPage({ portal = false }) {
                 )}
               </div>
             ) : (
-              <table className="hc-table">
+              <table className="hc-table" style={{ width: "100%" }}>
                 <thead>
                   <tr>
-                    <th>Mã đơn</th>
-                    <th>Phòng nghỉ</th>
-                    <th>Thời gian lưu trú</th>
-                    <th>Tổng chi phí</th>
-                    <th>Trạng thái</th>
-                    <th style={{ textAlign: "right" }}>Thao tác</th>
+                    <th style={{ textAlign: "left", paddingLeft: "20px" }}>Mã đơn</th>
+                    <th style={{ textAlign: "left" }}>Phòng nghỉ</th>
+                    <th style={{ textAlign: "left" }}>Thời gian lưu trú</th>
+                    <th style={{ textAlign: "left" }}>Tổng chi phí</th>
+                    <th style={{ textAlign: "left" }}>Trạng thái</th>
+                    <th style={{ textAlign: "left", paddingRight: "20px" }}>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredBookings.map((b) => (
-                    <tr
-                      key={b.bookingCode || b.bookingId}
-                      className="guest-booking-row"
-                      onClick={() => openDetailModal(b.bookingCode)}
-                      title="Nhấn để mở chi tiết lượt đặt phòng & dịch vụ đã sử dụng"
-                    >
-                      <td>
-                        <strong style={{ color: "var(--hc-primary)", fontSize: "14px" }}>{b.bookingCode}</strong>
-                        <div className="guest-cell-sub">Khách: {b.customerName || b.fullName}</div>
-                      </td>
-                      <td>
-                        <strong>{b.roomNumber ? `Phòng ${b.roomNumber}` : "Đang bố trí"}</strong>
-                        <div className="guest-cell-sub">{b.roomTypeName || "Hạng tiêu chuẩn"}</div>
-                      </td>
-                      <td>
-                        <div>
-                          {formatDate(b.checkInDate)} → {formatDate(b.checkOutDate)}
-                        </div>
-                        <div className="guest-cell-sub">
-                          {b.nights ? `${b.nights} đêm` : ""} {b.guestCount ? `· ${b.guestCount} khách` : ""}
-                        </div>
-                      </td>
-                      <td>
-                        <strong style={{ fontSize: "14px" }}>{formatVND(b.totalAmount)}</strong>
-                        {Number(b.depositPaid ?? b.depositAmount ?? b.depositApplied ?? 0) > 0 && (
-                          <div className="guest-cell-sub" style={{ color: "var(--hc-success)" }}>
-                            Đã cọc: {formatVND(b.depositPaid ?? b.depositAmount ?? b.depositApplied ?? 0)}
+                  {filteredBookings.map((b) => {
+                    const status = getBookingStatus(b);
+                    const isCheckedIn = status === "CHECKED_IN";
+
+                    return (
+                      <tr
+                        key={b.bookingCode || b.bookingId}
+                        className="guest-booking-row"
+                        onClick={() => openDetailModal(b.bookingCode)}
+                        title="Nhấn để mở chi tiết lượt đặt phòng & dịch vụ đã sử dụng"
+                      >
+                        <td style={{ paddingLeft: "20px" }}>
+                          <strong style={{ color: "var(--hc-primary)", fontSize: "14px" }}>{b.bookingCode}</strong>
+                          <div className="guest-cell-sub">Khách: {b.customerName || b.fullName}</div>
+                        </td>
+                        <td>
+                          <strong>{b.roomNumber ? `Phòng ${b.roomNumber}` : "Đang bố trí"}</strong>
+                          <div className="guest-cell-sub">{b.roomTypeName || "Hạng tiêu chuẩn"}</div>
+                        </td>
+                        <td>
+                          <div>
+                            {formatDate(b.checkInDate)} → {formatDate(b.checkOutDate)}
                           </div>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`hc-badge hc-badge-booking-${getBookingStatus(b)}`}>
-                          {statusLabel(getBookingStatus(b))}
-                        </span>
-                      </td>
-                      <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: "inline-flex", gap: "8px" }}>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-outline hc-btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openDetailModal(b.bookingCode);
-                            }}
-                            title="Xem chi tiết đơn đặt phòng & dịch vụ đã sử dụng"
-                          >
-                            <i className="bi bi-eye"></i> Chi tiết
-                          </button>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-primary hc-btn-sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigateServices(b.bookingCode);
-                            }}
-                            title="Mở hóa đơn & gọi dịch vụ"
-                          >
-                            <i className="bi bi-receipt"></i> Mở hóa đơn &amp; dịch vụ
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          <div className="guest-cell-sub">
+                            {b.nights ? `${b.nights} đêm` : ""} {b.guestCount ? `· ${b.guestCount} khách` : ""}
+                          </div>
+                        </td>
+                        <td>
+                          <strong style={{ fontSize: "14px" }}>{formatVND(paidInvoiceTotals[b.bookingCode] ?? b.totalAmount)}</strong>
+                          {status === "CHECKED_OUT" && <div className="guest-cell-sub">Tổng hóa đơn đã thanh toán</div>}
+                          {Number(b.depositPaid ?? b.depositAmount ?? b.depositApplied ?? 0) > 0 && (
+                            <div className="guest-cell-sub" style={{ color: "var(--hc-success)" }}>
+                              Đã cọc: {formatVND(b.depositPaid ?? b.depositAmount ?? b.depositApplied ?? 0)}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`hc-badge hc-badge-booking-${status}`}>{statusLabel(status)}</span>
+                        </td>
+                        <td style={{ textAlign: "right", paddingRight: "20px" }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px", width: "100%" }}>
+                            <button
+                              type="button"
+                              className="hc-btn hc-btn-outline hc-btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDetailModal(b.bookingCode);
+                              }}
+                              title="Xem chi tiết đơn đặt phòng & dịch vụ đã sử dụng"
+                            >
+                              <i className="bi bi-eye"></i> Chi tiết
+                            </button>
+                            {isCheckedIn && (
+                              <button
+                                type="button"
+                                className="hc-btn hc-btn-primary hc-btn-sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigateServices(b.bookingCode);
+                                }}
+                                title="Mở hóa đơn & gọi dịch vụ"
+                              >
+                                <i className="bi bi-receipt"></i> Mở hóa đơn & dịch vụ
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -464,16 +451,18 @@ export default function HistoryPage({ portal = false }) {
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setDetailModalOpen(false)}>
               Đóng
             </button>
-            <button
-              type="button"
-              className="hc-btn hc-btn-primary hc-btn-sm"
-              onClick={() => {
-                setDetailModalOpen(false);
-                navigateServices(selectedBookingCode);
-              }}
-            >
-              <i className="bi bi-receipt"></i> Mở hóa đơn &amp; dịch vụ
-            </button>
+            {bookingDetail && getBookingStatus(bookingDetail) === "CHECKED_IN" && (
+              <button
+                type="button"
+                className="hc-btn hc-btn-primary hc-btn-sm"
+                onClick={() => {
+                  setDetailModalOpen(false);
+                  navigateServices(selectedBookingCode);
+                }}
+              >
+                <i className="bi bi-receipt"></i> Mở hóa đơn & dịch vụ
+              </button>
+            )}
           </div>
         }
       >
@@ -489,9 +478,7 @@ export default function HistoryPage({ portal = false }) {
         ) : (
           <div style={{ fontSize: "14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
-              <span className={`hc-badge hc-badge-booking-${getBookingStatus(bookingDetail)}`}>
-                {statusLabel(getBookingStatus(bookingDetail))}
-              </span>
+              <span className={`hc-badge hc-badge-booking-${getBookingStatus(bookingDetail)}`}>{statusLabel(getBookingStatus(bookingDetail))}</span>
               <span style={{ color: "var(--hc-text-muted)", fontSize: "12px" }}>Tạo lúc: {formatDateTime(bookingDetail.createdAt)}</span>
             </div>
 
@@ -525,14 +512,20 @@ export default function HistoryPage({ portal = false }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--hc-primary-dark)" }}>
                   <i className="bi bi-stars" style={{ marginRight: "6px" }}></i>
-                  Dịch vụ đã đăng ký &amp; sử dụng ({bookingDetail.servicesUsed ? bookingDetail.servicesUsed.length : 0})
+                  Dịch vụ đã đăng ký & sử dụng ({bookingDetail.servicesUsed ? bookingDetail.servicesUsed.length : 0})
                 </span>
                 <div className="svc-lifecycle-stepper" style={{ margin: 0, padding: "2px 8px" }}>
-                  <span className="svc-step-node is-pending" style={{ fontSize: "9px", padding: "1px 5px" }}>PENDING</span>
+                  <span className="svc-step-node is-pending" style={{ fontSize: "9px", padding: "1px 5px" }}>
+                    PENDING
+                  </span>
                   <i className="bi bi-arrow-right svc-step-arrow"></i>
-                  <span className="svc-step-node is-delivering" style={{ fontSize: "9px", padding: "1px 5px" }}>DELIVERING</span>
+                  <span className="svc-step-node is-delivering" style={{ fontSize: "9px", padding: "1px 5px" }}>
+                    DELIVERING
+                  </span>
                   <i className="bi bi-arrow-right svc-step-arrow"></i>
-                  <span className="svc-step-node is-completed" style={{ fontSize: "9px", padding: "1px 5px" }}>COMPLETED</span>
+                  <span className="svc-step-node is-completed" style={{ fontSize: "9px", padding: "1px 5px" }}>
+                    COMPLETED
+                  </span>
                 </div>
               </div>
 
@@ -541,10 +534,10 @@ export default function HistoryPage({ portal = false }) {
                   <table className="hc-table" style={{ fontSize: "12px" }}>
                     <thead>
                       <tr>
-                        <th>Dịch vụ</th>
-                        <th style={{ textAlign: "center" }}>Trạng thái</th>
-                        <th style={{ textAlign: "center" }}>SL</th>
-                        <th style={{ textAlign: "right" }}>Thành tiền</th>
+                        <th style={{ textAlign: "left" }}>Dịch vụ</th>
+                        <th style={{ textAlign: "left" }}>Trạng thái</th>
+                        <th style={{ textAlign: "left" }}>SL</th>
+                        <th style={{ textAlign: "left" }}>Thành tiền</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -557,15 +550,11 @@ export default function HistoryPage({ portal = false }) {
                               {formatDateTime(u.usedAt || u.orderTime)}
                             </div>
                           </td>
-                          <td style={{ textAlign: "center" }}>
-                            {renderServiceStatusBadge(u.status)}
-                          </td>
-                          <td style={{ textAlign: "center" }}>{u.quantity}</td>
-                          <td style={{ textAlign: "right", fontWeight: 600 }}>
+                          <td style={{ textAlign: "left" }}>{renderServiceStatusBadge(u.status)}</td>
+                          <td style={{ textAlign: "left" }}>{u.quantity}</td>
+                          <td style={{ textAlign: "left", fontWeight: 600 }}>
                             {u.status === "CANCELED" || u.status === "CANCELLED" ? (
-                              <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }}>
-                                {formatVND(u.totalAmount || u.totalPrice)}
-                              </span>
+                              <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }}>{formatVND(u.totalAmount || u.totalPrice)}</span>
                             ) : (
                               formatVND(u.totalAmount || u.totalPrice)
                             )}
@@ -577,10 +566,8 @@ export default function HistoryPage({ portal = false }) {
                 </div>
               ) : (
                 <div style={{ background: "var(--hc-bg)", padding: "16px", borderRadius: "var(--hc-radius-md)", textAlign: "center", border: "1px dashed var(--hc-border)" }}>
-                  <p style={{ color: "var(--hc-text-secondary)", margin: 0, fontSize: "13px" }}>
-                    Chưa có dịch vụ nào được đăng ký trong lần đặt phòng này.
-                  </p>
-                  {(getBookingStatus(bookingDetail) === "CHECKED_IN" || getBookingStatus(bookingDetail) === "CONFIRMED") && (
+                  <p style={{ color: "var(--hc-text-secondary)", margin: 0, fontSize: "13px" }}>Chưa có dịch vụ nào được đăng ký trong lần đặt phòng này.</p>
+                  {getBookingStatus(bookingDetail) === "CHECKED_IN" && (
                     <button
                       type="button"
                       className="hc-btn hc-btn-outline hc-btn-sm"
@@ -598,27 +585,48 @@ export default function HistoryPage({ portal = false }) {
             </div>
 
             <div style={{ borderTop: "1px solid var(--hc-border-light)", paddingTop: "14px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Tiền phòng</span>
-                <strong>{formatVND(bookingDetail.roomCharge || bookingDetail.totalAmount)}</strong>
-              </div>
-              {bookingDetail.serviceCharge > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                  <span style={{ color: "var(--hc-text-secondary)" }}>Dịch vụ phát sinh</span>
-                  <strong>{formatVND(bookingDetail.serviceCharge)}</strong>
-                </div>
-              )}
-              {Number(bookingDetail.depositPaid ?? bookingDetail.depositAmount ?? bookingDetail.depositApplied ?? 0) > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "var(--hc-success)" }}>
-                  <span>Tiền cọc đã thanh toán</span>
-                  <strong>- {formatVND(bookingDetail.depositPaid ?? bookingDetail.depositAmount ?? bookingDetail.depositApplied ?? 0)}</strong>
-                </div>
-              )}
-              <hr className="hc-divider" style={{ margin: "10px 0" }} />
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "16px" }}>
-                <span>Tổng chi phí</span>
-                <span style={{ color: "var(--hc-primary)" }}>{formatVND(bookingDetail.totalAmount)}</span>
-              </div>
+              {(() => {
+                const bill = billingFolio || bookingDetail;
+                const totalDiscount = Number(bill?.discountAmount ?? 0);
+                const deposit = Number(bill?.depositPaid ?? bill?.depositAmount ?? bill?.depositApplied ?? 0);
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                      <span style={{ color: "var(--hc-text-secondary)" }}>Tiền phòng</span>
+                      <strong>{formatVND(bill?.roomCharge ?? bookingDetail.roomCharge ?? bookingDetail.totalAmount ?? 0)}</strong>
+                    </div>
+                    {Number(bill?.serviceCharge ?? bookingDetail.serviceCharge ?? 0) > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                        <span style={{ color: "var(--hc-text-secondary)" }}>Dịch vụ phát sinh</span>
+                        <strong>{formatVND(bill?.serviceCharge ?? bookingDetail.serviceCharge)}</strong>
+                      </div>
+                    )}
+                    {Number(bill?.taxAmount ?? 0) > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                        <span style={{ color: "var(--hc-text-secondary)" }}>Thuế VAT</span>
+                        <strong>{formatVND(bill.taxAmount)}</strong>
+                      </div>
+                    )}
+                    {totalDiscount > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "var(--hc-success)" }}>
+                        <span>Giảm giá (hội viên / voucher)</span>
+                        <strong>- {formatVND(totalDiscount)}</strong>
+                      </div>
+                    )}
+                    {deposit > 0 && (
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", color: "var(--hc-success)" }}>
+                        <span>Tiền cọc đã thanh toán</span>
+                        <strong>- {formatVND(deposit)}</strong>
+                      </div>
+                    )}
+                    <hr className="hc-divider" style={{ margin: "10px 0" }} />
+                    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "16px" }}>
+                      <span>Tổng chi phí</span>
+                      <span style={{ color: "var(--hc-primary)" }}>{formatVND(bill?.totalAmount ?? bookingDetail.totalAmount ?? 0)}</span>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         )}

@@ -175,7 +175,9 @@ VALUES
 (1,'BK-2026-0001',1,3,'2026-10-01','2026-10-04',2,'CHECKED_OUT',1000000.00,'DIRECT','Pearl member stay','2026-09-20 09:00:00'),
 (2,'BK-2026-0002',1,3,'2026-10-15','2026-10-17',2,'CHECKED_OUT',1000000.00,'ONLINE','Pearl member second stay','2026-10-01 10:00:00'),
 (3,'BK-2026-0003',2,3,'2026-11-05','2026-11-08',2,'CHECKED_OUT',1500000.00,'DIRECT','Coral member stay','2026-10-25 11:00:00'),
-(4,'BK-2026-0004',3,3,'2026-11-20','2026-11-22',1,'CONFIRMED',800000.00,'ONLINE','Starfish member upcoming stay','2026-11-01 12:00:00');
+(4,'BK-2026-0004',3,3,'2026-11-20','2026-11-22',1,'CONFIRMED',800000.00,'ONLINE','Starfish member upcoming stay','2026-11-01 12:00:00'),
+(5,'BK-2026-0005',1,3,'2026-11-13','2026-11-16',2,'CHECKED_IN',0.00,'DIRECT','Customer1 active demo stay','2026-11-12 09:00:00'),
+(6,'BK-2026-0006',1,3,'2026-11-25','2026-11-27',2,'CONFIRMED',1000000.00,'ONLINE','Customer1 upcoming demo reservation','2026-11-13 10:00:00');
 
 INSERT INTO booking_room
 (booking_room_id,booking_id,room_id,planned_checkin,planned_checkout,status,actual_checkin,actual_checkout,price_applied)
@@ -183,7 +185,12 @@ VALUES
 (1,1,3,'2026-10-01','2026-10-04','CHECKED_OUT','2026-10-01 14:00:00','2026-10-04 11:00:00',1250000.00),
 (2,2,4,'2026-10-15','2026-10-17','CHECKED_OUT','2026-10-15 14:00:00','2026-10-17 11:00:00',1250000.00),
 (3,3,5,'2026-11-05','2026-11-08','CHECKED_OUT','2026-11-05 14:00:00','2026-11-08 11:00:00',2400000.00),
-(4,4,1,'2026-11-20','2026-11-22','RESERVED',NULL,NULL,850000.00);
+(4,4,1,'2026-11-20','2026-11-22','RESERVED',NULL,NULL,850000.00),
+(5,5,2,'2026-11-13','2026-11-16','CHECKED_IN','2026-11-13 14:00:00',NULL,850000.00),
+(6,6,5,'2026-11-25','2026-11-27','RESERVED',NULL,NULL,2400000.00);
+
+-- Room 102 is occupied by customer1's active demo booking (BK-2026-0005).
+UPDATE room SET status = 'OCCUPIED' WHERE room_id = 2;
 
 INSERT INTO invoice
 (invoice_id,invoice_number,booking_id,issued_by,discount_approved_by,room_charge,service_charge,tax_amount,discount_amount,deposit_applied,total_amount,status,issued_at)
@@ -240,10 +247,10 @@ VALUES
 
 -- Room Cleaning Requests (Assigned to ROLE_HOUSEKEEPING account 4)
 INSERT INTO roomcleaning_request
-(request_id,room_id,reported_by,assigned_to,confirmed_by,title,description,priority,status,note,reported_at,started_at,completed_at,confirmed_at)
+(cleaning_id, room_id, booking_id, requested_by, assigned_to, priority, status, note, requested_at, started_at, completed_at)
 VALUES
-(1,3,3,4,NULL,'Dọn phòng định kỳ','Khách yêu cầu dọn phòng và thay ga giường','MEDIUM','IN_PROGRESS','Đang thực hiện dọn phòng','2026-11-11 09:00:00','2026-11-11 09:15:00',NULL,NULL),
-(2,2,3,4,2,'Dọn phòng sau Check-out','Dọn dẹp và khử trùng phòng 102','HIGH','CONFIRMED','Hoàn tất vệ sinh phòng','2026-11-10 11:00:00','2026-11-10 11:15:00','2026-11-10 12:00:00','2026-11-10 12:15:00');
+(1, 3, NULL, 3, 4, 'MEDIUM', 'IN_PROGRESS', 'Dọn phòng định kỳ: Khách yêu cầu dọn phòng và thay ga giường. Đang thực hiện dọn phòng', '2026-11-11 09:00:00', '2026-11-11 09:15:00', NULL),
+(2, 2, NULL, 3, 4, 'HIGH', 'COMPLETED', 'Dọn phòng sau Check-out: Dọn dẹp và khử trùng phòng 102. Hoàn tất vệ sinh phòng', '2026-11-10 11:00:00', '2026-11-10 11:15:00', '2026-11-10 12:00:00');
 
 -- ---------------------------------------------------------------------
 -- 7. Loyalty transactions, benefit redemptions & audit log (Text format)

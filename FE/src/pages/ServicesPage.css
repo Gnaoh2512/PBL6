@@ -1,21 +1,77 @@
 /* =========================================================
-   ServicesPage: booking-code bar, menu | folio layout, folio blocks.
+   ServicesPage: room picker, menu | folio layout, folio blocks.
    Everything generic (toolbar, rows, callouts) is in index.css.
    ========================================================= */
 
-/* Booking-code bar */
-.svc-code-bar {
+/* Room picker (checked-in rooms only) */
+.svc-room-bar {
   display: flex;
-  gap: 12px;
-  align-items: flex-end;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
 }
-.svc-code-field {
-  flex: 1 1 260px;
-  min-width: 0;
+.svc-room-bar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hc-text-secondary);
+  margin-right: 4px;
 }
-.svc-code-input {
-  text-transform: uppercase;
+.svc-room-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 16px;
+  border-radius: var(--hc-radius-md);
+  border: 1px solid var(--hc-border);
+  background: #ffffff;
+  font-family: var(--hc-font-body);
+  font-size: 14px;
+  color: var(--hc-text);
+  cursor: pointer;
+  text-align: left;
+  transition: all var(--hc-duration-fast) var(--hc-ease);
+}
+.svc-room-chip span {
+  font-size: 11px;
+  color: var(--hc-text-muted);
+}
+.svc-room-chip:hover {
+  border-color: var(--hc-primary);
+  background: var(--hc-primary-subtle);
+}
+.svc-room-chip.active {
+  border-color: var(--hc-primary);
+  background: var(--hc-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(41, 108, 122, 0.25);
+}
+.svc-room-chip.active span {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Ordering-blocked notice */
+.svc-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--hc-warning-bg);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-warning);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.svc-notice i {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 /* Two columns: menu | folio */
@@ -28,6 +84,12 @@
 @media (max-width: 1100px) {
   .svc-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 1101px) {
+  .svc-folio-card {
+    position: sticky;
+    top: 16px;
   }
 }
 .svc-price {
@@ -65,6 +127,14 @@
   color: var(--hc-text);
 }
 
+.svc-folio-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
 .svc-folio-section-title {
   font-size: 13px;
   font-weight: 700;
@@ -87,7 +157,7 @@
   font-size: 14px;
 }
 
-/* Order modal summary */
+/* Request modal summary */
 .svc-order-summary {
   padding: 14px;
   margin-bottom: 16px;
@@ -96,11 +166,11 @@
   border-radius: var(--hc-radius-md);
 }
 
-/* ── VIP Loyalty Perks Section in Services Menu ── */
+/* ── Loyalty strip (shown in the "Đặc quyền hội viên" tab) ── */
 .svc-loyalty-banner {
   background: linear-gradient(135deg, #174751 0%, #296c7a 100%);
   color: #ffffff;
-  padding: 16px 20px;
+  padding: 14px 20px;
   border-radius: var(--hc-radius-md);
   margin: 18px 22px 0;
   display: flex;
@@ -176,7 +246,12 @@
   font-size: 14px;
 }
 
-/* Category pills in toolbar */
+.svc-benefit-quota {
+  font-size: 12px;
+  color: var(--hc-text-muted);
+}
+
+/* Category pills */
 .svc-cat-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -231,122 +306,6 @@
   box-shadow: 0 2px 6px rgba(180, 83, 9, 0.3);
 }
 
-/* Informative Empty State for Loyalty View */
-.svc-empty-loyalty-box {
-  padding: 32px 24px;
-  text-align: center;
-  background: #ffffff;
-  border-radius: var(--hc-radius-md);
-  margin: 18px 22px;
-  border: 1px dashed var(--hc-border);
+.svc-guest-stats {
+  margin: 0 0 20px;
 }
-
-.svc-empty-loyalty-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--hc-primary-subtle);
-  color: var(--hc-primary);
-  display: inline-grid;
-  place-items: center;
-  font-size: 1.5rem;
-  margin-bottom: 12px;
-}
-
-.svc-empty-loyalty-box h5 {
-  font-family: var(--hc-font-heading);
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--hc-primary-dark);
-  margin: 0 0 6px 0;
-}
-
-.svc-empty-loyalty-box p {
-  font-size: 13px;
-  color: var(--hc-text-secondary);
-  max-width: 520px;
-  margin: 0 auto 16px auto;
-  line-height: 1.55;
-}
-
-.svc-tier-unlock-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-width: 520px;
-  margin: 0 auto 16px auto;
-  text-align: left;
-}
-
-.svc-tier-unlock-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 14px;
-  background: var(--hc-bg);
-  border: 1px solid var(--hc-border-light);
-  border-radius: var(--hc-radius-sm);
-  font-size: 12px;
-  color: var(--hc-text);
-}
-
-/* Benefit Cards Grid */
-.svc-benefits-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-  padding: 18px 22px;
-}
-
-.svc-benefit-card {
-  border: 1px solid var(--hc-border);
-  border-radius: var(--hc-radius-md);
-  padding: 18px;
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(41, 108, 122, 0.04);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 14px;
-  transition: transform var(--hc-duration-fast) var(--hc-ease), box-shadow var(--hc-duration-fast) var(--hc-ease);
-}
-
-.svc-benefit-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(41, 108, 122, 0.08);
-}
-
-.svc-benefit-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.svc-benefit-name {
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--hc-primary-dark);
-  margin-bottom: 4px;
-}
-
-.svc-benefit-desc {
-  font-size: 13px;
-  color: var(--hc-text-secondary);
-  line-height: 1.45;
-}
-
-.svc-benefit-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 12px;
-  border-top: 1px solid var(--hc-border-light);
-}
-
-.svc-benefit-quota {
-  font-size: 12px;
-  color: var(--hc-text-muted);
-}
-

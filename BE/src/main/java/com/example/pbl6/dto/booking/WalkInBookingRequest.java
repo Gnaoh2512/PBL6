@@ -63,4 +63,8 @@ public class WalkInBookingRequest {
 
     @Builder.Default
     private Boolean checkInImmediately = true; // Mặc định khách tại quầy sẽ nhận phòng ngay
+
+    // Tạo tài khoản cho khách: username = email, mật khẩu mặc định = số điện thoại
+    @Builder.Default
+    private Boolean createAccount = false;
 }

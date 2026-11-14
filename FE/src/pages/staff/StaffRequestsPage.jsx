@@ -23,6 +23,40 @@ const STATUS_OPTIONS = [
 
 const CLOSED_STATUSES = ["COMPLETED", "CANCELED", "CANCELLED"];
 
+// Accept the timestamp names used by both Java DTOs and SQL-oriented responses.
+const getRequestTime = (request) => request?.requestedAt ?? request?.reqTime ?? request?.req_time ?? request?.requestTime ?? null;
+
+// Only explicit backend loyalty metadata classifies a request as a loyalty benefit.
+// A zero fee alone is not sufficient: regular services can also be waived.
+const isLoyaltyBenefitRequest = (request) => {
+  // Trust the explicit backend classification before inspecting optional metadata.
+  if (typeof request?.isLoyaltyBenefit === "boolean") return request.isLoyaltyBenefit;
+  if (request?.loyaltyBenefit === true || request?.freeByLoyalty === true) return true;
+  if (request?.loyaltyBenefit === false || request?.freeByLoyalty === false) return false;
+
+  const marker = [request?.benefitType, request?.requestType, request?.serviceSource, request?.source, request?.benefitCode].filter(Boolean).join(" ").toUpperCase();
+
+  if (marker.includes("LOYALTY") || marker.includes("TIER_BENEFIT") || marker.includes("FREE_SERVICE") || request?.benefitRedemptionId || request?.tierBenefitId || request?.loyaltyBenefitId)
+    return true;
+
+  if (marker.includes("NORMAL") || marker.includes("REGULAR") || marker.includes("STANDARD")) {
+    return false;
+  }
+
+  // The updated API always supplies isLoyaltyBenefit. Older responses default to regular.
+  return false;
+};
+
+const toRequestTimestamp = (value) => {
+  if (Array.isArray(value)) {
+    const [year, month = 1, day = 1, hour = 0, minute = 0, second = 0, nanos = 0] = value;
+    return new Date(year, month - 1, day, hour, minute, second, Math.floor(nanos / 1_000_000)).getTime();
+  }
+  return Date.parse(value || "") || 0;
+};
+
+const sortRequestsNewestFirst = (items) => [...items].sort((a, b) => toRequestTimestamp(getRequestTime(b)) - toRequestTimestamp(getRequestTime(a)));
+
 export default function StaffRequestsPage() {
   const { addToast } = useToast();
   const [requests, setRequests] = useState([]);
@@ -49,7 +83,7 @@ export default function StaffRequestsPage() {
       } else if (response?.data && Array.isArray(response.data)) {
         items = response.data;
       }
-      setRequests(items);
+      setRequests(sortRequestsNewestFirst(items));
     } catch (error) {
       console.error("Lỗi khi tải danh sách yêu cầu dịch vụ:", error);
       setRequests([]);
@@ -164,11 +198,7 @@ export default function StaffRequestsPage() {
   const staffOptions = [
     {
       value: "",
-      label: loadingStaff
-        ? "Đang tải nhân viên trong ca trực…"
-        : serviceStaff.length
-        ? "Chọn nhân viên phục vụ có ca trực"
-        : "Không có nhân viên trong ca trực",
+      label: loadingStaff ? "Đang tải nhân viên trong ca trực…" : serviceStaff.length ? "Chọn nhân viên phục vụ có ca trực" : "Không có nhân viên trong ca trực",
     },
     ...serviceStaff.map((s) => ({ value: s.id, label: s.name })),
   ];
@@ -211,6 +241,7 @@ export default function StaffRequestsPage() {
               <thead>
                 <tr>
                   <th>Dịch vụ</th>
+                  <th>Loại dịch vụ</th>
                   <th>Khách</th>
                   <th>Phòng</th>
                   <th>Số lượng</th>
@@ -225,11 +256,21 @@ export default function StaffRequestsPage() {
                 {requests.map((request) => {
                   const meta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
                   const isClosed = CLOSED_STATUSES.includes(request.status);
+                  const isLoyaltyBenefit = isLoyaltyBenefitRequest(request);
                   return (
                     <tr key={request.serviceRequestId}>
                       <td>
                         <strong>{request.serviceName || "Yêu cầu dịch vụ"}</strong>
+                        {isLoyaltyBenefit && request.benefitName && <div style={{ fontSize: "12px", color: "var(--hc-success, #16a34a)", marginTop: "2px" }}>{request.benefitName}</div>}
                         {request.note && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.note}</div>}
+                      </td>
+                      <td>
+                        <span
+                          className={`hc-badge ${isLoyaltyBenefit === true ? "hc-badge-info" : "hc-badge-muted"}`}
+                          title={isLoyaltyBenefit === true ? "Dịch vụ được sử dụng từ quyền lợi hội viên" : isLoyaltyBenefit === false ? "Dịch vụ thông thường" : "API chưa trả về thông tin phân loại"}
+                        >
+                          {isLoyaltyBenefit === true ? "Ưu đãi hội viên" : isLoyaltyBenefit === false ? "Dịch vụ thường" : "Chưa xác định"}
+                        </span>
                       </td>
                       <td>{request.customerName || "—"}</td>
                       <td>
@@ -237,7 +278,7 @@ export default function StaffRequestsPage() {
                         {request.bookingCode && <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)" }}>#{request.bookingCode}</div>}
                       </td>
                       <td>{request.quantity || 1}</td>
-                      <td>{formatVND(request.feeAmount || 0)}</td>
+                      <td>{isLoyaltyBenefit === true ? <span style={{ color: "var(--hc-success, #16a34a)", fontWeight: 600 }}>Miễn phí</span> : formatVND(request.feeAmount || 0)}</td>
                       <td>
                         {request.assignedToStaff ? (
                           <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
@@ -245,12 +286,10 @@ export default function StaffRequestsPage() {
                             {request.assignedToStaff}
                           </span>
                         ) : (
-                          <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>
-                            Chưa phân công
-                          </span>
+                          <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>Chưa phân công</span>
                         )}
                       </td>
-                      <td>{formatDateTime(request.requestedAt)}</td>
+                      <td>{formatDateTime(getRequestTime(request))}</td>
                       <td>
                         <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                           <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
@@ -370,8 +409,20 @@ export default function StaffRequestsPage() {
                 <strong>{targetRequest.customerName || "—"}</strong>
               </div>
               <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Loại dịch vụ</span>
+                <strong>
+                  {isLoyaltyBenefitRequest(targetRequest) === true
+                    ? `Ưu đãi hội viên${targetRequest.benefitName ? ` — ${targetRequest.benefitName}` : ""}`
+                    : isLoyaltyBenefitRequest(targetRequest) === false
+                      ? "Dịch vụ thường"
+                      : "Chưa xác định"}
+                </strong>
+              </div>
+              <div>
                 <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Thành tiền</span>
-                <strong style={{ color: "var(--hc-primary)" }}>{formatVND(targetRequest.feeAmount || 0)}</strong>
+                <strong style={{ color: isLoyaltyBenefitRequest(targetRequest) === true ? "var(--hc-success, #16a34a)" : "var(--hc-primary)" }}>
+                  {isLoyaltyBenefitRequest(targetRequest) === true ? "Miễn phí" : formatVND(targetRequest.feeAmount || 0)}
+                </strong>
               </div>
               {targetRequest.note && (
                 <div style={{ gridColumn: "1 / -1" }}>
@@ -407,17 +458,12 @@ export default function StaffRequestsPage() {
                 >
                   <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
                   <div>
-                    <strong>Không có nhân viên trong ca trực:</strong> Hiện tại không có nhân viên phục vụ dịch vụ nào có lịch trực hoạt động theo ca. Vui lòng xếp ca trực tại mục <strong>Quản lý Lịch làm việc</strong> trước khi phân công.
+                    <strong>Không có nhân viên trong ca trực:</strong> Hiện tại không có nhân viên phục vụ dịch vụ nào có lịch trực hoạt động theo ca. Vui lòng xếp ca trực tại mục{" "}
+                    <strong>Quản lý Lịch làm việc</strong> trước khi phân công.
                   </div>
                 </div>
               ) : (
-                <SelectMenu
-                  value={selectedStaffId}
-                  onChange={setSelectedStaffId}
-                  options={staffOptions}
-                  ariaLabel="Chọn nhân viên phục vụ có ca trực"
-                  icon="bi-person-badge"
-                />
+                <SelectMenu value={selectedStaffId} onChange={setSelectedStaffId} options={staffOptions} ariaLabel="Chọn nhân viên phục vụ có ca trực" icon="bi-person-badge" />
               )}
             </div>
 
@@ -425,12 +471,7 @@ export default function StaffRequestsPage() {
               <button type="button" className="hc-btn hc-btn-outline" onClick={closeAssignModal} disabled={submittingAssign}>
                 Đóng
               </button>
-              <button
-                type="button"
-                className="hc-btn hc-btn-primary"
-                onClick={handleConfirmAssign}
-                disabled={submittingAssign || !selectedStaffId || serviceStaff.length === 0}
-              >
+              <button type="button" className="hc-btn hc-btn-primary" onClick={handleConfirmAssign} disabled={submittingAssign || !selectedStaffId || serviceStaff.length === 0}>
                 <i className="bi bi-check2-circle"></i>
                 {submittingAssign ? "Đang lưu…" : "Xác nhận phân công"}
               </button>

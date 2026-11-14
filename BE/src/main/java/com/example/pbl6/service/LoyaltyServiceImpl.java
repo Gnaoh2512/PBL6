@@ -101,8 +101,14 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         Customer customer = getCustomerByUsername(username);
         CustomerLoyalty loyalty = getOrCreateLoyalty(customer);
 
-        Integer currentLevel = loyalty.getTier().getTierLevel();
-        List<TierBenefit> eligibleBenefits = tierBenefitRepository.findByTier_TierLevelLessThanEqualAndIsActiveTrue(currentLevel);
+        // Show only manually usable benefits belonging to the customer's exact current tier.
+        // ROOM_DISCOUNT is applied automatically by the billing calculation, not redeemed here.
+        Integer currentTierId = loyalty.getTier() != null ? loyalty.getTier().getTierId() : null;
+        List<TierBenefit> eligibleBenefits = currentTierId == null ? List.of()
+                : tierBenefitRepository.findByTier_TierIdAndIsActiveTrue(currentTierId).stream()
+                    .filter(b -> !"ROOM_DISCOUNT".equalsIgnoreCase(b.getBenefitType()))
+                    .sorted(Comparator.comparing(TierBenefit::getTierBenefitId))
+                    .toList();
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startOfYear = LocalDateTime.of(now.getYear(), 1, 1, 0, 0);
@@ -137,8 +143,13 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             throw new IllegalStateException("Đặc quyền này hiện đang tạm ngưng áp dụng");
         }
 
-        if (loyalty.getTier() != null && loyalty.getTier().getTierLevel() < benefit.getTier().getTierLevel()) {
-            throw new IllegalArgumentException("Hạng thành viên của bạn chưa đủ điều kiện sử dụng đặc quyền này");
+        if ("ROOM_DISCOUNT".equalsIgnoreCase(benefit.getBenefitType())) {
+            throw new IllegalArgumentException("Ưu đãi giảm giá phòng được tự động áp dụng vào hóa đơn, không cần yêu cầu thủ công");
+        }
+
+        if (loyalty.getTier() == null || benefit.getTier() == null
+                || !loyalty.getTier().getTierId().equals(benefit.getTier().getTierId())) {
+            throw new IllegalArgumentException("Chỉ có thể sử dụng đặc quyền thuộc hạng thành viên hiện tại của bạn");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -163,9 +174,51 @@ public class LoyaltyServiceImpl implements LoyaltyService {
 
         ServiceUsage serviceUsage = null;
         if (req.getServiceUsageId() != null) {
-            serviceUsage = serviceUsageRepository.findById(req.getServiceUsageId()).orElse(null);
+            serviceUsage = serviceUsageRepository.findById(req.getServiceUsageId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy lượt sử dụng dịch vụ: " + req.getServiceUsageId()));
             if (serviceUsage != null && booking == null) {
                 booking = serviceUsage.getBooking();
+            }
+        }
+
+        ServiceRequest serviceRequest = null;
+        if (req.getServiceRequestId() != null) {
+            if (!"FREE_SERVICE".equalsIgnoreCase(benefit.getBenefitType())) {
+                throw new IllegalArgumentException("Chỉ quyền lợi FREE_SERVICE mới có thể áp dụng cho yêu cầu dịch vụ");
+            }
+            serviceRequest = serviceRequestRepository.findById(req.getServiceRequestId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ: " + req.getServiceRequestId()));
+            if (serviceRequest.getCustomer() == null
+                    || !serviceRequest.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
+                throw new IllegalArgumentException("Yêu cầu dịch vụ không thuộc khách hàng hiện tại");
+            }
+            if (benefit.getService() != null && (serviceRequest.getService() == null
+                    || !benefit.getService().getServiceId().equals(serviceRequest.getService().getServiceId()))) {
+                throw new IllegalArgumentException("Yêu cầu dịch vụ không khớp dịch vụ được áp dụng trong quyền lợi hội viên");
+            }
+            if (serviceRequest.getFeeAmount() == null || serviceRequest.getFeeAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalStateException("Yêu cầu dịch vụ đã miễn phí hoặc không có phí để áp dụng quyền lợi");
+            }
+            if (benefitRedemptionRepository.findFirstByServiceRequest_ServiceRequestId(serviceRequest.getServiceRequestId()).isPresent()) {
+                throw new IllegalStateException("Yêu cầu dịch vụ này đã được áp dụng quyền lợi hội viên");
+            }
+            if (booking == null) booking = serviceRequest.getBooking();
+            if (booking == null || serviceRequest.getBooking() == null
+                    || !booking.getBookingId().equals(serviceRequest.getBooking().getBookingId())) {
+                throw new IllegalArgumentException("Yêu cầu dịch vụ không khớp lượt đặt phòng được chọn");
+            }
+        }
+
+        if (serviceUsage != null) {
+            if (!"FREE_SERVICE".equalsIgnoreCase(benefit.getBenefitType())) {
+                throw new IllegalArgumentException("Chỉ quyền lợi FREE_SERVICE mới có thể áp dụng cho lượt sử dụng dịch vụ");
+            }
+            if (benefit.getService() != null && (serviceUsage.getService() == null
+                    || !benefit.getService().getServiceId().equals(serviceUsage.getService().getServiceId()))) {
+                throw new IllegalArgumentException("Lượt sử dụng không khớp dịch vụ được áp dụng trong quyền lợi hội viên");
+            }
+            if (benefitRedemptionRepository.findFirstByServiceUsage_UsageId(serviceUsage.getUsageId()).isPresent()) {
+                throw new IllegalStateException("Lượt sử dụng dịch vụ này đã được áp dụng quyền lợi hội viên");
             }
         }
 
@@ -177,8 +230,56 @@ public class LoyaltyServiceImpl implements LoyaltyService {
                     .orElse(null);
         }
 
-        // Tính toán giá trị ưu đãi thực tế áp dụng vào đơn đặt phòng hoặc dịch vụ
-        BigDecimal discountedValue = calculateAndApplyBenefitDiscount(benefit, booking, activeInvoice, serviceUsage, req.getServiceRequestId());
+        // The guest UI redeems FREE_SERVICE with tierBenefitId + bookingCode only.
+        // In that flow there is no pre-existing serviceRequestId/serviceUsageId, so
+        // create the staff-facing request here and link the redemption to that exact row.
+        if ("FREE_SERVICE".equalsIgnoreCase(benefit.getBenefitType())
+                && serviceRequest == null && serviceUsage == null) {
+            if (booking == null) {
+                throw new IllegalArgumentException("Vui lòng chọn mã đặt phòng trước khi sử dụng ưu đãi miễn phí dịch vụ");
+            }
+            if (booking.getCustomer() == null
+                    || !booking.getCustomer().getCustomerId().equals(customer.getCustomerId())) {
+                throw new IllegalArgumentException("Đặt phòng không thuộc tài khoản khách hàng hiện tại");
+            }
+            if (benefit.getService() == null) {
+                throw new IllegalStateException("Ưu đãi miễn phí dịch vụ chưa được cấu hình dịch vụ áp dụng");
+            }
+
+            List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
+            if (bookingRooms.size() != 1 || bookingRooms.get(0).getRoom() == null) {
+                throw new IllegalStateException(
+                        "Ưu đãi miễn phí dịch vụ hiện yêu cầu đặt phòng có đúng một phòng. Vui lòng chọn phòng cụ thể cho đặt phòng nhiều phòng.");
+            }
+
+            Room targetRoom = bookingRooms.get(0).getRoom();
+            BigDecimal requestFee = benefit.getService().getUnitPrice() != null
+                    ? benefit.getService().getUnitPrice()
+                    : BigDecimal.ZERO;
+            String requestNote = "Ưu đãi hội viên: " + benefit.getBenefitName();
+            if (req.getNote() != null && !req.getNote().isBlank()) {
+                requestNote += " — " + req.getNote().trim();
+            }
+
+            serviceRequest = serviceRequestRepository.save(ServiceRequest.builder()
+                    .booking(booking)
+                    .room(targetRoom)
+                    .service(benefit.getService())
+                    .customer(customer)
+                    .invoice(activeInvoice)
+                    .quantity(1)
+                    .feeAmount(requestFee)
+                    .status("PENDING")
+                    .note(requestNote)
+                    .build());
+        }
+
+        // Use the resolved exact request ID (including the request created above).
+        Integer resolvedServiceRequestId = serviceRequest != null
+                ? serviceRequest.getServiceRequestId()
+                : null;
+        BigDecimal discountedValue = calculateAndApplyBenefitDiscount(
+                benefit, booking, activeInvoice, serviceUsage, resolvedServiceRequestId);
 
         BenefitRedemption redemption = BenefitRedemption.builder()
                 .customer(customer)
@@ -186,6 +287,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
                 .booking(booking)
                 .invoice(activeInvoice)
                 .serviceUsage(serviceUsage)
+                .serviceRequest(serviceRequest)
                 .valueAmount(discountedValue)
                 .note(req.getNote() != null ? req.getNote() : "Áp dụng đặc quyền hội viên: " + benefit.getBenefitName())
                 .build();

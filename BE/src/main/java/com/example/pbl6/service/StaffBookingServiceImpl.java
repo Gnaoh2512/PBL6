@@ -11,6 +11,7 @@ import com.example.pbl6.repository.*;
 import com.example.pbl6.service.financial.FinancialCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -27,15 +28,22 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StaffBookingServiceImpl implements StaffBookingService {
 
+    private static final int MIN_PASSWORD_LENGTH = 6;
+    private static final int MAX_USERNAME_LENGTH = 50;
+
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
     private final RoomRepository roomRepository;
     private final CustomerRepository customerRepository;
     private final AccountRepository accountRepository;
+    private final RoleRepository roleRepository;
+    private final CustomerLoyaltyRepository customerLoyaltyRepository;
+    private final LoyaltyTierRepository loyaltyTierRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
     private final CashierShiftService cashierShiftService;
 
+    private final PasswordEncoder passwordEncoder;
     private final FinancialCalculator financialCalculator;
     private final BankConfig bankConfig;
     private final CustomerBookingService customerBookingService;
@@ -60,6 +68,20 @@ public class StaffBookingServiceImpl implements StaffBookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng với ID: " + request.getRoomId()));
 
         boolean checkInImmediately = Boolean.TRUE.equals(request.getCheckInImmediately());
+        boolean createAccount = Boolean.TRUE.equals(request.getCreateAccount());
+
+        // Kiểm tra sớm điều kiện tạo tài khoản (trước khi ghi bất kỳ dữ liệu nào)
+        if (createAccount) {
+            if (!StringUtils.hasText(request.getEmail())) {
+                throw new IllegalArgumentException("Cần nhập email để tạo tài khoản cho khách");
+            }
+            if (request.getEmail().trim().length() > MAX_USERNAME_LENGTH) {
+                throw new IllegalArgumentException("Email quá dài (tối đa " + MAX_USERNAME_LENGTH + " ký tự) để dùng làm tên đăng nhập");
+            }
+            if (request.getPhone().trim().length() < MIN_PASSWORD_LENGTH) {
+                throw new IllegalArgumentException("Số điện thoại phải có ít nhất " + MIN_PASSWORD_LENGTH + " ký tự để làm mật khẩu mặc định");
+            }
+        }
 
         if (checkInImmediately && !"AVAILABLE".equalsIgnoreCase(room.getStatus())) {
             throw new IllegalArgumentException("Phòng " + room.getRoomNumber() + " hiện đang có trạng thái [" 
@@ -95,8 +117,19 @@ public class StaffBookingServiceImpl implements StaffBookingService {
             throw new IllegalArgumentException("Hiện chưa có Ca thu ngân chung (Cashier Shift) nào đang mở. Vui lòng mở ca trước khi nhận tiền mặt tại quầy!");
         }
 
-        // Tìm hoặc tạo hồ sơ khách hàng vãng lai (account_id = null)
+        // Tìm hoặc tạo hồ sơ khách hàng
         Customer customer = findOrCreateCustomer(request);
+
+        // Tạo tài khoản đăng nhập cho khách (username = email, mật khẩu = số điện thoại)
+        Account guestAccount = null;
+        boolean accountCreated = false;
+        if (createAccount && customer.getAccount() == null) {
+            guestAccount = createGuestAccount(request);
+            customer.setAccount(guestAccount);
+            customer = customerRepository.save(customer);
+            createLoyaltyIfMissing(customer);
+            accountCreated = true;
+        }
 
         // Tính toán tài chính
         long nights = financialCalculator.calculateNights(checkInDate, checkOutDate);
@@ -206,13 +239,20 @@ public class StaffBookingServiceImpl implements StaffBookingService {
                     amountPaid, paymentMethod, activeShift != null ? activeShift.getCashierShiftId() : "Không gắn ca");
         }
 
-        log.info("Nhân viên {} đã tạo thành công đơn đặt phòng tại quầy (Walk-in): {}, Phòng: {}, Check-in ngay: {}", 
-                staffUsername, bookingCode, room.getRoomNumber(), checkInImmediately);
+        log.info("Nhân viên {} đã tạo thành công đơn đặt phòng tại quầy (Walk-in): {}, Phòng: {}, Check-in ngay: {}, Tạo tài khoản: {}", 
+                staffUsername, bookingCode, room.getRoomNumber(), checkInImmediately, accountCreated);
 
         auditLogService.log(staffAccount, "ĐẶT PHÒNG", "WALKIN", "booking", Long.valueOf(savedBooking.getBookingId()),
                 "Tạo đơn đặt phòng Walk-in mã " + bookingCode + " cho khách " + customer.getFullName() +
                         " (Phòng " + room.getRoomNumber() + ", " + checkInDate + " ➔ " + checkOutDate +
-                        ", Thu tiền: " + amountPaid + " VNĐ, Check-in ngay: " + (checkInImmediately ? "Có" : "Không") + ")");
+                        ", Thu tiền: " + amountPaid + " VNĐ, Check-in ngay: " + (checkInImmediately ? "Có" : "Không") +
+                        ", Tạo tài khoản: " + (accountCreated ? "Có" : "Không") + ")");
+
+        if (accountCreated && guestAccount != null) {
+            auditLogService.log(staffAccount, "TÀI KHOẢN", "CREATE_GUEST_ACCOUNT", "account",
+                    Long.valueOf(guestAccount.getAccountId()),
+                    "Lễ tân tạo tài khoản khách hàng " + guestAccount.getUsername() + " từ đơn Walk-in " + bookingCode);
+        }
 
         return customerBookingService.getBookingByCode(bookingCode);
     }
@@ -262,6 +302,48 @@ public class StaffBookingServiceImpl implements StaffBookingService {
     @Transactional
     public void cancelBooking(String bookingCode, String cancelReason, String staffUsername) {
         customerBookingService.cancelBooking(bookingCode, cancelReason, staffUsername);
+    }
+
+    /**
+     * Tạo tài khoản đăng nhập cho khách: username = email, mật khẩu = số điện thoại (đã băm).
+     * Không bao giờ ghi đè tài khoản đã tồn tại.
+     */
+    private Account createGuestAccount(WalkInBookingRequest request) {
+        String email = request.getEmail().trim();
+        String phone = request.getPhone().trim();
+
+        if (accountRepository.existsByUsername(email) || accountRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Email '" + email + "' đã có tài khoản trong hệ thống. "
+                    + "Vui lòng bỏ chọn \"Tạo tài khoản cho khách\" hoặc dùng email khác.");
+        }
+
+        Role role = roleRepository.findByRoleCode("ROLE_CUSTOMER")
+                .orElseThrow(() -> new IllegalStateException("Chưa cấu hình vai trò ROLE_CUSTOMER trong hệ thống"));
+
+        Account account = Account.builder()
+                .username(email)
+                .passwordHash(passwordEncoder.encode(phone))
+                .fullName(request.getFullName().trim())
+                .email(email)
+                .phone(phone)
+                .role(role)
+                .status("ACTIVE")
+                .build();
+
+        return accountRepository.save(account);
+    }
+
+    private void createLoyaltyIfMissing(Customer customer) {
+        if (customerLoyaltyRepository.findByCustomer_CustomerId(customer.getCustomerId()).isEmpty()) {
+            loyaltyTierRepository.findByTierCode("SEASHELL").ifPresent(tier ->
+                    customerLoyaltyRepository.save(CustomerLoyalty.builder()
+                            .customer(customer)
+                            .tier(tier)
+                            .totalStayDays(0)
+                            .totalSpent(BigDecimal.ZERO)
+                            .totalScore(BigDecimal.ZERO)
+                            .build()));
+        }
     }
 
     private Customer findOrCreateCustomer(WalkInBookingRequest request) {

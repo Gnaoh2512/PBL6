@@ -3,6 +3,7 @@ package com.example.pbl6.service;
 import com.example.pbl6.dto.servicerequest.CreateServiceRequestDto;
 import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.BenefitRedemption;
 import com.example.pbl6.entity.Booking;
 import com.example.pbl6.entity.BookingRoom;
 import com.example.pbl6.entity.Customer;
@@ -12,6 +13,7 @@ import com.example.pbl6.entity.ServiceUsage;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
 import com.example.pbl6.repository.BookingRepository;
+import com.example.pbl6.repository.BenefitRedemptionRepository;
 import com.example.pbl6.repository.BookingRoomRepository;
 import com.example.pbl6.repository.CustomerRepository;
 import com.example.pbl6.repository.InvoiceRepository;
@@ -41,6 +43,7 @@ import java.util.stream.Collectors;
 public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     private final ServiceRequestRepository serviceRequestRepository;
+    private final BenefitRedemptionRepository benefitRedemptionRepository;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
     private final RoomRepository roomRepository;
@@ -108,7 +111,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log(account, "YÊU CẦU DỊCH VỤ", "ORDER", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Đặt dịch vụ: " + service.getServiceName() + " x" + qty + " cho phòng " + room.getRoomNumber() + " (Đơn đặt: " + booking.getBookingCode() + ")");
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -123,7 +126,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                         || (account.getEmail() != null && account.getEmail().equalsIgnoreCase(r.getCustomer().getEmail()))
                 ))
                 .sorted(Comparator.comparing(ServiceRequest::getServiceRequestId, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(ServiceRequestResponse::fromEntity)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -144,7 +147,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hủy yêu cầu dịch vụ #" + requestId + " bởi " + username);
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -171,13 +174,9 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
 
         return list.stream()
-                .sorted((a, b) -> {
-                    if (a.getServiceRequestId() != null && b.getServiceRequestId() != null) {
-                        return b.getServiceRequestId().compareTo(a.getServiceRequestId());
-                    }
-                    return 0;
-                })
-                .map(ServiceRequestResponse::fromEntity)
+                .sorted(Comparator.comparing(ServiceRequest::getRequestedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -204,7 +203,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Nhân viên " + staffDisplay + " tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -231,7 +230,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Phân công nhân viên " + staff.getFullName() + " phục vụ yêu cầu dịch vụ #" + requestId + " (bởi " + actorUsername + ")");
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -260,7 +259,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "COMPLETE", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " bởi nhân viên " + staffUsername);
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -295,7 +294,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "UPDATE_STATUS", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Đổi trạng thái yêu cầu #" + requestId + " sang " + upper + " bởi " + staffUsername);
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return toResponse(saved);
     }
 
     @Override
@@ -307,7 +306,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
         return serviceRequestRepository.findByCustomer_CustomerId(customerId).stream()
                 .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(ServiceRequestResponse::fromEntity)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -344,7 +343,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         }
         return serviceRequestRepository.findByBooking_BookingId(bookingId).stream()
                 .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(ServiceRequestResponse::fromEntity)
+                .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -354,6 +353,23 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         Booking booking = bookingRepository.findByBookingCode(bookingCode.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
         return getRequestsByBookingId(booking.getBookingId());
+    }
+
+    private ServiceRequestResponse toResponse(ServiceRequest request) {
+        BenefitRedemption redemption = benefitRedemptionRepository
+                .findFirstByServiceRequest_ServiceRequestId(request.getServiceRequestId())
+                .orElseGet(() -> request.getServiceUsage() == null ? null
+                        : benefitRedemptionRepository.findFirstByServiceUsage_UsageId(request.getServiceUsage().getUsageId()).orElse(null));
+        return ServiceRequestResponse.fromEntity(request, redemption);
+    }
+
+    private void linkUsageRedemption(ServiceRequest request, ServiceUsage usage) {
+        benefitRedemptionRepository.findFirstByServiceUsage_UsageId(usage.getUsageId()).ifPresent(redemption -> {
+            if (redemption.getServiceRequest() == null) {
+                redemption.setServiceRequest(request);
+                benefitRedemptionRepository.save(redemption);
+            }
+        });
     }
 
     private void validateShiftIfScheduledDataExists(Account staff) {
@@ -373,7 +389,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         for (ServiceUsage u : usages) {
             if (u.getBooking() == null || u.getService() == null) continue;
 
-            boolean exists = existingRequests.stream().anyMatch(r -> {
+            List<ServiceRequest> matchingRequests = existingRequests.stream().filter(r -> {
                 try {
                     return r.getBooking() != null && u.getBooking() != null
                             && r.getBooking().getBookingId().equals(u.getBooking().getBookingId())
@@ -382,7 +398,15 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                 } catch (Exception ignored) {
                     return false;
                 }
-            });
+            }).toList();
+            boolean exists = !matchingRequests.isEmpty();
+
+            if (matchingRequests.size() == 1 && matchingRequests.get(0).getServiceUsage() == null) {
+                ServiceRequest matched = matchingRequests.get(0);
+                matched.setServiceUsage(u);
+                serviceRequestRepository.save(matched);
+                linkUsageRedemption(matched, u);
+            }
 
             if (!exists) {
                 Room room = null;
@@ -422,11 +446,13 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                             .status(initialStatus)
                             .note("Yêu cầu dịch vụ phòng")
                             .invoice(u.getInvoice())
+                            .serviceUsage(u)
                             .requestedAt(u.getUsedAt() != null ? u.getUsedAt() : LocalDateTime.now())
                             .build();
 
                     ServiceRequest saved = serviceRequestRepository.save(req);
                     existingRequests.add(saved);
+                    linkUsageRedemption(saved, u);
                     log.info("Tự động đồng bộ ServiceUsage #{} sang ServiceRequest #{}", u.getUsageId(), saved.getServiceRequestId());
                 }
             }

@@ -48,6 +48,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     private final LoyaltyService loyaltyService;
     private final VoucherRepository voucherRepository;
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
+    private final TierBenefitRepository tierBenefitRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final LoyaltyTierRepository loyaltyTierRepository;
     private final ServiceRequestRepository serviceRequestRepository;
@@ -178,8 +179,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             activeInvoice.setTaxAmount(tax);
 
             BigDecimal depositApplied = activeInvoice.getDepositApplied() != null ? activeInvoice.getDepositApplied() : BigDecimal.ZERO;
-            BigDecimal discount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
-            BigDecimal finalTotal = subtotal.add(tax).subtract(discount).subtract(depositApplied);
+            BigDecimal manualDiscount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+            BigDecimal loyaltyDiscount = calculateLoyaltyRoomDiscount(booking, roomCharge);
+            activeInvoice.setLoyaltyDiscountAmount(loyaltyDiscount);
+            BigDecimal finalTotal = subtotal.add(tax).subtract(manualDiscount).subtract(loyaltyDiscount).subtract(depositApplied);
             activeInvoice.setTotalAmount(finalTotal.compareTo(BigDecimal.ZERO) > 0 ? finalTotal : BigDecimal.ZERO);
 
             invoiceRepository.save(activeInvoice);
@@ -239,10 +242,39 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
 
         BigDecimal subtotal = roomCharge.add(serviceCharge);
         BigDecimal taxAmount = financialCalculator.calculateTax(subtotal);
-        BigDecimal discountAmount = activeInvoice != null && activeInvoice.getDiscountAmount() != null
+        BigDecimal manualDiscountAmount = activeInvoice != null && activeInvoice.getDiscountAmount() != null
                 ? activeInvoice.getDiscountAmount()
                 : BigDecimal.ZERO;
+        BigDecimal loyaltyDiscountAmount;
+        if (activeInvoice != null && InvoiceStatus.PAID.name().equalsIgnoreCase(activeInvoice.getStatus())) {
+            loyaltyDiscountAmount = activeInvoice.getLoyaltyDiscountAmount() != null
+                    ? activeInvoice.getLoyaltyDiscountAmount() : BigDecimal.ZERO;
+        } else {
+            loyaltyDiscountAmount = calculateLoyaltyRoomDiscount(booking, roomCharge);
+        }
+        BigDecimal discountAmount = manualDiscountAmount.add(loyaltyDiscountAmount);
         BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount).max(BigDecimal.ZERO);
+
+        // A PAID invoice is the immutable checkout snapshot. Historical bookings
+        // must not be recalculated using current room rates, service prices, tax,
+        // or loyalty-tier benefits.
+        boolean invoiceAlreadyPaid = activeInvoice != null
+                && InvoiceStatus.PAID.name().equalsIgnoreCase(activeInvoice.getStatus());
+        if (invoiceAlreadyPaid) {
+            roomCharge = activeInvoice.getRoomCharge() != null ? activeInvoice.getRoomCharge() : BigDecimal.ZERO;
+            serviceCharge = activeInvoice.getServiceCharge() != null ? activeInvoice.getServiceCharge() : BigDecimal.ZERO;
+            subtotal = roomCharge.add(serviceCharge);
+            taxAmount = activeInvoice.getTaxAmount() != null ? activeInvoice.getTaxAmount() : BigDecimal.ZERO;
+            manualDiscountAmount = activeInvoice.getDiscountAmount() != null
+                    ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+            loyaltyDiscountAmount = activeInvoice.getLoyaltyDiscountAmount() != null
+                    ? activeInvoice.getLoyaltyDiscountAmount() : BigDecimal.ZERO;
+            discountAmount = manualDiscountAmount.add(loyaltyDiscountAmount);
+            // totalAmount is the finalized invoice amount before deposit payments.
+            totalAmount = activeInvoice.getTotalAmount() != null
+                    ? activeInvoice.getTotalAmount()
+                    : subtotal.add(taxAmount).subtract(discountAmount).max(BigDecimal.ZERO);
+        }
 
         // Tiền cọc đã nộp và tiền tất toán đã nộp
         List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
@@ -404,7 +436,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         invoice.setRoomCharge(folio.getRoomCharge());
         invoice.setServiceCharge(folio.getServiceCharge());
         invoice.setTaxAmount(folio.getTaxAmount());
-        invoice.setDiscountAmount(folio.getDiscountAmount());
+        BigDecimal storedManualDiscount = invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal storedLoyaltyDiscount = calculateLoyaltyRoomDiscount(booking, folio.getRoomCharge());
+        invoice.setDiscountAmount(storedManualDiscount);
+        invoice.setLoyaltyDiscountAmount(storedLoyaltyDiscount);
         invoice.setDepositApplied(folio.getDepositPaid());
         invoice.setTotalAmount(folio.getTotalAmount());
         invoice.setStatus(InvoiceStatus.PAID.name());
@@ -809,8 +844,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 activeInvoice.setTaxAmount(tax);
 
                 BigDecimal depositApplied = activeInvoice.getDepositApplied() != null ? activeInvoice.getDepositApplied() : BigDecimal.ZERO;
-                BigDecimal discount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
-                BigDecimal finalTotal = subtotal.add(tax).subtract(discount).subtract(depositApplied);
+                BigDecimal manualDiscount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal loyaltyDiscount = calculateLoyaltyRoomDiscount(booking, roomCharge);
+                activeInvoice.setLoyaltyDiscountAmount(loyaltyDiscount);
+                BigDecimal finalTotal = subtotal.add(tax).subtract(manualDiscount).subtract(loyaltyDiscount).subtract(depositApplied);
                 activeInvoice.setTotalAmount(finalTotal.compareTo(BigDecimal.ZERO) > 0 ? finalTotal : BigDecimal.ZERO);
                 invoiceRepository.save(activeInvoice);
                 log.info("Đã tính lại Invoice #{} sau khi cập nhật dịch vụ. Phí dịch vụ: {}", activeInvoice.getInvoiceNumber(), activeServiceCharge);
@@ -818,6 +855,47 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         } catch (Exception e) {
             log.warn("Lỗi tính lại Invoice: {}", e.getMessage());
         }
+    }
+
+    /**
+     * Calculates the highest active ROOM_DISCOUNT for the customer's exact current tier.
+     * The discount is applied only to the room charge, never to service charges or tax.
+     */
+    private BigDecimal calculateLoyaltyRoomDiscount(Booking booking, BigDecimal roomCharge) {
+        if (booking == null || booking.getCustomer() == null || roomCharge == null
+                || roomCharge.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        CustomerLoyalty loyalty = customerLoyaltyRepository
+                .findByCustomer_CustomerId(booking.getCustomer().getCustomerId())
+                .orElse(null);
+        if (loyalty == null || loyalty.getTier() == null || loyalty.getTier().getTierId() == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
+        Integer bookedRoomTypeId = bookingRooms.stream()
+                .filter(br -> br.getRoom() != null && br.getRoom().getRoomType() != null)
+                .map(br -> br.getRoom().getRoomType().getRoomTypeId())
+                .findFirst().orElse(null);
+
+        BigDecimal highestPercent = tierBenefitRepository
+                .findByTier_TierIdAndIsActiveTrue(loyalty.getTier().getTierId()).stream()
+                .filter(b -> "ROOM_DISCOUNT".equalsIgnoreCase(b.getBenefitType()))
+                .filter(b -> b.getDiscountPercent() != null
+                        && b.getDiscountPercent().compareTo(BigDecimal.ZERO) > 0)
+                .filter(b -> b.getRoomType() == null || (bookedRoomTypeId != null
+                        && bookedRoomTypeId.equals(b.getRoomType().getRoomTypeId())))
+                .map(TierBenefit::getDiscountPercent)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        if (highestPercent.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return roomCharge.multiply(highestPercent)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     private ServiceUsageResponse mapToServiceUsageResponse(ServiceUsage u) {

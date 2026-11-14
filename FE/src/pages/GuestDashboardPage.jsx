@@ -86,8 +86,13 @@ export default function GuestDashboardPage() {
 
       if (nextStay) {
         try {
-          const detail = await apiCall(`/api/customer/bookings/history/${encodeURIComponent(nextStay.bookingCode)}`, { silentError: true });
-          if (active && detail?.success) setFolio(detail.data);
+          const billing = await apiCall(`/api/public/bookings/${encodeURIComponent(nextStay.bookingCode)}/folio`, { silentError: true });
+          if (active && billing?.success) {
+            setFolio(billing.data);
+          } else {
+            const detail = await apiCall(`/api/customer/bookings/history/${encodeURIComponent(nextStay.bookingCode)}`, { silentError: true });
+            if (active && detail?.success) setFolio(detail.data);
+          }
         } catch {
           /* booking summary still provides the trip details */
         }
@@ -134,51 +139,6 @@ export default function GuestDashboardPage() {
         </div>
       ) : (
         <div className="guest-stack">
-          {/* Top Quick Metric Stats */}
-          <div className="guest-stats-grid">
-            <div className="guest-stat-card">
-              <div className="guest-stat-icon" style={TONE.primary}>
-                <i className="bi bi-gem"></i>
-              </div>
-              <div className="guest-stat-content">
-                <div className="guest-stat-val">{loyalty?.tierName || "Thành viên"}</div>
-                <div className="guest-stat-lbl">Đặc quyền hội viên</div>
-              </div>
-            </div>
-
-            <div className="guest-stat-card">
-              <div className="guest-stat-icon" style={TONE.warning}>
-                <i className="bi bi-stars"></i>
-              </div>
-              <div className="guest-stat-content">
-                <div className="guest-stat-val">{(loyalty?.currentScore || 0).toLocaleString("vi-VN")}</div>
-                <div className="guest-stat-lbl">Điểm thưởng tích lũy</div>
-              </div>
-            </div>
-
-            <div className="guest-stat-card">
-              <div className="guest-stat-icon" style={TONE.info}>
-                <i className="bi bi-calendar-check"></i>
-              </div>
-              <div className="guest-stat-content">
-                <div className="guest-stat-val">{bookings.length}</div>
-                <div className="guest-stat-lbl">Đơn đặt phòng</div>
-              </div>
-            </div>
-
-            <div className="guest-stat-card">
-              <div className="guest-stat-icon" style={TONE.success}>
-                <i className="bi bi-door-open"></i>
-              </div>
-              <div className="guest-stat-content">
-                <div className="guest-stat-val">
-                  {nextStay ? (nextStay.bookingStatus === "CHECKED_IN" ? "Đang ở" : "Đã xác nhận") : "Chưa có đơn"}
-                </div>
-                <div className="guest-stat-lbl">Trạng thái kỳ nghỉ</div>
-              </div>
-            </div>
-          </div>
-
           {/* Next Stay Card */}
           <div className="hc-card">
             <div className="hc-card-header">
@@ -186,11 +146,7 @@ export default function GuestDashboardPage() {
                 <div className="guest-toolbar-title">
                   <i className="bi bi-suitcase-lg text-primary"></i> Kỳ nghỉ của bạn
                 </div>
-                {nextStay && (
-                  <span className={`hc-badge hc-badge-booking-${nextStay.bookingStatus}`}>
-                    {STATUS_LABEL[nextStay.bookingStatus] || nextStay.bookingStatus}
-                  </span>
-                )}
+                {nextStay && <span className={`hc-badge hc-badge-booking-${nextStay.bookingStatus}`}>{STATUS_LABEL[nextStay.bookingStatus] || nextStay.bookingStatus}</span>}
               </div>
             </div>
 
@@ -207,7 +163,12 @@ export default function GuestDashboardPage() {
                       <h3 className="guest-stay-name">{nextStay.roomTypeName || "Kỳ nghỉ dưỡng cao cấp"}</h3>
                       <div className="guest-cell-sub">
                         Mã đặt phòng: <strong style={{ color: "var(--hc-primary)", fontSize: "14px" }}>{nextStay.bookingCode}</strong>
-                        {nextStay.roomNumber && <span> · Số phòng: <strong>{nextStay.roomNumber}</strong></span>}
+                        {nextStay.roomNumber && (
+                          <span>
+                            {" "}
+                            · Số phòng: <strong>{nextStay.roomNumber}</strong>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -278,8 +239,30 @@ export default function GuestDashboardPage() {
                       <b>{formatVND(balance)}</b>
                     </div>
                     <div className="guest-sum-row">
+                      <span>Tiền phòng</span>
+                      <strong>{formatVND(folio?.roomCharge ?? nextStay.roomCharge ?? nextStay.totalAmount ?? 0)}</strong>
+                    </div>
+                    {Number(folio?.serviceCharge ?? 0) > 0 && (
+                      <div className="guest-sum-row">
+                        <span>Dịch vụ phát sinh</span>
+                        <strong>{formatVND(folio.serviceCharge)}</strong>
+                      </div>
+                    )}
+                    {Number(folio?.taxAmount ?? 0) > 0 && (
+                      <div className="guest-sum-row">
+                        <span>Thuế VAT</span>
+                        <strong>{formatVND(folio.taxAmount)}</strong>
+                      </div>
+                    )}
+                    {Number(folio?.discountAmount ?? 0) > 0 && (
+                      <div className="guest-sum-row" style={{ color: "var(--hc-success)" }}>
+                        <span>Giảm giá (hội viên / voucher)</span>
+                        <strong>- {formatVND(folio.discountAmount)}</strong>
+                      </div>
+                    )}
+                    <div className="guest-sum-row">
                       <span>Tiền cọc đã thanh toán</span>
-                      <strong style={{ color: "var(--hc-success)" }}>{formatVND(nextStay.depositPaid ?? nextStay.depositAmount ?? nextStay.depositApplied ?? 0)}</strong>
+                      <strong style={{ color: "var(--hc-success)" }}>{formatVND(folio?.depositPaid ?? nextStay.depositPaid ?? nextStay.depositAmount ?? nextStay.depositApplied ?? 0)}</strong>
                     </div>
                     <div className="guest-sum-row" style={{ borderBottom: 0 }}>
                       <span>Tổng chi phí dự kiến</span>
@@ -287,12 +270,7 @@ export default function GuestDashboardPage() {
                     </div>
                     <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
                       {balance > 0 && (
-                        <button
-                          type="button"
-                          className="hc-btn hc-btn-primary hc-btn-sm"
-                          onClick={() => setQrModalOpen(true)}
-                          style={{ width: "100%", justifyContent: "center" }}
-                        >
+                        <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={() => setQrModalOpen(true)} style={{ width: "100%", justifyContent: "center" }}>
                           <i className="bi bi-qr-code-scan"></i> Thanh toán VietQR ({formatVND(balance)})
                         </button>
                       )}
@@ -411,16 +389,14 @@ export default function GuestDashboardPage() {
                           {req.quantity > 1 && <span className="guest-cell-sub"> (x{req.quantity})</span>}
                           {req.note && <div className="guest-cell-sub">"{req.note}"</div>}
                         </td>
-                        <td>{req.roomNumber ? `Phòng ${req.roomNumber}` : (req.bookingCode || "—")}</td>
-                        <td style={{ textAlign: "center" }}>
-                          {renderServiceStatusBadge(req.status)}
-                        </td>
+                        <td>{req.roomNumber ? `Phòng ${req.roomNumber}` : req.bookingCode || "—"}</td>
+                        <td style={{ textAlign: "center" }}>{renderServiceStatusBadge(req.status)}</td>
                         <td>
-                          {req.requestedAt ? new Date(req.requestedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) + " " + new Date(req.requestedAt).toLocaleDateString("vi-VN") : "—"}
+                          {req.requestedAt
+                            ? new Date(req.requestedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) + " " + new Date(req.requestedAt).toLocaleDateString("vi-VN")
+                            : "—"}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>
-                          {formatVND(req.feeAmount)}
-                        </td>
+                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatVND(req.feeAmount)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -458,7 +434,7 @@ export default function GuestDashboardPage() {
           isOpen={qrModalOpen}
           onClose={() => setQrModalOpen(false)}
           bookingCode={nextStay.bookingCode}
-          amount={nextStay.bookingStatus === "PENDING_DEPOSIT" ? (nextStay.depositRequired || balance) : balance}
+          amount={nextStay.bookingStatus === "PENDING_DEPOSIT" ? nextStay.depositRequired || balance : balance}
           type={nextStay.bookingStatus === "PENDING_DEPOSIT" ? "DEPOSIT" : "SETTLEMENT"}
           title={nextStay.bookingStatus === "PENDING_DEPOSIT" ? "Thanh Toán Tiền Cọc Qua VietQR" : "Thanh Toán Chi Phí Qua VietQR"}
           redirectUrl={`/guest/services?bookingCode=${encodeURIComponent(nextStay.bookingCode)}`}

@@ -15,6 +15,7 @@ import java.math.BigDecimal;
 public class TierBenefitResponse {
     private Integer tierBenefitId;
     private Integer tierId;
+    private Integer tierLevel;
     private String tierCode;
     private String tierName;
     private Integer serviceId;
@@ -37,6 +38,7 @@ public class TierBenefitResponse {
         return TierBenefitResponse.builder()
                 .tierBenefitId(entity.getTierBenefitId())
                 .tierId(entity.getTier() != null ? entity.getTier().getTierId() : null)
+                .tierLevel(entity.getTier() != null ? entity.getTier().getTierLevel() : null)
                 .tierCode(entity.getTier() != null ? entity.getTier().getTierCode() : null)
                 .tierName(entity.getTier() != null ? entity.getTier().getTierName() : null)
                 .serviceId(entity.getService() != null ? entity.getService().getServiceId() : null)
