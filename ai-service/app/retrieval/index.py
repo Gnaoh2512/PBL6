@@ -7,6 +7,7 @@ from contextlib import closing
 from datetime import date
 from pathlib import Path
 
+from app.diagnostics import Category, Operation, Phase, step
 from app.ingestion.snapshot import ALGORITHM, ROOT, SOURCES, digest, document, normalize
 from app.providers.contracts import DependencyError, Evidence
 
@@ -18,6 +19,10 @@ class KnowledgeIndex:
         self.validate(today)
 
     def validate(self, today: date):
+        with step(Phase.INDEX, operation=Operation.INDEX_VALIDATE):
+            self._validate(today)
+
+    def _validate(self, today):
         try:
             expected = (self.root / ".local/assistant-index" / self.mode).resolve()
             if (
@@ -47,12 +52,18 @@ class KnowledgeIndex:
                     raise ValueError()
             if digest((self.path / "index.sqlite").read_bytes()) != manifest["databaseChecksum"]:
                 raise ValueError()
-        except (OSError, KeyError, TypeError, ValueError):
-            raise DependencyError() from None
+        except OSError:
+            raise DependencyError(diagnostic_category=Category.INDEX_IO) from None
+        except (KeyError, TypeError, ValueError):
+            raise DependencyError(diagnostic_category=Category.INDEX_VALIDATION) from None
 
     def search(
         self, query: str, today: date, top_k: int = 3, category: str | None = None
     ) -> list[Evidence]:
+        with step(Phase.INDEX, operation=Operation.RETRIEVAL):
+            return self._search(query, today, top_k, category)
+
+    def _search(self, query, today, top_k, category):
         self.validate(today)
         tokens = list(dict.fromkeys(re.findall(r"[a-z0-9]+", normalize(query))))[:64]
         # Vietnamese glue words should not make every FAQ appear relevant.
@@ -78,5 +89,7 @@ class KnowledgeIndex:
                 if len(evidence) >= min(3, max(1, top_k)):
                     break
             return evidence
-        except (sqlite3.Error, ValueError, KeyError, TypeError):
-            raise DependencyError() from None
+        except sqlite3.Error:
+            raise DependencyError(diagnostic_category=Category.INDEX_QUERY) from None
+        except (ValueError, KeyError, TypeError):
+            raise DependencyError(diagnostic_category=Category.INDEX_VALIDATION) from None

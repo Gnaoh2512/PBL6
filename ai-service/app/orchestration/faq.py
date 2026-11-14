@@ -1,8 +1,8 @@
 """One retrieval, at most two generation calls; no broker, continuation or business tools."""
 
-import asyncio
 import re
 
+from app.diagnostics import Category, Operation, Phase, bind_budget, context, deadline, step
 from app.prompts.faq import ANSWER, CLASSIFY
 from app.providers.contracts import DependencyError, TurnBudget
 from app.schemas.faq import GroundedAnswer, Intent
@@ -19,45 +19,55 @@ class Faq:
         self.provider, self.index, self.mode = provider, index, mode
 
     async def run(self, payload):
+        with context(operation=Operation.TURN, new=True), step(Phase.APPLICATION):
+            return await self._run(payload)
+
+    async def _run(self, payload):
         self.index.validate(payload.context.today)
         budget = TurnBudget(
             remaining_ms=payload.budget.remainingMs,
             input_limit=payload.budget.remainingInputTokens,
             output_limit=payload.budget.remainingOutputTokens,
         )
+        bind_budget(budget)
         evidence, selected = [], []
         status, answer = "capability_unavailable", "Chức năng này chưa được hỗ trợ trong D1."
-        async with asyncio.timeout(budget.seconds()):
-            intent = await self.provider.generate(
-                CLASSIFY,
-                {
-                    "message": public_text(payload.message),
-                    "history": [
-                        {"role": m.role, "content": public_text(m.content)} for m in payload.history
-                    ],
-                },
-                Intent,
-                budget,
-            )
+        async with deadline(budget.seconds()):
+            with context(operation=Operation.CLASSIFY):
+                intent = await self.provider.generate(
+                    CLASSIFY,
+                    {
+                        "message": public_text(payload.message),
+                        "history": [
+                            {"role": m.role, "content": public_text(m.content)}
+                            for m in payload.history
+                        ],
+                    },
+                    Intent,
+                    budget,
+                )
             if intent.intent == "faq":
                 if (
                     "search_knowledge" not in payload.allowedTools
                     or payload.budget.remainingToolCalls < 1
                 ):
-                    raise DependencyError("BUDGET_EXCEEDED")
+                    raise DependencyError(
+                        "BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT
+                    )
                 evidence = self.index.search(intent.query, payload.context.today)
                 status, answer = "insufficient_evidence", "Chưa có đủ nguồn để trả lời câu hỏi này."
                 if evidence:
-                    result = await self.provider.generate(
-                        ANSWER,
-                        {
-                            "message": public_text(payload.message),
-                            "query": intent.query,
-                            "evidence": [e.model_dump() for e in evidence],
-                        },
-                        GroundedAnswer,
-                        budget,
-                    )
+                    with context(operation=Operation.ANSWER):
+                        result = await self.provider.generate(
+                            ANSWER,
+                            {
+                                "message": public_text(payload.message),
+                                "query": intent.query,
+                                "evidence": [e.model_dump() for e in evidence],
+                            },
+                            GroundedAnswer,
+                            budget,
+                        )
                     if result.supported:
                         registry = {e.citationId: e for e in evidence}
                         if (
@@ -65,7 +75,9 @@ class Faq:
                             or len(set(result.citationIds)) != len(result.citationIds)
                             or any(cid not in registry for cid in result.citationIds)
                         ):
-                            raise DependencyError("AI_PROTOCOL_ERROR")
+                            raise DependencyError(
+                                "AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SCHEMA
+                            )
                         selected = [
                             registry[cid].model_dump(exclude={"excerpt", "corpusMode"})
                             for cid in result.citationIds

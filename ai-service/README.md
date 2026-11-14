@@ -78,6 +78,54 @@ Widget bật tường minh bằng `VITE_ASSISTANT_ENABLED=true` trong process Vi
 
 ## Kiểm chứng D1
 
+### Diagnostics D1.8 — offline
+
+Runtime ghi JSON từng dòng ra **stderr**, logger `ai_service.diagnostics` riêng, không propagate
+lên root và không bật HTTPX/HTTPCore debug. Không cần thêm biến cấu hình hoặc dependency.
+Mỗi event kết thúc một bước gồm `diagnostic_id` (UUID sinh nội bộ), `operation`, `phase`,
+`provider_method`, `outcome`, `duration_ms`, `remaining_budget_ms`, `http_status`, `error_category`.
+`operation` phân biệt probe/classify/answer/index_validate/retrieval/turn; `provider_method` chỉ là
+countTokens/generateContent hoặc null, giúp xác định method khi phase là response_validation.
+
+Tìm các event cùng `diagnostic_id`, đọc lỗi sâu nhất trước rồi event tổng kết turn:
+
+- `connect_timeout`, `read_timeout`, `write_timeout`, `pool_timeout`: HTTP client timeout.
+- `application_deadline`: context deadline tương ứng đã hết hạn hoặc ngân sách tích lũy đã cạn.
+  Khi outer deadline hủy HTTP đang chờ, event HTTP có thể là `cancelled`, event turn là
+  `application_deadline` cùng ID. Cancellation từ caller được truyền tiếp, không trở thành retry.
+- `http_status`: response non-200, xem status thực nhận; không tự suy key/quota từ mã chung.
+- `transport_connect/read/write/protocol/other`: lỗi transport; chưa đủ để kết luận DNS/TLS cụ thể.
+- `json_decode`, `response_schema`, `response_size`: lỗi body JSON, schema/content/usage hoặc kích thước.
+- `index_io`, `index_validation`, `index_query`: lỗi file/checksum/metadata hoặc SQLite cục bộ.
+- `budget_limit`, `unexpected`: giới hạn token/call hoặc lỗi chưa phân loại; không ghi raw exception.
+
+Duration của các bước lồng nhau **không cộng trực tiếp**. Ngân sách còn lại chặn dưới tại 0;
+validate index đầu tiên vẫn nằm trước budget, có giá trị null. Đồng hồ dùng monotonic; log không
+đổi deadline 20 giây, số HTTP requests, prompt/model, token budget hoặc no-retry.
+UUID chẩn đoán không phải request/conversation/account ID của khách và không được thêm vào API.
+Các lần validate index độc lập ngoài turn có ID riêng. Không lưu prompt/response, query, evidence,
+API key/JWT/PII, URL/header, đường dẫn index hoặc exception message/traceback trong diagnostics.
+Không cấu hình logger bên ngoài để dump headers/body. Các mã lỗi public và readiness không đổi:
+FastAPI vẫn giữ not-ready sau dependency failure đến restart; client provider riêng vẫn dùng lại
+được sau một lỗi request nếu transport đã phục hồi. Client được đóng cả khi startup probe bị hủy.
+
+Chạy kiểm chứng offline từ `ai-service`:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m pytest -q -p no:cacheprovider tests/unit tests/integration
+.\.venv\Scripts\ruff.exe check app tests/conftest.py tests/unit tests/integration
+.\.venv\Scripts\ruff.exe format --check app tests/conftest.py tests/unit tests/integration
+.\.venv\Scripts\python.exe -B -m pip check
+```
+
+Test guard chặn TCP sockets/DNS/outbound, kể cả async transport Windows; chỉ cho phép socketpair
+nội bộ của event loop. Mock HTTP/provider có nhãn, dữ liệu/index trong thư mục tạm, không dùng key
+thật hoặc gọi model. Tests kiểm tra mapping, LogRecord redaction, budget, cancellation, stream/client
+cleanup và request tiếp theo. Không chạy lại evaluation để kiểm chứng thay đổi này.
+D1.8 không chứng minh Gemini thật ổn định hoặc giải thích ngược 9 lỗi cũ; D1 vẫn chưa đóng nghiệm thu.
+
+### Kiểm chứng live đã có và hướng dẫn riêng
+
 Để chạy browser bằng Gemini thật: từ FE đặt `$env:D1_LIVE_GEMINI='1'`, rồi `npm run test:e2e`. Key được Settings đọc từ ai-service/.env, không truyền trong command. Entrypoint live bắt buộc dùng snapshot synthetic và không sửa file .env. Đọc STATUS để phân biệt 3 E2E pass với batch 24 ca còn lỗi; không chạy lại batch vô hạn để chọn kết quả đẹp.
 
 - Python: các lệnh pytest/Ruff/pip check ở trên; thêm `tests/evaluation/run_d1.py --retrieval-only` cho baseline synthetic hoặc `--live` khi có GEMINI_API_KEY. Báo cáo trong `.local/assistant-evaluation/` đã ignore; có đáp án synthetic để người đánh giá rà grounding, không chứa prompt/credential.

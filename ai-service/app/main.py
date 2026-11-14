@@ -9,6 +9,7 @@ from starlette.exceptions import HTTPException
 from starlette.responses import JSONResponse
 
 from app.api.boundary import FoundationBoundary, error_response
+from app.diagnostics import Operation, Phase, context, step
 from app.orchestration.faq import Faq
 from app.providers.contracts import DependencyError, TurnBudget
 from app.providers.gemini import Gemini
@@ -22,8 +23,7 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
     settings = settings if settings is not None else Settings()
     state = {"faq": faq, "provider": None, "dependency_failed": False}
 
-    @asynccontextmanager
-    async def lifespan(app):
+    async def initialize():
         if (
             state["faq"] is None
             and settings.gemini_key
@@ -38,15 +38,22 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
                 )
                 provider = Gemini(settings.gemini_key.get_secret_value(), settings.gemini_model)
                 state["provider"] = provider
-                probe = await provider.generate(
-                    "Return ok=true.", {}, Probe, TurnBudget(remaining_ms=5000, output_limit=100)
-                )
-                if not probe.ok:
-                    raise DependencyError()
+                budget = TurnBudget(remaining_ms=5000, output_limit=100)
+                with (
+                    context(operation=Operation.PROBE, budget=budget, new=True),
+                    step(Phase.APPLICATION),
+                ):
+                    probe = await provider.generate("Return ok=true.", {}, Probe, budget)
+                    if not probe.ok:
+                        raise DependencyError()
                 state["faq"] = Faq(provider, index, settings.corpus_mode)
             except (DependencyError, OSError, ValueError):
                 state["faq"] = None
+
+    @asynccontextmanager
+    async def lifespan(app):
         try:
+            await initialize()
             yield
         finally:
             if state["provider"]:

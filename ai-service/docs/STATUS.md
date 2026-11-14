@@ -1,6 +1,36 @@
 # Trạng thái trợ lý khách sạn
 
-Cập nhật: 2026-11-13, Asia/Ho_Chi_Minh.
+Cập nhật: 2026-11-14, Asia/Ho_Chi_Minh.
+
+## D1.8 — instrumentation và kiểm thử offline, 2026-11-14
+
+- Thêm logger JSON stderr riêng `ai_service.diagnostics`, UUID nội bộ và context cô lập theo turn.
+  Events phân biệt classify/answer/probe, countTokens/generateContent/response validation,
+  retrieval/index và application deadline; có duration, remaining budget, HTTP status khi có.
+  Categories phân biệt HTTP timeout, deadline, transport, non-200, malformed JSON/schema/size,
+  index I/O/validation/query, budget và cancellation. Không dùng raw exception hoặc input làm label.
+- Chỉ serialize enums, UUID sinh nội bộ và số đo; không ghi key/JWT/PII, prompt/response, query,
+  evidence, header/URL/path, thoughtSignature hoặc traceback. Không thêm dependency/config/secrets.
+  Hướng dẫn trường và cách đọc tại [README](../README.md#diagnostics-d18--offline).
+- Public API và error mapping giữ nguyên, gồm malformed JSON của provider vẫn là dependency error.
+  Model/prompt, deadline 20 giây, token/call budget, no-retry và readiness latch không đổi. Validate
+  index ban đầu vẫn ở trước budget. Sửa cleanup để provider được đóng nếu startup probe bị hủy.
+- Test mới dùng MockTransport/stream có theo dõi cleanup, fake clock, event cancellation và corpus
+  synthetic trong thư mục tạm. Guard chặn outbound/DNS/socket TCP, gồm đường async Windows;
+  ngoại lệ duy nhất là socketpair đồng bộ nội bộ event loop. Không chạy live hoặc evaluation runner.
+- Kiểm chứng: test mapping/redaction, cumulative budget qua classify/retrieval/answer, HTTP/application
+  timeout, cancellation khi chờ headers/body/giữa bước, client/stream cleanup, request tiếp theo,
+  context isolation, log injection, startup/shutdown và public/readiness regression.
+  `python -B -m pytest -q -p no:cacheprovider tests/unit tests/integration`: **139 passed**, 1 cảnh
+  báo Starlette/HTTPX đã có; 71 tests mới so với baseline 68. Ruff check/format-check cho app,
+  tests/conftest.py, unit/integration đều qua; `pip check` không có dependency hỏng.
+  Lệnh đầy đủ dùng virtualenv tại README; không dùng kết quả offline làm benchmark live.
+- Giữ file `.env`, artifact/index cũ, báo cáo D1.7 và mọi thay đổi ngoài nhiệm vụ; không sửa FE/BE,
+  knowledge, prompt/model hoặc evaluation runner. Nhánh `feature/assistant-d1-observability`;
+  chỉ commit D1.8, không push/deploy. Không cài phần mềm, dependency, model hoặc dịch vụ mới.
+- **D1 vẫn chưa đủ điều kiện nghiệm thu:** D1.8 cung cấp công cụ chẩn đoán cho lượt live tiếp theo,
+  không xác định lại root cause lịch sử hoặc chứng minh đã khắc phục 7 timeout/2 dependency.
+  Tiếp theo cần cho phép riêng một lượt live chẩn đoán giới hạn trước khi đánh giá ổn định.
 
 ## D1 — kiểm chứng Gemini thật, 2026-11-13
 
