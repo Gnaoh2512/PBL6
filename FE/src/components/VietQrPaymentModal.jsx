@@ -224,7 +224,7 @@ export default function VietQrPaymentModal({
               <div className="vq-info-row">
                 <span className="vq-info-label">Mã đặt phòng:</span>
                 <div className="vq-info-value-wrap">
-                  <strong style={{ color: "var(--hc-primary)" }}>{cleanCode}</strong>
+                  <strong className="u-text-primary">{cleanCode}</strong>
                 </div>
               </div>
 

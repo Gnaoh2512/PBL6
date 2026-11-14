@@ -1071,11 +1071,11 @@ export default function AdminSchedulesPage() {
                                   <b>{slot}</b> {getShiftName(item)}
                                 </span>
                               </td>
-                              <td style={{ whiteSpace: "nowrap" }}>{getTimeRange(item)}</td>
+                              <td className="u-nowrap">{getTimeRange(item)}</td>
                               <td>
                                 <span className={`admin-calendar-status ${meta.cls}`}>{meta.label}</span>
                               </td>
-                              <td style={{ textAlign: "right" }}>
+                              <td className="u-text-right">
                                 <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => (isEditing ? setEditingId(null) : startEdit(item))}>
                                   <i className={`bi ${isEditing ? "bi-x-lg" : "bi-pencil"}`} /> {isEditing ? "Đóng" : "Sửa"}
                                 </button>
@@ -1191,7 +1191,7 @@ export default function AdminSchedulesPage() {
               </button>
             </div>
           ) : (
-            <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+            <div className="hc-card-body flush u-scroll-x">
               <table className="hc-table">
                 <thead>
                   <tr>
@@ -1199,7 +1199,7 @@ export default function AdminSchedulesPage() {
                     <th>Giờ bắt đầu</th>
                     <th>Giờ kết thúc</th>
                     <th>Mô tả</th>
-                    <th style={{ textAlign: "right" }}>Thao tác</th>
+                    <th className="u-text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1219,7 +1219,7 @@ export default function AdminSchedulesPage() {
                         </span>
                       </td>
                       <td>{shift.description || "—"}</td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="u-text-right">
                         <div className="admin-shift-actions">
                           <button
                             type="button"

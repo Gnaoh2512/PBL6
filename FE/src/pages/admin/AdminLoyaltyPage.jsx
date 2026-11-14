@@ -537,14 +537,14 @@ export default function AdminLoyaltyPage() {
     const periodLabel = b.periodType === "DAY" ? "ngày" : b.periodType === "MONTH" ? "tháng" : "năm";
     return (
       <span>
-        <strong>{b.quota} lượt</strong> <small style={{ color: "var(--hc-text-muted)" }}>/ {periodLabel}</small>
+        <strong>{b.quota} lượt</strong> <small className="u-text-muted">/ {periodLabel}</small>
       </span>
     );
   };
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Quản Lý Chương Trình Loyalty</h2>
           <p>Xem hạng thành viên, điểm tích lũy và điều chỉnh điểm thưởng cho khách hàng.</p>
@@ -604,23 +604,22 @@ export default function AdminLoyaltyPage() {
             <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hc-border-light)" }}>
               <div>
                 <h3 className="hc-card-title" style={{ margin: 0, fontSize: "15px", fontWeight: 700 }}>
-                  <i className="bi bi-people" style={{ marginRight: 6, color: "var(--hc-primary)" }}></i>
+                  <i className="bi bi-people u-text-primary u-mr-6"></i>
                   Danh sách Khách hàng ({filtered.length})
                 </h3>
               </div>
             </div>
 
-            <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
+            <div className="hc-card-body u-row-ruled">
               <input
                 type="search"
-                className="hc-input"
-                style={{ flex: "1 1 240px" }}
+                className="hc-input u-flex-240"
                 placeholder="Tên, SĐT, email, số giấy tờ, quốc tịch, hạng..."
                 aria-label="Tìm kiếm hội viên"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <div style={{ flex: "0 0 220px" }}>
+              <div className="u-flex-220">
                 <SelectMenu value={tierFilter} onChange={setTierFilter} options={tierFilterOptions} ariaLabel="Lọc hạng thành viên" icon="bi-funnel" />
               </div>
             </div>
@@ -657,7 +656,7 @@ export default function AdminLoyaltyPage() {
                 <p>Không tìm thấy hội viên nào.</p>
               </div>
             ) : (
-              <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+              <div className="hc-card-body flush u-scroll-x">
                 <table className="hc-table">
                   <thead>
                     <tr>
@@ -666,7 +665,7 @@ export default function AdminLoyaltyPage() {
                       <th>Điểm</th>
                       <th>Ngày lưu trú</th>
                       <th>Tổng chi tiêu</th>
-                      <th style={{ textAlign: "right" }}>Thao tác</th>
+                      <th className="u-text-right">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -677,9 +676,9 @@ export default function AdminLoyaltyPage() {
                           <td>
                             <strong>{c.customerName || "—"}</strong>
                             <br />
-                            <small style={{ color: "var(--hc-text-secondary)" }}>{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</small>
+                            <small className="u-text-secondary">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</small>
                             <br />
-                            <small style={{ color: "var(--hc-text-muted)" }}>{[c.idNumber && `${c.idType || "Giấy tờ"}: ${c.idNumber}`, c.nationality].filter(Boolean).join(" · ")}</small>
+                            <small className="u-text-muted">{[c.idNumber && `${c.idType || "Giấy tờ"}: ${c.idNumber}`, c.nationality].filter(Boolean).join(" · ")}</small>
                           </td>
                           <td>
                             <button
@@ -699,11 +698,10 @@ export default function AdminLoyaltyPage() {
                           </td>
                           <td>{c.totalStayDays || 0} đêm</td>
                           <td>{formatVND(c.totalSpent || 0)}</td>
-                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                          <td className="u-text-right u-nowrap">
                             <button
                               type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              style={{ marginRight: 6 }}
+                              className="hc-btn hc-btn-outline hc-btn-sm u-mr-6"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 openEdit(c);
@@ -743,7 +741,7 @@ export default function AdminLoyaltyPage() {
             <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderBottom: "1px solid var(--hc-border-light)" }}>
               <div>
                 <h3 className="hc-card-title" style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  <i className="bi bi-gift" style={{ color: "var(--hc-primary)" }}></i>
+                  <i className="bi bi-gift u-text-primary"></i>
                   Đặc quyền hội viên ({filteredBenefits.length})
                 </h3>
                 <span style={{ fontSize: "12.5px", color: "var(--hc-text-muted)" }}>
@@ -764,8 +762,7 @@ export default function AdminLoyaltyPage() {
             <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)", background: "var(--hc-bg-subtle, #f8fafc)" }}>
               <input
                 type="search"
-                className="hc-input"
-                style={{ flex: "1 1 200px" }}
+                className="hc-input u-flex-200"
                 placeholder="Tìm tên đặc quyền, dịch vụ, mô tả..."
                 value={benefitSearch}
                 onChange={(e) => setBenefitSearch(e.target.value)}
@@ -792,7 +789,7 @@ export default function AdminLoyaltyPage() {
                 </button>
               </div>
             ) : (
-              <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+              <div className="hc-card-body flush u-scroll-x">
                 <table className="hc-table">
                   <thead>
                     <tr>
@@ -848,15 +845,14 @@ export default function AdminLoyaltyPage() {
                               color: b.isActive ? "var(--hc-success, #15803d)" : "var(--hc-text-muted, #64748b)",
                             }}
                           >
-                            <i className={`bi ${b.isActive ? "bi-check-circle-fill" : "bi-pause-circle"}`} style={{ marginRight: 4 }}></i>
+                            <i className={`bi ${b.isActive ? "bi-check-circle-fill" : "bi-pause-circle"} u-mr-4`}></i>
                             {b.isActive ? "Đang áp dụng" : "Tạm dừng"}
                           </button>
                         </td>
-                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                        <td className="u-text-right u-nowrap">
                           <button
                             type="button"
-                            className="hc-btn hc-btn-outline hc-btn-sm"
-                            style={{ marginRight: 6 }}
+                            className="hc-btn hc-btn-outline hc-btn-sm u-mr-6"
                             onClick={() => openEditBenefit(b)}
                             title="Chỉnh sửa đặc quyền"
                           >
@@ -886,9 +882,9 @@ export default function AdminLoyaltyPage() {
             <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: "15px" }}>{selectedCustomer.customerName || "Chi tiết hội viên"}</div>
-                <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>{selectedCustomer.phone || selectedCustomer.email || ""}</div>
+                <div className="u-hint">{selectedCustomer.phone || selectedCustomer.email || ""}</div>
               </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <div className="u-row-6">
                 <button
                   type="button"
                   className="hc-btn hc-btn-primary hc-btn-sm"
@@ -944,9 +940,9 @@ export default function AdminLoyaltyPage() {
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 600 }}>{txn.txnType === "EARN" ? "Tích điểm" : "Điều chỉnh"}</div>
-                        <div style={{ color: "var(--hc-text-secondary)", fontSize: "11px" }}>{formatDateTime(txn.createdAt)}</div>
-                        {txn.note && <div style={{ color: "var(--hc-text-secondary)", fontSize: "11px" }}>{txn.note}</div>}
+                        <div className="u-fw-600">{txn.txnType === "EARN" ? "Tích điểm" : "Điều chỉnh"}</div>
+                        <div className="u-hint-sm">{formatDateTime(txn.createdAt)}</div>
+                        {txn.note && <div className="u-hint-sm">{txn.note}</div>}
                       </div>
                       <div style={{ fontWeight: 700, color: Number(txn.scoreEarned) >= 0 ? "var(--hc-success)" : "var(--hc-error)" }}>
                         {Number(txn.scoreEarned) >= 0 ? "+" : ""}
@@ -970,7 +966,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-plus-slash-minus"
         maxWidth="480px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setAdjustModal(false)}>
               Hủy
             </button>
@@ -987,7 +983,7 @@ export default function AdminLoyaltyPage() {
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Số điểm điều chỉnh <span style={{ color: "var(--hc-error)" }}>*</span>
+              Số điểm điều chỉnh <span className="u-text-error">*</span>
             </label>
             <input
               type="number"
@@ -1022,7 +1018,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-person-lines-fill"
         maxWidth="680px"
         footer={
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setEditModal(false)}>
               Hủy
             </button>
@@ -1047,7 +1043,7 @@ export default function AdminLoyaltyPage() {
             ].map(([key, label, type, required, list]) => (
               <div className="hc-form-group" key={key}>
                 <label className="hc-label">
-                  {label} {required && <span style={{ color: "var(--hc-error)" }}>*</span>}
+                  {label} {required && <span className="u-text-error">*</span>}
                 </label>
                 <input className="hc-input" type={type} list={list} value={editForm[key] || ""} onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })} />
               </div>
@@ -1082,7 +1078,7 @@ export default function AdminLoyaltyPage() {
               </div>
             ))}
           </div>
-          <small style={{ color: "var(--hc-text-secondary)", fontSize: 11 }}>Muốn cộng/trừ điểm và lưu lý do trong lịch sử, hãy dùng nút "Điều chỉnh" ở danh sách.</small>
+          <small className="u-hint-sm">Muốn cộng/trừ điểm và lưu lý do trong lịch sử, hãy dùng nút "Điều chỉnh" ở danh sách.</small>
         </form>
       </Modal>
 
@@ -1095,7 +1091,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-gem"
         maxWidth="520px"
         footer={
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setTierModal(false)}>
               Hủy
             </button>
@@ -1109,15 +1105,15 @@ export default function AdminLoyaltyPage() {
           <div className="hc-form-group">
             <label className="hc-label">Mã hạng</label>
             <input className="hc-input" type="text" value={tierTarget?.tierCode || ""} disabled readOnly />
-            <small style={{ color: "var(--hc-text-secondary)", fontSize: 11 }}>Mã hạng dùng để liên kết trong hệ thống nên không thể đổi.</small>
+            <small className="u-hint-sm">Mã hạng dùng để liên kết trong hệ thống nên không thể đổi.</small>
           </div>
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên hạng <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên hạng <span className="u-text-error">*</span>
             </label>
             <input className="hc-input" type="text" value={tierForm.tierName} onChange={(e) => setTierForm({ ...tierForm, tierName: e.target.value })} required />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          <div className="u-grid-auto">
             <div className="hc-form-group">
               <label className="hc-label">Cấp độ (thứ tự hạng)</label>
               <input className="hc-input" type="number" min="1" step="1" value={tierForm.tierLevel} onChange={(e) => setTierForm({ ...tierForm, tierLevel: e.target.value })} />
@@ -1137,7 +1133,7 @@ export default function AdminLoyaltyPage() {
               placeholder="Quyền lợi hoặc ghi chú về hạng này..."
             ></textarea>
           </div>
-          <small style={{ color: "var(--hc-text-secondary)", fontSize: 11 }}>
+          <small className="u-hint-sm">
             Hiện có {customers.filter((c) => c.tierCode === tierTarget?.tierCode).length} khách ở hạng này. Đổi điểm tối thiểu không xếp hạng lại khách ngay; hạng được tính lại khi điểm của khách thay đổi.
           </small>
         </form>
@@ -1154,7 +1150,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-gift"
         maxWidth="560px"
         footer={
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setBenefitModal(false)}>
               Hủy bỏ
             </button>
@@ -1168,7 +1164,7 @@ export default function AdminLoyaltyPage() {
           {/* Hạng thành viên áp dụng */}
           <div className="hc-form-group">
             <label className="hc-label">
-              Hạng thành viên áp dụng <span style={{ color: "var(--hc-error)" }}>*</span>
+              Hạng thành viên áp dụng <span className="u-text-error">*</span>
             </label>
             <SelectMenu
               value={benefitForm.tierId}
@@ -1182,7 +1178,7 @@ export default function AdminLoyaltyPage() {
           {/* Tên đặc quyền */}
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên đặc quyền <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên đặc quyền <span className="u-text-error">*</span>
             </label>
             <input
               type="text"
@@ -1197,7 +1193,7 @@ export default function AdminLoyaltyPage() {
           {/* Loại đặc quyền */}
           <div className="hc-form-group">
             <label className="hc-label">
-              Loại đặc quyền <span style={{ color: "var(--hc-error)" }}>*</span>
+              Loại đặc quyền <span className="u-text-error">*</span>
             </label>
             <SelectMenu
               value={benefitForm.benefitType}
@@ -1216,7 +1212,7 @@ export default function AdminLoyaltyPage() {
           {benefitForm.benefitType === "ROOM_DISCOUNT" && (
             <div className="hc-form-group">
               <label className="hc-label">
-                Phần trăm giảm giá phòng (%) <span style={{ color: "var(--hc-error)" }}>*</span>
+                Phần trăm giảm giá phòng (%) <span className="u-text-error">*</span>
               </label>
               <input
                 type="number"
@@ -1275,7 +1271,7 @@ export default function AdminLoyaltyPage() {
           )}
 
           {/* Hạn mức (Quota) & Kỳ hạn (Period) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">Số lượt sử dụng (Quota)</label>
               <input

@@ -195,7 +195,7 @@ export default function StaffRequestsPage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ textAlign: "left" }}>
+      <div className="hc-page-title u-text-left">
         <h2>Yêu cầu dịch vụ</h2>
         <p>Tiếp nhận, xử lý và hoàn tất các yêu cầu từ khách lưu trú.</p>
       </div>
@@ -203,7 +203,7 @@ export default function StaffRequestsPage() {
       <div className="hc-card">
         <div className="hc-card-header">
           <div className="hc-card-title">
-            <i className="bi bi-bell text-primary" style={{ marginRight: "8px" }}></i>
+            <i className="bi bi-bell text-primary u-mr-8"></i>
             Danh sách yêu cầu
           </div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
@@ -226,7 +226,7 @@ export default function StaffRequestsPage() {
             <p>Không có yêu cầu dịch vụ phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>
@@ -264,7 +264,7 @@ export default function StaffRequestsPage() {
                       <td>{request.customerName || "—"}</td>
                       <td>
                         <strong>{request.roomNumber ? `Phòng ${request.roomNumber}` : "—"}</strong>
-                        {request.bookingCode && <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)" }}>#{request.bookingCode}</div>}
+                        {request.bookingCode && <div className="u-hint-sm">#{request.bookingCode}</div>}
                       </td>
                       <td>{request.quantity || 1}</td>
                       <td>{isLoyaltyBenefit === true ? <span style={{ color: "var(--hc-success, #16a34a)", fontWeight: 600 }}>Miễn phí</span> : formatVND(request.feeAmount || 0)}</td>
@@ -315,10 +315,9 @@ export default function StaffRequestsPage() {
                             <>
                               <button
                                 type="button"
-                                className="hc-btn hc-btn-primary hc-btn-sm"
+                                className="hc-btn hc-btn-primary hc-btn-sm u-fw-600"
                                 disabled={workingId !== null}
                                 onClick={() => updateRequest(request, "complete")}
-                                style={{ fontWeight: 600 }}
                                 title="Xác nhận đã giao dịch vụ lên phòng khách thành công"
                               >
                                 <i className="bi bi-check2-circle"></i> {workingId === request.serviceRequestId ? "Đang xử lý…" : "Hoàn tất giao"}
@@ -371,7 +370,7 @@ export default function StaffRequestsPage() {
         maxWidth="560px"
       >
         {targetRequest && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="u-col-16">
             <div
               style={{
                 background: "var(--hc-bg-subtle, #f8fafc)",
@@ -385,61 +384,51 @@ export default function StaffRequestsPage() {
               }}
             >
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Dịch vụ</span>
+                <span className="u-hint u-block">Dịch vụ</span>
                 <strong>{targetRequest.serviceName}</strong> (SL: {targetRequest.quantity || 1})
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Phòng / Đặt phòng</span>
+                <span className="u-hint u-block">Phòng / Đặt phòng</span>
                 <strong>{targetRequest.roomNumber ? `Phòng ${targetRequest.roomNumber}` : "—"}</strong>
                 {targetRequest.bookingCode && <span style={{ color: "var(--hc-text-secondary)", marginLeft: "4px" }}>({targetRequest.bookingCode})</span>}
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Khách hàng</span>
+                <span className="u-hint u-block">Khách hàng</span>
                 <strong>{targetRequest.customerName || "—"}</strong>
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Loại dịch vụ</span>
+                <span className="u-hint u-block">Loại dịch vụ</span>
                 <strong>{isLoyaltyBenefitRequest(targetRequest) === true ? "Ưu đãi hội viên" : isLoyaltyBenefitRequest(targetRequest) === false ? "Dịch vụ thường" : "Chưa xác định"}</strong>
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Thành tiền</span>
+                <span className="u-hint u-block">Thành tiền</span>
                 <strong style={{ color: isLoyaltyBenefitRequest(targetRequest) === true ? "var(--hc-success, #16a34a)" : "var(--hc-primary)" }}>
                   {isLoyaltyBenefitRequest(targetRequest) === true ? "Miễn phí" : formatVND(targetRequest.feeAmount || 0)}
                 </strong>
               </div>
               {targetRequest.note && (
                 <div style={{ gridColumn: "1 / -1" }}>
-                  <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Ghi chú của khách</span>
+                  <span className="u-hint u-block">Ghi chú của khách</span>
                   <p style={{ margin: "2px 0 0", fontStyle: "italic", color: "var(--hc-text-muted)" }}>{targetRequest.note}</p>
                 </div>
               )}
             </div>
 
             <div className="hc-form-group">
-              <label className="hc-label" style={{ fontWeight: 600 }}>
-                Nhân viên phục vụ (Đang trong ca trực) <span style={{ color: "var(--hc-error)" }}>*</span>
+              <label className="hc-label u-fw-600">
+                Nhân viên phục vụ (Đang trong ca trực) <span className="u-text-error">*</span>
               </label>
 
               {loadingStaff ? (
                 <div style={{ padding: "12px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
-                  <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                  <i className="bi bi-arrow-clockwise admin-schedule-spin u-mr-6"></i>
                   Đang kiểm tra lịch ca trực của nhân viên...
                 </div>
               ) : serviceStaff.length === 0 ? (
                 <div
-                  style={{
-                    background: "#fffbeb",
-                    border: "1px solid #fef3c7",
-                    borderRadius: "8px",
-                    padding: "12px 14px",
-                    fontSize: "0.85rem",
-                    color: "#92400e",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                  }}
+                  className="u-notice-warn"
                 >
-                  <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                  <i className="bi bi-exclamation-triangle-fill u-star"></i>
                   <div>
                     <strong>Không có nhân viên trong ca trực:</strong> Hiện tại không có nhân viên phục vụ dịch vụ nào có lịch trực hoạt động theo ca. Vui lòng xếp ca trực tại mục{" "}
                     <strong>Quản lý Lịch làm việc</strong> trước khi phân công.
@@ -450,7 +439,7 @@ export default function StaffRequestsPage() {
               )}
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+            <div className="u-modal-actions">
               <button type="button" className="hc-btn hc-btn-outline" onClick={closeAssignModal} disabled={submittingAssign}>
                 Đóng
               </button>

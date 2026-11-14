@@ -263,7 +263,7 @@ export default function HistoryPage({ portal = false }) {
                       }}
                     />
                   </div>
-                  <button type="button" className="hc-btn hc-btn-primary" style={{ whiteSpace: "nowrap" }} onClick={loadPhoneHistory} disabled={loading}>
+                  <button type="button" className="hc-btn hc-btn-primary u-nowrap" onClick={loadPhoneHistory} disabled={loading}>
                     <i className="bi bi-search"></i> {loading ? "Đang tra cứu..." : "Tìm đơn"}
                   </button>
                 </div>
@@ -329,7 +329,7 @@ export default function HistoryPage({ portal = false }) {
             </div>
           </div>
 
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             {loading ? (
               <div className="hc-loading-spinner">
                 <div className="hc-spinner"></div>
@@ -351,14 +351,14 @@ export default function HistoryPage({ portal = false }) {
                 )}
               </div>
             ) : (
-              <table className="hc-table" style={{ width: "100%" }}>
+              <table className="hc-table u-w-full">
                 <thead>
                   <tr>
                     <th style={{ textAlign: "left", paddingLeft: "20px" }}>Mã đơn</th>
-                    <th style={{ textAlign: "left" }}>Phòng nghỉ</th>
-                    <th style={{ textAlign: "left" }}>Thời gian lưu trú</th>
-                    <th style={{ textAlign: "left" }}>Tổng chi phí</th>
-                    <th style={{ textAlign: "left" }}>Trạng thái</th>
+                    <th className="u-text-left">Phòng nghỉ</th>
+                    <th className="u-text-left">Thời gian lưu trú</th>
+                    <th className="u-text-left">Tổng chi phí</th>
+                    <th className="u-text-left">Trạng thái</th>
                     <th style={{ textAlign: "left", paddingRight: "20px" }}>Thao tác</th>
                   </tr>
                 </thead>
@@ -394,7 +394,7 @@ export default function HistoryPage({ portal = false }) {
                           <strong style={{ fontSize: "14px" }}>{formatVND(paidInvoiceTotals[b.bookingCode] ?? b.totalAmount)}</strong>
                           {status === "CHECKED_OUT" && <div className="guest-cell-sub">Tổng hóa đơn đã thanh toán</div>}
                           {Number(b.depositPaid ?? b.depositAmount ?? b.depositApplied ?? 0) > 0 && (
-                            <div className="guest-cell-sub" style={{ color: "var(--hc-success)" }}>
+                            <div className="guest-cell-sub u-text-success">
                               Đã cọc: {formatVND(b.depositPaid ?? b.depositAmount ?? b.depositApplied ?? 0)}
                             </div>
                           )}
@@ -479,28 +479,28 @@ export default function HistoryPage({ portal = false }) {
           <div style={{ fontSize: "14px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }}>
               <span className={`hc-badge hc-badge-booking-${getBookingStatus(bookingDetail)}`}>{statusLabel(getBookingStatus(bookingDetail))}</span>
-              <span style={{ color: "var(--hc-text-muted)", fontSize: "12px" }}>Tạo lúc: {formatDateTime(bookingDetail.createdAt)}</span>
+              <span className="u-hint-muted">Tạo lúc: {formatDateTime(bookingDetail.createdAt)}</span>
             </div>
 
             <div style={{ background: "var(--hc-bg)", padding: "16px", borderRadius: "var(--hc-radius-md)", marginBottom: "16px", border: "1px solid var(--hc-border)" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+              <div className="u-grid-auto">
                 <div>
-                  <span style={{ color: "var(--hc-text-secondary)", fontSize: "12px" }}>Khách hàng</span>
-                  <div style={{ fontWeight: 600 }}>{bookingDetail.customerName || bookingDetail.fullName}</div>
+                  <span className="u-hint">Khách hàng</span>
+                  <div className="u-fw-600">{bookingDetail.customerName || bookingDetail.fullName}</div>
                 </div>
                 <div>
-                  <span style={{ color: "var(--hc-text-secondary)", fontSize: "12px" }}>Số điện thoại</span>
-                  <div style={{ fontWeight: 600 }}>{bookingDetail.customerPhone || bookingDetail.phone || "—"}</div>
+                  <span className="u-hint">Số điện thoại</span>
+                  <div className="u-fw-600">{bookingDetail.customerPhone || bookingDetail.phone || "—"}</div>
                 </div>
                 <div>
-                  <span style={{ color: "var(--hc-text-secondary)", fontSize: "12px" }}>Phòng nghỉ</span>
-                  <div style={{ fontWeight: 600 }}>
+                  <span className="u-hint">Phòng nghỉ</span>
+                  <div className="u-fw-600">
                     {bookingDetail.roomNumber ? `Phòng ${bookingDetail.roomNumber}` : "Đang xếp phòng"} ({bookingDetail.roomTypeName || "Tiêu chuẩn"})
                   </div>
                 </div>
                 <div>
-                  <span style={{ color: "var(--hc-text-secondary)", fontSize: "12px" }}>Thời gian lưu trú</span>
-                  <div style={{ fontWeight: 600 }}>
+                  <span className="u-hint">Thời gian lưu trú</span>
+                  <div className="u-fw-600">
                     {formatDate(bookingDetail.checkInDate)} → {formatDate(bookingDetail.checkOutDate)}
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export default function HistoryPage({ portal = false }) {
             <div style={{ borderTop: "1px solid var(--hc-border-light)", paddingTop: "14px", marginBottom: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--hc-primary-dark)" }}>
-                  <i className="bi bi-stars" style={{ marginRight: "6px" }}></i>
+                  <i className="bi bi-stars u-mr-6"></i>
                   Dịch vụ đã đăng ký & sử dụng ({bookingDetail.servicesUsed ? bookingDetail.servicesUsed.length : 0})
                 </span>
                 <div className="svc-lifecycle-stepper" style={{ margin: 0, padding: "2px 8px" }}>
@@ -530,14 +530,14 @@ export default function HistoryPage({ portal = false }) {
               </div>
 
               {bookingDetail.servicesUsed && bookingDetail.servicesUsed.length > 0 ? (
-                <div style={{ overflowX: "auto" }}>
+                <div className="u-scroll-x">
                   <table className="hc-table" style={{ fontSize: "12px" }}>
                     <thead>
                       <tr>
-                        <th style={{ textAlign: "left" }}>Dịch vụ</th>
-                        <th style={{ textAlign: "left" }}>Trạng thái</th>
-                        <th style={{ textAlign: "left" }}>SL</th>
-                        <th style={{ textAlign: "left" }}>Thành tiền</th>
+                        <th className="u-text-left">Dịch vụ</th>
+                        <th className="u-text-left">Trạng thái</th>
+                        <th className="u-text-left">SL</th>
+                        <th className="u-text-left">Thành tiền</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -550,9 +550,9 @@ export default function HistoryPage({ portal = false }) {
                               {formatDateTime(u.usedAt || u.orderTime)}
                             </div>
                           </td>
-                          <td style={{ textAlign: "left" }}>{renderServiceStatusBadge(u.status)}</td>
-                          <td style={{ textAlign: "left" }}>{u.quantity}</td>
-                          <td style={{ textAlign: "left", fontWeight: 600 }}>
+                          <td className="u-text-left">{renderServiceStatusBadge(u.status)}</td>
+                          <td className="u-text-left">{u.quantity}</td>
+                          <td className="u-fw-600 u-text-left">
                             {u.status === "CANCELED" || u.status === "CANCELLED" ? (
                               <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }}>{formatVND(u.totalAmount || u.totalPrice)}</span>
                             ) : (
@@ -592,18 +592,18 @@ export default function HistoryPage({ portal = false }) {
                 return (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                      <span style={{ color: "var(--hc-text-secondary)" }}>Tiền phòng</span>
+                      <span className="u-text-secondary">Tiền phòng</span>
                       <strong>{formatVND(bill?.roomCharge ?? bookingDetail.roomCharge ?? bookingDetail.totalAmount ?? 0)}</strong>
                     </div>
                     {Number(bill?.serviceCharge ?? bookingDetail.serviceCharge ?? 0) > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <span style={{ color: "var(--hc-text-secondary)" }}>Dịch vụ phát sinh</span>
+                        <span className="u-text-secondary">Dịch vụ phát sinh</span>
                         <strong>{formatVND(bill?.serviceCharge ?? bookingDetail.serviceCharge)}</strong>
                       </div>
                     )}
                     {Number(bill?.taxAmount ?? 0) > 0 && (
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-                        <span style={{ color: "var(--hc-text-secondary)" }}>Thuế VAT</span>
+                        <span className="u-text-secondary">Thuế VAT</span>
                         <strong>{formatVND(bill.taxAmount)}</strong>
                       </div>
                     )}
@@ -622,7 +622,7 @@ export default function HistoryPage({ portal = false }) {
                     <hr className="hc-divider" style={{ margin: "10px 0" }} />
                     <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "16px" }}>
                       <span>Tổng chi phí</span>
-                      <span style={{ color: "var(--hc-primary)" }}>{formatVND(bill?.totalAmount ?? bookingDetail.totalAmount ?? 0)}</span>
+                      <span className="u-text-primary">{formatVND(bill?.totalAmount ?? bookingDetail.totalAmount ?? 0)}</span>
                     </div>
                   </>
                 );

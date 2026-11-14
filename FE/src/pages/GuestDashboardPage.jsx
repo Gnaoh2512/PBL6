@@ -234,7 +234,7 @@ export default function GuestDashboardPage() {
                     <div className="guest-balance">
                       <div>
                         <div className="guest-balance-label">Số tiền còn lại</div>
-                        <small style={{ fontSize: "12px", color: "var(--hc-text-muted)" }}>Cần thanh toán khi làm thủ tục</small>
+                        <small className="u-hint-muted">Cần thanh toán khi làm thủ tục</small>
                       </div>
                       <b>{formatVND(balance)}</b>
                     </div>
@@ -255,14 +255,14 @@ export default function GuestDashboardPage() {
                       </div>
                     )}
                     {Number(folio?.discountAmount ?? 0) > 0 && (
-                      <div className="guest-sum-row" style={{ color: "var(--hc-success)" }}>
+                      <div className="guest-sum-row u-text-success">
                         <span>Giảm giá (hội viên / voucher)</span>
                         <strong>- {formatVND(folio.discountAmount)}</strong>
                       </div>
                     )}
                     <div className="guest-sum-row">
                       <span>Tiền cọc đã thanh toán</span>
-                      <strong style={{ color: "var(--hc-success)" }}>{formatVND(folio?.depositPaid ?? nextStay.depositPaid ?? nextStay.depositAmount ?? nextStay.depositApplied ?? 0)}</strong>
+                      <strong className="u-text-success">{formatVND(folio?.depositPaid ?? nextStay.depositPaid ?? nextStay.depositAmount ?? nextStay.depositApplied ?? 0)}</strong>
                     </div>
                     <div className="guest-sum-row" style={{ borderBottom: 0 }}>
                       <span>Tổng chi phí dự kiến</span>
@@ -356,29 +356,29 @@ export default function GuestDashboardPage() {
                     </span>
                   </div>
                   <div className="svc-lifecycle-stepper" style={{ margin: 0, padding: "3px 8px" }}>
-                    <span className="svc-step-node is-pending" style={{ fontSize: "10px", padding: "1px 6px" }}>
+                    <span className="svc-step-node is-pending u-chip-xs">
                       <i className="bi bi-clock-history"></i> PENDING
                     </span>
                     <i className="bi bi-arrow-right svc-step-arrow"></i>
-                    <span className="svc-step-node is-delivering" style={{ fontSize: "10px", padding: "1px 6px" }}>
+                    <span className="svc-step-node is-delivering u-chip-xs">
                       <i className="bi bi-bicycle"></i> DELIVERING
                     </span>
                     <i className="bi bi-arrow-right svc-step-arrow"></i>
-                    <span className="svc-step-node is-completed" style={{ fontSize: "10px", padding: "1px 6px" }}>
+                    <span className="svc-step-node is-completed u-chip-xs">
                       <i className="bi bi-check2-circle"></i> COMPLETED
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+              <div className="hc-card-body flush u-scroll-x">
                 <table className="hc-table">
                   <thead>
                     <tr>
                       <th>Dịch vụ yêu cầu</th>
                       <th>Phòng</th>
-                      <th style={{ textAlign: "center" }}>Trạng thái</th>
+                      <th className="u-text-center">Trạng thái</th>
                       <th>Thời gian yêu cầu</th>
-                      <th style={{ textAlign: "right" }}>Chi phí</th>
+                      <th className="u-text-right">Chi phí</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -390,13 +390,13 @@ export default function GuestDashboardPage() {
                           {req.note && <div className="guest-cell-sub">"{req.note}"</div>}
                         </td>
                         <td>{req.roomNumber ? `Phòng ${req.roomNumber}` : req.bookingCode || "—"}</td>
-                        <td style={{ textAlign: "center" }}>{renderServiceStatusBadge(req.status)}</td>
+                        <td className="u-text-center">{renderServiceStatusBadge(req.status)}</td>
                         <td>
                           {req.requestedAt
                             ? new Date(req.requestedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) + " " + new Date(req.requestedAt).toLocaleDateString("vi-VN")
                             : "—"}
                         </td>
-                        <td style={{ textAlign: "right", fontWeight: 600 }}>{formatVND(req.feeAmount)}</td>
+                        <td className="u-fw-600 u-text-right">{formatVND(req.feeAmount)}</td>
                       </tr>
                     ))}
                   </tbody>

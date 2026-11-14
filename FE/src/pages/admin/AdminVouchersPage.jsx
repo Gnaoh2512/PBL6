@@ -108,7 +108,7 @@ export default function AdminVouchersPage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Quản Lý Mã Khuyến Mãi (Vouchers)</h2>
           <p>Tạo chiến dịch ưu đãi, cấu hình mức giảm giá và quản lý bật/tắt kích hoạt voucher</p>
@@ -122,7 +122,7 @@ export default function AdminVouchersPage() {
       <div className="hc-card">
         <div className="hc-card-header">
           <div className="hc-card-title">
-            <i className="bi bi-ticket-detailed text-primary" style={{ marginRight: "8px" }}></i>
+            <i className="bi bi-ticket-detailed text-primary u-mr-8"></i>
             Danh Sách Voucher Khuyến Mãi ({vouchers.length})
           </div>
           <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={loadVouchers}>
@@ -130,7 +130,7 @@ export default function AdminVouchersPage() {
           </button>
         </div>
 
-        <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+        <div className="hc-card-body flush u-scroll-x">
           {loading ? (
             <div className="hc-loading-spinner">
               <div className="hc-spinner"></div>
@@ -170,7 +170,7 @@ export default function AdminVouchersPage() {
                         <strong>{v.voucherName}</strong>
                       </td>
                       <td>
-                        <span className={`hc-badge ${isPercent ? "hc-badge-info" : "hc-badge-secondary"}`} style={{ fontSize: "11px" }}>
+                        <span className={`hc-badge ${isPercent ? "hc-badge-info" : "hc-badge-secondary"} u-fs-11`}>
                           {isPercent ? "Phần trăm" : "Số tiền cố định"}
                         </span>
                       </td>
@@ -187,7 +187,7 @@ export default function AdminVouchersPage() {
                             </span>
                           )
                         ) : (
-                          <span style={{ color: "var(--hc-text-muted)", fontSize: "12px" }}>Cố định ({formatVND(v.discountValue)})</span>
+                          <span className="u-hint-muted">Cố định ({formatVND(v.discountValue)})</span>
                         )}
                       </td>
                       <td>{formatVND(v.minOrderAmount || 0)}</td>
@@ -224,7 +224,7 @@ export default function AdminVouchersPage() {
         icon="bi-ticket-perforated"
         maxWidth="560px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button
               type="button"
               className="hc-btn hc-btn-outline hc-btn-sm"
@@ -245,7 +245,7 @@ export default function AdminVouchersPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
             <div className="hc-form-group">
               <label className="hc-label">
-                Mã Code <span style={{ color: "var(--hc-error)" }}>*</span>
+                Mã Code <span className="u-text-error">*</span>
               </label>
               <input
                 type="text"
@@ -259,16 +259,16 @@ export default function AdminVouchersPage() {
             </div>
             <div className="hc-form-group">
               <label className="hc-label">
-                Tên chương trình ưu đãi <span style={{ color: "var(--hc-error)" }}>*</span>
+                Tên chương trình ưu đãi <span className="u-text-error">*</span>
               </label>
               <input type="text" className="hc-input" placeholder="VD: Chào Mừng Khách Mới..." value={form.voucherName} onChange={(e) => setForm({ ...form, voucherName: e.target.value })} required />
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">
-                Kiểu giảm giá <span style={{ color: "var(--hc-error)" }}>*</span>
+                Kiểu giảm giá <span className="u-text-error">*</span>
               </label>
               <select className="hc-select" value={form.discountType} onChange={(e) => setForm({ ...form, discountType: e.target.value })}>
                 <option value="PERCENT">Phần trăm (%)</option>
@@ -277,7 +277,7 @@ export default function AdminVouchersPage() {
             </div>
             <div className="hc-form-group">
               <label className="hc-label">
-                Giá trị giảm <span style={{ color: "var(--hc-error)" }}>*</span>
+                Giá trị giảm <span className="u-text-error">*</span>
                 <span style={{ color: "var(--hc-text-muted)", fontWeight: 400, marginLeft: 4 }}>{form.discountType === "PERCENT" || form.discountType === "PERCENTAGE" ? "(1 – 100%)" : "(VNĐ)"}</span>
               </label>
               <input
@@ -310,7 +310,7 @@ export default function AdminVouchersPage() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">Đơn tối thiểu (VNĐ)</label>
               <input type="number" className="hc-input" min="0" step="50000" value={form.minOrderAmount} onChange={(e) => setForm({ ...form, minOrderAmount: e.target.value })} />
@@ -321,7 +321,7 @@ export default function AdminVouchersPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">Ngày bắt đầu</label>
               <input type="date" className="hc-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />

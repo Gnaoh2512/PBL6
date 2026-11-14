@@ -82,6 +82,3 @@
 }
 
 /* Picker dropdowns are portalled to <body>; keep them above any modal overlay (z-index 2000). */
-.fp-pop {
-  z-index: 3000;
-}

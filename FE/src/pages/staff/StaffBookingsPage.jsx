@@ -119,14 +119,7 @@ export default function StaffBookingsPage() {
 
       <div className="hc-card">
         <div
-          className="hc-card-body"
-          style={{
-            display: "flex",
-            gap: "12px",
-            alignItems: "center",
-            flexWrap: "wrap",
-            borderBottom: "1px solid var(--hc-border-light)",
-          }}
+          className="hc-card-body u-row-ruled"
         >
           <input
             type="search"
@@ -137,7 +130,7 @@ export default function StaffBookingsPage() {
             placeholder="Tên khách, số điện thoại, mã đặt phòng"
             aria-label="Tìm khách hoặc mã đặt phòng"
           />
-          <div style={{ flex: "0 0 220px" }}>
+          <div className="u-flex-220">
             <SelectMenu value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Lọc trạng thái" icon="bi-funnel" />
           </div>
           <button type="button" className="hc-btn hc-btn-outline" onClick={loadBookings} disabled={loading}>
@@ -155,7 +148,7 @@ export default function StaffBookingsPage() {
             <p>Không tìm thấy đặt phòng phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>
@@ -175,22 +168,22 @@ export default function StaffBookingsPage() {
                     <tr key={booking.bookingCode}>
                       <td>
                         <strong>{booking.bookingCode}</strong>
-                        {booking.source && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>{booking.source}</div>}
+                        {booking.source && <div className="u-hint">{booking.source}</div>}
                       </td>
                       <td>
                         {booking.customerName}
-                        <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>{booking.customerPhone}</div>
+                        <div className="u-hint">{booking.customerPhone}</div>
                       </td>
                       <td>
                         {booking.roomType?.typeName || booking.roomNumber || "—"}
                         {booking.roomNumber ? ` · ${booking.roomNumber}` : ""}
                       </td>
-                      <td style={{ whiteSpace: "nowrap" }}>
+                      <td className="u-nowrap">
                         {formatDate(booking.checkInDate)} – {formatDate(booking.checkOutDate)}
                       </td>
                       <td>
                         {formatVND(booking.totalAmount || booking.totalRoomCharge)}
-                        {booking.depositPaid > 0 && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Cọc: {formatVND(booking.depositPaid)}</div>}
+                        {booking.depositPaid > 0 && <div className="u-hint">Cọc: {formatVND(booking.depositPaid)}</div>}
                       </td>
                       <td>
                         <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>

@@ -126,7 +126,7 @@ export default function GuestLoyaltyPage() {
                 </div>
               </div>
 
-              <div style={{ textAlign: "right" }}>
+              <div className="u-text-right">
                 <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase" }}>Điểm khả dụng</div>
                 <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--hc-secondary)", fontFamily: "Times New Roman, serif" }}>
                   {fmtNumber(currentScore)}
@@ -206,7 +206,7 @@ export default function GuestLoyaltyPage() {
                 </div>
               </div>
             </div>
-            <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+            <div className="hc-card-body flush u-scroll-x">
               {benefits.length === 0 ? (
                 <div className="svc-empty-loyalty-box" style={{ margin: "24px 20px" }}>
                   <div className="svc-empty-loyalty-icon">
@@ -237,7 +237,7 @@ export default function GuestLoyaltyPage() {
                     <tr>
                       <th>Tên quyền lợi</th>
                       <th>Chi tiết ưu đãi</th>
-                      <th style={{ textAlign: "right" }}>Số lượt áp dụng</th>
+                      <th className="u-text-right">Số lượt áp dụng</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -247,7 +247,7 @@ export default function GuestLoyaltyPage() {
                           <strong>{benefit.benefitName}</strong>
                         </td>
                         <td>{benefit.description || (benefit.discountPercent ? `Giảm ${benefit.discountPercent}% chi phí dịch vụ` : benefit.benefitType)}</td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="u-text-right">
                           {benefit.remainingQuota ?? <span className="hc-badge hc-badge-success">Không giới hạn</span>}
                         </td>
                       </tr>
@@ -300,7 +300,7 @@ export default function GuestLoyaltyPage() {
               </div>
             </div>
 
-            <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+            <div className="hc-card-body flush u-scroll-x">
               {filteredTransactions.length === 0 ? (
                 <div className="hc-empty-state">
                   <i className="bi bi-inbox"></i>
@@ -312,7 +312,7 @@ export default function GuestLoyaltyPage() {
                     <tr>
                       <th>Thời gian</th>
                       <th>Loại giao dịch</th>
-                      <th style={{ textAlign: "right" }}>Biến động điểm</th>
+                      <th className="u-text-right">Biến động điểm</th>
                       <th>Ghi chú</th>
                     </tr>
                   </thead>

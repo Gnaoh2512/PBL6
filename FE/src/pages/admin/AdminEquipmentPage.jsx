@@ -193,7 +193,7 @@ export default function AdminEquipmentPage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Thiết Bị &amp; Tài Sản</h2>
           <p>Theo dõi và quản lý tình trạng cơ sở vật chất, thiết bị trong khách sạn.</p>
@@ -204,11 +204,10 @@ export default function AdminEquipmentPage() {
       </div>
 
       <div className="hc-card">
-        <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
+        <div className="hc-card-body u-row-ruled">
           <input
             type="search"
-            className="hc-input"
-            style={{ flex: "1 1 240px" }}
+            className="hc-input u-flex-240"
             placeholder="Tìm theo tên, số serial..."
             aria-label="Tìm thiết bị"
             value={search}
@@ -254,7 +253,7 @@ export default function AdminEquipmentPage() {
             <p>Không tìm thấy thiết bị nào phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>
@@ -263,7 +262,7 @@ export default function AdminEquipmentPage() {
                   <th>Vị trí</th>
                   <th>Trạng thái</th>
                   <th>Ghi chú</th>
-                  <th style={{ textAlign: "right" }}>Thao tác</th>
+                  <th className="u-text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -278,7 +277,7 @@ export default function AdminEquipmentPage() {
                       <span className={`hc-badge ${STATUS_COLORS[item.status] || "hc-badge-muted"}`}>{STATUS_LABELS[item.status] || item.status}</span>
                     </td>
                     <td style={{ maxWidth: 200, fontSize: "13px", color: "var(--hc-text-secondary)" }}>{item.note || "—"}</td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="u-text-right">
                       <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
                         <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => openEdit(item)} title="Chỉnh sửa thông tin">
                           <i className="bi bi-pencil"></i> Sửa
@@ -294,7 +293,7 @@ export default function AdminEquipmentPage() {
                           </button>
                         )}
                         {item.status !== "BROKEN" && item.status !== "RETIRED" && (
-                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" style={{ color: "var(--hc-error)" }} onClick={() => handleStatusChange(item, "BROKEN")} title="Đánh dấu hỏng">
+                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm u-text-error" onClick={() => handleStatusChange(item, "BROKEN")} title="Đánh dấu hỏng">
                             Hỏng
                           </button>
                         )}
@@ -317,7 +316,7 @@ export default function AdminEquipmentPage() {
         icon={editTarget ? "bi-pencil-square" : "bi-cpu"}
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setModalOpen(false)}>
               Hủy
             </button>
@@ -330,7 +329,7 @@ export default function AdminEquipmentPage() {
         <form onSubmit={handleSubmit}>
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên thiết bị <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên thiết bị <span className="u-text-error">*</span>
             </label>
             <input
               type="text"
@@ -342,7 +341,7 @@ export default function AdminEquipmentPage() {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div className="u-grid-auto">
             <div className="hc-form-group">
               <label className="hc-label">Vị trí phòng</label>
               <SelectMenu value={form.roomId} onChange={(val) => setForm({ ...form, roomId: val })} options={roomFormOptions} ariaLabel="Chọn vị trí phòng" icon="bi-door-closed" />

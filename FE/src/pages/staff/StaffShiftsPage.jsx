@@ -218,7 +218,7 @@ export default function StaffShiftsPage() {
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="u-row-10">
           <button
             type="button"
             className="hc-btn hc-btn-outline"
@@ -298,12 +298,12 @@ export default function StaffShiftsPage() {
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right" }}>
-                  <span style={{ fontSize: "12px", color: "var(--hc-text-secondary)", display: "block" }}>
+                <div className="u-text-right">
+                  <span className="u-hint u-block">
                     Chế độ đồng bộ thời gian thực
                   </span>
                   <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--hc-success)" }}>
-                    <i className="bi bi-check-circle-fill" style={{ marginRight: "4px" }}></i>
+                    <i className="bi bi-check-circle-fill u-mr-4"></i>
                     Lễ tân &amp; Admin cùng thao tác
                   </span>
                 </div>
@@ -435,10 +435,10 @@ export default function StaffShiftsPage() {
               {/* Shared Transactions Table Card */}
               <div className="hc-card" style={{ marginBottom: "24px" }}>
                 <div className="hc-card-header">
-                  <div className="sh-txn-toolbar" style={{ width: "100%" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div className="sh-txn-toolbar u-w-full">
+                    <div className="u-row-10">
                       <div className="hc-card-title" style={{ margin: 0 }}>
-                        <i className="bi bi-list-check text-primary" style={{ marginRight: "8px" }}></i>
+                        <i className="bi bi-list-check text-primary u-mr-8"></i>
                         Giao Dịch Chung Phát Sinh Trong Ca
                       </div>
                       <span className="hc-badge hc-badge-primary">{transactions.length} GD</span>
@@ -472,7 +472,7 @@ export default function StaffShiftsPage() {
                   </div>
                 </div>
 
-                <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+                <div className="hc-card-body flush u-scroll-x">
                   {filteredTransactions.length === 0 ? (
                     <div className="hc-empty-state" style={{ padding: "40px 20px" }}>
                       <i className="bi bi-receipt" style={{ fontSize: "2.4rem", opacity: 0.4 }}></i>
@@ -491,7 +491,7 @@ export default function StaffShiftsPage() {
                           <th>Khách hàng</th>
                           <th>Loại giao dịch</th>
                           <th>Phương thức</th>
-                          <th style={{ textAlign: "right" }}>Số tiền</th>
+                          <th className="u-text-right">Số tiền</th>
                           <th>Thời gian</th>
                           <th>Người thu</th>
                         </tr>
@@ -510,7 +510,7 @@ export default function StaffShiftsPage() {
                               <td>
                                 {t.bookingCode ? (
                                   <div>
-                                    <strong style={{ color: "var(--hc-primary)" }}>{t.bookingCode}</strong>
+                                    <strong className="u-text-primary">{t.bookingCode}</strong>
                                     {t.roomNumber && (
                                       <span style={{ marginLeft: "6px", fontSize: "12px", color: "var(--hc-text-secondary)" }}>
                                         (P.{t.roomNumber})
@@ -518,13 +518,13 @@ export default function StaffShiftsPage() {
                                     )}
                                   </div>
                                 ) : (
-                                  <span style={{ color: "var(--hc-text-muted)" }}>—</span>
+                                  <span className="u-text-muted">—</span>
                                 )}
                               </td>
                               <td>
                                 <div>{t.customerName || "Khách vãng lai"}</div>
                                 {t.note && (
-                                  <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)" }}>
+                                  <div className="u-hint-sm">
                                     {t.note}
                                   </div>
                                 )}
@@ -593,7 +593,7 @@ export default function StaffShiftsPage() {
               <div className="hc-card">
                 <div className="hc-card-header">
                   <div className="hc-card-title">
-                    <i className="bi bi-file-earmark-text text-primary" style={{ marginRight: "8px" }}></i>
+                    <i className="bi bi-file-earmark-text text-primary u-mr-8"></i>
                     Thông Tin Quản Trị Ca Trực #{currentShift.cashierShiftId}
                   </div>
                   <span className="hc-badge hc-badge-success" style={{ padding: "6px 14px", fontSize: "13px" }}>
@@ -621,7 +621,7 @@ export default function StaffShiftsPage() {
                     </div>
                     <div>
                       <div className="sh-detail-label">Trạng thái hệ thống:</div>
-                      <div style={{ color: "var(--hc-success)", fontWeight: 600 }}>
+                      <div className="u-text-success u-fw-600">
                         <i className="bi bi-check-all"></i> Đang tiếp nhận mọi giao dịch thanh toán
                       </div>
                     </div>
@@ -639,7 +639,7 @@ export default function StaffShiftsPage() {
                     }}
                   >
                     <div style={{ fontSize: "13px", color: "var(--hc-text-secondary)" }}>
-                      <i className="bi bi-info-circle" style={{ marginRight: "4px" }}></i>
+                      <i className="bi bi-info-circle u-mr-4"></i>
                       Cả Lễ tân và Quản lý (Admin) đều có quyền kiểm đếm và đóng ca quyết toán khi kết thúc ca làm việc.
                     </div>
 
@@ -689,7 +689,7 @@ export default function StaffShiftsPage() {
                 <form onSubmit={handleOpenShift}>
                   <div className="hc-form-group">
                     <label className="hc-label" htmlFor="shift-float">
-                      Tiền mặt bàn giao đầu ca <span style={{ color: "var(--hc-error)" }}>*</span>
+                      Tiền mặt bàn giao đầu ca <span className="u-text-error">*</span>
                     </label>
                     <div className="sh-money">
                       <input
@@ -758,7 +758,7 @@ export default function StaffShiftsPage() {
         <div className="hc-card">
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-clock-history text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-clock-history text-primary u-mr-8"></i>
               Lịch Sử Đối Soát Ca Thu Ngân ({historyShifts.length} ca)
             </div>
             <button
@@ -771,7 +771,7 @@ export default function StaffShiftsPage() {
             </button>
           </div>
 
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             {loadingHistory ? (
               <div className="hc-loading-spinner" style={{ padding: "40px 0" }}>
                 <div className="hc-spinner"></div>
@@ -790,13 +790,13 @@ export default function StaffShiftsPage() {
                     <th>Mã ca</th>
                     <th>Thu ngân mở ca</th>
                     <th>Thời gian trực</th>
-                    <th style={{ textAlign: "right" }}>Tiền đầu ca</th>
-                    <th style={{ textAlign: "right" }}>Doanh thu ca</th>
-                    <th style={{ textAlign: "right" }}>Tiền bàn giao</th>
-                    <th style={{ textAlign: "right" }}>Chênh lệch</th>
+                    <th className="u-text-right">Tiền đầu ca</th>
+                    <th className="u-text-right">Doanh thu ca</th>
+                    <th className="u-text-right">Tiền bàn giao</th>
+                    <th className="u-text-right">Chênh lệch</th>
                     <th>Bàn giao cho</th>
                     <th>Trạng thái</th>
-                    <th style={{ textAlign: "center" }}>Thao tác</th>
+                    <th className="u-text-center">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -816,28 +816,28 @@ export default function StaffShiftsPage() {
                         <td>
                           <div>{sh.accountFullName || "Lễ tân"}</div>
                           {sh.accountRole && (
-                            <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)" }}>
+                            <div className="u-hint-sm">
                               {sh.accountRole}
                             </div>
                           )}
                         </td>
                         <td>
                           <div style={{ fontSize: "13px" }}>{formatDateTime(sh.startTime)}</div>
-                          <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>
+                          <div className="u-hint">
                             ➔ {sh.endTime ? formatDateTime(sh.endTime) : "Đang hoạt động"}
                           </div>
                         </td>
-                        <td style={{ textAlign: "right" }}>{formatVND(opCash)}</td>
+                        <td className="u-text-right">{formatVND(opCash)}</td>
                         <td style={{ textAlign: "right", fontWeight: 600, color: "var(--hc-primary)" }}>
                           {formatVND(sh.totalRevenue || 0)}
-                          <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)" }}>
+                          <div className="u-hint-sm">
                             {sh.transactionCount || 0} GD
                           </div>
                         </td>
                         <td style={{ textAlign: "right", fontWeight: 700 }}>
                           {actCash != null ? formatVND(actCash) : "—"}
                         </td>
-                        <td style={{ textAlign: "right" }}>
+                        <td className="u-text-right">
                           {actCash == null ? (
                             "—"
                           ) : diffVal === 0 ? (
@@ -854,7 +854,7 @@ export default function StaffShiftsPage() {
                             {isOpen ? "ĐANG MỞ" : "ĐÃ ĐÓNG"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="u-text-center">
                           <button
                             type="button"
                             className="hc-btn hc-btn-outline hc-btn-sm"
@@ -881,7 +881,7 @@ export default function StaffShiftsPage() {
         title="Đối Soát Doanh Thu &amp; Đóng Ca Thu Ngân"
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setCloseModalOpen(false)}>
               Hủy
             </button>
@@ -908,17 +908,17 @@ export default function StaffShiftsPage() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-              <span style={{ color: "var(--hc-text-secondary)" }}>Tiền mặt bàn giao đầu ca (Float):</span>
+              <span className="u-text-secondary">Tiền mặt bàn giao đầu ca (Float):</span>
               <strong>{formatVND(openingCash)}</strong>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-              <span style={{ color: "var(--hc-text-secondary)" }}>Tiền mặt thu thêm trong ca:</span>
-              <strong style={{ color: "var(--hc-success)" }}>+{formatVND(totalCashRevenue)}</strong>
+              <span className="u-text-secondary">Tiền mặt thu thêm trong ca:</span>
+              <strong className="u-text-success">+{formatVND(totalCashRevenue)}</strong>
             </div>
             <hr className="hc-divider" style={{ margin: "8px 0" }} />
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "14px" }}>
               <span>Tiền mặt lý thuyết trong két cần bàn giao:</span>
-              <span style={{ color: "var(--hc-primary)" }}>{formatVND(totalPhysicalFund)}</span>
+              <span className="u-text-primary">{formatVND(totalPhysicalFund)}</span>
             </div>
 
             <div
@@ -943,7 +943,7 @@ export default function StaffShiftsPage() {
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Tiền mặt thực tế kiểm đếm trong két (VNĐ) <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tiền mặt thực tế kiểm đếm trong két (VNĐ) <span className="u-text-error">*</span>
             </label>
             <input
               type="number"
@@ -1030,30 +1030,30 @@ export default function StaffShiftsPage() {
               }}
             >
               <div>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Thu ngân:</span>{" "}
+                <span className="u-text-secondary">Thu ngân:</span>{" "}
                 <strong>{selectedHistoryShift.accountFullName}</strong> ({selectedHistoryShift.accountRole || "Lễ tân"})
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Trạng thái:</span>{" "}
+                <span className="u-text-secondary">Trạng thái:</span>{" "}
                 <span className={`hc-badge ${selectedHistoryShift.status === "OPEN" ? "hc-badge-success" : "hc-badge-neutral"}`}>
                   {selectedHistoryShift.status}
                 </span>
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Bắt đầu:</span>{" "}
+                <span className="u-text-secondary">Bắt đầu:</span>{" "}
                 {formatDateTime(selectedHistoryShift.startTime)}
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Kết thúc:</span>{" "}
+                <span className="u-text-secondary">Kết thúc:</span>{" "}
                 {selectedHistoryShift.endTime ? formatDateTime(selectedHistoryShift.endTime) : "Đang hoạt động"}
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Tiền đầu ca:</span>{" "}
+                <span className="u-text-secondary">Tiền đầu ca:</span>{" "}
                 <strong>{formatVND(selectedHistoryShift.openingCash)}</strong>
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Tổng doanh thu:</span>{" "}
-                <strong style={{ color: "var(--hc-primary)" }}>{formatVND(selectedHistoryShift.totalRevenue || 0)}</strong>
+                <span className="u-text-secondary">Tổng doanh thu:</span>{" "}
+                <strong className="u-text-primary">{formatVND(selectedHistoryShift.totalRevenue || 0)}</strong>
               </div>
             </div>
 
@@ -1074,7 +1074,7 @@ export default function StaffShiftsPage() {
                       <th>Đơn / Phòng</th>
                       <th>Khách hàng</th>
                       <th>Phương thức</th>
-                      <th style={{ textAlign: "right" }}>Số tiền</th>
+                      <th className="u-text-right">Số tiền</th>
                       <th>Thời gian</th>
                     </tr>
                   </thead>

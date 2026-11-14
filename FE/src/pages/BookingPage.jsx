@@ -246,12 +246,12 @@ export default function BookingPage() {
 
       <main className="hc-page booking-experience">
         <div className="hc-container" ref={containerRef}>
-          <div className="hc-page-title bk-title-row">
+          <div className="hc-page-title hc-title-row">
             <div>
               <h2>Đặt Phòng Trực Tuyến</h2>
               <p>Điền thông tin lưu trú và quét mã QR thanh toán tiền cọc 30% để xác nhận giữ chỗ an toàn</p>
             </div>
-            <div className="bk-title-actions">
+            <div className="hc-title-actions">
               {currentRoom && (
                 <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setSelectedRoomId("")}>
                   <i className="bi bi-arrow-left"></i> Chọn phòng khác
@@ -354,7 +354,7 @@ export default function BookingPage() {
               <div className="hc-card booking-customer-card">
                 <div className="hc-card-header">
                   <div className="hc-card-title">
-                    <i className="bi bi-person-lines-fill text-primary bk-icon-gap"></i>
+                    <i className="bi bi-person-lines-fill text-primary hc-icon-gap"></i>
                     Thông Tin Khách Lưu Trú
                   </div>
                 </div>
@@ -363,13 +363,13 @@ export default function BookingPage() {
                     <div className="bk-grid-2">
                       <div className="hc-form-group">
                         <label className="hc-label">
-                          Họ và tên khách <span className="bk-required">*</span>
+                          Họ và tên khách <span className="hc-required">*</span>
                         </label>
                         <input type="text" className="hc-input" placeholder="Nguyễn Văn A" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                       </div>
                       <div className="hc-form-group">
                         <label className="hc-label">
-                          Số điện thoại liên hệ <span className="bk-required">*</span>
+                          Số điện thoại liên hệ <span className="hc-required">*</span>
                         </label>
                         <input type="tel" className="hc-input" placeholder="0912345678" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                       </div>
@@ -460,7 +460,7 @@ export default function BookingPage() {
                 <div className="hc-card bk-voucher-card">
                   <div className="hc-card-header">
                     <div className="hc-card-title">
-                      <i className="bi bi-ticket-perforated text-primary bk-icon-gap"></i>
+                      <i className="bi bi-ticket-perforated text-primary hc-icon-gap"></i>
                       Mã Ưu Đãi (Voucher)
                     </div>
                   </div>
@@ -502,23 +502,23 @@ export default function BookingPage() {
                 <div className="hc-card">
                   <div className="hc-card-header">
                     <div className="hc-card-title">
-                      <i className="bi bi-receipt text-primary bk-icon-gap"></i>
+                      <i className="bi bi-receipt text-primary hc-icon-gap"></i>
                       Tạm Tính Chi Phí
                     </div>
                   </div>
                   <div className="hc-card-body">
                     <div className="bk-bill-row">
-                      <span className="bk-muted">Đơn giá phòng:</span>
+                      <span className="hc-text-muted">Đơn giá phòng:</span>
                       <span>{formatVND(pricePerNight)} / đêm</span>
                     </div>
 
                     <div className="bk-bill-row">
-                      <span className="bk-muted">Thời gian lưu trú:</span>
+                      <span className="hc-text-muted">Thời gian lưu trú:</span>
                       <strong>{nights} đêm</strong>
                     </div>
 
                     <div className="bk-bill-row">
-                      <span className="bk-muted">Tiền phòng gốc:</span>
+                      <span className="hc-text-muted">Tiền phòng gốc:</span>
                       <strong>{formatVND(subtotal)}</strong>
                     </div>
 

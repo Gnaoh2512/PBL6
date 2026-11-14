@@ -229,7 +229,7 @@ export default function StaffMaintenancePage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ textAlign: "left" }}>
+      <div className="hc-page-title u-text-left">
         <h2>Bảo trì & sự cố</h2>
         <p>Báo cáo, theo dõi và nghiệm thu các yêu cầu sửa chữa.</p>
       </div>
@@ -238,7 +238,7 @@ export default function StaffMaintenancePage() {
         <div className="hc-card" style={{ marginBottom: "24px" }}>
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-exclamation-triangle text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-exclamation-triangle text-primary u-mr-8"></i>
               Tạo yêu cầu bảo trì
             </div>
           </div>
@@ -247,7 +247,7 @@ export default function StaffMaintenancePage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
                 <div className="hc-form-group">
                   <label className="hc-label">
-                    Phòng <span style={{ color: "var(--hc-error)" }}>*</span>
+                    Phòng <span className="u-text-error">*</span>
                   </label>
                   <SelectMenu value={form.roomId} onChange={(value) => setForm({ ...form, roomId: value, equipmentId: "" })} options={roomFormOptions} ariaLabel="Chọn phòng" icon="bi-door-open" />
                 </div>
@@ -263,7 +263,7 @@ export default function StaffMaintenancePage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
                 <div className="hc-form-group">
                   <label className="hc-label">
-                    Tiêu đề <span style={{ color: "var(--hc-error)" }}>*</span>
+                    Tiêu đề <span className="u-text-error">*</span>
                   </label>
                   <input className="hc-input" required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Mô tả ngắn sự cố" />
                 </div>
@@ -295,7 +295,7 @@ export default function StaffMaintenancePage() {
       <div className="hc-card">
         <div className="hc-card-header">
           <div className="hc-card-title">
-            <i className="bi bi-wrench-adjustable text-primary" style={{ marginRight: "8px" }}></i>
+            <i className="bi bi-wrench-adjustable text-primary u-mr-8"></i>
             Danh sách yêu cầu
           </div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
@@ -326,7 +326,7 @@ export default function StaffMaintenancePage() {
             <p>Không có yêu cầu bảo trì phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>
@@ -358,7 +358,7 @@ export default function StaffMaintenancePage() {
                       <td>
                         <strong>{request.title}</strong>
                         {request.description && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.description}</div>}
-                        {request.equipmentName && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Thiết bị: {request.equipmentName}</div>}
+                        {request.equipmentName && <div className="u-hint">Thiết bị: {request.equipmentName}</div>}
                       </td>
                       <td>{request.roomNumber || "—"}</td>
                       <td>
@@ -483,7 +483,7 @@ export default function StaffMaintenancePage() {
                 </h4>
                 {loadingTechnicians ? (
                   <div style={{ padding: "8px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
-                    <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                    <i className="bi bi-arrow-clockwise admin-schedule-spin u-mr-6"></i>
                     Đang kiểm tra lịch trực của kỹ thuật viên...
                   </div>
                 ) : technicians.length === 0 ? (
@@ -501,7 +501,7 @@ export default function StaffMaintenancePage() {
                       gap: "8px",
                     }}
                   >
-                    <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                    <i className="bi bi-exclamation-triangle-fill u-star"></i>
                     <div>
                       <strong>Không có kỹ thuật viên trong ca trực:</strong> Hiện không có nhân viên bảo trì nào có lịch trực hoạt động trong ca hiện tại. Vui lòng phân công ca tại mục <strong>Quản lý Lịch làm việc</strong>.
                     </div>
@@ -543,7 +543,7 @@ export default function StaffMaintenancePage() {
                     onChange={(event) => setResolutionNote(event.target.value)}
                   ></textarea>
                 </div>
-                <button type="button" className="hc-btn hc-btn-primary" style={{ width: "100%" }} disabled={busy} onClick={() => updateRequest(selected, "complete")}>
+                <button type="button" className="hc-btn hc-btn-primary u-w-full" disabled={busy} onClick={() => updateRequest(selected, "complete")}>
                   <i className="bi bi-check2-circle"></i> {workingId === selected.requestId ? "Đang xử lý…" : "Hoàn tất yêu cầu"}
                 </button>
               </div>
@@ -554,7 +554,7 @@ export default function StaffMaintenancePage() {
                 <h4 className="mt-panel-title">
                   <i className="bi bi-patch-check"></i> Nghiệm thu
                 </h4>
-                <button type="button" className="hc-btn hc-btn-primary" style={{ width: "100%" }} disabled={busy} onClick={() => updateRequest(selected, "confirm")}>
+                <button type="button" className="hc-btn hc-btn-primary u-w-full" disabled={busy} onClick={() => updateRequest(selected, "confirm")}>
                   <i className="bi bi-patch-check"></i> Xác nhận nghiệm thu
                 </button>
               </div>

@@ -53,14 +53,6 @@
   border-color: #296c7a;
   background: #296c7a;
 }
-.portal-action.secondary {
-  background: white;
-}
-.portal-action.quiet {
-  color: #296c7a;
-  border-color: transparent;
-  background: #e3dac8;
-}
 .portal-action.outline {
   border-color: rgba(41, 108, 122, 0.36);
 }

@@ -200,7 +200,7 @@ export default function AdminServicesPage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Danh Mục Dịch Vụ</h2>
           <p>Quản lý dịch vụ, đơn giá và trạng thái phục vụ.</p>
@@ -212,7 +212,7 @@ export default function AdminServicesPage() {
       </div>
 
       <div className="hc-card">
-        <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
+        <div className="hc-card-body u-row-ruled">
           <input
             type="search"
             className="hc-input"
@@ -237,7 +237,7 @@ export default function AdminServicesPage() {
             <p>Không tìm thấy dịch vụ nào.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>
@@ -246,7 +246,7 @@ export default function AdminServicesPage() {
                   <th>Đơn vị tính</th>
                   <th>Đơn giá</th>
                   <th>Trạng thái</th>
-                  <th style={{ textAlign: "right" }}>Thao tác</th>
+                  <th className="u-text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -270,7 +270,7 @@ export default function AdminServicesPage() {
                       <td>
                         <span className={`hc-badge ${active ? "hc-badge-success" : "hc-badge-muted"}`}>{active ? "Sẵn sàng" : "Tạm ngưng"}</span>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="u-text-right">
                         <div style={{ display: "inline-flex", gap: "8px", alignItems: "center" }}>
                           <button
                             type="button"
@@ -316,7 +316,7 @@ export default function AdminServicesPage() {
         icon={editServiceId ? "bi-pencil-square" : "bi-cup-hot"}
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setModalOpen(false)}>
               Hủy
             </button>
@@ -329,7 +329,7 @@ export default function AdminServicesPage() {
         <form onSubmit={handleSaveService}>
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên dịch vụ <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên dịch vụ <span className="u-text-error">*</span>
             </label>
             <input
               type="text"
@@ -341,10 +341,10 @@ export default function AdminServicesPage() {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div className="u-grid-auto">
             <div className="hc-form-group">
               <label className="hc-label">
-                Danh mục dịch vụ <span style={{ color: "var(--hc-error)" }}>*</span>
+                Danh mục dịch vụ <span className="u-text-error">*</span>
               </label>
               <SelectMenu
                 value={form.categoryId}
@@ -370,7 +370,7 @@ export default function AdminServicesPage() {
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Đơn giá (VNĐ) <span style={{ color: "var(--hc-error)" }}>*</span>
+              Đơn giá (VNĐ) <span className="u-text-error">*</span>
             </label>
             <input type="number" className="hc-input" min="0" step="1000" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} required />
           </div>

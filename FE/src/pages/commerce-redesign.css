@@ -255,16 +255,6 @@
 .booking-selected-room-copy {
   padding: 19px 21px 22px;
 }
-.booking-change-room {
-  display: block;
-  margin: 0 0 16px;
-  padding: 0;
-  border: 0;
-  color: var(--commerce-accent);
-  background: none;
-  font-size: 11px;
-  font-weight: 700;
-}
 .booking-selected-room-copy h2 {
   margin: 7px 0;
   color: var(--commerce-ink);

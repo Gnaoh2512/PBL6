@@ -105,29 +105,6 @@
   font-weight: 500;
 }
 
-.admin-calendar-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.admin-calendar-dot.scheduled {
-  background: #2563eb;
-}
-
-.admin-calendar-dot.completed {
-  background: #10b981;
-}
-
-.admin-calendar-dot.absent {
-  background: #ef4444;
-}
-
-.admin-calendar-dot.off {
-  background: #64748b;
-}
-
 .legend-tip {
   margin-left: auto;
   color: var(--hc-text-muted, #94a3b8);
@@ -916,57 +893,10 @@
 /* --------------------------------------------------------------------------
    Detail Modal: Schedule Info & Quick Status Updates
    -------------------------------------------------------------------------- */
-.admin-schedule-detail-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  padding: 6px 0;
-}
-
-.admin-schedule-detail-grid > div {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.admin-schedule-detail-grid small {
-  color: var(--hc-text-muted, #64748b);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-weight: 600;
-}
-
-.admin-schedule-detail-grid strong {
-  font-size: 14px;
-  color: var(--hc-text-primary, #0f172a);
-}
 
 .admin-subtext {
   font-size: 12px;
   color: var(--hc-text-muted, #94a3b8);
-}
-
-.admin-schedule-status-box {
-  grid-column: 1 / -1;
-  background: var(--hc-bg, #f8fafc);
-  border: 1px solid var(--hc-border-light, #e2e8f0);
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.admin-status-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
-}
-
-.admin-status-quick-btns {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
 }
 
 .admin-calendar-status {
@@ -995,19 +925,6 @@
 .admin-calendar-status.off {
   background: #f1f5f9;
   color: #475569;
-}
-
-.admin-schedule-notes {
-  grid-column: 1 / -1;
-  background: #fff;
-  border: 1px dashed var(--hc-border, #cbd5e1);
-  border-radius: 8px;
-  padding: 10px;
-}
-
-.admin-schedule-notes span {
-  font-size: 13px;
-  color: var(--hc-text-secondary, #334155);
 }
 
 /* --------------------------------------------------------------------------
@@ -1221,9 +1138,6 @@
 }
 
 @media (max-width: 500px) {
-  .admin-schedule-detail-grid {
-    grid-template-columns: 1fr;
-  }
 
   .admin-shift-time-fields {
     grid-template-columns: 1fr;

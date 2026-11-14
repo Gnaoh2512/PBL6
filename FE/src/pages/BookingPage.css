@@ -169,87 +169,8 @@ main.booking-experience > .hc-container {
 }
 
 /* ---------- QR payment modal ---------- */
-.bk-wait-badge {
-  padding: 8px 16px;
-  font-size: 13px;
-}
-.bk-qr-fallback {
-  width: 240px;
-  min-height: 180px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  color: var(--hc-text-muted);
-  background: var(--hc-bg-alt);
-  border: 1px solid var(--hc-border);
-  border-radius: var(--hc-radius-md);
-}
-.bk-qr-fallback-icon {
-  font-size: 36px;
-}
-.bk-transfer-info {
-  margin-bottom: 16px;
-  padding: 16px;
-  text-align: left;
-  font-size: 13px;
-  background: var(--hc-bg);
-  border: 1px solid var(--hc-border);
-  border-radius: var(--hc-radius-md);
-}
-.bk-info-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.bk-info-row.bk-info-row-flush {
-  margin-bottom: 0;
-}
-.bk-strong-primary {
-  color: var(--hc-primary);
-}
-.bk-strong-error {
-  font-size: 16px;
-  color: var(--hc-error);
-}
-.bk-strong-text {
-  color: var(--hc-text);
-}
 
 /* ---------- Payment success ---------- */
-.bk-success-wrap {
-  padding: 20px 0;
-}
-.bk-success-icon {
-  width: 64px;
-  height: 64px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 16px;
-  font-size: 32px;
-  color: var(--hc-success);
-  background: var(--hc-success-bg);
-  border-radius: 50%;
-}
-.bk-success-title {
-  margin-bottom: 8px;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--hc-success);
-}
-.bk-success-text {
-  margin-bottom: 24px;
-  font-size: 14px;
-  color: var(--hc-text-secondary);
-}
-.bk-success-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-}
 
 /* ---------- Small screens ---------- */
 @media (max-width: 640px) {
@@ -258,9 +179,6 @@ main.booking-experience > .hc-container {
     grid-template-columns: 1fr;
   }
   .bk-voucher-row {
-    flex-direction: column;
-  }
-  .bk-success-actions {
     flex-direction: column;
   }
 }
@@ -356,17 +274,6 @@ main.booking-experience > .hc-container {
   .bk-deposit-value {
     text-align: right;
   }
-
-  .bk-info-row {
-    align-items: flex-start;
-    gap: var(--hc-space-3);
-  }
-
-  .bk-info-row > :last-child {
-    max-width: 62%;
-    overflow-wrap: anywhere;
-    text-align: right;
-  }
 }
 
 @media (max-width: 540px) {
@@ -431,37 +338,6 @@ main.booking-experience > .hc-container {
 
   .bk-deposit-value {
     text-align: left;
-  }
-
-  .bk-transfer-info {
-    padding: var(--hc-space-3);
-  }
-
-  .bk-info-row {
-    flex-direction: column;
-    gap: 3px;
-    padding-bottom: var(--hc-space-2);
-    border-bottom: 1px solid var(--hc-border-light);
-  }
-
-  .bk-info-row > :last-child {
-    max-width: 100%;
-    text-align: left;
-  }
-
-  .bk-info-row.bk-info-row-flush {
-    padding-bottom: 0;
-    border-bottom: 0;
-  }
-
-  .bk-qr-fallback {
-    box-sizing: border-box;
-    width: min(240px, 100%);
-  }
-
-  .bk-success-actions .hc-btn {
-    width: 100%;
-    justify-content: center;
   }
 }
 

@@ -193,12 +193,6 @@
 }
 
 /* ── Demo / Simulation Bar ── */
-.vq-demo-bar {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin-top: 4px;
-}
 
 /* ── Success Animation Screen ── */
 .vq-success-wrap {

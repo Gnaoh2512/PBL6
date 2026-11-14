@@ -167,8 +167,8 @@ export default function StaffWalkInPage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ textAlign: "left" }}>
-        <h2 style={{ textAlign: "left" }}>Đặt Phòng Tại Quầy (Walk-in Booking)</h2>
+      <div className="hc-page-title u-text-left">
+        <h2 className="u-text-left">Đặt Phòng Tại Quầy (Walk-in Booking)</h2>
         <p>Xử lý khách vãng lai nhận phòng ngay tại sảnh lễ tân với tùy chọn check-in tức thì</p>
       </div>
 
@@ -177,7 +177,7 @@ export default function StaffWalkInPage() {
         <div className="hc-card">
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-pencil-square text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-pencil-square text-primary u-mr-8"></i>
               Phiếu Đăng Ký Lưu Trú Walk-in
             </div>
           </div>
@@ -186,7 +186,7 @@ export default function StaffWalkInPage() {
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "16px" }}>
                 <div className="hc-form-group">
                   <label className="hc-label">
-                    Chọn phòng trống <span style={{ color: "var(--hc-error)" }}>*</span>
+                    Chọn phòng trống <span className="u-text-error">*</span>
                   </label>
                   <SelectMenu value={roomId} onChange={setRoomId} options={roomOptions} ariaLabel="Chọn phòng trống" icon="bi-door-open" />
                 </div>
@@ -210,13 +210,13 @@ export default function StaffWalkInPage() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="hc-form-group">
                   <label className="hc-label">
-                    Họ và tên khách <span style={{ color: "var(--hc-error)" }}>*</span>
+                    Họ và tên khách <span className="u-text-error">*</span>
                   </label>
                   <input type="text" className="hc-input" placeholder="Nguyễn Văn A" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
                 </div>
                 <div className="hc-form-group">
                   <label className="hc-label">
-                    Số điện thoại liên hệ <span style={{ color: "var(--hc-error)" }}>*</span>
+                    Số điện thoại liên hệ <span className="u-text-error">*</span>
                   </label>
                   <input type="tel" className="hc-input" placeholder="0912345678" value={phone} onChange={(e) => setPhone(e.target.value)} required />
                 </div>
@@ -224,7 +224,7 @@ export default function StaffWalkInPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 <div className="hc-form-group">
-                  <label className="hc-label">Email {createAccount && <span style={{ color: "var(--hc-error)" }}>*</span>}</label>
+                  <label className="hc-label">Email {createAccount && <span className="u-text-error">*</span>}</label>
                   <input type="email" className="hc-input" placeholder="khach@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required={createAccount} />
                 </div>
                 <div className="hc-form-group">
@@ -250,7 +250,7 @@ export default function StaffWalkInPage() {
                   <input type="checkbox" checked={checkInImmediately} onChange={(e) => setCheckInImmediately(e.target.checked)} />
                   <div>
                     <strong>Nhận phòng ngay (Check-in tức thì)</strong>
-                    <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Tự động chuyển trạng thái phòng sang ĐANG Ở (OCCUPIED) ngay khi lưu đơn.</div>
+                    <div className="u-hint">Tự động chuyển trạng thái phòng sang ĐANG Ở (OCCUPIED) ngay khi lưu đơn.</div>
                   </div>
                 </label>
               </div>
@@ -261,7 +261,7 @@ export default function StaffWalkInPage() {
                   <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} />
                   <div>
                     <strong>Tạo tài khoản cho khách</strong>
-                    <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Tên đăng nhập là email, mật khẩu mặc định là số điện thoại. Bắt buộc nhập email.</div>
+                    <div className="u-hint">Tên đăng nhập là email, mật khẩu mặc định là số điện thoại. Bắt buộc nhập email.</div>
                   </div>
                 </label>
               </div>
@@ -295,21 +295,21 @@ export default function StaffWalkInPage() {
           <div className="hc-card">
             <div className="hc-card-header">
               <div className="hc-card-title">
-                <i className="bi bi-calculator text-primary" style={{ marginRight: "8px" }}></i>
+                <i className="bi bi-calculator text-primary u-mr-8"></i>
                 Tóm Tắt Dự Toán
               </div>
             </div>
             <div className="hc-card-body">
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Phòng:</span>
+                <span className="u-text-secondary">Phòng:</span>
                 <strong>{selectedRoom ? `Phòng ${selectedRoom.roomNumber} (${getTypeName(selectedRoom)})` : "Chưa chọn"}</strong>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Đơn giá:</span>
+                <span className="u-text-secondary">Đơn giá:</span>
                 <span>{formatVND(roomPrice)} / đêm</span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                <span style={{ color: "var(--hc-text-secondary)" }}>Thời gian:</span>
+                <span className="u-text-secondary">Thời gian:</span>
                 <span>{nights} đêm</span>
               </div>
 
@@ -336,7 +336,7 @@ export default function StaffWalkInPage() {
                   border: "1px solid var(--hc-border)",
                 }}
               >
-                <span style={{ fontWeight: 600 }}>Còn nợ lại (Balance):</span>
+                <span className="u-fw-600">Còn nợ lại (Balance):</span>
                 <strong style={{ color: "var(--hc-error)", fontSize: "16px" }}>{formatVND(Math.max(0, totalAmount - (parseFloat(amountPaid) || 0)))}</strong>
               </div>
             </div>

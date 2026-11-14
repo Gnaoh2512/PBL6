@@ -344,26 +344,6 @@
   height: 60px;
   margin-left: 20px;
 }
-.resort-availability {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 20px;
-  color: var(--hc-primary);
-  border-top: 1px solid #c9dfda;
-  background: #e8f2ef;
-  font-size: 12px;
-}
-.resort-availability > span:nth-child(2) {
-  flex: 1;
-}
-.resort-availability a {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 11px;
-  font-weight: 700;
-}
 
 .resort-intro,
 .resort-width {
@@ -648,12 +628,6 @@
   width: max-content;
   display: flex;
   margin: 42px auto 0;
-}
-.resort-room-empty {
-  padding: 44px;
-  color: var(--hc-text-secondary);
-  background: white;
-  text-align: center;
 }
 
 .resort-experience {
@@ -1020,10 +994,6 @@
   .search-rooms {
     height: 52px;
     margin: 10px 0 0;
-  }
-  .resort-availability {
-    align-items: start;
-    flex-wrap: wrap;
   }
   .resort-intro h2,
   .resort-section-heading h2,

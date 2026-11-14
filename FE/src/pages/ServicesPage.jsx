@@ -310,14 +310,14 @@ export default function ServicesPage({ portal = false }) {
       );
     }
     return (
-      <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+      <div className="hc-card-body flush u-scroll-x">
         <table className="hc-table">
           <thead>
             <tr>
               <th>Dịch vụ</th>
               <th>Danh mục</th>
               <th>Đơn giá</th>
-              <th style={{ textAlign: "right" }}>Thao tác</th>
+              <th className="u-text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody>
@@ -334,7 +334,7 @@ export default function ServicesPage({ portal = false }) {
                     <span className="svc-price">{formatVND(s.unitPrice)}</span>
                     <div className="guest-cell-sub">/ {s.unit || "Lần"}</div>
                   </td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="u-text-right">
                     <button
                       type="button"
                       className="hc-btn hc-btn-outline hc-btn-sm"
@@ -390,7 +390,7 @@ export default function ServicesPage({ portal = false }) {
                 <th>Đặc quyền</th>
                 <th>Hạng</th>
                 <th>Lượt dùng</th>
-                <th style={{ textAlign: "right" }}>Thao tác</th>
+                <th className="u-text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -415,7 +415,7 @@ export default function ServicesPage({ portal = false }) {
                     <td>
                       <span className="svc-benefit-quota">{b.remainingQuota != null ? `Còn ${b.remainingQuota} lượt` : "Không giới hạn"}</span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="u-text-right">
                       <button
                         type="button"
                         className="hc-btn hc-btn-primary hc-btn-sm"
@@ -476,15 +476,15 @@ export default function ServicesPage({ portal = false }) {
             Dịch vụ đã phát sinh
           </div>
           <div className="svc-lifecycle-stepper" style={{ margin: 0, padding: "3px 8px" }}>
-            <span className="svc-step-node is-pending" style={{ fontSize: "10px", padding: "1px 6px" }}>
+            <span className="svc-step-node is-pending u-chip-xs">
               <i className="bi bi-clock-history"></i> PENDING
             </span>
             <i className="bi bi-arrow-right svc-step-arrow"></i>
-            <span className="svc-step-node is-delivering" style={{ fontSize: "10px", padding: "1px 6px" }}>
+            <span className="svc-step-node is-delivering u-chip-xs">
               <i className="bi bi-bicycle"></i> DELIVERING
             </span>
             <i className="bi bi-arrow-right svc-step-arrow"></i>
-            <span className="svc-step-node is-completed" style={{ fontSize: "10px", padding: "1px 6px" }}>
+            <span className="svc-step-node is-completed u-chip-xs">
               <i className="bi bi-check2-circle"></i> COMPLETED
             </span>
           </div>
@@ -498,10 +498,10 @@ export default function ServicesPage({ portal = false }) {
               <thead>
                 <tr>
                   <th>Dịch vụ</th>
-                  <th style={{ textAlign: "center" }}>Trạng thái</th>
-                  <th style={{ textAlign: "center" }}>SL</th>
-                  <th style={{ textAlign: "right" }}>Đơn giá</th>
-                  <th style={{ textAlign: "right" }}>Thành tiền</th>
+                  <th className="u-text-center">Trạng thái</th>
+                  <th className="u-text-center">SL</th>
+                  <th className="u-text-right">Đơn giá</th>
+                  <th className="u-text-right">Thành tiền</th>
                 </tr>
               </thead>
               <tbody>
@@ -519,10 +519,10 @@ export default function ServicesPage({ portal = false }) {
                         )}
                         <div className="guest-cell-sub">{formatDateTime(u.orderTime || u.usedAt)}</div>
                       </td>
-                      <td style={{ textAlign: "center" }}>{renderServiceStatusBadge(u.status)}</td>
-                      <td style={{ textAlign: "center" }}>{u.quantity}</td>
-                      <td style={{ textAlign: "right" }}>{formatVND(u.unitPrice || u.unitPriceApplied)}</td>
-                      <td style={{ textAlign: "right", fontWeight: 600 }}>
+                      <td className="u-text-center">{renderServiceStatusBadge(u.status)}</td>
+                      <td className="u-text-center">{u.quantity}</td>
+                      <td className="u-text-right">{formatVND(u.unitPrice || u.unitPriceApplied)}</td>
+                      <td className="u-fw-600 u-text-right">
                         {canceled ? (
                           <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }} title="Dịch vụ đã hủy, không tính tiền">
                             {formatVND(u.totalAmount || u.totalPrice)}
@@ -540,30 +540,30 @@ export default function ServicesPage({ portal = false }) {
         )}
 
         <div className="svc-sum">
-          <div className="svc-sum-row">
+          <div className="hc-sum-row">
             <span>Tiền phòng lưu trú</span>
             <strong>{formatVND(folio.roomCharge)}</strong>
           </div>
-          <div className="svc-sum-row">
+          <div className="hc-sum-row">
             <span>Tiền dịch vụ phát sinh</span>
             <strong>{formatVND(folio.serviceCharge)}</strong>
           </div>
           {folio.discountAmount > 0 && (
-            <div className="svc-sum-row is-discount" style={{ color: "var(--hc-success)" }}>
+            <div className="hc-sum-row is-discount u-text-success">
               <span>Ưu đãi voucher</span>
               <strong>- {formatVND(folio.discountAmount)}</strong>
             </div>
           )}
-          <div className="svc-sum-row">
+          <div className="hc-sum-row">
             <span>Thuế GTGT (VAT 10%)</span>
             <strong>{formatVND(folio.taxAmount)}</strong>
           </div>
           <hr className="hc-divider" style={{ margin: "10px 0" }} />
-          <div className="svc-sum-row is-total" style={{ fontWeight: 700, fontSize: "15px" }}>
+          <div className="hc-sum-row is-total" style={{ fontWeight: 700, fontSize: "15px" }}>
             <span>Tổng chi phí</span>
             <span>{formatVND(folio.totalAmount)}</span>
           </div>
-          <div className="svc-sum-row is-deposit" style={{ color: "var(--hc-success)" }}>
+          <div className="hc-sum-row is-deposit u-text-success">
             <span>Tiền cọc / Đã trả</span>
             <strong>- {formatVND(folio.depositPaid ?? folio.depositApplied ?? folio.depositAmount ?? 0)}</strong>
           </div>
@@ -769,7 +769,7 @@ export default function ServicesPage({ portal = false }) {
               )}
               <div className="guest-cell-sub" style={{ marginTop: "8px", borderTop: "1px dashed var(--hc-border)", paddingTop: "8px" }}>
                 Áp dụng cho phòng:{" "}
-                <strong style={{ color: "var(--hc-primary)" }}>
+                <strong className="u-text-primary">
                   {folio?.roomNumber ? `Phòng ${folio.roomNumber}` : bookingCode} ({bookingCode})
                 </strong>
               </div>

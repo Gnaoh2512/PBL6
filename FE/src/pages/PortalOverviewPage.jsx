@@ -98,7 +98,7 @@ export default function PortalOverviewPage({ type }) {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>{isAdmin ? "Tổng quan" : "Hoạt động hôm nay"}</h2>
           <p>{isAdmin ? "Số liệu được tổng hợp từ tình trạng phòng và đặt phòng hiện tại." : <span style={{ textTransform: "capitalize" }}>{date}</span>}</p>
@@ -142,7 +142,7 @@ export default function PortalOverviewPage({ type }) {
         <div className="hc-card">
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-journal-text text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-journal-text text-primary u-mr-8"></i>
               {isAdmin ? "Đặt phòng gần đây" : "Khách đến hôm nay"}
             </div>
             <Link className="ov-link" to="/staff/bookings">
@@ -159,7 +159,7 @@ export default function PortalOverviewPage({ type }) {
               <p>{bookings.length === 0 ? "Chưa có dữ liệu đặt phòng cho vai trò hiện tại." : "Hôm nay chưa có khách đến."}</p>
             </div>
           ) : (
-            <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+            <div className="hc-card-body flush u-scroll-x">
               <table className="hc-table">
                 <thead>
                   <tr>
@@ -180,7 +180,7 @@ export default function PortalOverviewPage({ type }) {
                         </td>
                         <td>{b.customerName}</td>
                         <td>{b.roomType?.typeName || b.roomNumber || "—"}</td>
-                        <td style={{ whiteSpace: "nowrap" }}>
+                        <td className="u-nowrap">
                           {formatDate(b.checkInDate)} – {formatDate(b.checkOutDate)}
                         </td>
                         <td>
@@ -198,7 +198,7 @@ export default function PortalOverviewPage({ type }) {
         <div className="hc-card">
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-grid-3x3-gap text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-grid-3x3-gap text-primary u-mr-8"></i>
               Tình trạng phòng
             </div>
           </div>
@@ -229,11 +229,11 @@ export default function PortalOverviewPage({ type }) {
         <div className="hc-card ov-full">
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-flag text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-flag text-primary u-mr-8"></i>
               Công việc ưu tiên
             </div>
           </div>
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>

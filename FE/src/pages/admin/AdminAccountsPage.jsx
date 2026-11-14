@@ -99,7 +99,7 @@ export default function AdminAccountsPage() {
           <p>Quản lý tài khoản và vai trò truy cập hệ thống.</p>
         </div>
 
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="u-row-10">
           <button type="button" className="hc-btn hc-btn-primary" onClick={() => setModalOpen(true)}>
             <i className="bi bi-person-plus-fill"></i> Thêm Tài Khoản Mới
           </button>
@@ -190,7 +190,7 @@ export default function AdminAccountsPage() {
         title="Thêm Mới Tài Khoản Người Dùng"
         maxWidth="500px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setModalOpen(false)}>
               Hủy
             </button>
@@ -203,28 +203,28 @@ export default function AdminAccountsPage() {
         <form onSubmit={handleCreateAccount}>
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên đăng nhập (Username) <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên đăng nhập (Username) <span className="u-text-error">*</span>
             </label>
             <input type="text" className="hc-input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
           </div>
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Mật khẩu <span style={{ color: "var(--hc-error)" }}>*</span>
+              Mật khẩu <span className="u-text-error">*</span>
             </label>
             <input type="password" className="hc-input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
           </div>
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Họ và tên đầy đủ <span style={{ color: "var(--hc-error)" }}>*</span>
+              Họ và tên đầy đủ <span className="u-text-error">*</span>
             </label>
             <input type="text" className="hc-input" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} required />
           </div>
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Vai trò phân quyền (Role) <span style={{ color: "var(--hc-error)" }}>*</span>
+              Vai trò phân quyền (Role) <span className="u-text-error">*</span>
             </label>
             <select className="hc-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required>
               <option value="ROLE_RECEPTIONIST">Lễ tân (ROLE_RECEPTIONIST)</option>
@@ -237,7 +237,7 @@ export default function AdminAccountsPage() {
             </select>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">Số điện thoại</label>
               <input type="tel" className="hc-input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />

@@ -191,7 +191,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="hc-card-body" style={{ borderTop: "1px solid var(--hc-border-light)", fontSize: "13px", color: "var(--hc-text-muted)" }}>
-              <i className="bi bi-info-circle text-primary" style={{ marginRight: "6px" }}></i>
+              <i className="bi bi-info-circle text-primary u-mr-6"></i>
               Để bảo mật tài khoản, việc thay đổi số điện thoại hoặc email liên kết cần được đối soát bởi Quầy lễ tân hoặc Quản trị viên hệ thống.
             </div>
           </div>

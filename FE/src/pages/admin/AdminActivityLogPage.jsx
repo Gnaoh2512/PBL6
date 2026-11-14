@@ -135,7 +135,7 @@ export default function AdminActivityLogPage() {
           <h2>Nhật Ký Hoạt Động Toàn Hệ Thống (Audit Logs)</h2>
           <p>Truy vết chi tiết mọi thao tác của Quản trị viên, Nhân viên và Khách hàng trên tất cả các phân hệ.</p>
         </div>
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+        <div className="u-row-10">
           <button className="hc-btn hc-btn-primary" type="button" onClick={loadLogs} disabled={loading}>
             <i className="bi bi-arrow-clockwise" /> Làm mới dữ liệu
           </button>
@@ -220,22 +220,22 @@ export default function AdminActivityLogPage() {
                         </td>
                         <td>
                           {isSystem ? (
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <div className="u-row-6">
                               <i className="bi bi-cpu text-secondary" style={{ fontSize: "15px" }}></i>
-                              <span className="hc-badge hc-badge-neutral" style={{ fontSize: "11px" }}>
+                              <span className="hc-badge hc-badge-neutral u-fs-11">
                                 Hệ thống tự động
                               </span>
                             </div>
                           ) : (
                             <div>
-                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <div className="u-row-6">
                                 <i className="bi bi-person-circle text-primary" style={{ fontSize: "15px" }}></i>
                                 <strong style={{ color: "var(--hc-text-primary)" }}>{fullName && fullName !== username ? fullName : username || "Nhân sự"}</strong>
                               </div>
                               <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px" }}>
-                                {username && <span style={{ fontSize: "11px", color: "var(--hc-text-muted)" }}>@{username}</span>}
+                                {username && <span className="u-text-muted u-fs-11">@{username}</span>}
                                 {roleDisplay && (
-                                  <span className="hc-badge hc-badge-primary" style={{ fontSize: "10px", padding: "1px 6px" }}>
+                                  <span className="hc-badge hc-badge-primary u-chip-xs">
                                     {roleDisplay}
                                   </span>
                                 )}
@@ -249,7 +249,7 @@ export default function AdminActivityLogPage() {
                           </span>
                         </td>
                         <td>
-                          <span className={`hc-badge ${getActionBadgeClass(log.actionType || log.action)}`} style={{ fontSize: "11px" }}>
+                          <span className={`hc-badge ${getActionBadgeClass(log.actionType || log.action)} u-fs-11`}>
                             {getActionDisplayName(log.actionType || log.action)}
                           </span>
                         </td>

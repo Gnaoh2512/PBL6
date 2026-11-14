@@ -295,7 +295,7 @@ export default function AdminRoomsPage() {
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Danh Mục Phòng & Hạng Phòng</h2>
           <p>Quản lý danh sách phòng và trạng thái phòng.</p>
@@ -307,11 +307,11 @@ export default function AdminRoomsPage() {
       </div>
 
       <div className="hc-card">
-        <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
-          <div style={{ flex: "1 1 200px" }}>
+        <div className="hc-card-body u-row-ruled">
+          <div className="u-flex-200">
             <SelectMenu value={typeFilter} onChange={setTypeFilter} options={typeFilterOptions} ariaLabel="Lọc hạng phòng" icon="bi-layers" />
           </div>
-          <div style={{ flex: "0 0 220px" }}>
+          <div className="u-flex-220">
             <SelectMenu value={statusFilter} onChange={setStatusFilter} options={STATUS_FILTER_OPTIONS} ariaLabel="Lọc trạng thái" icon="bi-funnel" />
           </div>
         </div>
@@ -326,7 +326,7 @@ export default function AdminRoomsPage() {
             <p>Không tìm thấy phòng nào.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+          <div className="hc-card-body flush u-scroll-x">
             <table className="hc-table">
               <thead>
                 <tr>
@@ -335,7 +335,7 @@ export default function AdminRoomsPage() {
                   <th>Tầng</th>
                   <th>Đơn giá</th>
                   <th>Trạng thái</th>
-                  <th style={{ textAlign: "right" }}>Thao tác</th>
+                  <th className="u-text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -368,7 +368,7 @@ export default function AdminRoomsPage() {
                       <td>
                         <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
                       </td>
-                      <td style={{ textAlign: "right" }}>
+                      <td className="u-text-right">
                         <div style={{ display: "inline-flex", gap: "6px" }}>
                           {r.status === "CLEANING" && (
                             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" title="Xác nhận đã dọn xong" onClick={() => handleQuickStatus(r.roomId, "AVAILABLE")}>
@@ -424,33 +424,33 @@ export default function AdminRoomsPage() {
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
                     <div>
                       <strong>{booking.customerName || "Khách chưa cập nhật tên"}</strong>
-                      <div style={{ color: "var(--hc-text-secondary)", fontSize: "12px" }}>{booking.bookingCode}</div>
+                      <div className="u-hint">{booking.bookingCode}</div>
                     </div>
                     <span className={`hc-badge ${bookingStatus.badge}`}>{bookingStatus.label}</span>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px", fontSize: "13px" }}>
                     <div>
-                      <small style={{ display: "block", color: "var(--hc-text-secondary)" }}>Số điện thoại</small>
+                      <small className="u-text-secondary u-block">Số điện thoại</small>
                       <strong>{booking.customerPhone || "—"}</strong>
                     </div>
                     <div>
-                      <small style={{ display: "block", color: "var(--hc-text-secondary)" }}>Email</small>
+                      <small className="u-text-secondary u-block">Email</small>
                       <strong>{booking.customerEmail || "—"}</strong>
                     </div>
                     <div>
-                      <small style={{ display: "block", color: "var(--hc-text-secondary)" }}>CCCD / CMND</small>
+                      <small className="u-text-secondary u-block">CCCD / CMND</small>
                       <strong>{booking.idNumber || "—"}</strong>
                     </div>
                     <div>
-                      <small style={{ display: "block", color: "var(--hc-text-secondary)" }}>Số khách</small>
+                      <small className="u-text-secondary u-block">Số khách</small>
                       <strong>{booking.guestCount ?? "—"}</strong>
                     </div>
                     <div>
-                      <small style={{ display: "block", color: "var(--hc-text-secondary)" }}>Ngày nhận phòng</small>
+                      <small className="u-text-secondary u-block">Ngày nhận phòng</small>
                       <strong>{booking.checkInDate || "—"}</strong>
                     </div>
                     <div>
-                      <small style={{ display: "block", color: "var(--hc-text-secondary)" }}>Ngày trả phòng</small>
+                      <small className="u-text-secondary u-block">Ngày trả phòng</small>
                       <strong>{booking.checkOutDate || "—"}</strong>
                     </div>
                   </div>
@@ -471,7 +471,7 @@ export default function AdminRoomsPage() {
         icon={editRoomId ? "bi-pencil-square" : "bi-door-open"}
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setModalOpen(false)}>
               Hủy
             </button>
@@ -484,19 +484,19 @@ export default function AdminRoomsPage() {
         <form onSubmit={handleSaveRoom}>
           <div className="hc-form-group">
             <label className="hc-label">
-              Số phòng <span style={{ color: "var(--hc-error)" }}>*</span>
+              Số phòng <span className="u-text-error">*</span>
             </label>
             <input type="text" className="hc-input" placeholder="Ví dụ: 101, 202, 305..." value={form.roomNumber} onChange={(e) => setForm({ ...form, roomNumber: e.target.value })} required />
           </div>
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Hạng phòng <span style={{ color: "var(--hc-error)" }}>*</span>
+              Hạng phòng <span className="u-text-error">*</span>
             </label>
             <SelectMenu value={form.roomTypeId} onChange={(value) => setForm({ ...form, roomTypeId: value })} options={typeFormOptions} ariaLabel="Hạng phòng" icon="bi-layers" />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div className="u-grid-auto">
             <div className="hc-form-group">
               <label className="hc-label">Tầng</label>
               <input type="number" className="hc-input" min="1" max="50" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })} />
@@ -519,7 +519,7 @@ export default function AdminRoomsPage() {
         maxWidth="540px"
       >
         {cleaningTarget && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div className="u-col-16">
             <div
               style={{
                 background: "var(--hc-bg-subtle, #f8fafc)",
@@ -533,44 +533,34 @@ export default function AdminRoomsPage() {
               }}
             >
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Số phòng</span>
+                <span className="u-hint u-block">Số phòng</span>
                 <strong>Phòng {cleaningTarget.roomNumber}</strong>
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Vị trí</span>
+                <span className="u-hint u-block">Vị trí</span>
                 <span>Tầng {cleaningTarget.floor || 1}</span>
               </div>
               <div>
-                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Hạng phòng</span>
+                <span className="u-hint u-block">Hạng phòng</span>
                 <span>{getRoomTypeName(cleaningTarget)}</span>
               </div>
             </div>
 
             <div className="hc-form-group">
-              <label className="hc-label" style={{ fontWeight: 600 }}>
-                Nhân viên buồng phòng (Đang trong ca trực) <span style={{ color: "var(--hc-error)" }}>*</span>
+              <label className="hc-label u-fw-600">
+                Nhân viên buồng phòng (Đang trong ca trực) <span className="u-text-error">*</span>
               </label>
 
               {loadingHousekeepers ? (
                 <div style={{ padding: "10px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
-                  <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                  <i className="bi bi-arrow-clockwise admin-schedule-spin u-mr-6"></i>
                   Đang kiểm tra lịch ca trực của nhân viên buồng phòng...
                 </div>
               ) : housekeepers.length === 0 ? (
                 <div
-                  style={{
-                    background: "#fffbeb",
-                    border: "1px solid #fef3c7",
-                    borderRadius: "8px",
-                    padding: "12px 14px",
-                    fontSize: "0.85rem",
-                    color: "#92400e",
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "8px",
-                  }}
+                  className="u-notice-warn"
                 >
-                  <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                  <i className="bi bi-exclamation-triangle-fill u-star"></i>
                   <div>
                     <strong>Không có nhân viên trong ca trực:</strong> Hiện tại không có nhân viên buồng phòng nào có lịch trực hoạt động theo ca. Vui lòng xếp ca trực tại mục{" "}
                     <strong>Quản lý Lịch làm việc</strong> trước khi phân công.
@@ -591,7 +581,7 @@ export default function AdminRoomsPage() {
               <textarea className="hc-textarea" rows="2" placeholder="Ví dụ: Khách check-in sớm, thay chăn ga, bổ sung đồ dùng..." value={assignNote} onChange={(e) => setAssignNote(e.target.value)} />
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+            <div className="u-modal-actions">
               <button type="button" className="hc-btn hc-btn-outline" onClick={closeAssignCleaningModal} disabled={submittingAssign}>
                 Đóng
               </button>
