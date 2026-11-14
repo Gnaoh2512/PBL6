@@ -7,10 +7,15 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.diagnostics import Category
+
 
 class DependencyError(Exception):
-    def __init__(self, code: str = "DEPENDENCY_UNAVAILABLE"):
+    def __init__(
+        self, code: str = "DEPENDENCY_UNAVAILABLE", *, diagnostic_category: Category | None = None
+    ):
         self.code = code
+        self.diagnostic_category = diagnostic_category
         super().__init__(code)
 
 
@@ -27,7 +32,9 @@ class TurnBudget:
     def seconds(self) -> float:
         remaining = self.remaining_ms / 1000 - (monotonic() - self.started)
         if remaining <= 0:
-            raise DependencyError("DEADLINE_EXCEEDED")
+            raise DependencyError(
+                "DEADLINE_EXCEEDED", diagnostic_category=Category.APPLICATION_DEADLINE
+            )
         return remaining
 
     def reserve(self, input_tokens: int):
@@ -38,16 +45,16 @@ class TurnBudget:
             or self.input_used + input_tokens > self.input_limit
             or self.output_used >= self.output_limit
         ):
-            raise DependencyError("BUDGET_EXCEEDED")
+            raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
 
     def record(self, input_tokens: int, output_tokens: int):
         if input_tokens < 0 or output_tokens < 0:
-            raise DependencyError("AI_PROTOCOL_ERROR")
+            raise DependencyError("AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SCHEMA)
         self.calls += 1
         self.input_used += input_tokens
         self.output_used += output_tokens
         if self.input_used > self.input_limit or self.output_used > self.output_limit:
-            raise DependencyError("BUDGET_EXCEEDED")
+            raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
 
 
 class Evidence(BaseModel):

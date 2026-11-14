@@ -7,6 +7,7 @@ import re
 import httpx
 from pydantic import BaseModel, ValidationError
 
+from app.diagnostics import Category, Phase, category, context, step
 from app.providers.contracts import DependencyError, TurnBudget
 
 
@@ -29,32 +30,62 @@ class Gemini:
         await self.client.aclose()
 
     async def _post(self, method: str, body: dict, budget: TurnBudget):
+        phase = Phase(method)
+        with step(phase, provider_method=phase) as event:
+            return await self._request(method, body, budget, event)
+
+    async def _request(self, method, body, budget, event):
+        timeout = None
         try:
-            async with asyncio.timeout(budget.seconds()):
+            timeout = asyncio.timeout(budget.seconds())
+            async with timeout:
                 async with self.client.stream(
                     "POST",
                     f"models/{self.model}:{method}",
                     json=body,
                 ) as response:
+                    event.http_status = response.status_code
                     if response.status_code != 200:
-                        raise DependencyError()
+                        raise DependencyError(diagnostic_category=Category.HTTP_STATUS)
                     chunks = bytearray()
                     async for chunk in response.aiter_bytes():
                         chunks.extend(chunk)
                         if len(chunks) > 256 * 1024:
-                            raise DependencyError("AI_PROTOCOL_ERROR")
-                    parsed = json.loads(chunks)
+                            raise DependencyError(
+                                "AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SIZE
+                            )
+                    try:
+                        parsed = json.loads(chunks)
+                    except ValueError:
+                        raise DependencyError(diagnostic_category=Category.JSON_DECODE) from None
                     if not isinstance(parsed, dict):
-                        raise DependencyError("AI_PROTOCOL_ERROR")
+                        raise DependencyError(
+                            "AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SCHEMA
+                        )
                     return parsed
-        except (TimeoutError, httpx.TimeoutException):
-            raise DependencyError("DEADLINE_EXCEEDED") from None
-        except (httpx.HTTPError, ValueError):
-            raise DependencyError() from None
+        except httpx.TimeoutException as error:
+            raise DependencyError(
+                "DEADLINE_EXCEEDED", diagnostic_category=category(error)
+            ) from None
+        except TimeoutError:
+            raise DependencyError(
+                "DEADLINE_EXCEEDED",
+                diagnostic_category=(
+                    Category.APPLICATION_DEADLINE
+                    if timeout is not None and timeout.expired()
+                    else Category.UNEXPECTED
+                ),
+            ) from None
+        except (httpx.HTTPError, ValueError) as error:
+            raise DependencyError(diagnostic_category=category(error)) from None
 
     async def generate(
         self, system: str, data: dict, schema: type[BaseModel], budget: TurnBudget
     ) -> BaseModel:
+        with context(budget=budget), step(Phase.APPLICATION):
+            return await self._generate(system, data, schema, budget)
+
+    async def _generate(self, system, data, schema, budget):
         budget.reserve(0)
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
@@ -72,11 +103,18 @@ class Gemini:
             {"generateContentRequest": {"model": f"models/{self.model}", **body}},
             budget,
         )
-        tokens = count.get("totalTokens")
-        if type(tokens) is not int:
-            raise DependencyError("AI_PROTOCOL_ERROR")
+        with step(Phase.VALIDATE, http_status=200, provider_method=Phase.COUNT):
+            tokens = count.get("totalTokens")
+            if type(tokens) is not int:
+                raise DependencyError(
+                    "AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SCHEMA
+                )
         budget.reserve(tokens)
         result = await self._post("generateContent", body, budget)
+        with step(Phase.VALIDATE, http_status=200, provider_method=Phase.GENERATE):
+            return self._parse(result, schema, budget)
+
+    def _parse(self, result, schema, budget):
         try:
             usage = result["usageMetadata"]
             input_tokens = usage["promptTokenCount"]
@@ -99,4 +137,6 @@ class Gemini:
             self.model_version = result.get("modelVersion")
             return parsed
         except (KeyError, IndexError, TypeError, ValueError, ValidationError):
-            raise DependencyError("AI_PROTOCOL_ERROR") from None
+            raise DependencyError(
+                "AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SCHEMA
+            ) from None
