@@ -260,3 +260,213 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------- Shared Shift Banner ---------- */
+.sh-shared-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  border-radius: var(--hc-radius-lg);
+  background: linear-gradient(135deg, rgba(22, 101, 52, 0.08) 0%, rgba(30, 58, 138, 0.08) 100%);
+  border: 1px solid rgba(22, 101, 52, 0.2);
+}
+.sh-shared-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.sh-shared-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--hc-success);
+  color: #fff;
+  font-size: 1.3rem;
+  box-shadow: 0 4px 10px rgba(22, 101, 52, 0.25);
+}
+.sh-shared-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--hc-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sh-shared-sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--hc-text-secondary);
+}
+
+/* ---------- Navigation Tabs ---------- */
+.sh-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--hc-border);
+  padding-bottom: 12px;
+}
+.sh-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--hc-radius-full);
+  border: 1px solid var(--hc-border);
+  background: var(--hc-surface);
+  color: var(--hc-text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.sh-tab:hover {
+  border-color: var(--hc-primary);
+  color: var(--hc-primary);
+}
+.sh-tab.is-active {
+  background: var(--hc-primary);
+  border-color: var(--hc-primary);
+  color: #fff;
+  box-shadow: var(--hc-shadow-sm);
+}
+
+/* ---------- 4-Column Payment Breakdown Grid ---------- */
+.sh-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.sh-breakdown-card {
+  padding: 16px;
+  background: var(--hc-surface);
+  border: 1px solid var(--hc-border-light);
+  border-radius: var(--hc-radius-md);
+  box-shadow: var(--hc-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.sh-breakdown-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.sh-breakdown-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 1.1rem;
+}
+.sh-breakdown-lbl {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--hc-text-muted);
+}
+.sh-breakdown-val {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--hc-text);
+  line-height: 1.2;
+}
+.sh-breakdown-hint {
+  font-size: 11px;
+  color: var(--hc-text-secondary);
+  margin-top: 4px;
+}
+
+@media (max-width: 992px) {
+  .sh-breakdown-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 576px) {
+  .sh-breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Shared Transactions Card ---------- */
+.sh-txn-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.sh-txn-search {
+  position: relative;
+  min-width: 240px;
+  flex: 1;
+}
+.sh-txn-search i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--hc-text-muted);
+}
+.sh-txn-search input {
+  padding-left: 36px;
+}
+.sh-method-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.sh-method-badge.cash {
+  background: #fef3c7;
+  color: #92400e;
+}
+.sh-method-badge.bank {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+.sh-method-badge.card {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* ---------- Diff Box in Close Modal ---------- */
+.sh-diff-box {
+  padding: 12px 14px;
+  border-radius: var(--hc-radius-md);
+  margin-top: 12px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+}
+.sh-diff-box.match {
+  background: var(--hc-success-bg, #dcfce7);
+  color: var(--hc-success, #166534);
+  border: 1px solid rgba(22, 101, 52, 0.2);
+}
+.sh-diff-box.shortage {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid rgba(153, 27, 27, 0.2);
+}
+.sh-diff-box.surplus {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid rgba(7, 89, 133, 0.2);
+}
+

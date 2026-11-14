@@ -18,7 +18,6 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/public/bookings")
 @RequiredArgsConstructor
 public class PublicBookingController {
 
@@ -27,7 +26,7 @@ public class PublicBookingController {
     /**
      * Khách hàng đặt phòng trực tuyến & nhận mã VietQR nộp cọc
      */
-    @PostMapping
+    @PostMapping("/api/public/bookings")
     public ResponseEntity<ApiResponse<BookingDetailResponse>> createBooking(
             @Valid @RequestBody BookingCreateRequest request,
             Authentication authentication) {
@@ -44,7 +43,7 @@ public class PublicBookingController {
     /**
      * Tra cứu thông tin chi tiết đơn đặt phòng bằng mã booking
      */
-    @GetMapping("/{bookingCode}")
+    @GetMapping("/api/public/bookings/{bookingCode}")
     public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingByCode(@PathVariable String bookingCode) {
         BookingDetailResponse response = customerBookingService.getBookingByCode(bookingCode);
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -53,16 +52,20 @@ public class PublicBookingController {
     /**
      * Kiểm tra trạng thái nộp cọc theo thời gian thực (Polling API mỗi 3 giây)
      */
-    @GetMapping("/{bookingCode}/payment-status")
+    @GetMapping("/api/public/bookings/{bookingCode}/payment-status")
     public ResponseEntity<ApiResponse<PaymentStatusResponse>> getPaymentStatus(@PathVariable String bookingCode) {
         PaymentStatusResponse response = customerBookingService.getPaymentStatus(bookingCode);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     /**
-     * Cổng tiếp nhận Webhook tự động từ dịch vụ SePay khi có tiền về
+     * Cổng tiếp nhận Webhook tự động từ dịch vụ SePay / VietQR khi có tiền về
      */
-    @PostMapping("/sepay-webhook")
+    @PostMapping({
+            "/api/public/bookings/sepay-webhook",
+            "/api/public/sepay-webhook",
+            "/api/v1/webhooks/sepay"
+    })
     public ResponseEntity<Map<String, Object>> handleSePayWebhook(
             @RequestBody SePayWebhookPayload payload,
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
@@ -77,7 +80,7 @@ public class PublicBookingController {
     /**
      * Giả lập nộp tiền cọc thành công (Dành riêng cho dev / demo thuyết trình đồ án)
      */
-    @PostMapping("/{bookingCode}/simulate-deposit")
+    @PostMapping("/api/public/bookings/{bookingCode}/simulate-deposit")
     public ResponseEntity<ApiResponse<PaymentStatusResponse>> simulateDeposit(@PathVariable String bookingCode) {
         PaymentStatusResponse response = customerBookingService.simulateDeposit(bookingCode);
         return ResponseEntity.ok(ApiResponse.ok("Giả lập nộp cọc thành công!", response));

@@ -58,4 +58,9 @@ public interface CustomerBillingService {
      * Hủy đặt phòng theo chính sách hoàn cọc mặc định (hoàn tiền)
      */
     CancellationRefundResponse cancelWithRefundPolicy(String bookingCode, String reason, String username);
+
+    /**
+     * Cập nhật trạng thái phục vụ của dịch vụ (PENDING -> DELIVERING -> COMPLETED)
+     */
+    ServiceUsageResponse updateServiceUsageStatus(Integer usageId, String status);
 }

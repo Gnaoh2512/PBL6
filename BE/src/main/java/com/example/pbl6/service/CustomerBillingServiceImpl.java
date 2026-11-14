@@ -25,7 +25,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -49,8 +48,13 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     private final LoyaltyService loyaltyService;
     private final VoucherRepository voucherRepository;
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
+    private final TierBenefitRepository tierBenefitRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
     private final LoyaltyTierRepository loyaltyTierRepository;
+    private final ServiceRequestRepository serviceRequestRepository;
+    private final CustomerRepository customerRepository;
+    private final CashierShiftService cashierShiftService;
+    private final RoomCleaningRequestRepository roomCleaningRequestRepository;
     private final AuditLogService auditLogService;
 
     @Override
@@ -118,11 +122,50 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .unitPriceApplied(unitPrice)
                 .discountAmount(BigDecimal.ZERO)
                 .totalPrice(totalPrice)
-                .status("CHARGED_TO_ROOM")
+                .status("PENDING")
                 .recordedBy(recordedByAccount)
                 .build();
 
         ServiceUsage savedUsage = serviceUsageRepository.save(usage);
+
+        // Đăng ký ServiceRequest để bộ phận dịch vụ tiếp nhận giao hàng lên phòng
+        try {
+            Room room = null;
+            List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
+            for (BookingRoom br : bookingRooms) {
+                if (br.getRoom() != null) {
+                    room = br.getRoom();
+                    break;
+                }
+            }
+            if (room == null) {
+                room = roomRepository.findAll().stream().findFirst().orElse(null);
+            }
+
+            Customer customer = booking.getCustomer() != null
+                    ? booking.getCustomer()
+                    : customerRepository.findAll().stream().findFirst().orElse(null);
+
+            if (room != null && customer != null) {
+                ServiceRequest serviceReq = ServiceRequest.builder()
+                        .booking(booking)
+                        .room(room)
+                        .service(serviceEntity)
+                        .customer(customer)
+                        .quantity(quantity)
+                        .feeAmount(totalPrice)
+                        .status("PENDING")
+                        .note(request.getNote())
+                        .invoice(activeInvoice)
+                        .requestedAt(LocalDateTime.now())
+                        .build();
+                ServiceRequest savedReq = serviceRequestRepository.save(serviceReq);
+                log.info("Đã tạo ServiceRequest #{} cho phòng {} (Đơn {})",
+                        savedReq.getServiceRequestId(), room.getRoomNumber(), booking.getBookingCode());
+            }
+        } catch (Exception e) {
+            log.warn("Không thể tạo ServiceRequest đồng bộ: {}", e.getMessage());
+        }
 
         // Nếu đã có Invoice, cập nhật trường serviceCharge và totalAmount
         if (activeInvoice != null) {
@@ -136,8 +179,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             activeInvoice.setTaxAmount(tax);
 
             BigDecimal depositApplied = activeInvoice.getDepositApplied() != null ? activeInvoice.getDepositApplied() : BigDecimal.ZERO;
-            BigDecimal discount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
-            BigDecimal finalTotal = subtotal.add(tax).subtract(discount).subtract(depositApplied);
+            BigDecimal manualDiscount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+            BigDecimal loyaltyDiscount = calculateLoyaltyRoomDiscount(booking, roomCharge);
+            activeInvoice.setLoyaltyDiscountAmount(loyaltyDiscount);
+            BigDecimal finalTotal = subtotal.add(tax).subtract(manualDiscount).subtract(loyaltyDiscount).subtract(depositApplied);
             activeInvoice.setTotalAmount(finalTotal.compareTo(BigDecimal.ZERO) > 0 ? finalTotal : BigDecimal.ZERO);
 
             invoiceRepository.save(activeInvoice);
@@ -185,13 +230,51 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .collect(Collectors.toList());
 
         BigDecimal serviceCharge = usages.stream()
+                .filter(u -> !"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus()))
                 .map(u -> u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
+        Invoice activeInvoice = invoices.stream()
+                .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
+                .findFirst()
+                .orElse(null);
+
         BigDecimal subtotal = roomCharge.add(serviceCharge);
         BigDecimal taxAmount = financialCalculator.calculateTax(subtotal);
-        BigDecimal discountAmount = BigDecimal.ZERO;
-        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount);
+        BigDecimal manualDiscountAmount = activeInvoice != null && activeInvoice.getDiscountAmount() != null
+                ? activeInvoice.getDiscountAmount()
+                : BigDecimal.ZERO;
+        BigDecimal loyaltyDiscountAmount;
+        if (activeInvoice != null && InvoiceStatus.PAID.name().equalsIgnoreCase(activeInvoice.getStatus())) {
+            loyaltyDiscountAmount = activeInvoice.getLoyaltyDiscountAmount() != null
+                    ? activeInvoice.getLoyaltyDiscountAmount() : BigDecimal.ZERO;
+        } else {
+            loyaltyDiscountAmount = calculateLoyaltyRoomDiscount(booking, roomCharge);
+        }
+        BigDecimal discountAmount = manualDiscountAmount.add(loyaltyDiscountAmount);
+        BigDecimal totalAmount = subtotal.add(taxAmount).subtract(discountAmount).max(BigDecimal.ZERO);
+
+        // A PAID invoice is the immutable checkout snapshot. Historical bookings
+        // must not be recalculated using current room rates, service prices, tax,
+        // or loyalty-tier benefits.
+        boolean invoiceAlreadyPaid = activeInvoice != null
+                && InvoiceStatus.PAID.name().equalsIgnoreCase(activeInvoice.getStatus());
+        if (invoiceAlreadyPaid) {
+            roomCharge = activeInvoice.getRoomCharge() != null ? activeInvoice.getRoomCharge() : BigDecimal.ZERO;
+            serviceCharge = activeInvoice.getServiceCharge() != null ? activeInvoice.getServiceCharge() : BigDecimal.ZERO;
+            subtotal = roomCharge.add(serviceCharge);
+            taxAmount = activeInvoice.getTaxAmount() != null ? activeInvoice.getTaxAmount() : BigDecimal.ZERO;
+            manualDiscountAmount = activeInvoice.getDiscountAmount() != null
+                    ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+            loyaltyDiscountAmount = activeInvoice.getLoyaltyDiscountAmount() != null
+                    ? activeInvoice.getLoyaltyDiscountAmount() : BigDecimal.ZERO;
+            discountAmount = manualDiscountAmount.add(loyaltyDiscountAmount);
+            // totalAmount is the finalized invoice amount before deposit payments.
+            totalAmount = activeInvoice.getTotalAmount() != null
+                    ? activeInvoice.getTotalAmount()
+                    : subtotal.add(taxAmount).subtract(discountAmount).max(BigDecimal.ZERO);
+        }
 
         // Tiền cọc đã nộp và tiền tất toán đã nộp
         List<Payment> payments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
@@ -200,13 +283,26 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        if (depositPaid.compareTo(BigDecimal.ZERO) == 0 && activeInvoice != null && activeInvoice.getDepositApplied() != null && activeInvoice.getDepositApplied().compareTo(BigDecimal.ZERO) > 0) {
+            depositPaid = activeInvoice.getDepositApplied();
+        }
+
+        if (depositPaid.compareTo(BigDecimal.ZERO) == 0 &&
+                (BookingStatus.CONFIRMED.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_IN.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_OUT.name().equalsIgnoreCase(booking.getStatus()))) {
+            if (booking.getDepositRequired() != null && booking.getDepositRequired().compareTo(BigDecimal.ZERO) > 0) {
+                depositPaid = booking.getDepositRequired();
+            }
+        }
+
         BigDecimal settlementPaid = payments.stream()
-                .filter(p -> PaymentType.SETTLEMENT.name().equalsIgnoreCase(p.getType()))
+                .filter(p -> PaymentType.SETTLEMENT.name().equalsIgnoreCase(p.getType()) || "PAYMENT".equalsIgnoreCase(p.getType()))
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal remainingBalance = totalAmount.subtract(depositPaid).subtract(settlementPaid);
-        if (remainingBalance.compareTo(BigDecimal.ZERO) < 0) {
+        if (remainingBalance.compareTo(BigDecimal.ZERO) < 0 || BookingStatus.CHECKED_OUT.name().equalsIgnoreCase(booking.getStatus())) {
             remainingBalance = BigDecimal.ZERO;
         }
 
@@ -317,9 +413,12 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     ? request.getPaymentMethod()
                     : PaymentMethod.CASH.name();
 
+            CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
+
             Payment payment = Payment.builder()
                     .booking(booking)
                     .invoice(invoice)
+                    .cashierShift(openShift)
                     .type(PaymentType.SETTLEMENT.name())
                     .method(method)
                     .amount(paymentAmount)
@@ -337,7 +436,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         invoice.setRoomCharge(folio.getRoomCharge());
         invoice.setServiceCharge(folio.getServiceCharge());
         invoice.setTaxAmount(folio.getTaxAmount());
-        invoice.setDiscountAmount(folio.getDiscountAmount());
+        BigDecimal storedManualDiscount = invoice.getDiscountAmount() != null ? invoice.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal storedLoyaltyDiscount = calculateLoyaltyRoomDiscount(booking, folio.getRoomCharge());
+        invoice.setDiscountAmount(storedManualDiscount);
+        invoice.setLoyaltyDiscountAmount(storedLoyaltyDiscount);
         invoice.setDepositApplied(folio.getDepositPaid());
         invoice.setTotalAmount(folio.getTotalAmount());
         invoice.setStatus(InvoiceStatus.PAID.name());
@@ -348,25 +450,38 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         // Cập nhật trạng thái tất cả ServiceUsage sang BILLED
         List<ServiceUsage> usages = serviceUsageRepository.findByBooking_BookingId(booking.getBookingId());
         for (ServiceUsage u : usages) {
-            u.setInvoice(invoice);
-            u.setStatus("BILLED");
-            serviceUsageRepository.save(u);
+            if (!"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus())) {
+                u.setInvoice(invoice);
+                u.setStatus("BILLED");
+                serviceUsageRepository.save(u);
+            }
         }
 
         // Cập nhật Booking sang CHECKED_OUT
         booking.setStatus(BookingStatus.CHECKED_OUT.name());
         bookingRepository.save(booking);
 
-        // Cập nhật BookingRoom sang CHECKED_OUT và Room sang CLEANING
+        // Cập nhật BookingRoom sang CHECKED_OUT, Room sang CLEANING và tự động tạo RoomCleaningRequest cho bộ phận Housekeeping
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
         for (BookingRoom br : bookingRooms) {
             br.setStatus(BookingStatus.CHECKED_OUT.name());
+            br.setActualCheckout(LocalDateTime.now());
             bookingRoomRepository.save(br);
 
             Room room = br.getRoom();
             if (room != null) {
                 room.setStatus(RoomStatus.CLEANING.name());
                 roomRepository.save(room);
+
+                RoomCleaningRequest cleaningReq = RoomCleaningRequest.builder()
+                        .room(room)
+                        .booking(booking)
+                        .requestedBy(cashierAccount)
+                        .priority("HIGH")
+                        .status("PENDING")
+                        .note("Khách trả phòng (Check-out đơn " + booking.getBookingCode() + ") - Cần dọn phòng đón khách mới")
+                        .build();
+                roomCleaningRequestRepository.save(cleaningReq);
             }
         }
 
@@ -388,7 +503,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     @Override
     @Transactional
     public boolean processSettlementWebhook(String bookingCode, BigDecimal amount, String referenceCode) {
-        log.info("Xử lý webhook tất toán: bookingCode={}, amount={}, ref={}", bookingCode, amount, referenceCode);
+        log.info("Xử lý webhook tất toán SePay: bookingCode={}, amount={}, ref={}", bookingCode, amount, referenceCode);
         Optional<Booking> optBooking = bookingRepository.findByBookingCode(bookingCode);
         if (optBooking.isEmpty()) {
             log.warn("Không tìm thấy đơn khi xử lý webhook tất toán: {}", bookingCode);
@@ -396,9 +511,38 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         }
 
         Booking booking = optBooking.get();
+        LiveFolioResponse folio = getLiveFolio(booking.getBookingCode());
+        BigDecimal remaining = folio.getRemainingBalance() != null ? folio.getRemainingBalance() : BigDecimal.ZERO;
+        BigDecimal transferAmount = amount != null ? amount : BigDecimal.ZERO;
+
+        // Kiểm tra khớp số tiền: Nếu số tiền chuyển vào nhỏ hơn số dư cần thanh toán thì chỉ ghi nhận Payment một phần, chưa tự động Check-out
+        if (transferAmount.compareTo(remaining) < 0) {
+            CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
+            Invoice activeInvoice = invoiceRepository.findByBooking_BookingId(booking.getBookingId()).stream()
+                    .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
+                    .findFirst()
+                    .orElse(null);
+
+            Payment partialPayment = Payment.builder()
+                    .booking(booking)
+                    .invoice(activeInvoice)
+                    .cashierShift(openShift)
+                    .type(PaymentType.SETTLEMENT.name())
+                    .method(PaymentMethod.BANK_TRANSFER.name())
+                    .amount(transferAmount)
+                    .note("Thanh toán một phần qua SePay Webhook (Ref: " + referenceCode + ")")
+                    .paidAt(LocalDateTime.now())
+                    .build();
+            paymentRepository.save(partialPayment);
+
+            log.warn("Đơn {} nhận tất toán {}đ qua SePay nhưng số dư cần trả là {}đ. Đã ghi nhận thanh toán một phần, chờ trả đủ.",
+                    booking.getBookingCode(), transferAmount, remaining);
+            return true;
+        }
+
         SettlementRequest request = SettlementRequest.builder()
                 .paymentMethod(PaymentMethod.BANK_TRANSFER.name())
-                .amount(amount)
+                .amount(transferAmount)
                 .note("Tất toán tự động qua SePay Webhook (Ref: " + referenceCode + ")")
                 .build();
 
@@ -469,6 +613,14 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        if (depositPaid.compareTo(BigDecimal.ZERO) == 0 &&
+                (BookingStatus.CONFIRMED.name().equalsIgnoreCase(booking.getStatus()) ||
+                 BookingStatus.CHECKED_IN.name().equalsIgnoreCase(booking.getStatus()))) {
+            if (booking.getDepositRequired() != null && booking.getDepositRequired().compareTo(BigDecimal.ZERO) > 0) {
+                depositPaid = booking.getDepositRequired();
+            }
+        }
+
         int refundPercentage = 0;
         BigDecimal refundAmount = BigDecimal.ZERO;
         BigDecimal penaltyFee = BigDecimal.ZERO;
@@ -479,7 +631,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
         if (depositPaid.compareTo(BigDecimal.ZERO) <= 0) {
             messageDetail = "Đơn chưa thanh toán tiền cọc, hủy phòng thành công mà không phát sinh hoàn tiền/bảo lưu.";
         } else if ("CREDIT_VOUCHER".equalsIgnoreCase(option)) {
-            // Tùy chọn 1: Bảo lưu 100% cọc thành Voucher nghỉ dưỡng 6 tháng
             refundPercentage = 100;
             refundAmount = depositPaid;
             penaltyFee = BigDecimal.ZERO;
@@ -510,7 +661,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     depositPaid, creditVoucherCode);
 
         } else if ("LOYALTY_POINTS".equalsIgnoreCase(option)) {
-            // Tùy chọn 2: Quy đổi 100% cọc sang Điểm thưởng Coastal Bay Club (Tỷ lệ: 100.000đ = 1.0 điểm)
             refundPercentage = 100;
             refundAmount = depositPaid;
             penaltyFee = BigDecimal.ZERO;
@@ -520,7 +670,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 throw new IllegalArgumentException("Đơn đặt phòng này không liên kết với hồ sơ hội viên để quy đổi điểm thưởng");
             }
 
-            // Quy đổi: 100.000 VNĐ cọc = 1.00 điểm Loyalty
             loyaltyPointsCredited = depositPaid.divide(BigDecimal.valueOf(100_000), 2, RoundingMode.HALF_UP);
 
             CustomerLoyalty loyalty = customerLoyaltyRepository.findByCustomer_CustomerId(customer.getCustomerId())
@@ -548,7 +697,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
 
             loyalty.setTotalScore(loyalty.getTotalScore().add(loyaltyPointsCredited));
 
-            // Tự động thăng hạng nếu đủ điểm
             List<LoyaltyTier> tiers = loyaltyTierRepository.findAll();
             tiers.sort((a, b) -> b.getTierLevel().compareTo(a.getTierLevel()));
             for (LoyaltyTier tier : tiers) {
@@ -567,7 +715,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     depositPaid, loyaltyPointsCredited);
 
         } else {
-            // Tùy chọn 3: Hoàn tiền mặt/chuyển khoản theo chính sách thời gian (>=3 ngày: 100%, 1-2 ngày: 50%, 0 ngày: 0%)
             option = "CASH_REFUND";
             refundPercentage = financialCalculator.calculateRefundPercentage(booking.getCheckInDate(), LocalDate.now());
             refundAmount = depositPaid.multiply(BigDecimal.valueOf(refundPercentage))
@@ -575,8 +722,10 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             penaltyFee = depositPaid.subtract(refundAmount);
 
             if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+                CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
                 Payment refundPayment = Payment.builder()
                         .booking(booking)
+                        .cashierShift(openShift)
                         .type(PaymentType.REFUND.name())
                         .method(PaymentMethod.BANK_TRANSFER.name())
                         .amount(refundAmount)
@@ -592,14 +741,12 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                     refundPercentage, refundAmount, penaltyFee);
         }
 
-        // Cập nhật trạng thái Booking sang CANCELED
         booking.setStatus(BookingStatus.CANCELED.name());
         booking.setCancelReason(reason + " [Chính sách: " + option + "]");
         booking.setCanceledBy(userAccount);
         booking.setCanceledAt(LocalDateTime.now());
         bookingRepository.save(booking);
 
-        // Cập nhật trạng thái BookingRoom sang CANCELED và giải phóng phòng thành AVAILABLE
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
         for (BookingRoom br : bookingRooms) {
             br.setStatus(BookingStatus.CANCELED.name());
@@ -612,7 +759,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             }
         }
 
-        // Hủy các hóa đơn liên quan nếu có
         List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
         for (Invoice inv : invoices) {
             inv.setStatus(InvoiceStatus.CANCELED.name());
@@ -637,6 +783,119 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .status("CANCELED")
                 .message(finalMessage)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public ServiceUsageResponse updateServiceUsageStatus(Integer usageId, String status) {
+        ServiceUsage usage = serviceUsageRepository.findById(usageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ đã gọi với mã: " + usageId));
+
+        String upperStatus = (status != null && !status.isBlank()) ? status.trim().toUpperCase() : "PENDING";
+        if ("IN_PROGRESS".equalsIgnoreCase(upperStatus)) {
+            upperStatus = "DELIVERING";
+        }
+        usage.setStatus(upperStatus);
+        ServiceUsage saved = serviceUsageRepository.save(usage);
+
+        // Đồng bộ ServiceRequest tương ứng nếu có
+        try {
+            if (usage.getBooking() != null && usage.getService() != null) {
+                List<ServiceRequest> requests = serviceRequestRepository.findByBooking_BookingId(usage.getBooking().getBookingId());
+                for (ServiceRequest r : requests) {
+                    if (r.getService() != null && r.getService().getServiceId().equals(usage.getService().getServiceId())
+                            && !"CANCELED".equalsIgnoreCase(r.getStatus())) {
+                        r.setStatus(upperStatus);
+                        if ("COMPLETED".equalsIgnoreCase(upperStatus)) {
+                            r.setCompletedAt(LocalDateTime.now());
+                        }
+                        serviceRequestRepository.save(r);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Không thể đồng bộ ServiceRequest: {}", e.getMessage());
+        }
+
+        recalculateActiveInvoice(usage.getBooking());
+
+        return mapToServiceUsageResponse(saved);
+    }
+
+    private void recalculateActiveInvoice(Booking booking) {
+        if (booking == null) return;
+        try {
+            List<Invoice> invoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
+            Invoice activeInvoice = invoices.stream()
+                    .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
+                    .findFirst()
+                    .orElse(null);
+            if (activeInvoice != null) {
+                List<ServiceUsage> usages = serviceUsageRepository.findByBooking_BookingId(booking.getBookingId());
+                BigDecimal activeServiceCharge = usages.stream()
+                        .filter(u -> !"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus()))
+                        .map(u -> u.getTotalPrice() != null ? u.getTotalPrice() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                activeInvoice.setServiceCharge(activeServiceCharge);
+                BigDecimal roomCharge = activeInvoice.getRoomCharge() != null ? activeInvoice.getRoomCharge() : BigDecimal.ZERO;
+                BigDecimal subtotal = roomCharge.add(activeServiceCharge);
+                BigDecimal tax = financialCalculator.calculateTax(subtotal);
+                activeInvoice.setTaxAmount(tax);
+
+                BigDecimal depositApplied = activeInvoice.getDepositApplied() != null ? activeInvoice.getDepositApplied() : BigDecimal.ZERO;
+                BigDecimal manualDiscount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal loyaltyDiscount = calculateLoyaltyRoomDiscount(booking, roomCharge);
+                activeInvoice.setLoyaltyDiscountAmount(loyaltyDiscount);
+                BigDecimal finalTotal = subtotal.add(tax).subtract(manualDiscount).subtract(loyaltyDiscount).subtract(depositApplied);
+                activeInvoice.setTotalAmount(finalTotal.compareTo(BigDecimal.ZERO) > 0 ? finalTotal : BigDecimal.ZERO);
+                invoiceRepository.save(activeInvoice);
+                log.info("Đã tính lại Invoice #{} sau khi cập nhật dịch vụ. Phí dịch vụ: {}", activeInvoice.getInvoiceNumber(), activeServiceCharge);
+            }
+        } catch (Exception e) {
+            log.warn("Lỗi tính lại Invoice: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Calculates the highest active ROOM_DISCOUNT for the customer's exact current tier.
+     * The discount is applied only to the room charge, never to service charges or tax.
+     */
+    private BigDecimal calculateLoyaltyRoomDiscount(Booking booking, BigDecimal roomCharge) {
+        if (booking == null || booking.getCustomer() == null || roomCharge == null
+                || roomCharge.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        CustomerLoyalty loyalty = customerLoyaltyRepository
+                .findByCustomer_CustomerId(booking.getCustomer().getCustomerId())
+                .orElse(null);
+        if (loyalty == null || loyalty.getTier() == null || loyalty.getTier().getTierId() == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
+        Integer bookedRoomTypeId = bookingRooms.stream()
+                .filter(br -> br.getRoom() != null && br.getRoom().getRoomType() != null)
+                .map(br -> br.getRoom().getRoomType().getRoomTypeId())
+                .findFirst().orElse(null);
+
+        BigDecimal highestPercent = tierBenefitRepository
+                .findByTier_TierIdAndIsActiveTrue(loyalty.getTier().getTierId()).stream()
+                .filter(b -> "ROOM_DISCOUNT".equalsIgnoreCase(b.getBenefitType()))
+                .filter(b -> b.getDiscountPercent() != null
+                        && b.getDiscountPercent().compareTo(BigDecimal.ZERO) > 0)
+                .filter(b -> b.getRoomType() == null || (bookedRoomTypeId != null
+                        && bookedRoomTypeId.equals(b.getRoomType().getRoomTypeId())))
+                .map(TierBenefit::getDiscountPercent)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        if (highestPercent.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return roomCharge.multiply(highestPercent)
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
     }
 
     private ServiceUsageResponse mapToServiceUsageResponse(ServiceUsage u) {

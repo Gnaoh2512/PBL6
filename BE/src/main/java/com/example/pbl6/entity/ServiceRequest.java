@@ -44,6 +44,12 @@ public class ServiceRequest {
     @JoinColumn(name = "invoice_id")
     private Invoice invoice;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "service_usage_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private ServiceUsage serviceUsage;
+
     @Builder.Default
     @Column(name = "quantity")
     private Integer quantity = 1;

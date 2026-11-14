@@ -24,8 +24,24 @@ public class CustomerBookingHistorySummaryResponse {
     private Integer guestCount;
     private String bookingStatus;
 
+    @JsonProperty("status")
+    public String getStatus() {
+        return bookingStatus;
+    }
+
     private BigDecimal depositRequired;
     private BigDecimal depositPaid;
+
+    @JsonProperty("depositAmount")
+    public BigDecimal getDepositAmount() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
+    @JsonProperty("depositApplied")
+    public BigDecimal getDepositApplied() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
     private BigDecimal totalAmount;
 
     @JsonProperty("isPaidFull")

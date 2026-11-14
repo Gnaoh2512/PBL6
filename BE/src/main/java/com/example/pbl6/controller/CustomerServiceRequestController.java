@@ -37,6 +37,25 @@ public class CustomerServiceRequestController {
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
+    /**
+     * Lịch sử Dịch vụ theo Booking (Guest Portal):
+     * Lấy danh sách dịch vụ chi tiết gắn liền với một lượt đặt phòng cụ thể (hỗ trợ cả bookingId số hoặc bookingCode chuỗi)
+     */
+    @GetMapping({"/booking/{bookingIdentifier}", "/by-booking/{bookingIdentifier}"})
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN', 'RECEPTIONIST', 'MANAGER')")
+    public ResponseEntity<ApiResponse<List<ServiceRequestResponse>>> getByBooking(
+            @PathVariable String bookingIdentifier
+    ) {
+        List<ServiceRequestResponse> list;
+        try {
+            Integer bookingId = Integer.parseInt(bookingIdentifier.trim());
+            list = serviceRequestService.getRequestsByBookingId(bookingId);
+        } catch (NumberFormatException e) {
+            list = serviceRequestService.getRequestsByBookingCode(bookingIdentifier.trim());
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Lấy lịch sử dịch vụ theo lượt đặt phòng thành công", list));
+    }
+
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> cancelRequest(

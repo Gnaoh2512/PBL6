@@ -48,6 +48,16 @@ export default function AdminRoomsPage() {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  // Modal Phân công Dọn phòng Chặt chẽ
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [cleaningTarget, setCleaningTarget] = useState(null);
+  const [housekeepers, setHousekeepers] = useState([]);
+  const [selectedHousekeeperId, setSelectedHousekeeperId] = useState("");
+  const [assignPriority, setAssignPriority] = useState("MEDIUM");
+  const [assignNote, setAssignNote] = useState("");
+  const [loadingHousekeepers, setLoadingHousekeepers] = useState(false);
+  const [submittingAssign, setSubmittingAssign] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -148,6 +158,101 @@ export default function AdminRoomsPage() {
     }
   };
 
+  const fetchHousekeepers = async () => {
+    setLoadingHousekeepers(true);
+    try {
+      const res = await apiCall("/api/staff/available-in-shift?roleCode=ROLE_HOUSEKEEPING", { silentError: true });
+      const list = res?.success && Array.isArray(res.data) ? res.data : [];
+      const formatted = list.map((item) => {
+        const id = item.accountId ?? item.id;
+        const name = item.fullName || item.username || `Nhân viên #${id}`;
+        const start = item.shiftStartTime ? String(item.shiftStartTime).slice(0, 5) : "";
+        const end = item.shiftEndTime ? String(item.shiftEndTime).slice(0, 5) : "";
+        const timeStr = start && end ? ` (${start} - ${end})` : "";
+        const shiftStr = item.shiftName ? ` — ${item.shiftName}${timeStr}` : "";
+        return {
+          id: String(id),
+          name: `${name}${shiftStr}`,
+          raw: item,
+        };
+      });
+      setHousekeepers(formatted);
+      if (formatted.length > 0 && !selectedHousekeeperId) {
+        setSelectedHousekeeperId(formatted[0].id);
+      }
+    } catch (err) {
+      console.error("Lỗi tải danh sách buồng phòng trong ca:", err);
+      setHousekeepers([]);
+    } finally {
+      setLoadingHousekeepers(false);
+    }
+  };
+
+  const openAssignCleaningModal = (targetRoom) => {
+    setCleaningTarget(targetRoom);
+    setSelectedHousekeeperId("");
+    setAssignPriority("MEDIUM");
+    setAssignNote("");
+    setAssignModalOpen(true);
+    fetchHousekeepers();
+  };
+
+  const closeAssignCleaningModal = () => {
+    setAssignModalOpen(false);
+    setCleaningTarget(null);
+    setSelectedHousekeeperId("");
+    setAssignPriority("MEDIUM");
+    setAssignNote("");
+  };
+
+  const handleConfirmAssignCleaning = async () => {
+    if (!cleaningTarget || !selectedHousekeeperId) {
+      addToast("Vui lòng chọn nhân viên buồng phòng đang trong ca trực.", "warning");
+      return;
+    }
+    setSubmittingAssign(true);
+    try {
+      const res = await apiCall("/api/staff/room-cleaning", {
+        method: "POST",
+        body: {
+          roomId: Number(cleaningTarget.roomId),
+          assignedToId: Number(selectedHousekeeperId),
+          priority: assignPriority,
+          note: assignNote.trim() || null,
+        },
+      });
+
+      if (res && res.success) {
+        addToast(`Đã phân công nhân viên dọn phòng ${cleaningTarget.roomNumber} thành công!`, "success");
+        closeAssignCleaningModal();
+        loadData();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi khi phân công nhân viên buồng phòng.", "error");
+    } finally {
+      setSubmittingAssign(false);
+    }
+  };
+
+  const housekeeperOptions = [
+    {
+      value: "",
+      label: loadingHousekeepers
+        ? "Đang tải nhân viên trong ca trực…"
+        : housekeepers.length
+        ? "Chọn nhân viên buồng phòng có ca trực"
+        : "Không có nhân viên buồng phòng trong ca trực",
+    },
+    ...housekeepers.map((h) => ({ value: h.id, label: h.name })),
+  ];
+
+  const PRIORITY_OPTIONS = [
+    { value: "LOW", label: "Thấp" },
+    { value: "MEDIUM", label: "Trung bình" },
+    { value: "HIGH", label: "Cao" },
+    { value: "URGENT", label: "Khẩn cấp" },
+  ];
+
   const filteredRooms = rooms.filter((r) => {
     const matchType = typeFilter === "ALL" || String(r.roomTypeId) === String(typeFilter);
     const matchStatus = statusFilter === "ALL" || r.status === statusFilter;
@@ -226,6 +331,16 @@ export default function AdminRoomsPage() {
                               <i className="bi bi-check2"></i> Đã dọn xong
                             </button>
                           )}
+                          {(r.status === "AVAILABLE" || r.status === "CLEANING") && (
+                            <button
+                              type="button"
+                              className="hc-btn hc-btn-outline hc-btn-sm"
+                              title="Phân công nhân viên buồng phòng có ca trực"
+                              onClick={() => openAssignCleaningModal(r)}
+                            >
+                              <i className="bi bi-person-gear"></i> Phân công dọn
+                            </button>
+                          )}
                           <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => openEditModal(r)}>
                             <i className="bi bi-pencil"></i> Sửa
                           </button>
@@ -285,6 +400,123 @@ export default function AdminRoomsPage() {
             </div>
           </div>
         </form>
+      </Modal>
+
+      {/* Modal Phân công Dọn phòng Chặt chẽ (Strict Housekeeper Shift Modal) */}
+      <Modal
+        isOpen={assignModalOpen}
+        onClose={closeAssignCleaningModal}
+        title={`Phân công dọn phòng — Phòng ${cleaningTarget?.roomNumber || ""}`}
+        subtitle={cleaningTarget ? `Tầng ${cleaningTarget.floor || 1} · Trạng thái: ${cleaningTarget.status || "Đang dọn"}` : undefined}
+        icon="bi-brush"
+        maxWidth="540px"
+      >
+        {cleaningTarget && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div
+              style={{
+                background: "var(--hc-bg-subtle, #f8fafc)",
+                border: "1px solid var(--hc-border-light, #e2e8f0)",
+                borderRadius: "8px",
+                padding: "12px 16px",
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: "12px",
+                fontSize: "0.875rem",
+              }}
+            >
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Số phòng</span>
+                <strong>Phòng {cleaningTarget.roomNumber}</strong>
+              </div>
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Vị trí</span>
+                <span>Tầng {cleaningTarget.floor || 1}</span>
+              </div>
+              <div>
+                <span style={{ color: "var(--hc-text-secondary)", fontSize: "0.75rem", display: "block" }}>Hạng phòng</span>
+                <span>{getRoomTypeName(cleaningTarget)}</span>
+              </div>
+            </div>
+
+            <div className="hc-form-group">
+              <label className="hc-label" style={{ fontWeight: 600 }}>
+                Nhân viên buồng phòng (Đang trong ca trực) <span style={{ color: "var(--hc-error)" }}>*</span>
+              </label>
+
+              {loadingHousekeepers ? (
+                <div style={{ padding: "10px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
+                  <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                  Đang kiểm tra lịch ca trực của nhân viên buồng phòng...
+                </div>
+              ) : housekeepers.length === 0 ? (
+                <div
+                  style={{
+                    background: "#fffbeb",
+                    border: "1px solid #fef3c7",
+                    borderRadius: "8px",
+                    padding: "12px 14px",
+                    fontSize: "0.85rem",
+                    color: "#92400e",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "8px",
+                  }}
+                >
+                  <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                  <div>
+                    <strong>Không có nhân viên trong ca trực:</strong> Hiện tại không có nhân viên buồng phòng nào có lịch trực hoạt động theo ca. Vui lòng xếp ca trực tại mục <strong>Quản lý Lịch làm việc</strong> trước khi phân công.
+                  </div>
+                </div>
+              ) : (
+                <SelectMenu
+                  value={selectedHousekeeperId}
+                  onChange={setSelectedHousekeeperId}
+                  options={housekeeperOptions}
+                  ariaLabel="Chọn nhân viên buồng phòng có ca trực"
+                  icon="bi-person-badge"
+                />
+              )}
+            </div>
+
+            <div className="hc-form-group">
+              <label className="hc-label">Mức độ ưu tiên</label>
+              <SelectMenu
+                value={assignPriority}
+                onChange={setAssignPriority}
+                options={PRIORITY_OPTIONS}
+                ariaLabel="Mức độ ưu tiên"
+                icon="bi-flag"
+              />
+            </div>
+
+            <div className="hc-form-group">
+              <label className="hc-label">Ghi chú dọn phòng (tùy chọn)</label>
+              <textarea
+                className="hc-textarea"
+                rows="2"
+                placeholder="Ví dụ: Khách check-in sớm, thay chăn ga, bổ sung đồ dùng..."
+                value={assignNote}
+                onChange={(e) => setAssignNote(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+              <button type="button" className="hc-btn hc-btn-outline" onClick={closeAssignCleaningModal} disabled={submittingAssign}>
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="hc-btn hc-btn-primary"
+                onClick={handleConfirmAssignCleaning}
+                disabled={submittingAssign || !selectedHousekeeperId || housekeepers.length === 0}
+              >
+                <i className="bi bi-check2-circle"></i>
+                {submittingAssign ? "Đang lưu…" : "Xác nhận phân công"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

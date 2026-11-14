@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Modal from "../components/Modal";
+import VietQrPaymentModal from "../components/VietQrPaymentModal";
 import { apiCall, formatVND, getAuthUser } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
 import DatePicker from "../components/DatePicker";
@@ -201,7 +202,7 @@ export default function BookingPage() {
       nationality: nationality || "Việt Nam",
       idType,
       idNumber: idNumber.trim() || null,
-      voucherCode: appliedVoucher ? (appliedVoucher.voucherCode || appliedVoucher.code) : (voucherCodeInput.trim().toUpperCase() || null),
+      voucherCode: appliedVoucher ? appliedVoucher.voucherCode || appliedVoucher.code : voucherCodeInput.trim().toUpperCase() || null,
       note: note.trim() || null,
     };
 
@@ -241,7 +242,7 @@ export default function BookingPage() {
 
   return (
     <>
-      <Navbar hideLinks />
+      <Navbar hideLinks compact />
 
       <main className="hc-page booking-experience">
         <div className="hc-container" ref={containerRef}>
@@ -477,15 +478,17 @@ export default function BookingPage() {
                       </button>
                     </div>
                     {appliedVoucher && (
-<div className="bk-voucher-applied" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div className="bk-voucher-applied bk-voucher-applied-row">
                         <span>
                           <i className="bi bi-check-circle-fill"></i> {appliedVoucher.voucherName} (-{formatVND(appliedVoucher.discountAmount)})
                         </span>
                         <button
                           type="button"
-                          className="hc-btn hc-btn-outline hc-btn-sm"
-                          style={{ padding: "2px 8px", fontSize: "11px", color: "var(--hc-error)", borderColor: "var(--hc-error)" }}
-                          onClick={() => { setAppliedVoucher(null); setVoucherCodeInput(""); }}
+                          className="hc-btn hc-btn-outline hc-btn-sm bk-voucher-remove"
+                          onClick={() => {
+                            setAppliedVoucher(null);
+                            setVoucherCodeInput("");
+                          }}
                           title="Hủy mã ưu đãi"
                         >
                           Hủy dùng
@@ -548,88 +551,19 @@ export default function BookingPage() {
         </div>
       </main>
 
-      {/* VietQR Payment Modal with Polling */}
-      <Modal
-        isOpen={qrModalOpen}
-        onClose={handleCloseQrModal}
-        title="Thanh Toán Tiền Cọc Qua VietQR"
-        maxWidth="500px"
-        footer={
-          <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={handleCloseQrModal}>
-            Đóng
-          </button>
-        }
-      >
-        {bookingData && (
-          <div className="bk-center">
-            {!paymentSuccess ? (
-              <>
-                <div className="bk-mb-16">
-                  <span className="hc-badge hc-badge-warning bk-wait-badge">
-                    <span className="hc-pulse-dot bk-icon-gap"></span>
-                    Đang chờ chuyển khoản (kiểm tra trạng thái mỗi 3 giây)...
-                  </span>
-                </div>
-
-                <div className="hc-qr-box bk-mb-16">
-                  {bookingData.qrInfo?.qrImageUrl && !qrImageFailed ? (
-                    <img src={bookingData.qrInfo.qrImageUrl} alt="Mã VietQR thanh toán tiền cọc" onError={() => setQrImageFailed(true)} />
-                  ) : (
-                    <div className="bk-qr-fallback">
-                      <i className="bi bi-qr-code bk-qr-fallback-icon" />
-                      <span>{qrImageFailed ? "Không tải được ảnh QR. Vui lòng kiểm tra cấu hình VietQR." : "Đơn đặt phòng chưa có mã QR."}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bk-transfer-info">
-                  <div className="bk-info-row">
-                    <span className="bk-muted">Mã đặt phòng:</span>
-                    <strong className="bk-strong-primary">{bookingData.bookingCode}</strong>
-                  </div>
-                  <div className="bk-info-row">
-                    <span className="bk-muted">Ngân hàng thụ hưởng:</span>
-                    <strong>
-                      {bookingData.qrInfo?.bankId || "MB Bank"} - {bookingData.qrInfo?.accountNo || "090123456789"}
-                    </strong>
-                  </div>
-                  <div className="bk-info-row">
-                    <span className="bk-muted">Chủ tài khoản:</span>
-                    <strong>{bookingData.qrInfo?.accountName || "HOTEL CALIFORNIA"}</strong>
-                  </div>
-                  <div className="bk-info-row">
-                    <span className="bk-muted">Số tiền cọc:</span>
-                    <strong className="bk-strong-error">{formatVND(bookingData.depositRequired)}</strong>
-                  </div>
-                  <div className="bk-info-row bk-info-row-flush">
-                    <span className="bk-muted">Nội dung chuyển khoản:</span>
-                    <strong className="bk-strong-text">{bookingData.qrInfo?.transferContent || bookingData.bookingCode}</strong>
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="bk-success-wrap">
-                <div className="bk-success-icon">
-                  <i className="bi bi-check-lg"></i>
-                </div>
-                <h3 className="bk-success-title">Thanh Toán Cọc Thành Công!</h3>
-                <p className="bk-success-text">
-                  Đơn đặt phòng mã <strong>{bookingData.bookingCode}</strong> của quý khách đã được chuyển sang trạng thái <strong>XÁC NHẬN (CONFIRMED)</strong>.
-                </p>
-
-                <div className="bk-success-actions">
-                  <Link to={authUser ? `/guest/services?bookingCode=${bookingData.bookingCode}` : "/login"} className="hc-btn hc-btn-primary" onClick={handleCloseQrModal}>
-                    <i className="bi bi-receipt"></i> Xem Hóa Đơn & Gọi Dịch Vụ
-                  </Link>
-                  <Link to={authUser ? "/guest/bookings" : "/login"} className="hc-btn hc-btn-outline" onClick={handleCloseQrModal}>
-                    Tra Cứu Lịch Sử
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
+      {/* Dynamic VietQR Payment Modal with Polling & Auto-Redirect */}
+      {bookingData && (
+        <VietQrPaymentModal
+          isOpen={qrModalOpen}
+          onClose={() => setQrModalOpen(false)}
+          bookingCode={bookingData.bookingCode}
+          amount={bookingData.depositRequired}
+          type="DEPOSIT"
+          title="Thanh Toán Tiền Cọc Qua VietQR"
+          qrInfo={bookingData.qrInfo}
+          redirectUrl={authUser ? `/guest/services?bookingCode=${bookingData.bookingCode}` : `/services?bookingCode=${bookingData.bookingCode}`}
+        />
+      )}
 
       <Footer variant="resort" />
     </>

@@ -10,7 +10,15 @@ public interface LoyaltyService {
     LoyaltyProfileResponse getProfile(String username);
     List<LoyaltyTransactionResponse> getTransactions(String username);
     List<TierBenefitResponse> getAvailableBenefits(String username);
+    TierBenefitResponse redeemBenefit(RedeemBenefitRequest req, String username);
     void recordStayAndEarnPoints(Invoice invoice);
     LoyaltyProfileResponse adjustPoints(AdjustPointsRequest req, String adminUsername);
     List<LoyaltyTier> getAllTiers();
+
+    // Admin CRUD for TierBenefit
+    List<TierBenefitResponse> getAllTierBenefits(Integer tierId);
+    TierBenefitResponse getTierBenefitById(Integer benefitId);
+    TierBenefitResponse createTierBenefit(TierBenefitRequest req);
+    TierBenefitResponse updateTierBenefit(Integer benefitId, TierBenefitRequest req);
+    void deleteTierBenefit(Integer benefitId);
 }

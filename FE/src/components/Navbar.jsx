@@ -3,7 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
 
-export default function Navbar({ variant, hideLinks = false }) {
+export default function Navbar({ variant, hideLinks = false, compact = false, booking = false }) {
   const { user, isAuthenticated, logout, hasRole } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
@@ -32,7 +32,7 @@ export default function Navbar({ variant, hideLinks = false }) {
 
   if (variant === "resort") {
     return (
-      <header className={`hc-navbar resort-nav ${scrolled ? "scrolled" : ""} ${mobileOpen ? "menu-open" : ""}`}>
+      <header className={`hc-navbar resort-nav ${booking ? "booking-resort-nav" : ""} ${scrolled ? "scrolled" : ""} ${mobileOpen ? "menu-open" : ""}`}>
         <div className="resort-nav-inner">
           <Link to="/" className="resort-brand" onClick={() => setMobileOpen(false)}>
             <img className="resort-brand-logo" src="/logo.svg" alt="" />
@@ -57,6 +57,26 @@ export default function Navbar({ variant, hideLinks = false }) {
             <Link to={{ pathname: "/", hash: "#offers" }} onClick={() => setMobileOpen(false)}>
               Ưu đãi
             </Link>
+            <div className="resort-nav-mobile-actions">
+              {isAuthenticated ? (
+                <button
+                  className="resort-login"
+                  onClick={() => {
+                    handlePortalNavigation();
+                    setMobileOpen(false);
+                  }}
+                >
+                  {user?.fullName || user?.username}
+                </button>
+              ) : (
+                <Link className="resort-login" to="/login" onClick={() => setMobileOpen(false)}>
+                  Đăng nhập
+                </Link>
+              )}
+              <Link className="resort-nav-book" to="/booking" onClick={() => setMobileOpen(false)}>
+                Đặt phòng
+              </Link>
+            </div>
           </nav>
           <div className="resort-nav-actions">
             {isAuthenticated ? (
@@ -87,7 +107,7 @@ export default function Navbar({ variant, hideLinks = false }) {
   };
 
   return (
-    <header className="hc-navbar">
+    <header className={`hc-navbar ${compact ? "hc-navbar-compact" : ""}`}>
       <div className="hc-container">
         <Link to="/" className="hc-navbar-brand">
           <img className="hc-brand-logo" src="/logo.svg" alt="" />
@@ -137,7 +157,7 @@ export default function Navbar({ variant, hideLinks = false }) {
 
         <div className="hc-navbar-actions">
           {isAuthenticated && user ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div className="hc-navbar-user-actions">
               <div className="hc-user-badge" onClick={handlePortalNavigation} style={{ cursor: "pointer" }} title="Chuyển đến trang cá nhân">
                 <i className="bi bi-person-circle"></i>
                 <span>{user.fullName || user.username}</span>
@@ -148,7 +168,7 @@ export default function Navbar({ variant, hideLinks = false }) {
               </button>
             </div>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div className="hc-navbar-auth-actions">
               <Link to="/login" className="hc-btn hc-btn-outline hc-btn-sm">
                 Đăng nhập
               </Link>

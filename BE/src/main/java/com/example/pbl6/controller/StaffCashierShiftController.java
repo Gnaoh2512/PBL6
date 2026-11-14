@@ -12,6 +12,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/staff/cashier-shifts")
 @RequiredArgsConstructor
@@ -19,6 +21,11 @@ import org.springframework.web.bind.annotation.*;
 public class StaffCashierShiftController {
 
     private final CashierShiftService cashierShiftService;
+
+    @GetMapping
+    public ApiResponse<List<CashierShiftResponse>> getAllShifts() {
+        return ApiResponse.ok(cashierShiftService.getAllShifts());
+    }
 
     @PostMapping("/open")
     public ApiResponse<CashierShiftResponse> openShift(
@@ -35,7 +42,7 @@ public class StaffCashierShiftController {
         return ApiResponse.ok("Cashier shift closed successfully", cashierShiftService.closeShift(id, userDetails, request));
     }
 
-    @GetMapping("/me")
+    @GetMapping({"/me", "/current", "/open"})
     public ApiResponse<CashierShiftResponse> getActiveShift(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ApiResponse.ok(cashierShiftService.getActiveShift(userDetails));

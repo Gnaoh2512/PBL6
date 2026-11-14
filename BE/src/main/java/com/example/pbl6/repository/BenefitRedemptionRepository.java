@@ -11,6 +11,8 @@ import java.util.List;
 public interface BenefitRedemptionRepository extends JpaRepository<BenefitRedemption, Integer> {
     List<BenefitRedemption> findByCustomer_CustomerId(Integer customerId);
     List<BenefitRedemption> findByBooking_BookingId(Integer bookingId);
+    java.util.Optional<BenefitRedemption> findFirstByServiceRequest_ServiceRequestId(Integer serviceRequestId);
+    java.util.Optional<BenefitRedemption> findFirstByServiceUsage_UsageId(Integer usageId);
     long countByCustomer_CustomerIdAndTierBenefit_TierBenefitIdAndRedeemedAtAfter(
             Integer customerId, Integer tierBenefitId, LocalDateTime after);
 }

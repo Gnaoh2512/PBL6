@@ -2,6 +2,36 @@
 
 Cập nhật: 2026-11-14, Asia/Ho_Chi_Minh.
 
+## Đồng bộ GitHub main với assistant D1, 2026-11-14
+
+- Nhánh `fix/merge-main-assistant` tích hợp `origin/main` tại `3f45c7d` vào D1.10 (`06a6289`).
+  Giải quyết ba conflict tại `FE/package.json`, `FE/package-lock.json` và `FE/src/services/api.js`.
+  Giữ test tooling, cancellation, credentials, reset phiên và lỗi có mã của assistant;
+  nhận dependency lịch làm việc và logic category mới từ main. Widget vẫn gắn đúng một lần;
+  matcher assistant có phạm vi hẹp và việc gỡ facade recommendation cũ được giữ lại.
+- Lockfile được npm tái tạo, giữ nguyên các package đã khóa của assistant; `npm ci --ignore-scripts
+  --no-audit --no-fund` cài 139 package vào FE/node_modules, gồm dependency lịch mới từ main.
+  Không cài phần mềm hệ thống, model hoặc dịch vụ mới. Không gọi Gemini/live evaluation.
+- Bổ sung mock `ServiceRequestRepository` trong `CustomerHistoryServiceTest` cho dependency
+  mới từ main; kiểm tra response có danh sách service requests rỗng. Không đổi logic nghiệp vụ.
+- FE: `npm test` **8/8 pass**; `npm run lint` qua với các warning; `npm run build -- --outDir
+  dist-assistant-check` qua, có cảnh báo bundle lớn. Không build đè BE/static.
+- Spring: lệnh package offline/local-h2 trong README, chọn AssistantControllerTest,
+  AssistantClientTest, AssistantSessionsTest, PublicRoomControllerTest, AuthControllerTest và
+  CustomerHistoryServiceTest: **19/19 pass, BUILD SUCCESS** sau khi sửa mock thiếu.
+- Browser: `$env:D1_LIVE_GEMINI='0'; npm run test:e2e` **3/3 pass** qua Vite/Spring/FastAPI
+  với provider giả có nhãn: FAQ có nguồn, demo badge, thiếu nguồn, capability chưa bật,
+  mobile/focus, JWT sai, reset và cô lập phiên A/B. Navbar mới có link đặt phòng desktop/mobile;
+  cập nhật locator test theo role để chọn link đang hiển thị. Không đổi UI hoặc giảm assertion.
+- Python: `python -B -m pytest -q -p no:cacheprovider tests/unit tests/integration` có
+  **213 pass, 5 fail**, 1 warning Starlette/HTTPX. Các lỗi là TimeoutError tại ngưỡng chờ
+  event 1 giây của test cancellation HTTP timing. Chạy riêng nhóm 7 test liên quan còn
+  **4 pass, 3 fail**; chưa xác định đầy đủ nguyên nhân. Source app/unit/integration/conftest
+  giống hệt trước merge, không sửa timeout/runtime để làm test xanh. Ruff check, format-check
+  và pip check qua. Không kết luận toàn bộ test suite đã pass hoặc D1 đã nghiệm thu.
+- Giữ nguyên staging ngoài nhiệm vụ, README nháp, 59 đường dẫn AI cũ đang xóa và các file
+  untracked ban đầu; không đưa chúng vào merge commit. Không push/deploy.
+
 ## D1.10 — client HTTP timing và kiểm chứng offline, 2026-11-14
 
 - Đã bổ sung plan theo bốn điểm review và đối chiếu source HTTPX 0.28.1/httpcore 1.0.9 trước sửa

@@ -1,103 +1,311 @@
 /* =========================================================
-   ServicesPage styles
+   ServicesPage: room picker, menu | folio layout, folio blocks.
+   Everything generic (toolbar, rows, callouts) is in index.css.
    ========================================================= */
 
-/* Title row with "Trở về trang chủ" button (same pattern as the booking page) */
-.svc-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-/* Category pills on the left, search on the right */
-.svc-filter-bar {
+/* Room picker (checked-in rooms only) */
+.svc-room-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px 16px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 20px;
 }
-.svc-filter-bar .hc-tab-group {
-  margin-bottom: 0;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.svc-search {
-  position: relative;
-  flex: 0 1 240px;
-  min-width: 190px;
-  margin-left: auto;
-}
-.svc-search .svc-search-input {
-  width: 100%;
-  padding-left: 36px;
-  padding-right: 34px;
-  transition:
-    border-color 0.25s ease,
-    box-shadow 0.25s ease;
-}
-/* hide the browser's built-in clear "x" - we draw our own */
-.svc-search .svc-search-input::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-  appearance: none;
-}
-.svc-search-icon {
-  position: absolute;
-  top: 50%;
-  left: 12px;
-  transform: translateY(-50%);
-  color: var(--hc-text-muted);
-  font-size: 14px;
-  pointer-events: none;
-  transition: color 0.25s ease;
-}
-.svc-search:focus-within .svc-search-icon {
-  color: var(--hc-primary, #19525f);
-}
-.svc-search-clear {
-  position: absolute;
-  top: 50%;
-  right: 8px;
-  width: 22px;
-  height: 22px;
+.svc-room-bar-label {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: 0;
-  color: var(--hc-text-muted);
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  font-size: 11px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--hc-text-secondary);
+  margin-right: 4px;
+}
+.svc-room-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 16px;
+  border-radius: var(--hc-radius-md);
+  border: 1px solid var(--hc-border);
+  background: #ffffff;
+  font-family: var(--hc-font-body);
+  font-size: 14px;
+  color: var(--hc-text);
   cursor: pointer;
-  transform: translateY(-50%);
-  animation: svcClearIn 0.2s ease both;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
+  text-align: left;
+  transition: all var(--hc-duration-fast) var(--hc-ease);
 }
-.svc-search-clear:hover {
-  color: var(--hc-primary, #19525f);
-  background: rgba(25, 82, 95, 0.1);
+.svc-room-chip span {
+  font-size: 11px;
+  color: var(--hc-text-muted);
 }
-@keyframes svcClearIn {
-  from {
-    opacity: 0;
-    transform: translateY(-50%) scale(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(-50%) scale(1);
-  }
+.svc-room-chip:hover {
+  border-color: var(--hc-primary);
+  background: var(--hc-primary-subtle);
+}
+.svc-room-chip.active {
+  border-color: var(--hc-primary);
+  background: var(--hc-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(41, 108, 122, 0.25);
+}
+.svc-room-chip.active span {
+  color: rgba(255, 255, 255, 0.8);
 }
 
-@media (max-width: 640px) {
-  .svc-search {
-    flex: 1 1 100%;
-    margin-left: 0;
+/* Ordering-blocked notice */
+.svc-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: var(--hc-warning-bg);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+  color: var(--hc-warning);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.svc-notice i {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Two columns: menu | folio */
+.svc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .svc-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
+}
+@media (min-width: 1101px) {
+  .svc-folio-card {
+    position: sticky;
+    top: 16px;
+  }
+}
+.svc-price {
+  font-weight: 700;
+  color: var(--hc-secondary-dark);
+  white-space: nowrap;
+}
+
+/* Folio */
+.svc-folio-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--hc-primary-subtle);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+}
+.svc-folio-banner-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.svc-folio-code {
+  font-weight: 700;
+  color: var(--hc-primary);
+}
+.svc-folio-meta {
+  font-size: 13px;
+  color: var(--hc-text-secondary);
+}
+.svc-folio-meta strong {
+  color: var(--hc-text);
+}
+
+.svc-folio-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.svc-folio-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hc-text-secondary);
+  margin-bottom: 8px;
+}
+.svc-folio-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--hc-text-muted);
+  background: var(--hc-bg);
+  border-radius: var(--hc-radius-sm);
+}
+
+.svc-sum {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--hc-border-light);
+  font-size: 14px;
+}
+
+/* Request modal summary */
+.svc-order-summary {
+  padding: 14px;
+  margin-bottom: 16px;
+  background: var(--hc-bg);
+  border: 1px solid var(--hc-border);
+  border-radius: var(--hc-radius-md);
+}
+
+/* ── Loyalty strip (shown in the "Đặc quyền hội viên" tab) ── */
+.svc-loyalty-banner {
+  background: linear-gradient(135deg, #174751 0%, #296c7a 100%);
+  color: #ffffff;
+  padding: 14px 20px;
+  border-radius: var(--hc-radius-md);
+  margin: 18px 22px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.svc-loyalty-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.svc-loyalty-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 230, 191, 0.2);
+  border: 1px solid rgba(255, 230, 191, 0.4);
+  color: var(--hc-secondary);
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.svc-loyalty-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.svc-loyalty-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+  margin-top: 2px;
+}
+
+/* High-contrast solid button for loyalty banner */
+.svc-loyalty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff !important;
+  color: var(--hc-primary-dark) !important;
+  font-family: var(--hc-font-body) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2px;
+  padding: 8px 18px !important;
+  border-radius: var(--hc-radius-full) !important;
+  border: 1px solid rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16) !important;
+  text-decoration: none !important;
+  cursor: pointer;
+  transition: all var(--hc-duration-fast) var(--hc-ease);
+  white-space: nowrap;
+}
+
+.svc-loyalty-btn:hover {
+  background: #f4fbfb !important;
+  color: var(--hc-primary) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22) !important;
+  text-decoration: none !important;
+}
+
+.svc-loyalty-btn i {
+  color: var(--hc-secondary-dark);
+  font-size: 14px;
+}
+
+.svc-benefit-quota {
+  font-size: 12px;
+  color: var(--hc-text-muted);
+}
+
+/* Category pills */
+.svc-cat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 22px;
+  background: var(--hc-surface-warm);
+  border-bottom: 1px solid var(--hc-border-light);
+}
+
+.svc-cat-tab {
+  padding: 7px 16px;
+  border-radius: var(--hc-radius-full);
+  border: 1px solid var(--hc-border);
+  background: #ffffff;
+  font-family: var(--hc-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--hc-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--hc-duration-fast) var(--hc-ease);
+}
+
+.svc-cat-tab:hover {
+  background: var(--hc-primary-subtle);
+  border-color: var(--hc-primary);
+  color: var(--hc-primary);
+}
+
+.svc-cat-tab.active {
+  background: var(--hc-primary);
+  border-color: var(--hc-primary);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(41, 108, 122, 0.25);
+}
+
+.svc-cat-tab.is-loyalty {
+  background: #fff8eb;
+  border-color: #fde68a;
+  color: #b45309;
+  font-weight: 600;
+}
+
+.svc-cat-tab.is-loyalty:hover,
+.svc-cat-tab.is-loyalty.active {
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  border-color: #b45309;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(180, 83, 9, 0.3);
+}
+
+.svc-guest-stats {
+  margin: 0 0 20px;
 }

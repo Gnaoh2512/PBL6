@@ -41,11 +41,26 @@ public class LiveFolioResponse {
     private BigDecimal depositPaid;
     private BigDecimal remainingBalance;
 
+    @JsonProperty("depositApplied")
+    public BigDecimal getDepositApplied() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
+    @JsonProperty("depositAmount")
+    public BigDecimal getDepositAmount() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
     @JsonProperty("isFullySettled")
     private boolean isFullySettled;
 
     @Builder.Default
     private List<ServiceUsageResponse> services = new ArrayList<>();
+
+    @JsonProperty("serviceUsages")
+    public List<ServiceUsageResponse> getServiceUsages() {
+        return services;
+    }
 
     private BankTransferQrResponse settlementQr;
 }

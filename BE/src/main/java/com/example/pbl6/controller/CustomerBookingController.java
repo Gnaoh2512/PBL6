@@ -6,12 +6,13 @@ import com.example.pbl6.dto.billing.CancellationRefundResponse;
 import com.example.pbl6.dto.booking.BookingDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
+import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.service.CustomerBillingService;
 import com.example.pbl6.service.CustomerBookingService;
 import com.example.pbl6.service.CustomerHistoryService;
+import com.example.pbl6.service.ServiceRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,6 +26,7 @@ public class CustomerBookingController {
     private final CustomerBookingService customerBookingService;
     private final CustomerHistoryService customerHistoryService;
     private final CustomerBillingService customerBillingService;
+    private final ServiceRequestService serviceRequestService;
 
     /**
      * Khách hàng đã đăng nhập xem danh sách các đơn đặt phòng của mình
@@ -66,6 +68,24 @@ public class CustomerBookingController {
         }
         CustomerBookingHistoryDetailResponse detail = customerHistoryService.getMemberBookingDetail(authentication.getName(), bookingCode);
         return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết đơn lưu trú thành công", detail));
+    }
+
+    /**
+     * Lịch sử Dịch vụ theo Booking (Guest Portal):
+     * Bổ sung API lấy danh sách dịch vụ chi tiết gắn liền với một lượt đặt phòng cụ thể (bookingId hoặc bookingCode)
+     */
+    @GetMapping({"/{bookingIdentifier}/services", "/{bookingIdentifier}/service-requests"})
+    public ResponseEntity<ApiResponse<List<ServiceRequestResponse>>> getBookingServiceHistory(
+            @PathVariable String bookingIdentifier
+    ) {
+        List<ServiceRequestResponse> list;
+        try {
+            Integer bookingId = Integer.parseInt(bookingIdentifier.trim());
+            list = serviceRequestService.getRequestsByBookingId(bookingId);
+        } catch (NumberFormatException e) {
+            list = serviceRequestService.getRequestsByBookingCode(bookingIdentifier.trim());
+        }
+        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách dịch vụ theo lượt đặt phòng thành công", list));
     }
 
     /**

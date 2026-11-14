@@ -3,9 +3,11 @@ package com.example.pbl6.service;
 import com.example.pbl6.dto.schedule.WorkScheduleRequest;
 import com.example.pbl6.dto.schedule.WorkScheduleResponse;
 import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.Role;
 import com.example.pbl6.entity.Shift;
 import com.example.pbl6.entity.WorkSchedule;
 import com.example.pbl6.repository.AccountRepository;
+import com.example.pbl6.repository.CashierShiftRepository;
 import com.example.pbl6.repository.ShiftRepository;
 import com.example.pbl6.repository.WorkScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +38,12 @@ class WorkScheduleServiceTest {
     @Mock
     private ShiftRepository shiftRepository;
 
+    @Mock
+    private CashierShiftRepository cashierShiftRepository;
+
+    @Mock
+    private AuditLogService auditLogService;
+
     @InjectMocks
     private WorkScheduleServiceImpl workScheduleService;
 
@@ -45,7 +53,8 @@ class WorkScheduleServiceTest {
 
     @BeforeEach
     void setUp() {
-        mockAccount = Account.builder().accountId(1).username("staff1").fullName("Staff One").build();
+        Role staffRole = Role.builder().roleId(2).roleCode("ROLE_RECEPTIONIST").roleName("Lễ tân").build();
+        mockAccount = Account.builder().accountId(1).username("staff1").fullName("Staff One").role(staffRole).status("ACTIVE").build();
         mockShift = Shift.builder().shiftId(1).startTime(LocalTime.of(8, 0)).endTime(LocalTime.of(16, 0)).build();
         mockSchedule = WorkSchedule.builder()
                 .scheduleId(10)
@@ -76,12 +85,12 @@ class WorkScheduleServiceTest {
 
         when(accountRepository.findById(1)).thenReturn(Optional.of(mockAccount));
         when(shiftRepository.findById(1)).thenReturn(Optional.of(mockShift));
-        when(workScheduleRepository.save(any(WorkSchedule.class))).thenReturn(mockSchedule);
+        when(workScheduleRepository.saveAndFlush(any(WorkSchedule.class))).thenReturn(mockSchedule);
 
         WorkScheduleResponse result = workScheduleService.createSchedule(request);
 
         assertNotNull(result);
         assertEquals(10, result.getScheduleId());
-        verify(workScheduleRepository, times(1)).save(any(WorkSchedule.class));
+        verify(workScheduleRepository, times(1)).saveAndFlush(any(WorkSchedule.class));
     }
 }

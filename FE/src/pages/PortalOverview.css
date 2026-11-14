@@ -25,11 +25,12 @@
 }
 .ov-stat-value {
   margin: 4px 0 2px;
-  font-family: var(--hc-font-heading);
+  font-family: var(--hc-font-number);
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
   color: var(--hc-primary-dark);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .ov-stat-sub {
   font-size: 12px;

@@ -17,7 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +32,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     private final RoomRepository roomRepository;
     private final EquipmentRepository equipmentRepository;
     private final AccountRepository accountRepository;
+    private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
 
     @Override
@@ -95,6 +98,15 @@ public class MaintenanceServiceImpl implements MaintenanceService {
 
         Account tech = accountRepository.findById(technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kỹ thuật viên #" + technicianId));
+
+        // Strict Shift Validation nếu trong ca hiện tại có lịch trực cho kỹ thuật viên
+        var availableStaff = workScheduleService.getAvailableStaffInShift(LocalDate.now(), LocalTime.now(), "ROLE_MAINTENANCE");
+        if (!availableStaff.isEmpty()) {
+            boolean inShift = availableStaff.stream().anyMatch(s -> s.getAccountId().equals(tech.getAccountId()));
+            if (!inShift) {
+                throw new IllegalArgumentException("Kỹ thuật viên " + tech.getFullName() + " hiện không có trong lịch trực ca bảo trì hiện tại!");
+            }
+        }
 
         request.setAssignedTo(tech);
         request.setStatus("IN_PROGRESS");

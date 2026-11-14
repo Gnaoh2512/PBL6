@@ -40,6 +40,15 @@ class CashierShiftServiceTest {
     @Mock
     private WorkScheduleRepository workScheduleRepository;
 
+    @Mock
+    private AuditLogService auditLogService;
+
+    @Mock
+    private com.example.pbl6.repository.PaymentRepository paymentRepository;
+
+    @Mock
+    private com.example.pbl6.repository.BookingRoomRepository bookingRoomRepository;
+
     @InjectMocks
     private CashierShiftServiceImpl cashierShiftService;
 
@@ -75,8 +84,10 @@ class CashierShiftServiceTest {
         OpenCashierShiftRequest request = new OpenCashierShiftRequest();
         request.setOpeningCash(new BigDecimal("500000.00"));
 
-        when(cashierShiftRepository.findByAccount_AccountId(1)).thenReturn(Collections.emptyList());
+        when(cashierShiftRepository.findOpenShiftsForDate(any(), any(), any())).thenReturn(Collections.emptyList());
+        when(cashierShiftRepository.findFirstByStatusOrderByStartTimeDesc("OPEN")).thenReturn(Optional.empty());
         when(cashierShiftRepository.save(any(CashierShift.class))).thenReturn(mockCashierShift);
+        when(paymentRepository.findPaymentsForShift(any(), any(), any())).thenReturn(Collections.emptyList());
 
         CashierShiftResponse response = cashierShiftService.openShift(userDetails, request);
 
@@ -91,12 +102,12 @@ class CashierShiftServiceTest {
         OpenCashierShiftRequest request = new OpenCashierShiftRequest();
         request.setOpeningCash(new BigDecimal("500000.00"));
 
-        when(cashierShiftRepository.findByAccount_AccountId(1)).thenReturn(List.of(mockCashierShift));
+        when(cashierShiftRepository.findOpenShiftsForDate(any(), any(), any())).thenReturn(List.of(mockCashierShift));
 
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
                 cashierShiftService.openShift(userDetails, request));
 
-        assertTrue(exception.getMessage().contains("already have an active/open cashier shift"));
+        assertTrue(exception.getMessage().contains("Hiện đã có ca thu ngân chung"));
         verify(cashierShiftRepository, never()).save(any(CashierShift.class));
     }
 
@@ -108,6 +119,7 @@ class CashierShiftServiceTest {
 
         when(cashierShiftRepository.findById(100)).thenReturn(Optional.of(mockCashierShift));
         when(cashierShiftRepository.save(any(CashierShift.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(paymentRepository.findPaymentsForShift(any(), any(), any())).thenReturn(Collections.emptyList());
 
         CashierShiftResponse response = cashierShiftService.closeShift(100, userDetails, request);
 

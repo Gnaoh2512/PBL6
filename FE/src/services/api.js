@@ -2,15 +2,15 @@
  * Hotel California — API Client Service
  */
 
-const API_BASE = '';  // Vite proxy handles /api -> localhost:9090
+const API_BASE = ""; // Vite proxy handles /api -> localhost:9090
 
 export function getAuthToken() {
-  return localStorage.getItem('auth_token') || '';
+  return localStorage.getItem("auth_token") || "";
 }
 
 export function getAuthUser() {
   try {
-    const raw = localStorage.getItem('user_info');
+    const raw = localStorage.getItem("user_info");
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -18,24 +18,24 @@ export function getAuthUser() {
 }
 
 export function setAuthSession(token, user) {
-  if (token) localStorage.setItem('auth_token', token);
-  if (user) localStorage.setItem('user_info', JSON.stringify(user));
+  if (token) localStorage.setItem("auth_token", token);
+  if (user) localStorage.setItem("user_info", JSON.stringify(user));
 }
 
 export function clearAuthSession() {
-  localStorage.removeItem('auth_token');
-  localStorage.removeItem('user_info');
+  localStorage.removeItem("auth_token");
+  localStorage.removeItem("user_info");
 }
 
 function normalizeRole(role) {
-  if (typeof role === 'string') {
+  if (typeof role === "string") {
     const normalized = role.trim().toUpperCase();
-    return normalized.startsWith('ROLE_') ? normalized : `ROLE_${normalized}`;
+    return normalized.startsWith("ROLE_") ? normalized : `ROLE_${normalized}`;
   }
-  if (role && typeof role === 'object') {
+  if (role && typeof role === "object") {
     return normalizeRole(role.roleCode || role.authority || role.name || role.code);
   }
-  return '';
+  return "";
 }
 
 export function getPrimaryRole(user) {
@@ -52,15 +52,15 @@ export function hasRole(roles = [], candidateUser = getAuthUser()) {
 }
 
 export async function apiCall(endpoint, options = {}) {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+  const url = endpoint.startsWith("http") ? endpoint : `${API_BASE}${endpoint}`;
   const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {})
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
   };
 
   const token = options.auth === false ? '' : getAuthToken();
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   const fetchOptions = {
@@ -71,7 +71,7 @@ export async function apiCall(endpoint, options = {}) {
   };
 
   if (options.body) {
-    fetchOptions.body = typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+    fetchOptions.body = typeof options.body === "string" ? options.body : JSON.stringify(options.body);
   }
 
   let response;
@@ -80,9 +80,9 @@ export async function apiCall(endpoint, options = {}) {
   } catch (err) {
     if (err.name === 'AbortError') throw err;
     if (!options.silentError) {
-      console.warn('Network fetch error:', err);
+      console.warn("Network fetch error:", err);
     }
-    throw new Error('Không thể kết nối đến máy chủ Backend (http://localhost:9090)');
+    throw new Error("Không thể kết nối đến máy chủ Backend (http://localhost:9090)");
   }
 
   let result = null;
@@ -129,12 +129,12 @@ export function waitForAssistantSessionReset() { return assistantReset; }
 
 // Formatters
 export function formatVND(amount) {
-  if (amount === null || amount === undefined || isNaN(amount)) return '0 đ';
-  return Number(amount).toLocaleString('vi-VN') + ' đ';
+  if (amount === null || amount === undefined || isNaN(amount)) return "0 đ";
+  return Number(amount).toLocaleString("vi-VN") + " đ";
 }
 
 export function formatDate(dateStr) {
-  if (!dateStr) return '---';
+  if (!dateStr) return "---";
   try {
     let d;
     if (Array.isArray(dateStr)) {
@@ -143,14 +143,14 @@ export function formatDate(dateStr) {
       d = new Date(dateStr);
     }
     if (isNaN(d.getTime())) return String(dateStr);
-    return d.toLocaleDateString('vi-VN');
+    return d.toLocaleDateString("vi-VN");
   } catch {
     return String(dateStr);
   }
 }
 
 export function formatDateTime(dateTimeStr) {
-  if (!dateTimeStr) return '---';
+  if (!dateTimeStr) return "---";
   try {
     let d;
     if (Array.isArray(dateTimeStr)) {
@@ -159,38 +159,44 @@ export function formatDateTime(dateTimeStr) {
       d = new Date(dateTimeStr);
     }
     if (isNaN(d.getTime())) return String(dateTimeStr);
-    return d.toLocaleString('vi-VN');
+    return d.toLocaleString("vi-VN");
   } catch {
     return String(dateTimeStr);
   }
 }
 
 export function getCategoryName(category) {
-  if (!category) return 'Khác';
-  if (typeof category === 'string') return category;
-  if (typeof category === 'object' && category.categoryName) return category.categoryName;
-  return 'Khác';
+  if (!category) return "Khác";
+  if (typeof category === "string") return category;
+  if (typeof category === "object") {
+    if (category.categoryName) return category.categoryName;
+    if (category.category && typeof category.category === "object" && category.category.categoryName) {
+      return category.category.categoryName;
+    }
+    if (typeof category.category === "string") return category.category;
+    if (category.name) return category.name;
+  }
+  return "Khác";
 }
 
 export function getRoomTypeName(room) {
-  if (!room) return '---';
+  if (!room) return "---";
   if (room.roomTypeName) return room.roomTypeName;
-  if (room.roomType && typeof room.roomType === 'object') return room.roomType.typeName || '---';
-  if (typeof room.roomType === 'string') return room.roomType;
-  return '---';
+  if (room.roomType && typeof room.roomType === "object") return room.roomType.typeName || "---";
+  if (typeof room.roomType === "string") return room.roomType;
+  return "---";
 }
 
 export function getRoomBasePrice(room) {
   if (!room) return 0;
   if (room.basePrice !== undefined && room.basePrice !== null) return Number(room.basePrice);
-  if (room.roomType && typeof room.roomType === 'object') return Number(room.roomType.basePrice || 0);
+  if (room.roomType && typeof room.roomType === "object") return Number(room.roomType.basePrice || 0);
   return 0;
 }
 
 export function getRoomTypeId(room) {
-  if (!room) return '';
+  if (!room) return "";
   if (room.roomTypeId) return String(room.roomTypeId);
-  if (room.roomType && typeof room.roomType === 'object') return String(room.roomType.roomTypeId || '');
-  return '';
+  if (room.roomType && typeof room.roomType === "object") return String(room.roomType.roomTypeId || "");
+  return "";
 }
-

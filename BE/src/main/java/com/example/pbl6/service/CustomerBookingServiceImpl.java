@@ -7,6 +7,8 @@ import com.example.pbl6.common.enums.PaymentType;
 import com.example.pbl6.config.BankConfig;
 import com.example.pbl6.dto.booking.*;
 import com.example.pbl6.dto.room.RoomTypeResponse;
+import com.example.pbl6.dto.service.ServiceUsageResponse;
+import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.*;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.*;
@@ -26,6 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -39,6 +42,9 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     private final AccountRepository accountRepository;
     private final InvoiceRepository invoiceRepository;
     private final PaymentRepository paymentRepository;
+    private final ServiceUsageRepository serviceUsageRepository;
+    private final ServiceRequestRepository serviceRequestRepository;
+    private final CashierShiftService cashierShiftService;
 
     private final FinancialCalculator financialCalculator;
     private final VietQrService vietQrService;
@@ -161,7 +167,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     @Override
     @Transactional(readOnly = true)
     public BookingDetailResponse getBookingByCode(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+        Booking booking = findBookingFlexible(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng với mã: " + bookingCode));
 
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
@@ -178,7 +184,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     @Override
     @Transactional
     public PaymentStatusResponse getPaymentStatus(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+        Booking booking = findBookingFlexible(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng với mã: " + bookingCode));
 
         // Kiểm tra nếu đơn PENDING_DEPOSIT đã quá 15 phút thì tự động chuyển EXPIRED
@@ -196,7 +202,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 }
 
                 return PaymentStatusResponse.builder()
-                        .bookingCode(bookingCode)
+                        .bookingCode(booking.getBookingCode())
                         .bookingStatus(BookingStatus.EXPIRED.name())
                         .isPaid(false)
                         .depositAmount(booking.getDepositRequired())
@@ -215,11 +221,16 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .findFirst()
                 .orElse(null);
 
+        BigDecimal totalDepositPaid = payments.stream()
+                .filter(p -> PaymentType.DEPOSIT.name().equalsIgnoreCase(p.getType()))
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         return PaymentStatusResponse.builder()
-                .bookingCode(bookingCode)
+                .bookingCode(booking.getBookingCode())
                 .bookingStatus(booking.getStatus())
                 .isPaid(isConfirmed)
-                .depositAmount(depositPayment != null ? depositPayment.getAmount() : booking.getDepositRequired())
+                .depositAmount(totalDepositPaid.compareTo(BigDecimal.ZERO) > 0 ? totalDepositPaid : booking.getDepositRequired())
                 .paidAt(depositPayment != null ? depositPayment.getPaidAt() : null)
                 .message(isConfirmed ? "Đã thanh toán tiền cọc thành công!" : "Đang chờ thanh toán tiền cọc qua ngân hàng.")
                 .build();
@@ -228,7 +239,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     @Override
     @Transactional
     public BookingDetailResponse confirmDepositManual(String bookingCode, String staffUsername) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+        Booking booking = findBookingFlexible(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
 
         Account staffAccount = null;
@@ -245,75 +256,106 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         );
 
         auditLogService.log(staffAccount, "ĐẶT PHÒNG", "CONFIRM_DEPOSIT", "booking", Long.valueOf(booking.getBookingId()),
-                "Xác nhận cọc cho đơn đặt phòng " + bookingCode + " bởi " + (staffAccount != null ? staffAccount.getFullName() : staffUsername));
+                "Xác nhận cọc cho đơn đặt phòng " + booking.getBookingCode() + " bởi " + (staffAccount != null ? staffAccount.getFullName() : staffUsername));
 
-        return getBookingByCode(bookingCode);
+        return getBookingByCode(booking.getBookingCode());
     }
 
     @Override
     @Transactional
     public boolean processSePayWebhook(SePayWebhookPayload payload, String apiKeyHeader) {
-        log.info("Nhận Webhook từ SePay: content={}, amount={}, transferType={}", payload.getContent(), payload.getTransferAmount(), payload.getTransferType());
+        if (payload == null) {
+            return false;
+        }
+        log.info("Nhận Webhook từ SePay: id={}, content={}, amount={}, transferType={}, ref={}",
+                payload.getId(), payload.getContent(), payload.getTransferAmount(), payload.getTransferType(), payload.getReferenceCode());
 
+        // 1. Xác thực API Key nếu có cấu hình bảo mật
         if (StringUtils.hasText(bankConfig.getSepayApiKey())) {
-            String expected = "Apikey " + bankConfig.getSepayApiKey();
-            if (!expected.equals(apiKeyHeader) && !bankConfig.getSepayApiKey().equals(apiKeyHeader)) {
+            String expected = "Apikey " + bankConfig.getSepayApiKey().trim();
+            String altExpected = "Bearer " + bankConfig.getSepayApiKey().trim();
+            if (apiKeyHeader == null || (!expected.equalsIgnoreCase(apiKeyHeader.trim())
+                    && !altExpected.equalsIgnoreCase(apiKeyHeader.trim())
+                    && !bankConfig.getSepayApiKey().trim().equals(apiKeyHeader.trim()))) {
                 log.warn("SePay webhook API Key không khớp! Nhận: {}", apiKeyHeader);
                 return false;
             }
         }
 
+        // 2. Chỉ xử lý giao dịch tiền vào ('in')
         if (payload.getTransferType() != null && !"in".equalsIgnoreCase(payload.getTransferType().trim())) {
             log.info("Bỏ qua giao dịch không phải tiền vào (transferType != 'in')");
             return true;
         }
 
-        String content = payload.getContent();
-        if (!StringUtils.hasText(content)) {
-            content = payload.getDescription();
-        }
+        // 3. Gộp nội dung từ content, code và description để không bỏ sót mã đơn
+        String combinedContent = ((payload.getContent() != null ? payload.getContent() : "") + " "
+                + (payload.getCode() != null ? payload.getCode() : "") + " "
+                + (payload.getDescription() != null ? payload.getDescription() : "")).trim();
 
-        if (!StringUtils.hasText(content)) {
+        if (!StringUtils.hasText(combinedContent)) {
             log.warn("Nội dung chuyển khoản rỗng trong webhook SePay!");
             return false;
         }
 
-        String bookingCode = extractBookingCode(content);
-        if (bookingCode == null) {
-            log.warn("Không tìm thấy mã đơn đặt phòng (BK...) trong nội dung chuyển khoản: {}", content);
-            return false;
-        }
-
-        Optional<Booking> optBooking = bookingRepository.findByBookingCode(bookingCode);
+        // 4. Bóc tách và tìm đơn đặt phòng (hỗ trợ cả khi ngân hàng tự xóa dấu gạch ngang '-')
+        Optional<Booking> optBooking = extractAndFindBooking(combinedContent);
         if (optBooking.isEmpty()) {
-            log.warn("Không tìm thấy đơn đặt phòng có mã: {}", bookingCode);
+            log.warn("Không tìm thấy đơn đặt phòng khớp với nội dung chuyển khoản: {}", combinedContent);
             return false;
         }
 
         Booking booking = optBooking.get();
+        String bookingCode = booking.getBookingCode();
         BigDecimal transferAmount = payload.getTransferAmount() != null ? payload.getTransferAmount() : BigDecimal.ZERO;
 
-        if (content.toUpperCase().contains("SETTLE")) {
-            log.info("Phát hiện từ khóa SETTLE trong nội dung chuyển khoản: {}. Thực hiện tất toán check-out...", content);
-            return customerBillingService.processSettlementWebhook(bookingCode, transferAmount, payload.getReferenceCode());
+        if (transferAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("Số tiền chuyển khoản trong webhook SePay không hợp lệ ({}) cho đơn {}", transferAmount, bookingCode);
+            return false;
         }
 
+        // 5. Chống trùng lặp giao dịch (Idempotency check theo referenceCode hoặc SePay id)
+        String txRef = StringUtils.hasText(payload.getReferenceCode())
+                ? payload.getReferenceCode().trim()
+                : (payload.getId() != null ? "SEPAY-" + payload.getId() : null);
+
+        if (txRef != null) {
+            List<Payment> existingPayments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
+            boolean alreadyProcessed = existingPayments.stream()
+                    .anyMatch(p -> p.getNote() != null && p.getNote().contains(txRef));
+            if (alreadyProcessed) {
+                log.info("Giao dịch SePay [{}] của đơn {} đã được xử lý trước đó, bỏ qua chống trùng.", txRef, bookingCode);
+                return true;
+            }
+        }
+
+        // 6. Phân nhánh nếu là giao dịch tất toán hóa đơn (SETTLE)
+        if (combinedContent.toUpperCase().contains("SETTLE")) {
+            log.info("Phát hiện từ khóa SETTLE trong nội dung chuyển khoản: {}. Thực hiện đối chiếu tất toán check-out...", combinedContent);
+            return customerBillingService.processSettlementWebhook(bookingCode, transferAmount, txRef != null ? txRef : "SEPAY");
+        }
+
+        // 7. Xử lý thanh toán tiền cọc (DEPOSIT): Kiểm tra khớp nội dung VÀ số tiền
         confirmDepositInternal(
                 booking,
                 transferAmount,
                 PaymentMethod.BANK_TRANSFER.name(),
-                "Mã GD SePay: " + payload.getReferenceCode(),
+                "Mã GD SePay: " + (txRef != null ? txRef : "AUTO"),
                 null
         );
 
-        log.info("Đã xử lý Webhook SePay thành công cho đơn: {}, số tiền: {}", bookingCode, transferAmount);
+        auditLogService.log("THANH TOÁN", "SEPAY_WEBHOOK", "booking", Long.valueOf(booking.getBookingId()),
+                "Nhận chuyển khoản tự động qua SePay cho đơn " + bookingCode + ": " + transferAmount + " VNĐ (Mã GD: " + txRef + ")");
+
+        log.info("Đã xử lý Webhook SePay thành công cho đơn: {}, số tiền: {}, trạng thái hiện tại: {}",
+                bookingCode, transferAmount, booking.getStatus());
         return true;
     }
 
     @Override
     @Transactional
     public PaymentStatusResponse simulateDeposit(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+        Booking booking = findBookingFlexible(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
 
         confirmDepositInternal(
@@ -324,13 +366,13 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 null
         );
 
-        return getPaymentStatus(bookingCode);
+        return getPaymentStatus(booking.getBookingCode());
     }
 
     @Override
     @Transactional
     public void cancelBooking(String bookingCode, String cancelReason, String canceledByUsername) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
+        Booking booking = findBookingFlexible(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
 
         Account canceledByAccount = null;
@@ -343,7 +385,7 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         booking.setCanceledBy(canceledByAccount);
         booking.setCanceledAt(LocalDateTime.now());
         auditLogService.log(canceledByAccount, "ĐẶT PHÒNG", "CANCEL", "booking", Long.valueOf(booking.getBookingId()),
-                "Hủy đơn đặt phòng " + bookingCode + " (Lý do: " + cancelReason + ", Người hủy: " + (canceledByAccount != null ? canceledByAccount.getFullName() : canceledByUsername) + ")");
+                "Hủy đơn đặt phòng " + booking.getBookingCode() + " (Lý do: " + cancelReason + ", Người hủy: " + (canceledByAccount != null ? canceledByAccount.getFullName() : canceledByUsername) + ")");
         bookingRepository.save(booking);
 
         List<BookingRoom> rooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
@@ -421,25 +463,29 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
     // LOGIC DÙNG CHUNG KHI TIỀN VỀ (WEBHOOK HOẶC DUYỆT TAY)
     // ==========================================
 
-    private void confirmDepositInternal(Booking booking, BigDecimal depositAmount, String method, String note, Account staffAccount) {
-        if (BookingStatus.CONFIRMED.name().equalsIgnoreCase(booking.getStatus())) {
-            log.info("Đơn đặt phòng {} đã được xác nhận trước đó, bỏ qua", booking.getBookingCode());
+    private void confirmDepositInternal(Booking booking, BigDecimal incomingAmount, String method, String note, Account staffAccount) {
+        if (BookingStatus.CHECKED_IN.name().equalsIgnoreCase(booking.getStatus())
+                || BookingStatus.CHECKED_OUT.name().equalsIgnoreCase(booking.getStatus())) {
+            log.info("Đơn đặt phòng {} đang ở trạng thái {}, bỏ qua xác nhận cọc", booking.getBookingCode(), booking.getStatus());
             return;
         }
 
-        // 1. Cập nhật Booking -> CONFIRMED
-        booking.setStatus(BookingStatus.CONFIRMED.name());
-        bookingRepository.save(booking);
+        BigDecimal depositRequired = booking.getDepositRequired() != null ? booking.getDepositRequired() : BigDecimal.ZERO;
+        BigDecimal paidNow = incomingAmount != null ? incomingAmount : depositRequired;
 
-        // 2. Cập nhật BookingRoom -> CONFIRMED
+        // Tính tổng tiền cọc đã nộp trước đó (nếu khách chuyển khoản nhiều lần)
+        List<Payment> existingPayments = paymentRepository.findByBooking_BookingId(booking.getBookingId());
+        BigDecimal previousDepositPaid = existingPayments.stream()
+                .filter(p -> PaymentType.DEPOSIT.name().equalsIgnoreCase(p.getType()))
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal cumulativeDepositPaid = previousDepositPaid.add(paidNow);
+
+        // Tìm hoặc khởi tạo Hóa đơn dự thảo (Invoice - DRAFT)
         List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
         BookingRoom bookingRoom = bookingRooms.isEmpty() ? null : bookingRooms.get(0);
-        for (BookingRoom br : bookingRooms) {
-            br.setStatus(BookingStatus.CONFIRMED.name());
-            bookingRoomRepository.save(br);
-        }
 
-        // 3. LÚC NÀY MỚI KHỞI TẠO HÓA ĐƠN DỰ THẢO (Invoice - DRAFT)
         long nights = financialCalculator.calculateNights(booking.getCheckInDate(), booking.getCheckOutDate());
         BigDecimal priceApplied = bookingRoom != null && bookingRoom.getPriceApplied() != null
                 ? bookingRoom.getPriceApplied()
@@ -447,40 +493,71 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
 
         BigDecimal totalRoomCharge = financialCalculator.calculateTotalRoomCharge(priceApplied, nights);
         BigDecimal taxAmount = financialCalculator.calculateTax(totalRoomCharge);
-        BigDecimal subtotal = totalRoomCharge;
-        BigDecimal finalBalance = financialCalculator.calculateFinalTotal(subtotal, taxAmount, BigDecimal.ZERO, depositAmount);
 
-        String invoiceNumber = "INV-" + booking.getBookingCode().replace("BK-", "");
+        List<Invoice> existingInvoices = invoiceRepository.findByBooking_BookingId(booking.getBookingId());
+        Invoice activeInvoice = existingInvoices.stream()
+                .filter(inv -> !InvoiceStatus.CANCELED.name().equalsIgnoreCase(inv.getStatus()))
+                .findFirst()
+                .orElse(null);
 
-        Invoice invoice = Invoice.builder()
-                .invoiceNumber(invoiceNumber)
-                .booking(booking)
-                .roomCharge(totalRoomCharge)
-                .serviceCharge(BigDecimal.ZERO)
-                .taxAmount(taxAmount)
-                .discountAmount(BigDecimal.ZERO)
-                .depositApplied(depositAmount)
-                .totalAmount(finalBalance)
-                .status(InvoiceStatus.DRAFT.name())
-                .build();
+        if (activeInvoice == null) {
+            String invoiceNumber = "INV-" + booking.getBookingCode().replace("BK-", "");
+            BigDecimal finalBalance = financialCalculator.calculateFinalTotal(totalRoomCharge, taxAmount, BigDecimal.ZERO, cumulativeDepositPaid);
+            activeInvoice = Invoice.builder()
+                    .invoiceNumber(invoiceNumber)
+                    .booking(booking)
+                    .roomCharge(totalRoomCharge)
+                    .serviceCharge(BigDecimal.ZERO)
+                    .taxAmount(taxAmount)
+                    .discountAmount(BigDecimal.ZERO)
+                    .depositApplied(cumulativeDepositPaid)
+                    .totalAmount(finalBalance)
+                    .status(InvoiceStatus.DRAFT.name())
+                    .build();
+        } else {
+            activeInvoice.setDepositApplied(cumulativeDepositPaid);
+            BigDecimal discount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
+            BigDecimal srvCharge = activeInvoice.getServiceCharge() != null ? activeInvoice.getServiceCharge() : BigDecimal.ZERO;
+            BigDecimal sub = totalRoomCharge.add(srvCharge);
+            BigDecimal tax = financialCalculator.calculateTax(sub);
+            activeInvoice.setTaxAmount(tax);
+            BigDecimal finalBalance = sub.add(tax).subtract(discount).subtract(cumulativeDepositPaid);
+            activeInvoice.setTotalAmount(finalBalance.compareTo(BigDecimal.ZERO) > 0 ? finalBalance : BigDecimal.ZERO);
+        }
+        Invoice savedInvoice = invoiceRepository.save(activeInvoice);
 
-        Invoice savedInvoice = invoiceRepository.save(invoice);
-
-        // 4. KHỞI TẠO BẢN GHI THANH TOÁN (Payment - DEPOSIT)
+        // Chèn bản ghi lịch sử Payment (gắn với ca thu ngân đang mở nếu có)
+        CashierShift openShift = cashierShiftService.findSharedOpenShiftEntity().orElse(null);
         Payment payment = Payment.builder()
                 .booking(booking)
                 .invoice(savedInvoice)
+                .cashierShift(openShift)
                 .type(PaymentType.DEPOSIT.name())
                 .method(method)
-                .amount(depositAmount)
+                .amount(paidNow)
+                .receivedBy(staffAccount)
                 .approvedBy(staffAccount)
                 .note(note)
+                .paidAt(LocalDateTime.now())
                 .build();
-
         paymentRepository.save(payment);
 
-        log.info("Xác nhận tiền cọc thành công cho đơn {}: Đã tạo Invoice {} (DRAFT) và Payment {} (DEPOSIT)",
-                booking.getBookingCode(), savedInvoice.getInvoiceNumber(), depositAmount);
+        // Chỉ cập nhật booking.status = 'CONFIRMED' khi tổng tiền đã chuyển >= tiền cọc yêu cầu (khớp số tiền)
+        if (cumulativeDepositPaid.compareTo(depositRequired) >= 0) {
+            booking.setStatus(BookingStatus.CONFIRMED.name());
+            booking.setCancelReason(null);
+            bookingRepository.save(booking);
+
+            for (BookingRoom br : bookingRooms) {
+                br.setStatus(BookingStatus.CONFIRMED.name());
+                bookingRoomRepository.save(br);
+            }
+            log.info("Xác nhận tiền cọc thành công cho đơn {}: Tổng cọc đã nhận {} >= Yêu cầu {}. Đã chuyển trạng thái CONFIRMED.",
+                    booking.getBookingCode(), cumulativeDepositPaid, depositRequired);
+        } else {
+            log.warn("Đơn {} nhận được {}đ (tổng {}đ), chưa đủ mức cọc yêu cầu {}đ. Giữ trạng thái {}",
+                    booking.getBookingCode(), paidNow, cumulativeDepositPaid, depositRequired, booking.getStatus());
+        }
     }
 
     private Customer findOrCreateCustomer(BookingCreateRequest request) {
@@ -505,7 +582,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                     .build();
             customer = customerRepository.save(customer);
         } else {
-            // Cập nhật tên hoặc email nếu chưa có
             boolean changed = false;
             if (StringUtils.hasText(request.getFullName()) && !request.getFullName().equals(customer.getFullName())) {
                 customer.setFullName(request.getFullName().trim());
@@ -535,16 +611,75 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         return code;
     }
 
-    private String extractBookingCode(String content) {
-        if (!StringUtils.hasText(content)) return null;
-
-        // Tìm pattern: BK-yyyyMMdd-XXXX hoặc BK2026...
-        Pattern pattern = Pattern.compile("BK[-A-Za-z0-9]+", Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(content);
-        if (matcher.find()) {
-            return matcher.group().toUpperCase();
+    /**
+     * Tìm kiếm đơn đặt phòng linh hoạt: hỗ trợ cả mã chuẩn "BK-20261113-A1B2"
+     * lẫn mã bị ngân hàng xóa dấu gạch ngang "BK20261113A1B2".
+     */
+    private Optional<Booking> findBookingFlexible(String rawCode) {
+        if (!StringUtils.hasText(rawCode)) {
+            return Optional.empty();
         }
-        return null;
+        String clean = rawCode.trim().toUpperCase();
+        Optional<Booking> direct = bookingRepository.findByBookingCode(clean);
+        if (direct.isPresent()) {
+            return direct;
+        }
+        // Nếu dạng BK20261113A1B2 -> chuyển thành BK-20261113-A1B2
+        Pattern compactPattern = Pattern.compile("^BK[-\\s]*(\\d{8})[-\\s]*([A-Z0-9]{4})$", Pattern.CASE_INSENSITIVE);
+        Matcher m = compactPattern.matcher(clean);
+        if (m.find()) {
+            String normalized = "BK-" + m.group(1) + "-" + m.group(2).toUpperCase();
+            Optional<Booking> normOpt = bookingRepository.findByBookingCode(normalized);
+            if (normOpt.isPresent()) {
+                return normOpt;
+            }
+        }
+        String strippedTarget = clean.replaceAll("[^A-Z0-9]", "");
+        return bookingRepository.findAll().stream()
+                .filter(b -> b.getBookingCode() != null && b.getBookingCode().replaceAll("[^A-Za-z0-9]", "").equalsIgnoreCase(strippedTarget))
+                .findFirst();
+    }
+
+    /**
+     * Bóc tách mã đơn đặt phòng từ nội dung chuyển khoản ngân hàng SePay (kể cả khi mất dấu '-' hoặc có khoảng trắng)
+     */
+    private Optional<Booking> extractAndFindBooking(String content) {
+        if (!StringUtils.hasText(content)) {
+            return Optional.empty();
+        }
+        String upper = content.toUpperCase();
+
+        // 1. Khớp pattern chuẩn: BK-20261113-XXXX hoặc BK 20261113 XXXX hoặc BK20261113XXXX
+        Pattern stdPattern = Pattern.compile("BK[-\\s]*(\\d{8})[-\\s]*([A-Z0-9]{4})");
+        Matcher stdMatcher = stdPattern.matcher(upper);
+        if (stdMatcher.find()) {
+            String normalizedCode = "BK-" + stdMatcher.group(1) + "-" + stdMatcher.group(2);
+            Optional<Booking> found = bookingRepository.findByBookingCode(normalizedCode);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+
+        // 2. Khớp mọi chuỗi bắt đầu bằng BK...
+        Pattern genericPattern = Pattern.compile("BK[-A-Z0-9]{4,}");
+        Matcher genericMatcher = genericPattern.matcher(upper);
+        while (genericMatcher.find()) {
+            String candidate = genericMatcher.group();
+            Optional<Booking> found = findBookingFlexible(candidate);
+            if (found.isPresent()) {
+                return found;
+            }
+        }
+
+        // 3. Fallback đối chiếu chuỗi đã loại bỏ ký tự đặc biệt với các đơn đang hoạt động
+        String compactContent = upper.replaceAll("[^A-Z0-9]", "");
+        return bookingRepository.findAll().stream()
+                .filter(b -> b.getBookingCode() != null)
+                .filter(b -> {
+                    String compactCode = b.getBookingCode().toUpperCase().replaceAll("[^A-Z0-9]", "");
+                    return compactCode.length() >= 6 && compactContent.contains(compactCode);
+                })
+                .findFirst();
     }
 
     private BookingDetailResponse mapToDetailResponse(Booking booking, BookingRoom bookingRoom, BankTransferQrResponse qrInfo) {
@@ -568,6 +703,31 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 ? booking.getCreatedAt().plusMinutes(bankConfig.getPaymentTimeoutMinutes())
                 : null;
 
+        // Lấy danh sách dịch vụ gắn liền với lượt đặt phòng (Module 7)
+        List<ServiceUsageResponse> servicesUsed = serviceUsageRepository.findByBooking_BookingId(booking.getBookingId())
+                .stream()
+                .map(u -> ServiceUsageResponse.builder()
+                        .usageId(u.getUsageId())
+                        .serviceId(u.getService() != null ? u.getService().getServiceId() : null)
+                        .serviceName(u.getService() != null ? u.getService().getServiceName() : "Dịch vụ")
+                        .categoryName((u.getService() != null && u.getService().getCategory() != null)
+                                ? u.getService().getCategory().getCategoryName()
+                                : "Khác")
+                        .quantity(u.getQuantity())
+                        .unit(u.getService() != null ? u.getService().getUnit() : "")
+                        .unitPriceApplied(u.getUnitPriceApplied())
+                        .discountAmount(u.getDiscountAmount())
+                        .totalPrice(u.getTotalPrice())
+                        .status(u.getStatus())
+                        .usedAt(u.getUsedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        List<ServiceRequestResponse> serviceRequests = serviceRequestRepository.findByBooking_BookingId(booking.getBookingId())
+                .stream()
+                .map(ServiceRequestResponse::fromEntity)
+                .collect(Collectors.toList());
+
         return BookingDetailResponse.builder()
                 .bookingId(booking.getBookingId())
                 .bookingCode(booking.getBookingCode())
@@ -590,6 +750,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                 .totalRoomCharge(totalRoomCharge)
                 .depositRequired(booking.getDepositRequired())
                 .depositPaid(depositPaid)
+                .servicesUsed(servicesUsed)
+                .serviceRequests(serviceRequests)
                 .qrInfo(qrInfo)
                 .createdAt(booking.getCreatedAt())
                 .expiredAt(expiredAt)

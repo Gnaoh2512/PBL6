@@ -1,5 +1,6 @@
 package com.example.pbl6.dto.service;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -24,4 +25,19 @@ public class ServiceUsageResponse {
     private BigDecimal totalPrice;
     private String status;
     private LocalDateTime usedAt;
+
+    @JsonProperty("unitPrice")
+    public BigDecimal getUnitPrice() {
+        return unitPriceApplied;
+    }
+
+    @JsonProperty("totalAmount")
+    public BigDecimal getTotalAmount() {
+        return totalPrice;
+    }
+
+    @JsonProperty("orderTime")
+    public LocalDateTime getOrderTime() {
+        return usedAt;
+    }
 }

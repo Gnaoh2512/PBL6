@@ -47,6 +47,8 @@ class CustomerHistoryServiceTest {
     @Mock
     private ServiceUsageRepository serviceUsageRepository;
     @Mock
+    private ServiceRequestRepository serviceRequestRepository;
+    @Mock
     private VietQrService vietQrService;
 
     @Spy
@@ -164,6 +166,7 @@ class CustomerHistoryServiceTest {
         assertThat(detail.getRoomNumber()).isEqualTo("201");
         assertThat(detail.getDepositPaid()).isEqualByComparingTo(BigDecimal.valueOf(480000));
         assertThat(detail.getPaymentTransactions()).hasSize(1);
+        assertThat(detail.getServiceRequests()).isEmpty();
     }
 
     @Test

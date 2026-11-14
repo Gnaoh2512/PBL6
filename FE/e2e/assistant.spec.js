@@ -13,7 +13,7 @@ test(`${process.env.D1_LIVE_GEMINI === '1' ? 'Gemini live' : 'labeled fake'} E2E
   await expect(page.getByRole('note')).toContainText('Dữ liệu giả lập');
   await expect(page.getByRole('list', { name: 'Nguồn' })).toContainText('FAQ-WIFI');
   await expect(page.getByRole('log')).toContainText('Wi-Fi');
-  await page.locator('.resort-nav-book').click({ trial: true });
+  await page.getByRole('banner').getByRole('link', { name: 'Đặt phòng', exact: true }).click({ trial: true });
   await page.locator('.search-rooms').click({ trial: true });
   await page.screenshot({ path: 'test-results/assistant-desktop.png' });
   await page.getByLabel('Câu hỏi', { exact: true }).fill(process.env.D1_LIVE_GEMINI === '1' ? 'Khách sạn có hồ bơi không?' : 'astronaut rocket');

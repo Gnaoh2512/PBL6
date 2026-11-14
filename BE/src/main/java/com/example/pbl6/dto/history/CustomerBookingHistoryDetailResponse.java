@@ -2,6 +2,7 @@ package com.example.pbl6.dto.history;
 
 import com.example.pbl6.dto.booking.BankTransferQrResponse;
 import com.example.pbl6.dto.service.ServiceUsageResponse;
+import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,14 +20,25 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CustomerBookingHistoryDetailResponse {
+    private Integer bookingId;
     private String bookingCode;
     private String bookingStatus;
     private LocalDateTime createdAt;
+
+    @JsonProperty("status")
+    public String getStatus() {
+        return bookingStatus;
+    }
 
     // Thông tin khách hàng
     private String customerName;
     private String customerPhone;
     private String customerEmail;
+
+    @JsonProperty("phone")
+    public String getPhone() {
+        return customerPhone;
+    }
 
     // Thông tin phòng
     private String roomNumber;
@@ -54,15 +66,29 @@ public class CustomerBookingHistoryDetailResponse {
     // Thanh toán
     private BigDecimal depositRequired;
     private BigDecimal depositPaid;
+
+    @JsonProperty("depositAmount")
+    public BigDecimal getDepositAmount() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
+    @JsonProperty("depositApplied")
+    public BigDecimal getDepositApplied() {
+        return depositPaid != null ? depositPaid : BigDecimal.ZERO;
+    }
+
     private BigDecimal settlementPaid;
     private BigDecimal remainingBalance;
 
     @JsonProperty("isFullySettled")
     private boolean isFullySettled;
 
-    // Chi tiết dịch vụ đã sử dụng trong kỳ
+    // Chi tiết dịch vụ đã sử dụng trong kỳ (service_usage & service_request)
     @Builder.Default
     private List<ServiceUsageResponse> servicesUsed = new ArrayList<>();
+
+    @Builder.Default
+    private List<ServiceRequestResponse> serviceRequests = new ArrayList<>();
 
     // Lịch sử các đợt giao dịch tài chính (Cọc, Tất toán, Hoàn tiền)
     @Builder.Default

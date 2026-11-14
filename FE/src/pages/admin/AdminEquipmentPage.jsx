@@ -18,6 +18,44 @@ const STATUS_COLORS = {
   RETIRED: "hc-badge-muted",
 };
 
+// Accepts: [..] | {data:[..]} | {data:{content:[..]}} | {data:{items:[..]}}
+const unwrapList = (res) => {
+  if (Array.isArray(res)) return res;
+  const d = res && typeof res === "object" && "data" in res ? res.data : res;
+  if (Array.isArray(d)) return d;
+  if (Array.isArray(d?.content)) return d.content;
+  if (Array.isArray(d?.items)) return d.items;
+  return [];
+};
+
+const normalizeEquipment = (e) => ({
+  ...e,
+  equipmentId: e.equipmentId ?? e.equipment_id ?? e.id,
+  roomId: e.roomId ?? e.room_id ?? e.room?.roomId ?? e.room?.id ?? null,
+  roomNumber: e.roomNumber ?? e.room_number ?? e.room?.roomNumber ?? null,
+  equipmentName: e.equipmentName ?? e.equipment_name ?? e.name ?? "",
+  serialNumber: e.serialNumber ?? e.serial_number ?? e.serial ?? "",
+  status: String(e.status ?? e.equipmentStatus ?? "WORKING").toUpperCase(),
+  note: e.note ?? e.notes ?? "",
+});
+
+const normalizeRoom = (r) => ({
+  ...r,
+  roomId: r.roomId ?? r.room_id ?? r.id,
+  roomNumber: r.roomNumber ?? r.room_number ?? r.number ?? r.name,
+});
+
+// Returns { list, error }
+const readList = (settled, fallbackMsg) => {
+  if (settled.status === "rejected") {
+    return { list: [], error: settled.reason?.message || fallbackMsg };
+  }
+  const res = settled.value;
+  if (res == null) return { list: [], error: fallbackMsg };
+  if (res.success === false) return { list: [], error: res.message || fallbackMsg };
+  return { list: unwrapList(res), error: null };
+};
+
 const EMPTY_FORM = {
   roomId: "",
   equipmentName: "",
@@ -31,6 +69,7 @@ export default function AdminEquipmentPage() {
   const [equipment, setEquipment] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [roomFilter, setRoomFilter] = useState("ALL");
   const [search, setSearch] = useState("");
@@ -43,16 +82,20 @@ export default function AdminEquipmentPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    try {
-      const [equipRes, roomRes] = await Promise.allSettled([apiCall("/api/staff/maintenance/equipment", { silentError: true }), apiCall("/api/admin/rooms", { silentError: true })]);
-      setEquipment(equipRes.status === "fulfilled" && equipRes.value?.success ? equipRes.value.data || [] : []);
-      setRooms(roomRes.status === "fulfilled" && roomRes.value?.success ? roomRes.value.data || [] : []);
-    } catch (err) {
-      addToast(err.message || "Không thể tải danh sách thiết bị.", "error");
-    } finally {
-      setLoading(false);
-    }
-  }, [addToast]);
+    setLoadError("");
+    const [equipRes, roomRes] = await Promise.allSettled([apiCall("/api/admin/equipment", { silentError: true }), apiCall("/api/admin/rooms", { silentError: true })]);
+    const eq = readList(equipRes, "Không thể tải danh sách thiết bị.");
+    const rm = readList(roomRes, "Không thể tải danh sách phòng.");
+
+    // Temporary diagnostics: open DevTools > Console to see exactly what the API returned
+    console.debug("[AdminEquipment] /api/admin/equipment ->", equipRes);
+    console.debug("[AdminEquipment] /api/admin/rooms ->", roomRes);
+
+    setEquipment(eq.list.map(normalizeEquipment));
+    setRooms(rm.list.map(normalizeRoom));
+    if (eq.error) setLoadError(eq.error);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -129,10 +172,11 @@ export default function AdminEquipmentPage() {
     return matchStatus && matchRoom && matchSearch;
   });
 
-  const getRoomLabel = (roomId) => {
-    if (!roomId) return "Khu vực chung";
-    const room = rooms.find((r) => r.roomId === roomId);
-    return room ? `Phòng ${room.roomNumber}` : `Phòng #${roomId}`;
+  const getRoomLabel = (item) => {
+    if (!item.roomId) return "Khu vực chung";
+    const room = rooms.find((r) => String(r.roomId) === String(item.roomId));
+    const number = room?.roomNumber ?? item.roomNumber;
+    return number ? `Phòng ${number}` : `Phòng #${item.roomId}`;
   };
 
   // SelectMenu Options
@@ -178,6 +222,28 @@ export default function AdminEquipmentPage() {
           </div>
         </div>
 
+        {loadError && !loading && (
+          <div
+            role="alert"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
+              padding: "12px 16px",
+              color: "var(--hc-error)",
+              borderBottom: "1px solid var(--hc-border-light)",
+            }}
+          >
+            <span>
+              <i className="bi bi-exclamation-triangle"></i> {loadError}
+            </span>
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={loadData}>
+              Thử lại
+            </button>
+          </div>
+        )}
+
         {loading ? (
           <div className="hc-loading-spinner">
             <div className="hc-spinner"></div>
@@ -207,7 +273,7 @@ export default function AdminEquipmentPage() {
                       <strong>{item.equipmentName}</strong>
                     </td>
                     <td>{item.serialNumber || "—"}</td>
-                    <td>{getRoomLabel(item.roomId)}</td>
+                    <td>{getRoomLabel(item)}</td>
                     <td>
                       <span className={`hc-badge ${STATUS_COLORS[item.status] || "hc-badge-muted"}`}>{STATUS_LABELS[item.status] || item.status}</span>
                     </td>

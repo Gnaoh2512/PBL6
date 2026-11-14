@@ -68,4 +68,16 @@ public class PublicBillingController {
         LiveFolioResponse response = billingService.settleCheckout(bookingCode, request, "SIMULATOR_BANK");
         return ResponseEntity.ok(ApiResponse.ok("Giả lập tất toán thành công! Hóa đơn đã hoàn tất và khách đã check-out.", response));
     }
+
+    /**
+     * Cập nhật trạng thái phục vụ của dịch vụ (PENDING -> DELIVERING -> COMPLETED)
+     */
+    @PatchMapping("/services/usages/{usageId}/status")
+    public ResponseEntity<ApiResponse<ServiceUsageResponse>> updateServiceUsageStatus(
+            @PathVariable Integer usageId,
+            @RequestParam String status
+    ) {
+        ServiceUsageResponse response = billingService.updateServiceUsageStatus(usageId, status);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái dịch vụ thành công", response));
+    }
 }
