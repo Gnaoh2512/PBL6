@@ -4,10 +4,9 @@ import logging
 from collections import deque
 from threading import Event
 
-import httpcore
 import httpx
 import pytest
-from http_timing_support import PublicCoreTransport, ScriptedBackend, frames
+from http_timing_support import PublicCoreTransport, ScriptedBackend, frames, synthetic_pool
 from pydantic import BaseModel
 
 from app.diagnostics import Phase
@@ -51,7 +50,7 @@ def timing_records():
 def test_provider_wires_trace_per_attempt_without_changing_budgets_or_client(timing_records):
     async def run():
         backend = ScriptedBackend(generation_frames() + generation_frames())
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         client = Gemini("synthetic-key", "gemini-3.1-flash-lite", transport)
         budget = TurnBudget()
         hooks = {k: list(v) for k, v in client.client.event_hooks.items()}
@@ -96,7 +95,7 @@ def test_provider_mapping_with_real_core_failures_and_successor_request(
 ):
     async def run():
         backend = ScriptedBackend(generation_frames(), fail=stage)
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         client = Gemini("synthetic-key", "gemini-3.1-flash-lite", transport)
         try:
             with pytest.raises(DependencyError) as caught:
@@ -131,7 +130,7 @@ def test_malformed_and_http_errors_keep_existing_public_mapping(
 ):
     async def run():
         backend = ScriptedBackend(frames(payload, status))
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         client = Gemini("synthetic-key", "gemini-3.1-flash-lite", transport)
         try:
             with pytest.raises(DependencyError) as caught:
@@ -175,19 +174,16 @@ def test_blocked_and_failing_log_sink_cannot_hold_provider_cancellation_or_clean
     class BrokenSink(logging.Handler):
         def emit(self, record):
             entered.set()
-            release.wait(2)
+            release.wait()
             returned.set()
             raise RuntimeError("private-key sink exception customer@example.invalid")
 
     handler = BrokenSink()
     LOGGER.addHandler(handler)
-    # Occupy the logging worker before starting the request, using a valid synthetic summary.
-    HttpTiming(Phase.COUNT, TurnBudget()).finish()
-    assert entered.wait(1)
 
     async def run():
         backend = ScriptedBackend(generation_frames(), block="headers")
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         client = Gemini("synthetic-key", "gemini-3.1-flash-lite", transport)
         original = None
 
@@ -200,6 +196,10 @@ def test_blocked_and_failing_log_sink_cannot_hold_provider_cancellation_or_clean
                 raise
 
         try:
+            # Prepare the verified SSL context/client before occupying the sink.
+            # Phase 1 proves cancellation/cleanup while the sink is still blocked.
+            HttpTiming(Phase.COUNT, TurnBudget()).finish()
+            assert entered.wait(1)
             task = asyncio.create_task(request())
             await asyncio.wait_for(backend.entered.wait(), 1)
             task.cancel("synthetic cancel")
@@ -208,10 +208,15 @@ def test_blocked_and_failing_log_sink_cannot_hold_provider_cancellation_or_clean
             assert caught.value is original and task.cancelling() == 1
             assert not returned.is_set() and not release.is_set()
             assert all(s.closed == 1 for s in backend.streams)
+            # Phase 2 is a separate check: explicitly release and acknowledge the
+            # failing sink before testing the successor, rather than racing wall time.
+            release.set()
+            assert await asyncio.to_thread(get_emitter().drain)
+            assert returned.is_set() and get_emitter().loss.is_set()
             backend.block = None
             backend.responses = deque(generation_frames())
             assert (await client.generate("synthetic", {}, Output, TurnBudget())).ok
-            assert not returned.is_set()
+            assert returned.is_set() and release.is_set()
         finally:
             await client.close()
         assert transport.closed == 1 and all(s.closed == 1 for s in backend.streams)
@@ -220,8 +225,11 @@ def test_blocked_and_failing_log_sink_cannot_hold_provider_cancellation_or_clean
         asyncio.run(run())
     finally:
         release.set()
-        assert get_emitter().drain()
-        LOGGER.removeHandler(handler)
+        try:
+            assert get_emitter().drain()
+        finally:
+            LOGGER.removeHandler(handler)
     assert get_emitter().loss.is_set()
+    assert any(row["delivery_loss_observed"] for row in timing_records)
     text = capsys.readouterr().err + json.dumps(timing_records)
     assert "private-key" not in text and "example.invalid" not in text

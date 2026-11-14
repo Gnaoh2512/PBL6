@@ -2,6 +2,14 @@
 
 Cập nhật: 2026-11-14, Asia/Ho_Chi_Minh.
 
+## D1.10.1 — ổn định integration test HTTP timing, 2026-11-14
+
+- Nhánh `test/d1101-stabilize-http-timing`, baseline `7f333f2`. Chỉ sửa ba file test/support và tài liệu; giữ nguyên source production, dependency/configuration, kiến thức và staging ngoài nhiệm vụ.
+- Synthetic pool chuẩn bị cùng verified SSL context qua API public trước observer/deadline. Sink integration dùng handshake release/returned, tách assertion cancellation khi sink còn bị chặn khỏi successor request sau release/drain. Không tăng timeout, sleep, retry hoặc bỏ assertion quan trọng.
+- Năm test lỗi trước đó chạy riêng đều pass; nhóm HTTP timing **79/79 pass**; toàn bộ unit/integration **218/218 pass**, còn 1 warning Starlette/HTTPX đã có. Ruff check/format-check 40 file và pip check qua.
+- Không đọc `.env`, không Gemini live, không cài dependency hoặc đổi production provider/model/prompt/deadline/budget/readiness. D1 vẫn chưa đóng nghiệm thu live.
+- Chi tiết lệnh, diff, kết quả và giới hạn: [D1.10.1_TEST_STABILIZATION.md](D1.10.1_TEST_STABILIZATION.md).
+
 ## Đồng bộ GitHub main với assistant D1, 2026-11-14
 
 - Nhánh `fix/merge-main-assistant` tích hợp `origin/main` tại `3f45c7d` vào D1.10 (`06a6289`).

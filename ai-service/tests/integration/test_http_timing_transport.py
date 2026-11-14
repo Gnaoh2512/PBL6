@@ -9,7 +9,13 @@ from types import SimpleNamespace
 import httpcore
 import httpx
 import pytest
-from http_timing_support import MemorySink, PublicCoreTransport, ScriptedBackend, frames
+from http_timing_support import (
+    MemorySink,
+    PublicCoreTransport,
+    ScriptedBackend,
+    frames,
+    synthetic_pool,
+)
 
 from app.diagnostics import Phase
 from app.providers.http_timing import HttpTiming
@@ -31,7 +37,7 @@ def test_request_scoped_extension_reaches_real_httpcore_without_global_or_privat
 
     async def run():
         backend = ScriptedBackend(frames() + frames())
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         observer, sink = timing(backend)
         callback = observer.trace
         async with httpx.AsyncClient(transport=transport) as client:
@@ -87,7 +93,7 @@ def test_request_scoped_extension_reaches_real_httpcore_without_global_or_privat
 def test_real_trace_failure_and_cancellation_then_cleanup(phase):
     async def run(cancel):
         backend = ScriptedBackend(frames(), **({"block": phase} if cancel else {"fail": phase}))
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         observer, sink = timing(backend)
         original = None
         async with httpx.AsyncClient(transport=transport) as client:
@@ -142,7 +148,7 @@ def test_real_trace_failure_and_cancellation_then_cleanup(phase):
 def test_buffered_body_and_missing_trace_do_not_invent_network_latency():
     async def run():
         backend = ScriptedBackend(frames(combined=True))
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         observer, sink = timing(backend)
         async with httpx.AsyncClient(transport=transport) as client:
             with observer:
@@ -164,7 +170,7 @@ def test_buffered_body_and_missing_trace_do_not_invent_network_latency():
 def test_slow_phase_uses_actual_core_boundaries(phase):
     async def run():
         backend = ScriptedBackend(frames(), delays={phase: 0.05})
-        transport = PublicCoreTransport(httpcore.AsyncConnectionPool(network_backend=backend))
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend))
         observer, sink = timing(backend)
         async with httpx.AsyncClient(transport=transport) as client:
             with observer:
@@ -187,9 +193,7 @@ def test_slow_phase_uses_actual_core_boundaries(phase):
 def test_pool_timeout_has_no_invented_pool_or_connect_phase():
     async def run():
         backend = ScriptedBackend(frames())
-        transport = PublicCoreTransport(
-            httpcore.AsyncConnectionPool(network_backend=backend, max_connections=1)
-        )
+        transport = PublicCoreTransport(synthetic_pool(network_backend=backend, max_connections=1))
         observer, sink = timing(backend)
         async with httpx.AsyncClient(transport=transport) as client:
             held = await client.send(
@@ -218,7 +222,9 @@ def test_proxy_connect_trace_is_not_confused_with_origin_protocol():
     async def run():
         backend = ScriptedBackend(frames(b"", combined=True) + frames())
         pool = httpcore.AsyncHTTPProxy(
-            proxy_url="http://synthetic-proxy.invalid:8080", network_backend=backend
+            proxy_url="http://synthetic-proxy.invalid:8080",
+            network_backend=backend,
+            ssl_context=httpcore.default_ssl_context(),
         )
         transport = PublicCoreTransport(pool)
         observer, sink = timing(backend)

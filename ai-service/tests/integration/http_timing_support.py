@@ -9,6 +9,11 @@ import httpx
 CORE_ERRORS = (httpcore.TimeoutException, httpcore.NetworkError, httpcore.ProtocolError)
 
 
+def synthetic_pool(**kwargs):
+    """Prepare the same verified CA context before request observers/deadlines are armed."""
+    return httpcore.AsyncConnectionPool(ssl_context=httpcore.default_ssl_context(), **kwargs)
+
+
 class Clock:
     value = 0.0
 
