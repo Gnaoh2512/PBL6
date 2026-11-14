@@ -2,6 +2,33 @@
 
 Cập nhật: 2026-11-14, Asia/Ho_Chi_Minh.
 
+## D1.9 — một batch Gemini live có diagnostics, 2026-11-14
+
+- Đã chạy đúng một batch 24 ca, 12 dev + 12 held-out, bằng Gemini thật trên runtime D1.8
+  `220efa0`. Giữ model/prompt, snapshot synthetic gốc, payload/context.today=2026-11-13,
+  deadline chung 20 giây, budget 8000/2000 tokens, tối đa hai generation, no-retry.
+  Không probe/warm-up, không sửa source hoặc `.env`, không dùng runner ghi đè `live.json`.
+- Kết quả: **18/24 final đúng trạng thái (75%), 6 DEADLINE_EXCEEDED, 0 dependency failures**.
+  Đủ 24 ca, không dừng sớm; **37 countTokens + 37 generateContent = 74/96 attempts**.
+  Có 68 method events HTTP 200, 6 chưa quan sát được HTTP status; không có 401/403/429.
+- Xác nhận 5 timeout ở classify/generateContent, 1 ở answer/generateContent; cả 6 do application
+  deadline, không ghi nhận HTTPX timeout category. Ca refund: classify mất khoảng 19 giây,
+  answer/generateContent chỉ còn khoảng 887 ms. Index và countTokens hoàn tất nhanh, không lỗi.
+  Chưa phân biệt được nguyên nhân sâu network/provider; không suy quota/key.
+- So với 13/11 (15/24), cả 9 lỗi cũ đều hoàn tất, nhưng 6 ca từng thành công lại timeout.
+  Chưa chứng minh cải thiện ổn định. Nearest-rank p50/p95: final mới **4317.47/19412.23 ms**;
+  toàn bộ 24 ca **7205.71/20015.33 ms**. Không chỉ báo latency của ca thành công.
+- Usage chỉ của 18 final: **12562 input / 1635 output tokens**; thiếu usage ca lỗi, chưa đo tổng
+  chi phí/grounding. Cancellation không chứng minh upstream dừng compute hoặc tính phí.
+- Artifact ignored riêng: `.local/assistant-evaluation/d1.9/20261114T121542_50bf6c59/`;
+  254 diagnostics events, 24 case rows, manifest và summary không lưu prompt/response nhạy cảm.
+  Đã đối chiếu JSON/counters/IDs và baseline; client đã đóng, source/.env/artifact cũ và staging
+  ngoài nhiệm vụ được giữ nguyên. Không chạy lại runtime tests, cài dependency hoặc push/deploy.
+- Chi tiết và bảng so sánh từng ca tại [D1.9_LIVE_DIAGNOSTIC.md](D1.9_LIVE_DIAGNOSTIC.md).
+  Nhánh `feature/assistant-d1-live-diagnostic`, chỉ commit báo cáo/STATUS, không commit artifacts.
+  **D1 chưa đủ điều kiện nghiệm thu** vì còn 25% timeout. Chưa được tự chạy thêm batch hoặc sửa
+  deadline/model/prompt/retry; bước tiếp cần phạm vi riêng cho network/provider timing và khắc phục.
+
 ## D1.8 — instrumentation và kiểm thử offline, 2026-11-14
 
 - Thêm logger JSON stderr riêng `ai_service.diagnostics`, UUID nội bộ và context cô lập theo turn.
