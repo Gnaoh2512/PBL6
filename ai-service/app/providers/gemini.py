@@ -9,6 +9,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.diagnostics import Category, Phase, category, context, step
 from app.providers.contracts import DependencyError, TurnBudget
+from app.providers.http_timing import HttpTiming
 
 
 class Gemini:
@@ -32,9 +33,10 @@ class Gemini:
     async def _post(self, method: str, body: dict, budget: TurnBudget):
         phase = Phase(method)
         with step(phase, provider_method=phase) as event:
-            return await self._request(method, body, budget, event)
+            with HttpTiming(phase, budget) as timing:
+                return await self._request(method, body, budget, event, timing)
 
-    async def _request(self, method, body, budget, event):
+    async def _request(self, method, body, budget, event, timing):
         timeout = None
         try:
             timeout = asyncio.timeout(budget.seconds())
@@ -43,8 +45,10 @@ class Gemini:
                     "POST",
                     f"models/{self.model}:{method}",
                     json=body,
+                    extensions={"trace": timing.trace},
                 ) as response:
                     event.http_status = response.status_code
+                    timing.observe_httpx_response(response)
                     if response.status_code != 200:
                         raise DependencyError(diagnostic_category=Category.HTTP_STATUS)
                     chunks = bytearray()

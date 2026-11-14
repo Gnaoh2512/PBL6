@@ -2,6 +2,31 @@
 
 Cập nhật: 2026-11-14, Asia/Ho_Chi_Minh.
 
+## D1.10 — client HTTP timing và kiểm chứng offline, 2026-11-14
+
+- Đã bổ sung plan theo bốn điểm review và đối chiếu source HTTPX 0.28.1/httpcore 1.0.9 trước sửa
+  code. Observer/unit tests làm trước, sau đó chứng minh extension forwarding rồi mới gắn provider.
+  Nhánh `feature/assistant-d1-http-timing`, không private pool hoặc monkeypatch runtime.
+- Request-scoped trace đo các khoảng client connect/TLS/write/headers/body/close. Protocol chỉ từ
+  explicit response extension; thiếu bằng chứng là unknown. trace_family là code namespace riêng.
+  Không quan sát phase hoặc thiếu terminal thì unavailable, không suy 0 ms/reuse/provider compute.
+- Logger riêng JSON schema v1, tối đa 32 samples/request; callback bỏ qua info. Queue 128 records,
+  put_nowait và worker daemon cô lập sink I/O. Tests chứng minh sink chậm/lỗi, callback/clock lỗi
+  không thay exception gốc hoặc giữ cancellation; giữ cancel count=1, cleanup và request tiếp theo.
+  Delivery best effort, không flush/join trên request path, có cờ loss; không cam kết log không mất.
+- Forwarding test dùng HTTPX thật + adapter test API public + core pool/backend synthetic trong bộ
+  nhớ; không thay global client/hooks hoặc default private pool. Không có network/TLS thực; không
+  suy kết quả fake backend là bằng chứng về OpenSSL hoặc Gemini thật.
+- **218 tests passed**, 1 cảnh báo Starlette/HTTPX đã có; Ruff check/format-check và pip check qua.
+  Bao gồm 139 tests baseline + 79 tests mới, kiểm tra budgets/mapping/readiness/cancellation và
+  phase/error/stream lifecycle. Microbenchmark 1000 cặp replay: overhead median 0.07325 ms,
+  p95 0.11070 ms với worker sink không I/O; không phải latency network/production hoặc SLO.
+- Giữ model/prompt/deadline 20 giây/token-call budget/no-retry/public API/readiness; không đọc
+  `.env`, không gọi Gemini/live batch, không cài dependency/service/model hoặc sửa FE/BE/corpus/
+  dataset/artifact D1.9. Chỉ commit phạm vi D1.10, bảo toàn staging ngoài nhiệm vụ, không push/deploy.
+- Chi tiết tại [D1.10_HTTP_TIMING.md](D1.10_HTTP_TIMING.md). **D1 vẫn chưa đủ điều kiện nghiệm thu**;
+  cần phạm vi live riêng để dùng timing mới phân biệt sâu hơn network/provider waiting.
+
 ## D1.9 — một batch Gemini live có diagnostics, 2026-11-14
 
 - Đã chạy đúng một batch 24 ca, 12 dev + 12 held-out, bằng Gemini thật trên runtime D1.8

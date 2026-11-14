@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import math
+import sys
 from queue import Full, Queue
 from threading import Event, Lock, Thread
 from time import monotonic
@@ -16,11 +17,19 @@ _emitter = None
 _lock = Lock()
 
 
-class SafeStreamHandler(logging.StreamHandler):
-    def handleError(self, record):
-        # Standard logging.handleError may print a raw sink exception and traceback.
-        # Let only the isolated worker see a constant failure, never stderr diagnostics.
-        raise OSError("Diagnostic sink unavailable") from None
+class SafeStreamHandler(logging.Handler):
+    def __init__(self, stream=None):
+        super().__init__()
+        self.stream = stream
+
+    def emit(self, record):
+        # Resolve default stderr at emission, not first request/capture initialization.
+        stream = self.stream if self.stream is not None else sys.stderr
+        try:
+            stream.write(self.format(record) + "\n")
+            stream.flush()
+        except Exception:  # noqa: BLE001 -- never call logging.handleError with raw sink errors
+            raise OSError("Diagnostic sink unavailable") from None
 
 
 # Verified against httpcore 1.0.9. Families describe code paths, not negotiated protocol.
@@ -218,8 +227,10 @@ class HttpTiming:
                 for index in stack:
                     sample = self.samples[index]
                     sample.update(
-                        outcome="cancelled" if cancelled else "incomplete",
-                        duration_ms=round(max(0, now - sample["started"]) * 1000, 3),
+                        # Missing terminal can mean a lost event, not a phase still running.
+                        outcome="incomplete",
+                        duration_ms=None,
+                        duration_kind="unavailable",
                     )
                     self.partial = True
             remaining = max(0, self.budget.remaining_ms - (now - self.budget.started) * 1000)

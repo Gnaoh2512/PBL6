@@ -124,6 +124,33 @@ thật hoặc gọi model. Tests kiểm tra mapping, LogRecord redaction, budget
 cleanup và request tiếp theo. Không chạy lại evaluation để kiểm chứng thay đổi này.
 D1.8 không chứng minh Gemini thật ổn định hoặc giải thích ngược 9 lỗi cũ; D1 vẫn chưa đóng nghiệm thu.
 
+### HTTP timing D1.10 — offline
+
+Gemini adapter gắn request-scoped `extensions={"trace": ...}`; transport, pool, proxy/TLS,
+timeout/budget, error mapping và no-retry giữ nguyên. Logger mới `ai_service.http_timing` phát
+summary JSON schema v1; logger/schema D1.8 không đổi. Context dùng UUID nội bộ, không thêm vào API.
+
+Summary gồm protocol/protocol_source, timing tổng, budget còn lại, status/category khi có và tối đa
+32 samples connect_tcp/tls/proxy_tls/write_headers/write_body/wait_headers/read_body/close.
+`trace_family` chỉ là namespace code path; protocol chỉ từ bytes allowlist trong explicit response
+extension. Thiếu extension là `unknown`, kể cả khi HTTPX property mặc định trả HTTP/1.1.
+
+Không có phase: unavailable, không phải 0 ms/reused. Thiếu terminal: duration_ms=null,
+duration_kind=unavailable. Cặp started/failed chỉ đo đến lúc abort, không phải latency hoàn tất.
+`wait_headers` không phải Gemini compute/TTFB thuần; body có thể đã buffered trong lúc đọc headers.
+`pre_trace_ms` không phải pool wait. Proxy CONNECT có thể lặp chuỗi events; không suy origin hoặc
+cộng parent/child intervals. Summary cancelled cần đối chiếu turn/application D1.8 để biết deadline.
+
+Callback không đọc `info`, không I/O/await bên trong. Queue 128 records dùng put_nowait, worker daemon
+ghi stderr; sink chậm/lỗi hoặc queue đầy không chặn request/cancellation. Delivery best effort:
+`delivery_loss_observed` báo đã có loss, record cuối có thể mất khi process thoát; không drain/join
+trên request/client shutdown. Không ghi URL/host/IP, headers/body, prompt/response, key/JWT/PII hoặc
+raw exception/traceback. Giữ diagnostics worker riêng với client/service nghiệp vụ.
+
+Chi tiết source-version, schema, bốn điểm review và offline verification tại
+[D1.10_HTTP_TIMING.md](docs/D1.10_HTTP_TIMING.md). Dùng lại các lệnh test/Ruff/pip check phía trên.
+Không có live run trong D1.10; D1 vẫn chưa được đóng nghiệm thu.
+
 ### Kiểm chứng live đã có và hướng dẫn riêng
 
 Để chạy browser bằng Gemini thật: từ FE đặt `$env:D1_LIVE_GEMINI='1'`, rồi `npm run test:e2e`. Key được Settings đọc từ ai-service/.env, không truyền trong command. Entrypoint live bắt buộc dùng snapshot synthetic và không sửa file .env. Đọc STATUS để phân biệt 3 E2E pass với batch 24 ca còn lỗi; không chạy lại batch vô hạn để chọn kết quả đẹp.

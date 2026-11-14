@@ -1,6 +1,8 @@
 import asyncio
 import json
 import logging
+from contextlib import redirect_stderr
+from io import StringIO
 from threading import Event
 from types import SimpleNamespace
 from uuid import UUID
@@ -15,6 +17,7 @@ from app.providers.http_timing import (
     HttpTiming,
     SafeStreamHandler,
     _log,
+    get_emitter,
 )
 
 
@@ -117,10 +120,26 @@ def test_missing_unmatched_unknown_and_overflow_are_not_zero_latency_or_reuse():
     row = sink.records[0]
     assert row["trace_state"] == "partial" and row["truncated"] is True
     assert len(row["samples"]) == 32
-    assert all(s["outcome"] == "cancelled" and s["duration_ms"] == 1000 for s in row["samples"])
+    assert all(
+        s["outcome"] == "incomplete"
+        and s["duration_ms"] is None
+        and s["duration_kind"] == "unavailable"
+        for s in row["samples"]
+    )
     assert "private-key" not in json.dumps(row)
     timing.finish()
     assert len(sink.records) == 1
+
+
+def test_missing_terminal_on_success_is_unavailable_not_the_remaining_request_duration():
+    timing, clock, sink = observer()
+    asyncio.run(timing.trace("connection.start_tls.started", HostileInfo()))
+    clock.value = 5
+    timing.finish()
+    sample = sink.records[0]["samples"][0]
+    assert sample["outcome"] == "incomplete" and sample["duration_ms"] is None
+    assert sample["duration_kind"] == "unavailable"
+    assert sink.records[0]["trace_state"] == "partial"
 
 
 def test_failed_write_is_not_relabelled_when_later_headers_are_cancelled():
@@ -133,7 +152,7 @@ def test_failed_write_is_not_relabelled_when_later_headers_are_cancelled():
 
     asyncio.run(run())
     timing.finish(asyncio.CancelledError())
-    assert [s["outcome"] for s in sink.records[0]["samples"]] == ["failed", "cancelled"]
+    assert [s["outcome"] for s in sink.records[0]["samples"]] == ["failed", "incomplete"]
     assert sink.records[0]["error_category"] == "cancelled"
 
 
@@ -156,6 +175,7 @@ def test_repeated_phases_and_context_ids_are_request_scoped():
         first.finish()
         second.finish()
     a, b = sink.records
+    assert a["protocol"] == b["protocol"] == "unknown"  # Trace family is not wire protocol.
     assert a["diagnostic_id"] == b["diagnostic_id"]
     assert a["http_attempt_id"] != b["http_attempt_id"]
     assert a["operation"] == b["operation"] == "answer"
@@ -182,6 +202,28 @@ def test_observer_fault_cannot_replace_original_exception(failure, kind):
     with pytest.raises(kind) as caught, timing:
         raise original
     assert caught.value is original
+
+
+def test_callback_failure_during_exception_unwind_does_not_replace_original():
+    timing, clock, sink = observer()
+    original = RuntimeError("synthetic transport error")
+
+    def broken():
+        raise ValueError("private-key callback failure")
+
+    async def run():
+        await timing.trace("http11.receive_response_headers.started", HostileInfo())
+        timing.clock = broken
+        await timing.trace("http11.receive_response_headers.failed", HostileInfo())
+        timing.clock = clock
+        raise original
+
+    with pytest.raises(RuntimeError) as caught, timing:
+        asyncio.run(run())
+    assert caught.value is original
+    assert sink.records[0]["trace_state"] == "partial"
+    assert sink.records[0]["samples"][0]["duration_ms"] is None
+    assert "private-key" not in json.dumps(sink.records)
 
 
 def test_emitter_is_bounded_nonblocking_and_does_not_delay_cancellation():
@@ -277,6 +319,7 @@ def test_broken_response_metadata_is_optional_and_not_retained():
 
 
 def test_logrecord_schema_and_sink_io_failure_do_not_expose_secrets(capsys):
+    assert get_emitter().drain()
     records = []
 
     class Collector(logging.Handler):
@@ -329,3 +372,13 @@ def test_logrecord_schema_and_sink_io_failure_do_not_expose_secrets(capsys):
     finally:
         assert emitter.close()
         LOGGER.handlers, LOGGER.level, LOGGER.propagate = old
+
+
+def test_default_sink_resolves_current_stderr_without_retaining_closed_capture_stream():
+    first, second = StringIO(), StringIO()
+    with redirect_stderr(first):
+        handler = SafeStreamHandler()
+    first.close()
+    with redirect_stderr(second):
+        handler.emit(logging.makeLogRecord({"msg": "safe", "args": ()}))
+    assert second.getvalue() == "safe\n"
