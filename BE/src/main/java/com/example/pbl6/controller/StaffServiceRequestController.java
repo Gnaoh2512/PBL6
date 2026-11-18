@@ -1,10 +1,12 @@
 package com.example.pbl6.controller;
 
 import com.example.pbl6.common.ApiResponse;
+import com.example.pbl6.common.StaffScope;
 import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.service.ServiceRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,16 +22,21 @@ public class StaffServiceRequestController {
     private final ServiceRequestService serviceRequestService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.SERVICE_DESK)
     public ResponseEntity<ApiResponse<List<ServiceRequestResponse>>> getAllRequests(
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            Authentication authentication
     ) {
-        List<ServiceRequestResponse> list = serviceRequestService.getAllRequests(status);
+        // Service staff only see the requests assigned to them
+        List<ServiceRequestResponse> list = serviceRequestService.getAllRequests(
+                status,
+                authentication != null ? authentication.getName() : null,
+                StaffScope.isOwnTasksOnly(authentication));
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
     @PostMapping("/{id}/assign")
-    @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.SUPERVISORS)
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> assignRequest(
             @PathVariable Integer id,
             @RequestParam(required = false) Integer staffId,
@@ -51,24 +58,36 @@ public class StaffServiceRequestController {
             }
         }
 
-        ServiceRequestResponse response = targetStaffId != null
-                ? serviceRequestService.assignRequestToStaff(id, targetStaffId, actorUsername)
-                : serviceRequestService.assignRequest(id, actorUsername);
+        ServiceRequestResponse response = serviceRequestService.assignRequestToStaff(id, targetStaffId, actorUsername);
         return ResponseEntity.ok(ApiResponse.ok("Đã phân công xử lý yêu cầu dịch vụ (Trạng thái: DELIVERING)", response));
     }
 
+    // Service staff picks an unassigned request from the shared pool (must be on the current shift)
+    @PostMapping("/{id}/claim")
+    @PreAuthorize(Roles.SERVICE_STAFF_ONLY)
+    public ResponseEntity<ApiResponse<ServiceRequestResponse>> claimRequest(
+            @PathVariable Integer id,
+            Authentication authentication
+    ) {
+        ServiceRequestResponse response = serviceRequestService.claimRequest(id, authentication.getName());
+        return ResponseEntity.ok(ApiResponse.ok("Đã nhận yêu cầu dịch vụ (Trạng thái: DELIVERING)", response));
+    }
+
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.SERVICE_DESK)
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> completeRequest(
             @PathVariable Integer id,
             Authentication authentication
     ) {
-        ServiceRequestResponse response = serviceRequestService.completeRequest(id, authentication != null ? authentication.getName() : "staff");
+        ServiceRequestResponse response = serviceRequestService.completeRequest(
+                id,
+                authentication != null ? authentication.getName() : "staff",
+                StaffScope.isOwnTasksOnly(authentication));
         return ResponseEntity.ok(ApiResponse.ok("Đã hoàn tất yêu cầu dịch vụ phòng (Trạng thái: COMPLETED)", response));
     }
 
     @PostMapping("/{id}/cancel")
-    @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.SUPERVISORS)
     public ResponseEntity<ApiResponse<ServiceRequestResponse>> cancelRequest(
             @PathVariable Integer id,
             Authentication authentication
@@ -77,27 +96,4 @@ public class StaffServiceRequestController {
         return ResponseEntity.ok(ApiResponse.ok("Đã hủy yêu cầu dịch vụ", response));
     }
 
-    @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<ServiceRequestResponse>> updateStatus(
-            @PathVariable Integer id,
-            @RequestParam String status,
-            Authentication authentication
-    ) {
-        String staff = authentication != null ? authentication.getName() : "staff";
-        ServiceRequestResponse response = serviceRequestService.updateStatus(id, status, staff);
-        return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật trạng thái yêu cầu dịch vụ", response));
-    }
-
-    @PostMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN', 'HOUSEKEEPING', 'MAINTENANCE') or hasAnyAuthority('ROLE_SERVICE_STAFF', 'ROLE_RECEPTIONIST', 'ROLE_MANAGER', 'ROLE_ADMIN', 'SERVICE_STAFF', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<ServiceRequestResponse>> updateStatusPost(
-            @PathVariable Integer id,
-            @RequestParam String status,
-            Authentication authentication
-    ) {
-        String staff = authentication != null ? authentication.getName() : "staff";
-        ServiceRequestResponse response = serviceRequestService.updateStatus(id, status, staff);
-        return ResponseEntity.ok(ApiResponse.ok("Đã cập nhật trạng thái yêu cầu dịch vụ", response));
-    }
 }

@@ -1,15 +1,15 @@
 package com.example.pbl6.controller;
 
 import com.example.pbl6.common.ApiResponse;
+import com.example.pbl6.common.StaffScope;
 import com.example.pbl6.dto.maintenance.CompleteMaintenanceDto;
 import com.example.pbl6.dto.maintenance.MaintenanceRequestResponse;
 import com.example.pbl6.dto.maintenance.ReportMaintenanceDto;
-import com.example.pbl6.dto.equipment.EquipmentResponse;
-import com.example.pbl6.service.EquipmentService;
 import com.example.pbl6.service.MaintenanceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -22,18 +22,9 @@ import java.util.List;
 public class StaffMaintenanceController {
 
     private final MaintenanceService maintenanceService;
-    private final EquipmentService equipmentService;
-
-    @GetMapping("/equipment")
-    @PreAuthorize("hasAnyRole('HOUSEKEEPING', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
-    public ResponseEntity<ApiResponse<List<EquipmentResponse>>> getEquipmentForReport(
-            @RequestParam(required = false) Integer roomId
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(equipmentService.getAllEquipment(roomId, null)));
-    }
 
     @PostMapping("/report")
-    @PreAuthorize("hasAnyRole('HOUSEKEEPING', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.HOUSEKEEPING_DESK)
     public ResponseEntity<ApiResponse<MaintenanceRequestResponse>> reportIssue(
             @Valid @RequestBody ReportMaintenanceDto dto,
             Authentication authentication
@@ -43,39 +34,51 @@ public class StaffMaintenanceController {
     }
 
     @GetMapping("/requests")
-    @PreAuthorize("hasAnyRole('MAINTENANCE', 'HOUSEKEEPING', 'RECEPTIONIST', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.OPERATIONS_STAFF)
     public ResponseEntity<ApiResponse<List<MaintenanceRequestResponse>>> getAllRequests(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String priority,
-            @RequestParam(required = false) Integer roomId
+            @RequestParam(required = false) Integer roomId,
+            Authentication authentication
     ) {
-        List<MaintenanceRequestResponse> list = maintenanceService.getAllRequests(status, priority, roomId);
+        // Maintenance staff see only the requests assigned to them; housekeeping only the ones they reported.
+        String assignedTo = null;
+        String reportedBy = null;
+        if (StaffScope.isOwnTasksOnly(authentication)) {
+            if (StaffScope.hasRole(authentication, "MAINTENANCE")) {
+                assignedTo = authentication.getName();
+            } else {
+                reportedBy = authentication.getName();
+            }
+        }
+        List<MaintenanceRequestResponse> list = maintenanceService.getAllRequests(status, priority, roomId, assignedTo, reportedBy);
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
     @PostMapping("/requests/{id}/assign")
-    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN', 'MAINTENANCE')")
+    @PreAuthorize(Roles.ADMIN_MANAGER)
     public ResponseEntity<ApiResponse<MaintenanceRequestResponse>> assignTechnician(
             @PathVariable Integer id,
-            @RequestParam Integer technicianId
+            @RequestParam Integer technicianId,
+            Authentication authentication
     ) {
-        MaintenanceRequestResponse response = maintenanceService.assignTechnician(id, technicianId);
+        MaintenanceRequestResponse response = maintenanceService.assignTechnician(id, technicianId, authentication.getName());
         return ResponseEntity.ok(ApiResponse.ok("Đã phân công nhân viên xử lý bảo trì", response));
     }
 
     @PostMapping("/requests/{id}/complete")
-    @PreAuthorize("hasAnyRole('MAINTENANCE', 'MANAGER', 'ADMIN')")
+    @PreAuthorize(Roles.MAINTENANCE_DESK)
     public ResponseEntity<ApiResponse<MaintenanceRequestResponse>> completeWork(
             @PathVariable Integer id,
             @RequestBody(required = false) CompleteMaintenanceDto dto,
             Authentication authentication
     ) {
-        MaintenanceRequestResponse response = maintenanceService.completeWork(id, dto, authentication.getName());
+        MaintenanceRequestResponse response = maintenanceService.completeWork(id, dto, authentication.getName(), StaffScope.isOwnTasksOnly(authentication));
         return ResponseEntity.ok(ApiResponse.ok("Đã báo cáo sửa chữa hoàn tất", response));
     }
 
     @PostMapping("/requests/{id}/confirm")
-    @PreAuthorize("hasAnyRole('MANAGER', 'RECEPTIONIST', 'ADMIN')")
+    @PreAuthorize(Roles.SUPERVISORS)
     public ResponseEntity<ApiResponse<MaintenanceRequestResponse>> confirmCompletion(
             @PathVariable Integer id,
             Authentication authentication

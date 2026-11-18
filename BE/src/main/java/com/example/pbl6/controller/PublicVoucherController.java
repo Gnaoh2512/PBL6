@@ -20,15 +20,6 @@ public class PublicVoucherController {
     private final VoucherService voucherService;
 
     /**
-     * Khách hàng xem danh sách các voucher ưu đãi đang có hiệu lực
-     */
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<VoucherResponse>>> getActiveVouchers() {
-        List<VoucherResponse> vouchers = voucherService.getActiveVouchers();
-        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách mã ưu đãi thành công", vouchers));
-    }
-
-    /**
      * Khách hàng áp dụng thử mã voucher để xem số tiền được giảm và tiền cọc mới
      */
     @PostMapping("/apply")

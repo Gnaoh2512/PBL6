@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiCall, formatVND, getRoomTypeName, getRoomBasePrice } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import DatePicker from "../../components/DatePicker";
-import SelectMenu from "../../components/SelectMenu";
-import { parseISODate, toISODate, todayISO } from "../../components/dateUtils";
+import DatePicker from "../../components/common/DatePicker";
+import SelectMenu from "../../components/common/SelectMenu";
+import "./StaffWalkIn.css";
+import { parseISODate, toISODate, todayISO } from "../../utils/dateUtils";
 
 export default function StaffWalkInPage() {
   const { addToast } = useToast();
@@ -94,11 +95,6 @@ export default function StaffWalkInPage() {
     { value: "CARD", label: "Thẻ ngân hàng (CARD)" },
   ];
 
-  const selectedRoom = availableRooms.find((r) => String(r.roomId) === String(roomId));
-  const nights = Math.max(1, Math.round((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)) || 1);
-  const roomPrice = selectedRoom ? getPrice(selectedRoom) : 0;
-  const totalAmount = roomPrice * nights;
-
   const handleSubmitWalkIn = async (e) => {
     e.preventDefault();
     if (!roomId) {
@@ -172,7 +168,7 @@ export default function StaffWalkInPage() {
         <p>Xử lý khách vãng lai nhận phòng ngay tại sảnh lễ tân với tùy chọn check-in tức thì</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.4fr) minmax(320px, 1fr)", gap: "32px" }}>
+      <div className="walkin-layout">
         {/* Left Form */}
         <div className="hc-card">
           <div className="hc-card-header">
@@ -245,10 +241,10 @@ export default function StaffWalkInPage() {
               </div>
 
               {/* Immediate Check-In Switch */}
-              <div style={{ background: "var(--hc-bg)", padding: "14px 18px", borderRadius: "var(--hc-radius-md)", marginBottom: "20px", border: "1px solid var(--hc-border)" }}>
+              <div className="walkin-toggle">
                 <label className="hc-switch">
                   <input type="checkbox" checked={checkInImmediately} onChange={(e) => setCheckInImmediately(e.target.checked)} />
-                  <div>
+                  <div className="walkin-toggle-text">
                     <strong>Nhận phòng ngay (Check-in tức thì)</strong>
                     <div className="u-hint">Tự động chuyển trạng thái phòng sang ĐANG Ở (OCCUPIED) ngay khi lưu đơn.</div>
                   </div>
@@ -256,17 +252,17 @@ export default function StaffWalkInPage() {
               </div>
 
               {/* Create Account Switch */}
-              <div style={{ background: "var(--hc-bg)", padding: "14px 18px", borderRadius: "var(--hc-radius-md)", marginBottom: "20px", border: "1px solid var(--hc-border)" }}>
+              <div className="walkin-toggle">
                 <label className="hc-switch">
                   <input type="checkbox" checked={createAccount} onChange={(e) => setCreateAccount(e.target.checked)} />
-                  <div>
+                  <div className="walkin-toggle-text">
                     <strong>Tạo tài khoản cho khách</strong>
                     <div className="u-hint">Tên đăng nhập là email, mật khẩu mặc định là số điện thoại. Bắt buộc nhập email.</div>
                   </div>
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+              <div className="walkin-pay-grid">
                 <div className="hc-form-group">
                   <label className="hc-label">Số tiền khách đã trả / cọc tại quầy (VNĐ)</label>
                   <input type="number" className="hc-input" placeholder="0" value={amountPaid} onChange={(e) => setAmountPaid(e.target.value)} />
@@ -290,58 +286,6 @@ export default function StaffWalkInPage() {
           </div>
         </div>
 
-        {/* Right Summary */}
-        <div>
-          <div className="hc-card">
-            <div className="hc-card-header">
-              <div className="hc-card-title">
-                <i className="bi bi-calculator text-primary u-mr-8"></i>
-                Tóm Tắt Dự Toán
-              </div>
-            </div>
-            <div className="hc-card-body">
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                <span className="u-text-secondary">Phòng:</span>
-                <strong>{selectedRoom ? `Phòng ${selectedRoom.roomNumber} (${getTypeName(selectedRoom)})` : "Chưa chọn"}</strong>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                <span className="u-text-secondary">Đơn giá:</span>
-                <span>{formatVND(roomPrice)} / đêm</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
-                <span className="u-text-secondary">Thời gian:</span>
-                <span>{nights} đêm</span>
-              </div>
-
-              <hr className="hc-divider" />
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                <span style={{ fontWeight: 700, fontSize: "16px" }}>Tổng tiền phòng:</span>
-                <span style={{ fontSize: "20px", fontWeight: 700, color: "var(--hc-primary)" }}>{formatVND(totalAmount)}</span>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", color: "var(--hc-success)" }}>
-                <span>Tiền nhận trước ({paymentMethod}):</span>
-                <strong style={{ fontSize: "16px" }}>{formatVND(amountPaid || 0)}</strong>
-              </div>
-
-              <div
-                style={{
-                  background: "var(--hc-bg)",
-                  padding: "14px",
-                  borderRadius: "var(--hc-radius-md)",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  border: "1px solid var(--hc-border)",
-                }}
-              >
-                <span className="u-fw-600">Còn nợ lại (Balance):</span>
-                <strong style={{ color: "var(--hc-error)", fontSize: "16px" }}>{formatVND(Math.max(0, totalAmount - (parseFloat(amountPaid) || 0)))}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

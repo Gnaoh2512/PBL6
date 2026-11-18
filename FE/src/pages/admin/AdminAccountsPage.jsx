@@ -1,12 +1,52 @@
 import React, { useState, useEffect } from "react";
-import Modal from "../../components/Modal";
+import Modal from "../../components/common/Modal";
 import { apiCall } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import { useAuth } from "../../contexts/AuthContext";
+import "../../components/common/SearchInput.css";
+import SelectMenu from "../../components/common/SelectMenu";
+import Paginated from "../../components/common/TablePagination";
+
+const ROLE_FILTER_OPTIONS = [
+  { value: "ALL", label: "Tất cả vai trò" },
+  { value: "ROLE_ADMIN", label: "Quản trị viên (Admin)" },
+  { value: "ROLE_MANAGER", label: "Quản lý (Manager)" },
+  { value: "ROLE_RECEPTIONIST", label: "Lễ tân (Receptionist)" },
+  { value: "ROLE_HOUSEKEEPING", label: "Buồng phòng (Housekeeping)" },
+  { value: "ROLE_MAINTENANCE", label: "Kỹ thuật (Maintenance)" },
+  { value: "ROLE_SERVICE_STAFF", label: "Nhân viên Dịch vụ (Service Staff)" },
+  { value: "ROLE_CUSTOMER", label: "Khách hàng (Customer)" },
+];
+
+const ROLE_FORM_OPTIONS = [
+  { value: "ROLE_RECEPTIONIST", label: "Lễ tân (ROLE_RECEPTIONIST)" },
+  { value: "ROLE_HOUSEKEEPING", label: "Buồng phòng (ROLE_HOUSEKEEPING)" },
+  { value: "ROLE_MAINTENANCE", label: "Kỹ thuật & Bảo trì (ROLE_MAINTENANCE)" },
+  { value: "ROLE_SERVICE_STAFF", label: "Nhân viên Dịch vụ (ROLE_SERVICE_STAFF)" },
+  { value: "ROLE_MANAGER", label: "Quản lý (ROLE_MANAGER)" },
+  { value: "ROLE_ADMIN", label: "Quản trị viên (ROLE_ADMIN)" },
+  { value: "ROLE_CUSTOMER", label: "Khách hàng (ROLE_CUSTOMER)" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "ACTIVE", label: "Hoạt động" },
+  { value: "INACTIVE", label: "Vô hiệu hóa" },
+  { value: "LOCKED", label: "Bị khóa" },
+];
+
+const STATUS_META = {
+  ACTIVE: { label: "Hoạt động", badge: "hc-badge-success", icon: "bi-check-circle-fill" },
+  INACTIVE: { label: "Vô hiệu hóa", badge: "hc-badge-muted", icon: "bi-pause-circle" },
+  LOCKED: { label: "Bị khóa", badge: "hc-badge-error", icon: "bi-lock-fill" },
+};
+
+const statusOf = (a) => String(a?.status || "ACTIVE").toUpperCase();
 
 const roleCodeOf = (role) => (typeof role === "string" ? role : role?.roleCode || role?.code || "");
 
 export default function AdminAccountsPage() {
   const { addToast } = useToast();
+  const { user } = useAuth();
 
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +66,84 @@ export default function AdminAccountsPage() {
     role: "ROLE_RECEPTIONIST",
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Edit / view / deactivate modal
+  const [editTarget, setEditTarget] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deactivating, setDeactivating] = useState(false);
+
+  const openEdit = (a) => {
+    setEditTarget(a);
+    setEditForm({
+      fullName: a.fullName || "",
+      phone: a.phone || "",
+      email: a.email || "",
+      role: roleCodeOf(a.role) || "ROLE_RECEPTIONIST",
+      status: statusOf(a),
+      password: "",
+    });
+  };
+
+  const closeEdit = () => {
+    if (savingEdit || deactivating) return;
+    setEditTarget(null);
+    setEditForm(null);
+  };
+
+  const isSelf = (a) => !!a && !!user?.username && a.username?.toLowerCase() === user.username.toLowerCase();
+
+  const handleSaveEdit = async (e) => {
+    e?.preventDefault?.();
+    if (!editTarget || !editForm) return;
+    if (!editForm.fullName.trim()) {
+      addToast("Vui lòng nhập họ tên!", "warning");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await apiCall(`/api/admin/accounts/${editTarget.accountId}`, {
+        method: "PUT",
+        body: {
+          fullName: editForm.fullName.trim(),
+          phone: editForm.phone.trim() || null,
+          email: editForm.email.trim() || null,
+          role: editForm.role,
+          status: editForm.status,
+          password: editForm.password || null,
+        },
+      });
+      if (res && res.success) {
+        addToast(`Đã cập nhật tài khoản ${editTarget.username}!`, "success");
+        setEditTarget(null);
+        setEditForm(null);
+        loadData();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi cập nhật tài khoản", "error");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!editTarget) return;
+    if (!window.confirm(`Vô hiệu hóa tài khoản "${editTarget.username}"? Tài khoản sẽ không còn hoạt động nhưng dữ liệu lịch sử được giữ lại.`)) return;
+    setDeactivating(true);
+    try {
+      const res = await apiCall(`/api/admin/accounts/${editTarget.accountId}`, { method: "DELETE" });
+      if (res && res.success) {
+        addToast(`Đã vô hiệu hóa tài khoản ${editTarget.username}.`, "success");
+        setEditTarget(null);
+        setEditForm(null);
+        loadData();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi vô hiệu hóa tài khoản", "error");
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -109,7 +227,7 @@ export default function AdminAccountsPage() {
       {
         <div className="hc-card">
           <div className="hc-card-header">
-            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", width: "100%", justifyContent: "space-between" }}>
+            <div className="m-fields" style={{ display: "flex", gap: "12px", flexWrap: "wrap", width: "100%", justifyContent: "space-between" }}>
               <div style={{ position: "relative", width: "320px" }}>
                 <i className="bi bi-search" style={{ position: "absolute", left: "12px", top: "10px", color: "var(--hc-text-muted)" }}></i>
                 <input
@@ -122,16 +240,9 @@ export default function AdminAccountsPage() {
                 />
               </div>
 
-              <select className="hc-select" style={{ width: "200px", height: "38px", fontSize: "13px" }} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-                <option value="ALL">Tất cả vai trò</option>
-                <option value="ROLE_ADMIN">Quản trị viên (Admin)</option>
-                <option value="ROLE_MANAGER">Quản lý (Manager)</option>
-                <option value="ROLE_RECEPTIONIST">Lễ tân (Receptionist)</option>
-                <option value="ROLE_HOUSEKEEPING">Buồng phòng (Housekeeping)</option>
-                <option value="ROLE_MAINTENANCE">Kỹ thuật (Maintenance)</option>
-                <option value="ROLE_SERVICE_STAFF">Nhân viên Dịch vụ (Service Staff)</option>
-                <option value="ROLE_CUSTOMER">Khách hàng (Customer)</option>
-              </select>
+              <div style={{ width: "200px" }}>
+                <SelectMenu ariaLabel="Lọc vai trò" icon="bi-funnel" value={roleFilter} onChange={setRoleFilter} options={ROLE_FILTER_OPTIONS} />
+              </div>
             </div>
           </div>
 
@@ -146,42 +257,152 @@ export default function AdminAccountsPage() {
                 <p>Không tìm thấy tài khoản nào.</p>
               </div>
             ) : (
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Username</th>
-                    <th>Họ và tên</th>
-                    <th>Vai trò (Role)</th>
-                    <th>Số điện thoại</th>
-                    <th>Email</th>
-                    <th>Trạng thái</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAccounts.map((a) => (
-                    <tr key={a.accountId || a.id || a.username}>
-                      <td>
-                        <strong>{a.username}</strong>
-                      </td>
-                      <td>{a.fullName || "---"}</td>
-                      <td>
-                        <span className="hc-badge hc-badge-primary">{roleCodeOf(a.role).replace("ROLE_", "") || "—"}</span>
-                      </td>
-                      <td>{a.phone || "---"}</td>
-                      <td>{a.email || "---"}</td>
-                      <td>
-                        <span className="hc-badge hc-badge-success">
-                          <i className="bi bi-check-circle-fill"></i> Hoạt động
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <Paginated items={filteredAccounts}>
+                {(pageRows, pager) => (
+                  <>
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Username</th>
+                          <th>Họ và tên</th>
+                          <th>Vai trò (Role)</th>
+                          <th>Số điện thoại</th>
+                          <th>Email</th>
+                          <th>Trạng thái</th>
+                          <th className="col-actions">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((a) => {
+                          const st = STATUS_META[statusOf(a)] || { label: statusOf(a), badge: "hc-badge-muted", icon: "bi-circle" };
+                          return (
+                          <tr
+                            key={a.accountId || a.id || a.username}
+                            className="row-clickable"
+                            tabIndex={0}
+                            title="Xem & chỉnh sửa tài khoản"
+                            onClick={() => openEdit(a)}
+                            onKeyDown={(e) => {
+                              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault();
+                                openEdit(a);
+                              }
+                            }}
+                          >
+                            <td>
+                              <strong>{a.username}</strong>
+                            </td>
+                            <td>{a.fullName || "---"}</td>
+                            <td>
+                              <span className="hc-badge hc-badge-primary">{roleCodeOf(a.role).replace("ROLE_", "") || "—"}</span>
+                            </td>
+                            <td>{a.phone || "---"}</td>
+                            <td>{a.email || "---"}</td>
+                            <td>
+                              <span className={`hc-badge ${st.badge}`}>
+                                <i className={`bi ${st.icon}`}></i> {st.label}
+                              </span>
+                            </td>
+                            <td className="col-actions">
+                              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => openEdit(a)} title="Sửa tài khoản">
+                                  <i className="bi bi-pencil-square"></i> Sửa
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             )}
           </div>
         </div>
       }
+
+      {/* View / Edit / Deactivate Account Modal */}
+      <Modal
+        isOpen={!!editTarget}
+        onClose={closeEdit}
+        title={`Tài khoản ${editTarget?.username || ""}`}
+        subtitle="Xem, chỉnh sửa hoặc vô hiệu hóa tài khoản"
+        icon="bi-person-gear"
+        maxWidth="500px"
+        headerExtra={
+          editTarget ? (
+            <span className={`hc-badge ${(STATUS_META[statusOf(editTarget)] || { badge: "hc-badge-muted" }).badge}`}>{(STATUS_META[statusOf(editTarget)] || { label: statusOf(editTarget) }).label}</span>
+          ) : null
+        }
+        footer={
+          <div className="u-actions-end">
+            <button
+              type="button"
+              className="hc-btn hc-btn-outline-danger hc-btn-sm"
+              onClick={handleDeactivate}
+              disabled={deactivating || savingEdit || isSelf(editTarget) || (editTarget && statusOf(editTarget) === "INACTIVE")}
+              title={isSelf(editTarget) ? "Không thể vô hiệu hóa chính mình" : "Vô hiệu hóa tài khoản"}
+            >
+              <i className="bi bi-person-slash"></i> {deactivating ? "Đang xử lý..." : "Vô hiệu hóa"}
+            </button>
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={closeEdit}>
+              Hủy
+            </button>
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={handleSaveEdit} disabled={savingEdit || deactivating}>
+              {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
+            </button>
+          </div>
+        }
+      >
+        {editTarget && editForm && (
+          <form onSubmit={handleSaveEdit}>
+            <div className="hc-form-group">
+              <label className="hc-label">Tên đăng nhập (Username)</label>
+              <input type="text" className="hc-input" value={editTarget.username} disabled readOnly />
+            </div>
+
+            <div className="hc-form-group">
+              <label className="hc-label">
+                Họ và tên đầy đủ <span className="u-text-error">*</span>
+              </label>
+              <input type="text" className="hc-input" value={editForm.fullName} onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })} required />
+            </div>
+
+            <div className="u-grid-2">
+              <div className="hc-form-group">
+                <label className="hc-label">Vai trò (Role)</label>
+                <SelectMenu ariaLabel="Vai trò" icon="bi-shield-check" value={editForm.role} onChange={(val) => setEditForm({ ...editForm, role: val })} options={ROLE_FORM_OPTIONS} />
+              </div>
+              <div className="hc-form-group">
+                <label className="hc-label">Trạng thái</label>
+                <SelectMenu ariaLabel="Trạng thái" icon="bi-toggles" value={editForm.status} onChange={(val) => setEditForm({ ...editForm, status: val })} options={STATUS_OPTIONS} />
+              </div>
+            </div>
+            {isSelf(editTarget) && <div className="u-hint" style={{ marginTop: "-6px", marginBottom: "12px" }}>Đây là tài khoản của bạn — không thể đổi vai trò hoặc khóa chính mình.</div>}
+
+            <div className="u-grid-2">
+              <div className="hc-form-group">
+                <label className="hc-label">Số điện thoại</label>
+                <input type="tel" className="hc-input" value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
+              </div>
+              <div className="hc-form-group">
+                <label className="hc-label">Email</label>
+                <input type="email" className="hc-input" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="hc-form-group">
+              <label className="hc-label">
+                Mật khẩu mới <span style={{ color: "var(--hc-text-muted)", fontWeight: 400 }}>(tùy chọn)</span>
+              </label>
+              <input type="password" className="hc-input" autoComplete="new-password" placeholder="Để trống = giữ nguyên mật khẩu hiện tại" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} />
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Create Account Modal */}
       <Modal
@@ -226,15 +447,7 @@ export default function AdminAccountsPage() {
             <label className="hc-label">
               Vai trò phân quyền (Role) <span className="u-text-error">*</span>
             </label>
-            <select className="hc-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} required>
-              <option value="ROLE_RECEPTIONIST">Lễ tân (ROLE_RECEPTIONIST)</option>
-              <option value="ROLE_HOUSEKEEPING">Buồng phòng (ROLE_HOUSEKEEPING)</option>
-              <option value="ROLE_MAINTENANCE">Kỹ thuật & Bảo trì (ROLE_MAINTENANCE)</option>
-              <option value="ROLE_SERVICE_STAFF">Nhân viên Dịch vụ (ROLE_SERVICE_STAFF)</option>
-              <option value="ROLE_MANAGER">Quản lý (ROLE_MANAGER)</option>
-              <option value="ROLE_ADMIN">Quản trị viên (ROLE_ADMIN)</option>
-              <option value="ROLE_CUSTOMER">Khách hàng (ROLE_CUSTOMER)</option>
-            </select>
+            <SelectMenu ariaLabel="Vai trò phân quyền" icon="bi-shield-check" value={form.role} onChange={(val) => setForm({ ...form, role: val })} options={ROLE_FORM_OPTIONS} />
           </div>
 
           <div className="u-grid-2">

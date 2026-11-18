@@ -1,27 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiCall, formatDateTime, formatVND } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import SelectMenu from "../../components/SelectMenu";
-import Modal from "../../components/Modal";
+import { useAuth } from "../../contexts/AuthContext";
+import SelectMenu from "../../components/common/SelectMenu";
+import Modal from "../../components/common/Modal";
+import Paginated from "../../components/common/TablePagination";
+import { SERVICE_STATUS_LABEL } from "../../utils/labels";
 
 const STATUS_META = {
-  PENDING: { label: "PENDING (Chờ xử lý)", badge: "hc-badge-service-pending" },
-  DELIVERING: { label: "DELIVERING (Đang giao)", badge: "hc-badge-service-delivering" },
-  IN_PROGRESS: { label: "DELIVERING (Đang giao)", badge: "hc-badge-service-delivering" },
-  COMPLETED: { label: "COMPLETED (Hoàn tất)", badge: "hc-badge-service-completed" },
-  CANCELED: { label: "CANCELED (Đã hủy)", badge: "hc-badge-service-canceled" },
-  CANCELLED: { label: "CANCELED (Đã hủy)", badge: "hc-badge-service-canceled" },
+  PENDING: { label: SERVICE_STATUS_LABEL.PENDING, badge: "hc-badge-service-pending" },
+  DELIVERING: { label: SERVICE_STATUS_LABEL.DELIVERING, badge: "hc-badge-service-delivering" },
+  IN_PROGRESS: { label: SERVICE_STATUS_LABEL.DELIVERING, badge: "hc-badge-service-delivering" },
+  COMPLETED: { label: SERVICE_STATUS_LABEL.COMPLETED, badge: "hc-badge-service-completed" },
+  CANCELED: { label: SERVICE_STATUS_LABEL.CANCELED, badge: "hc-badge-service-canceled" },
+  CANCELLED: { label: SERVICE_STATUS_LABEL.CANCELED, badge: "hc-badge-service-canceled" },
 };
 
 const STATUS_OPTIONS = [
   { value: "", label: "Tất cả trạng thái" },
-  { value: "PENDING", label: "PENDING (Chờ xử lý)" },
-  { value: "DELIVERING", label: "DELIVERING (Đang giao)" },
-  { value: "COMPLETED", label: "COMPLETED (Hoàn tất)" },
-  { value: "CANCELED", label: "CANCELED (Đã hủy)" },
+  { value: "PENDING", label: SERVICE_STATUS_LABEL.PENDING },
+  { value: "DELIVERING", label: SERVICE_STATUS_LABEL.DELIVERING },
+  { value: "COMPLETED", label: SERVICE_STATUS_LABEL.COMPLETED },
+  { value: "CANCELED", label: SERVICE_STATUS_LABEL.CANCELED },
 ];
 
 const CLOSED_STATUSES = ["COMPLETED", "CANCELED", "CANCELLED"];
+
 
 // Accept the timestamp names used by both Java DTOs and SQL-oriented responses.
 const getRequestTime = (request) => request?.requestedAt ?? request?.reqTime ?? request?.req_time ?? request?.requestTime ?? null;
@@ -53,6 +57,19 @@ export default function StaffRequestsPage() {
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [workingId, setWorkingId] = useState(null);
+  const { hasRole } = useAuth();
+  // Service staff only complete their own requests; assigning / cancelling is for supervisors
+  const canManage = hasRole(["RECEPTIONIST", "MANAGER", "ADMIN"]);
+  const isServiceStaff = hasRole(["SERVICE_STAFF"]);
+  const [completeTarget, setCompleteTarget] = useState(null);
+
+  const confirmComplete = async () => {
+    if (!completeTarget) return;
+    await updateRequest(completeTarget, "complete");
+    setCompleteTarget(null);
+  };
+  // Detail modal (read-only, opens when a row is clicked)
+  const [editTarget, setEditTarget] = useState(null);
 
   // Assign Modal States
   const [assignModalOpen, setAssignModalOpen] = useState(false);
@@ -93,8 +110,8 @@ export default function StaffRequestsPage() {
       const response = await apiCall(`/api/staff/service-requests/${request.serviceRequestId}/${action}`, { method: "POST" });
       if (response?.success) {
         const messages = {
-          assign: "Đã tiếp nhận yêu cầu, trạng thái chuyển sang DELIVERING (Đang giao)!",
-          complete: "Đã hoàn tất yêu cầu dịch vụ (COMPLETED)!",
+          assign: "Đã tiếp nhận yêu cầu, trạng thái chuyển sang Đang giao!",
+          complete: "Đã hoàn tất yêu cầu dịch vụ!",
           cancel: "Đã hủy yêu cầu dịch vụ.",
         };
         addToast(messages[action] || "Cập nhật thành công.", "success");
@@ -107,22 +124,8 @@ export default function StaffRequestsPage() {
     }
   };
 
-  const updateRequestStatus = async (request, nextStatus) => {
-    setWorkingId(request.serviceRequestId);
-    try {
-      const response = await apiCall(`/api/staff/service-requests/${request.serviceRequestId}/status?status=${nextStatus}`, {
-        method: "PATCH",
-      });
-      if (response?.success) {
-        addToast(`Đã chuyển trạng thái yêu cầu sang ${nextStatus}!`, "success");
-        await loadRequests();
-      }
-    } catch (error) {
-      addToast(error.message || "Không thể cập nhật trạng thái.", "error");
-    } finally {
-      setWorkingId(null);
-    }
-  };
+  const openEditModal = (request) => setEditTarget(request);
+  const closeEditModal = () => setEditTarget(null);
 
   const openAssignModal = async (request) => {
     setTargetRequest(request);
@@ -174,7 +177,7 @@ export default function StaffRequestsPage() {
         method: "POST",
       });
       if (res?.success) {
-        addToast("Đã phân công nhân viên phục vụ thành công! (Trạng thái: DELIVERING)", "success");
+        addToast("Đã phân công nhân viên phục vụ thành công! (Trạng thái: Đang giao)", "success");
         closeAssignModal();
         await loadRequests();
       }
@@ -206,7 +209,7 @@ export default function StaffRequestsPage() {
             <i className="bi bi-bell text-primary u-mr-8"></i>
             Danh sách yêu cầu
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-fields" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ minWidth: "200px" }}>
               <SelectMenu value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Lọc trạng thái" icon="bi-funnel" />
             </div>
@@ -226,139 +229,237 @@ export default function StaffRequestsPage() {
             <p>Không có yêu cầu dịch vụ phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush u-scroll-x">
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Dịch vụ</th>
-                  <th>Loại dịch vụ</th>
-                  <th>Khách</th>
-                  <th>Phòng</th>
-                  <th>Số lượng</th>
-                  <th>Thành tiền</th>
-                  <th>Người phục vụ</th>
-                  <th>Yêu cầu lúc</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((request) => {
-                  const meta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
-                  const isClosed = CLOSED_STATUSES.includes(request.status);
-                  const isLoyaltyBenefit = isLoyaltyBenefitRequest(request);
-                  return (
-                    <tr key={request.serviceRequestId}>
-                      <td>
-                        <strong>{request.serviceName || "Yêu cầu dịch vụ"}</strong>
-                        {request.note && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.note}</div>}
-                      </td>
-                      <td>
-                        <span
-                          className={`hc-badge ${isLoyaltyBenefit === true ? "hc-badge-info" : "hc-badge-muted"}`}
-                          title={isLoyaltyBenefit === true ? "Dịch vụ được sử dụng từ quyền lợi hội viên" : isLoyaltyBenefit === false ? "Dịch vụ thông thường" : "API chưa trả về thông tin phân loại"}
-                        >
-                          {isLoyaltyBenefit === true ? "Ưu đãi hội viên" : isLoyaltyBenefit === false ? "Dịch vụ thường" : "Chưa xác định"}
-                        </span>
-                      </td>
-                      <td>{request.customerName || "—"}</td>
-                      <td>
-                        <strong>{request.roomNumber ? `Phòng ${request.roomNumber}` : "—"}</strong>
-                        {request.bookingCode && <div className="u-hint-sm">#{request.bookingCode}</div>}
-                      </td>
-                      <td>{request.quantity || 1}</td>
-                      <td>{isLoyaltyBenefit === true ? <span style={{ color: "var(--hc-success, #16a34a)", fontWeight: 600 }}>Miễn phí</span> : formatVND(request.feeAmount || 0)}</td>
-                      <td>
-                        {request.assignedToStaff ? (
-                          <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                            <i className="bi bi-person-check-fill"></i>
-                            {request.assignedToStaff}
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>Chưa phân công</span>
-                        )}
-                      </td>
-                      <td>{formatDateTime(getRequestTime(request))}</td>
-                      <td>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                          <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
-                          <select
-                            className="hc-select"
-                            value={request.status || "PENDING"}
-                            disabled={workingId !== null}
-                            onChange={(e) => updateRequestStatus(request, e.target.value)}
-                            style={{ fontSize: "11px", padding: "2px 6px", height: "auto", borderRadius: "4px", marginTop: "2px" }}
-                            title="Thay đổi trạng thái trực tiếp"
+          <Paginated items={requests}>
+            {(pageRows, pager) => (
+              <>
+                <div className="hc-card-body flush u-scroll-x">
+                  <table className="hc-table requests-table">
+                    <thead>
+                      <tr>
+                        <th>Dịch vụ</th>
+                        <th>Loại dịch vụ</th>
+                        <th>Khách</th>
+                        <th>Phòng</th>
+                        <th>Số lượng</th>
+                        <th>Thành tiền</th>
+                        <th>Người phục vụ</th>
+                        <th>Yêu cầu lúc</th>
+                        <th>Trạng thái</th>
+                        <th className="col-actions">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((request) => {
+                        const meta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
+                        const isClosed = CLOSED_STATUSES.includes(request.status);
+                        const isLoyaltyBenefit = isLoyaltyBenefitRequest(request);
+                        return (
+                          <tr
+                            key={request.serviceRequestId}
+                            className="row-clickable"
+                            tabIndex={0}
+                            title="Nhấn để xem chi tiết yêu cầu"
+                            onClick={() => openEditModal(request)}
+                            onKeyDown={(e) => {
+                              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault();
+                                openEditModal(request);
+                              }
+                            }}
                           >
-                            <option value="PENDING">PENDING (Chờ xử lý)</option>
-                            <option value="DELIVERING">DELIVERING (Đang giao)</option>
-                            <option value="COMPLETED">COMPLETED (Hoàn tất)</option>
-                            <option value="CANCELED">CANCELED (Đã hủy)</option>
-                          </select>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-                          {request.status === "PENDING" && (
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              disabled={workingId !== null}
-                              onClick={() => openAssignModal(request)}
-                              style={{ borderColor: "#0284c7", color: "#0284c7", fontWeight: 600 }}
-                              title="Phân công nhân viên có ca trực phục vụ"
-                            >
-                              <i className="bi bi-person-gear"></i> Phân công
-                            </button>
-                          )}
-                          {(request.status === "DELIVERING" || request.status === "IN_PROGRESS") && (
-                            <>
-                              <button
-                                type="button"
-                                className="hc-btn hc-btn-primary hc-btn-sm u-fw-600"
-                                disabled={workingId !== null}
-                                onClick={() => updateRequest(request, "complete")}
-                                title="Xác nhận đã giao dịch vụ lên phòng khách thành công"
+                            <td>
+                              <strong>{request.serviceName || "Yêu cầu dịch vụ"}</strong>
+                              {request.note && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.note}</div>}
+                            </td>
+                            <td>
+                              <span
+                                className={`hc-badge ${isLoyaltyBenefit === true ? "hc-badge-info" : isLoyaltyBenefit === false ? "hc-badge-violet" : "hc-badge-muted"}`}
+                                title={isLoyaltyBenefit === true ? "Dịch vụ được sử dụng từ quyền lợi hội viên" : isLoyaltyBenefit === false ? "Dịch vụ thông thường" : "API chưa trả về thông tin phân loại"}
                               >
-                                <i className="bi bi-check2-circle"></i> {workingId === request.serviceRequestId ? "Đang xử lý…" : "Hoàn tất giao"}
-                              </button>
-                              <button
-                                type="button"
-                                className="hc-btn hc-btn-outline hc-btn-sm"
-                                disabled={workingId !== null}
-                                onClick={() => openAssignModal(request)}
-                                title="Đổi nhân viên phục vụ khác"
-                              >
-                                <i className="bi bi-arrow-repeat"></i> Đổi
-                              </button>
-                            </>
-                          )}
-                          {request.status !== "CANCELED" && request.status !== "CANCELLED" && request.status !== "COMPLETED" && (
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              disabled={workingId !== null}
-                              onClick={() => {
-                                if (window.confirm("Xác nhận hủy yêu cầu dịch vụ này?")) {
-                                  updateRequest(request, "cancel");
-                                }
-                              }}
-                              style={{ color: "#dc2626", borderColor: "#fca5a5" }}
-                              title="Hủy yêu cầu dịch vụ"
-                            >
-                              <i className="bi bi-x-circle"></i> Hủy
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                                {isLoyaltyBenefit === true ? "Ưu đãi hội viên" : isLoyaltyBenefit === false ? "Dịch vụ thường" : "Chưa xác định"}
+                              </span>
+                            </td>
+                            <td>{request.customerName || "—"}</td>
+                            <td>
+                              <strong>{request.roomNumber ? `Phòng ${request.roomNumber}` : "—"}</strong>
+                              {request.bookingCode && <div className="u-hint-sm">#{request.bookingCode}</div>}
+                            </td>
+                            <td>{request.quantity || 1}</td>
+                            <td>{isLoyaltyBenefit === true ? <span style={{ color: "var(--hc-success, #16a34a)", fontWeight: 600 }}>Miễn phí</span> : formatVND(request.feeAmount || 0)}</td>
+                            <td>
+                              {request.assignedToStaff ? (
+                                <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                  <i className="bi bi-person-check-fill"></i>
+                                  {request.assignedToStaff}
+                                </span>
+                              ) : (
+                                <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>Chưa phân công</span>
+                              )}
+                            </td>
+                            <td>{formatDateTime(getRequestTime(request))}</td>
+                            <td>
+                              <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
+                            </td>
+                            <td className="col-actions">
+                              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                {isServiceStaff && request.status === "PENDING" && !request.assignedToStaff && (
+                                  <button
+                                    type="button"
+                                    className="hc-btn hc-btn-info hc-btn-sm"
+                                    disabled={workingId !== null}
+                                    onClick={() => updateRequest(request, "claim")}
+                                    title="Nhận yêu cầu này từ hàng chờ"
+                                  >
+                                    <i className="bi bi-hand-index-thumb"></i> Nhận việc
+                                  </button>
+                                )}
+                                {canManage && request.status === "PENDING" && (
+                                  <button
+                                    type="button"
+                                    className="hc-btn hc-btn-info hc-btn-sm"
+                                    disabled={workingId !== null}
+                                    onClick={() => openAssignModal(request)}
+                                    title="Phân công nhân viên có ca trực phục vụ"
+                                  >
+                                    <i className="bi bi-person-gear"></i> Phân công
+                                  </button>
+                                )}
+                                {(request.status === "DELIVERING" || request.status === "IN_PROGRESS") && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="hc-btn hc-btn-primary hc-btn-sm u-fw-600"
+                                      disabled={workingId !== null}
+                                      onClick={() => setCompleteTarget(request)}
+                                      title="Xác nhận đã giao dịch vụ lên phòng khách thành công"
+                                    >
+                                      <i className="bi bi-check2-circle"></i> {workingId === request.serviceRequestId ? "Đang xử lý…" : "Hoàn tất"}
+                                    </button>
+                                    {canManage && (
+                                      <button
+                                        type="button"
+                                        className="hc-btn hc-btn-outline hc-btn-sm"
+                                        disabled={workingId !== null}
+                                        onClick={() => openAssignModal(request)}
+                                        title="Đổi nhân viên phục vụ khác"
+                                      >
+                                        <i className="bi bi-arrow-repeat"></i> Đổi
+                                      </button>
+                                    )}
+                                  </>
+                                )}
+                                {canManage && request.status !== "CANCELED" && request.status !== "CANCELLED" && request.status !== "COMPLETED" && (
+                                  <button
+                                    type="button"
+                                    className="hc-btn hc-btn-outline-danger hc-btn-sm"
+                                    disabled={workingId !== null}
+                                    onClick={() => {
+                                      if (window.confirm("Xác nhận hủy yêu cầu dịch vụ này?")) {
+                                        updateRequest(request, "cancel");
+                                      }
+                                    }}
+                                    title="Hủy yêu cầu dịch vụ"
+                                  >
+                                    <i className="bi bi-x-circle"></i> Hủy
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pager}
+              </>
+            )}
+          </Paginated>
         )}
       </div>
+
+      {/* Xác nhận hoàn tất yêu cầu dịch vụ */}
+      <Modal
+        isOpen={!!completeTarget}
+        onClose={() => workingId === null && setCompleteTarget(null)}
+        title="Xác nhận hoàn tất"
+        subtitle={completeTarget ? `${completeTarget.serviceName || "Yêu cầu dịch vụ"}${completeTarget.roomNumber ? ` · Phòng ${completeTarget.roomNumber}` : ""}` : undefined}
+        icon="bi-check2-circle"
+        maxWidth="440px"
+        footer={
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setCompleteTarget(null)} disabled={workingId !== null}>
+              Hủy
+            </button>
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={confirmComplete} disabled={workingId !== null}>
+              {workingId !== null ? "Đang xử lý..." : "Xác nhận hoàn tất"}
+            </button>
+          </div>
+        }
+      >
+        {completeTarget && (
+          <div className="u-col-16" style={{ fontSize: "13px" }}>
+            <p style={{ margin: 0 }}>
+              Xác nhận bạn đã giao <strong>{completeTarget.serviceName || "dịch vụ"}</strong>
+              {completeTarget.quantity > 1 ? ` (x${completeTarget.quantity})` : ""} tới <strong>{completeTarget.roomNumber ? `phòng ${completeTarget.roomNumber}` : "khách"}</strong>?
+            </p>
+            <p className="u-text-secondary" style={{ margin: 0 }}>Yêu cầu sẽ chuyển sang trạng thái Hoàn tất và được tính vào hóa đơn của khách.</p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal chi tiết yêu cầu dịch vụ (chỉ xem) */}
+      <Modal
+        isOpen={!!editTarget}
+        onClose={closeEditModal}
+        title={`Yêu cầu dịch vụ #${editTarget?.serviceRequestId || ""}`}
+        subtitle={editTarget ? `${editTarget.serviceName || "Yêu cầu dịch vụ"}${editTarget.roomNumber ? ` · Phòng ${editTarget.roomNumber}` : ""}` : undefined}
+        icon="bi-bell"
+        maxWidth="560px"
+        headerExtra={
+          editTarget ? (
+            <span className={`hc-badge ${(STATUS_META[editTarget.status] || { badge: "hc-badge-muted" }).badge}`}>{(STATUS_META[editTarget.status] || { label: editTarget.status }).label}</span>
+          ) : null
+        }
+        footer={
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={closeEditModal}>
+              Đóng
+            </button>
+          </div>
+        }
+      >
+        {editTarget && (() => {
+          const loyalty = isLoyaltyBenefitRequest(editTarget);
+          const rows = [
+            ["Dịch vụ", editTarget.serviceName || "—"],
+            ["Loại dịch vụ", loyalty === true ? "Ưu đãi hội viên" : loyalty === false ? "Dịch vụ thường" : "Chưa xác định"],
+            ["Khách", editTarget.customerName || "—"],
+            ["Phòng", editTarget.roomNumber ? `Phòng ${editTarget.roomNumber}` : "—"],
+            ["Mã đặt phòng", editTarget.bookingCode ? `#${editTarget.bookingCode}` : "—"],
+            ["Số lượng", editTarget.quantity || 1],
+            ["Thành tiền", loyalty === true ? "Miễn phí" : formatVND(editTarget.feeAmount || 0)],
+            ["Người phục vụ", editTarget.assignedToStaff || "Chưa phân công"],
+            ["Yêu cầu lúc", getRequestTime(editTarget) ? formatDateTime(getRequestTime(editTarget)) : "—"],
+          ];
+          return (
+            <div className="u-col-16">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px 18px", fontSize: "13px" }}>
+                {rows.map(([label, value]) => (
+                  <div key={label}>
+                    <small className="u-text-secondary u-block">{label}</small>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <small className="u-text-secondary u-block">Ghi chú</small>
+                <p style={{ margin: "2px 0 0", fontSize: "13px" }}>{editTarget.note || "—"}</p>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
 
       {/* Modal Phân công Yêu cầu Dịch vụ */}
       <Modal

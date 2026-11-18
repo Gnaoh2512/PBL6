@@ -40,4 +40,9 @@ public interface VoucherService {
      * Bật / Tắt trạng thái hoạt động của voucher
      */
     VoucherResponse toggleVoucher(Integer voucherId);
+
+    /**
+     * Cập nhật thông tin voucher (Admin)
+     */
+    VoucherResponse updateVoucher(Integer voucherId, VoucherCreateRequest request);
 }

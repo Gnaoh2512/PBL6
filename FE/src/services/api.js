@@ -158,6 +158,22 @@ export function getCategoryName(category) {
   return "Khác";
 }
 
+// Colour-codes a service category tag so each kind of service reads at a glance.
+// Known categories get a fixed tone; any other name gets a stable tone from a hash.
+const CATEGORY_TONES = ["warning", "info", "violet", "success", "primary"];
+export function getCategoryTone(categoryName) {
+  const name = String(categoryName || "").trim().toLowerCase();
+  if (!name || name === "khác") return "muted";
+  if (/ẩm thực|đồ uống|f&b|nhà hàng|ăn|uống/.test(name)) return "warning";
+  if (/phòng|giặt/.test(name)) return "info";
+  if (/spa|thư giãn|massage|chăm sóc/.test(name)) return "violet";
+  if (/đưa đón|phương tiện|xe|vận chuyển/.test(name)) return "success";
+  if (/tiện ích/.test(name)) return "primary";
+  let hash = 0;
+  for (let i = 0; i < name.length; i += 1) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return CATEGORY_TONES[hash % CATEGORY_TONES.length];
+}
+
 export function getRoomTypeName(room) {
   if (!room) return "---";
   if (room.roomTypeName) return room.roomTypeName;

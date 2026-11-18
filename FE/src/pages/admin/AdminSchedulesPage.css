@@ -239,6 +239,13 @@
   cursor: default;
 }
 
+/* nav buttons + refresh share one row (refresh sits at the far right on mobile) */
+.admin-calendar-wrapper .admin-cal-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .admin-calendar-wrapper .admin-cal-btn-group.is-nav {
   display: inline-flex;
   gap: 6px;
@@ -349,8 +356,6 @@
 }
 
 .fc-slot-row:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .fc-slot-badge {
@@ -417,7 +422,11 @@
 
 .tl-grid {
   display: grid;
-  width: 100%;
+  /* the grid box must be as wide as its columns: sticky cells (staff names,
+     header row) can only stick inside their grid container, so a 100%-wide
+     grid with overflowing columns made them scroll away */
+  width: max-content;
+  min-width: 100%;
 }
 
 .tl-grid {
@@ -605,8 +614,6 @@
 }
 
 .tl-bar:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
   z-index: 3;
 }
 

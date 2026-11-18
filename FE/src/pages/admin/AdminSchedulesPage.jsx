@@ -9,13 +9,14 @@ import "@fullcalendar/react/skeleton.css";
 import "@fullcalendar/react/themes/classic/theme.css";
 import "@fullcalendar/react/themes/classic/palette.css";
 
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
-import DatePicker from "../../components/DatePicker";
-import TimePicker from "../../components/TimePicker";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
+import DatePicker from "../../components/common/DatePicker";
+import TimePicker from "../../components/common/TimePicker";
 import { apiCall, formatDate } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import "./AdminSchedulesPage.css";
+import Paginated from "../../components/common/TablePagination";
 
 const pad = (v) => String(v).padStart(2, "0");
 const toISO = (date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -150,19 +151,25 @@ const compactHM = (min) => {
  * (including overnight ones) is a single bar positioned by its absolute start/end time.
  * Day view: 24 columns of 1h.  Week view: 7 days, each split into 4h cells.
  */
-function ScheduleTimeline({ view, timeline, now, onOpenDay }) {
+function ScheduleTimeline({ view, timeline, now, onOpenDay, onEditShift }) {
   const { days, rows, total } = timeline;
+  const [hover, setHover] = React.useState(null); // { rowKey, idx }: a day x staff cell (both set), a whole staff row (idx null) or a whole day column (rowKey null)
   const isDay = view === "day";
   const todayISO = toISO(now);
   const todayIdx = days.findIndex((x) => x.date === todayISO);
   const nowPct = todayIdx >= 0 ? ((todayIdx * 1440 + now.getHours() * 60 + now.getMinutes()) / total) * 100 : null;
   const columns = isDay ? "var(--tl-name-w) minmax(1344px, 1fr)" : "var(--tl-name-w) repeat(7, minmax(240px, 1fr))";
 
-  // Empty area of a track -> open the day that was clicked
-  const handleTrackClick = (e) => {
+  const dayIndexAt = (e) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const idx = Math.min(days.length - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * days.length)));
-    onOpenDay(days[idx].date);
+    return Math.min(days.length - 1, Math.max(0, Math.floor(((e.clientX - rect.left) / rect.width) * days.length)));
+  };
+
+  // Empty area of a track -> open the day that was clicked
+  const handleTrackClick = (e) => onOpenDay(days[dayIndexAt(e)].date);
+  const handleTrackMove = (rowKey) => (e) => {
+    const idx = dayIndexAt(e);
+    setHover((cur) => (cur && cur.rowKey === rowKey && cur.idx === idx ? cur : { rowKey, idx }));
   };
 
   return (
@@ -176,8 +183,8 @@ function ScheduleTimeline({ view, timeline, now, onOpenDay }) {
             ))}
           </div>
         ) : (
-          days.map(({ date, d }) => (
-            <div key={date} className={`tl-dayhead${date === todayISO ? " is-today" : ""}`}>
+          days.map(({ date, d }, dayIdx) => (
+            <div key={date} className={`tl-dayhead${date === todayISO ? " is-today" : ""}`} onMouseEnter={() => setHover({ rowKey: null, idx: dayIdx })} onMouseLeave={() => setHover(null)}>
               <div>
                 <strong>{WEEKDAY_SHORT[d.getDay()]}</strong> <span>{fmtShort(d)}</span>
               </div>
@@ -198,11 +205,19 @@ function ScheduleTimeline({ view, timeline, now, onOpenDay }) {
 
         {rows.map((row) => (
           <React.Fragment key={row.key}>
-            <div className="tl-name">
+            <div className="tl-name" onMouseEnter={() => setHover({ rowKey: row.key, idx: null })} onMouseLeave={() => setHover(null)}>
               <strong title={row.name}>{row.name}</strong>
               <small>{row.role}</small>
             </div>
-            <div className="tl-track" style={{ gridColumn: "2 / -1" }} onClick={handleTrackClick}>
+            <div className="tl-track" style={{ gridColumn: "2 / -1" }} onClick={handleTrackClick} onMouseMove={handleTrackMove(row.key)} onMouseLeave={() => setHover(null)}>
+              {(() => {
+                if (!hover) return null;
+                const rowHit = hover.rowKey == null || hover.rowKey === row.key;
+                const colHit = hover.idx == null ? 0 : hover.idx;
+                if (!rowHit) return null;
+                const span = hover.idx == null ? 100 : 100 / days.length;
+                return <i className="tl-cell-hover" style={{ left: `${(colHit / days.length) * 100}%`, width: `${span}%` }} />;
+              })()}
               {todayIdx >= 0 && <i className="tl-today-col" style={{ left: `${(todayIdx / days.length) * 100}%`, width: `${100 / days.length}%` }} />}
               {nowPct != null && <i className="tl-now" style={{ left: `${nowPct}%` }} />}
               {row.segs.map((sg, i) => {
@@ -218,7 +233,7 @@ function ScheduleTimeline({ view, timeline, now, onOpenDay }) {
                     title={`${row.name} · ${getShiftName(sg.item)} · ${range} · ${meta.label}`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onOpenDay(dateOfSchedule(sg.item));
+                      onEditShift(sg.item);
                     }}
                   >
                     <b>{sg.slot}</b>
@@ -751,6 +766,17 @@ export default function AdminSchedulesPage() {
   // ==========================================
   // SCHEDULE STATUS UPDATE & DELETE
   // ==========================================
+  const openShiftEdit = (shift) => {
+    setEditShiftId(shift.shiftId);
+    setShiftForm({
+      shiftName: shift.shiftName || "",
+      startTime: formatTime(shift.startTime) || "06:00",
+      endTime: formatTime(shift.endTime) || "14:00",
+      description: shift.description || "",
+    });
+    setShiftModalOpen(true);
+  };
+
   const startEdit = (item) => {
     setEditingId(item.scheduleId);
     setEditForm({
@@ -914,10 +940,6 @@ export default function AdminSchedulesPage() {
             <div className="admin-schedule-filter-select">
               <SelectMenu value={roleFilter} onChange={setRoleFilter} options={roleFilterOptions} ariaLabel="Lọc theo vai trò" icon="bi-people" />
             </div>
-
-            <button type="button" className="hc-btn hc-btn-outline" onClick={() => loadSchedules(dateRange.from, dateRange.to)} disabled={loading} title="Làm mới dữ liệu lịch">
-              <i className={`bi bi-arrow-clockwise${loading ? " admin-schedule-spin" : ""}`} /> Làm mới
-            </button>
           </div>
         )}
       </div>
@@ -941,15 +963,26 @@ export default function AdminSchedulesPage() {
             <div className="admin-calendar-wrapper">
               {/* Toolbar (shared by month / week / day) */}
               <div className="admin-cal-toolbar">
-                <div className="admin-cal-btn-group is-nav">
-                  <button type="button" className="admin-cal-btn" aria-label="Trước" onClick={() => shiftCursor(-1)}>
-                    <i className="bi bi-chevron-left" />
-                  </button>
-                  <button type="button" className="admin-cal-btn" aria-label="Sau" onClick={() => shiftCursor(1)}>
-                    <i className="bi bi-chevron-right" />
-                  </button>
-                  <button type="button" className="admin-cal-btn" onClick={() => setCursor(new Date())}>
-                    Hôm nay
+                <div className="admin-cal-nav-row">
+                  <div className="admin-cal-btn-group is-nav">
+                    <button type="button" className="admin-cal-btn" aria-label="Trước" onClick={() => shiftCursor(-1)}>
+                      <i className="bi bi-chevron-left" />
+                    </button>
+                    <button type="button" className="admin-cal-btn" aria-label="Sau" onClick={() => shiftCursor(1)}>
+                      <i className="bi bi-chevron-right" />
+                    </button>
+                    <button type="button" className="admin-cal-btn" onClick={() => setCursor(new Date())}>
+                      Hôm nay
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    className="admin-cal-btn is-refresh"
+                    onClick={() => loadSchedules(dateRange.from, dateRange.to)}
+                    disabled={loading}
+                    title="Làm mới dữ liệu lịch"
+                  >
+                    <i className={`bi bi-arrow-clockwise${loading ? " admin-schedule-spin" : ""}`} /> Làm mới
                   </button>
                 </div>
 
@@ -969,6 +1002,7 @@ export default function AdminSchedulesPage() {
               </div>
 
               {view === "month" ? (
+                <div className="admin-cal-scroll">
                 <FullCalendar
                   key={`${cursor.getFullYear()}-${cursor.getMonth()}`}
                   plugins={[dayGridPlugin, interactionPlugin, classicThemePlugin]}
@@ -994,8 +1028,9 @@ export default function AdminSchedulesPage() {
                   eventContent={renderEventContent}
                   events={calendarEvents}
                 />
+                </div>
               ) : (
-                <ScheduleTimeline view={view} timeline={timeline} now={now} onOpenDay={openDay} />
+                <ScheduleTimeline view={view} timeline={timeline} now={now} onOpenDay={openDay} onEditShift={startEdit} />
               )}
             </div>
           </section>
@@ -1005,8 +1040,8 @@ export default function AdminSchedulesPage() {
             <Modal
               isOpen={Boolean(selectedDay)}
               onClose={() => {
+                if (editingId !== null) return; // the edit modal is on top; it closes first
                 setSelectedDay(null);
-                setEditingId(null);
               }}
               title={`Lịch làm việc ngày ${formatDate(selectedDay)}`}
               subtitle={`${selectedDayLabel} · ${dayRows.length} ca làm việc`}
@@ -1038,126 +1073,145 @@ export default function AdminSchedulesPage() {
                 </div>
               ) : (
                 <div className="admin-day-table-wrap">
-                  <table className="hc-table admin-day-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: 44 }}>#</th>
-                        <th>Nhân viên</th>
-                        <th>Số điện thoại</th>
-                        <th>Vai trò</th>
-                        <th>Ca</th>
-                        <th>Giờ làm việc</th>
-                        <th>Trạng thái</th>
-                        <th style={{ textAlign: "right", width: 110 }}>Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dayRows.map((item, index) => {
-                        const slot = slotOfSchedule(item);
-                        const meta = statusMeta(item.status);
-                        const isEditing = editingId === item.scheduleId;
-                        return (
-                          <React.Fragment key={item.scheduleId}>
-                            <tr className={isEditing ? "is-editing" : ""}>
-                              <td>{index + 1}</td>
-                              <td>
-                                <strong>{getStaffName(item)}</strong>
-                                <div className="admin-subtext">@{item.accountUsername || item.username || "—"}</div>
-                              </td>
-                              <td>{getPhone(item)}</td>
-                              <td>{roleLabelOf(item.role || item.roleCode)}</td>
-                              <td>
-                                <span className={`day-slot-chip slot-${slot}`}>
-                                  <b>{slot}</b> {getShiftName(item)}
-                                </span>
-                              </td>
-                              <td className="u-nowrap">{getTimeRange(item)}</td>
-                              <td>
-                                <span className={`admin-calendar-status ${meta.cls}`}>{meta.label}</span>
-                              </td>
-                              <td className="u-text-right">
-                                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => (isEditing ? setEditingId(null) : startEdit(item))}>
-                                  <i className={`bi ${isEditing ? "bi-x-lg" : "bi-pencil"}`} /> {isEditing ? "Đóng" : "Sửa"}
-                                </button>
-                              </td>
+                  <Paginated items={dayRows}>
+                    {(pageRows, pager) => (
+                      <>
+                        <table className="hc-table admin-day-table">
+                          <thead>
+                            <tr>
+                              <th style={{ width: 44 }}>#</th>
+                              <th>Nhân viên</th>
+                              <th>Số điện thoại</th>
+                              <th>Vai trò</th>
+                              <th>Ca</th>
+                              <th>Giờ làm việc</th>
+                              <th>Trạng thái</th>
+                              <th className="col-actions">Thao tác</th>
                             </tr>
-
-                            {isEditing && (
-                              <tr className="admin-day-edit-row">
-                                <td colSpan={8}>
-                                  <div className="admin-day-edit">
-                                    <div className="hc-form-group">
-                                      <label className="hc-label">Chuyển sang ca (chỉ áp dụng cho ngày này)</label>
-                                      <div className="admin-slot-picker">
-                                        {shifts.map((sh) => {
-                                          const k = slotKeyOf(sh.shiftName, sh.startTime);
-                                          const active = String(sh.shiftId) === editForm.shiftId;
-                                          return (
-                                            <button
-                                              key={sh.shiftId}
-                                              type="button"
-                                              className={`admin-slot-option slot-${k}${active ? " active" : ""}`}
-                                              onClick={() => setEditForm((f) => ({ ...f, shiftId: String(sh.shiftId) }))}
-                                            >
-                                              <b>{k}</b>
-                                              <span>{sh.shiftName || `Ca #${sh.shiftId}`}</span>
-                                              <small>
-                                                {formatTime(sh.startTime)} – {formatTime(sh.endTime)}
-                                              </small>
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-
-                                    <div className="admin-day-edit-fields">
-                                      <div className="hc-form-group mb-0">
-                                        <label className="hc-label">Trạng thái</label>
-                                        <SelectMenu
-                                          value={editForm.status}
-                                          onChange={(value) => setEditForm((f) => ({ ...f, status: value }))}
-                                          options={STATUS_OPTIONS}
-                                          ariaLabel="Chọn trạng thái"
-                                          icon="bi-flag"
-                                        />
-                                      </div>
-                                      <div className="hc-form-group mb-0">
-                                        <label className="hc-label">Ghi chú</label>
-                                        <input
-                                          className="hc-input"
-                                          value={editForm.notes}
-                                          onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
-                                          placeholder="Ghi chú cho ca này (tùy chọn)"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="admin-day-edit-actions">
-                                      <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm text-danger" onClick={() => handleDeleteSchedule(item.scheduleId)}>
-                                        <i className="bi bi-trash" /> Hủy ca này
+                          </thead>
+                          <tbody>
+                            {pageRows.map((item, index) => {
+                              const slot = slotOfSchedule(item);
+                              const meta = statusMeta(item.status);
+                              return (
+                                <tr
+                                  key={item.scheduleId}
+                                  className="row-clickable"
+                                  tabIndex={0}
+                                  title="Nhấn để chỉnh sửa ca làm việc"
+                                  onClick={() => startEdit(item)}
+                                  onKeyDown={(e) => {
+                                    if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                      e.preventDefault();
+                                      startEdit(item);
+                                    }
+                                  }}
+                                >
+                                  <td>{dayRows.indexOf(item) + 1}</td>
+                                  <td>
+                                    <strong>{getStaffName(item)}</strong>
+                                    <div className="admin-subtext">@{item.accountUsername || item.username || "—"}</div>
+                                  </td>
+                                  <td>{getPhone(item)}</td>
+                                  <td>{roleLabelOf(item.role || item.roleCode)}</td>
+                                  <td>
+                                    <span className={`day-slot-chip slot-${slot}`}>
+                                      <b>{slot}</b> {getShiftName(item)}
+                                    </span>
+                                  </td>
+                                  <td className="u-nowrap">{getTimeRange(item)}</td>
+                                  <td>
+                                    <span className={`admin-calendar-status ${meta.cls}`}>{meta.label}</span>
+                                  </td>
+                                  <td className="col-actions">
+                                    <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                      <button type="button" className="hc-btn hc-btn-outline-danger hc-btn-sm" onClick={() => handleDeleteSchedule(item.scheduleId)} title="Hủy ca này">
+                                        <i className="bi bi-trash" />
                                       </button>
-                                      <div style={{ display: "flex", gap: 8 }}>
-                                        <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setEditingId(null)}>
-                                          Hủy bỏ
-                                        </button>
-                                        <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={savingEdit} onClick={() => handleSaveEdit(item)}>
-                                          {savingEdit ? "Đang lưu…" : "Lưu thay đổi"}
-                                        </button>
-                                      </div>
                                     </div>
-                                  </div>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                        {pager}
+                      </>
+                    )}
+                  </Paginated>
                 </div>
               )}
             </Modal>
           )}
+
+          {/* Edit one person's shift for this day */}
+          {editingId !== null &&
+            (() => {
+              const item = schedules.find((row) => row.scheduleId === editingId);
+              if (!item) return null;
+              return (
+                <Modal
+                  isOpen
+                  onClose={() => setEditingId(null)}
+                  title="Chỉnh sửa ca làm việc"
+                  subtitle={`${getStaffName(item)} · ${formatDate(dateOfSchedule(item) || selectedDay)}`}
+                  icon="bi-pencil-square"
+                  maxWidth="680px"
+                  footer={
+                    <div className="admin-day-edit-actions" style={{ width: "100%" }}>
+                      <button type="button" className="hc-btn hc-btn-outline-danger hc-btn-sm" onClick={() => handleDeleteSchedule(item.scheduleId)}>
+                        <i className="bi bi-trash" /> Hủy ca này
+                      </button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setEditingId(null)}>
+                          Hủy bỏ
+                        </button>
+                        <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={savingEdit} onClick={() => handleSaveEdit(item)}>
+                          {savingEdit ? "Đang lưu…" : "Lưu thay đổi"}
+                        </button>
+                      </div>
+                    </div>
+                  }
+                >
+                  <div className="admin-day-edit" style={{ padding: 0 }}>
+                    <div className="hc-form-group">
+                      <label className="hc-label">Chuyển sang ca (chỉ áp dụng cho ngày này)</label>
+                      <div className="admin-slot-picker">
+                        {shifts.map((sh) => {
+                          const k = slotKeyOf(sh.shiftName, sh.startTime);
+                          const active = String(sh.shiftId) === editForm.shiftId;
+                          return (
+                            <button
+                              key={sh.shiftId}
+                              type="button"
+                              className={`admin-slot-option slot-${k}${active ? " active" : ""}`}
+                              onClick={() => setEditForm((f) => ({ ...f, shiftId: String(sh.shiftId) }))}
+                            >
+                              <b>{k}</b>
+                              <span>{sh.shiftName || `Ca #${sh.shiftId}`}</span>
+                              <small>
+                                {formatTime(sh.startTime)} – {formatTime(sh.endTime)}
+                              </small>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="admin-day-edit-fields">
+                      <div className="hc-form-group mb-0">
+                        <label className="hc-label">Trạng thái</label>
+                        <SelectMenu value={editForm.status} onChange={(value) => setEditForm((f) => ({ ...f, status: value }))} options={STATUS_OPTIONS} ariaLabel="Chọn trạng thái" icon="bi-flag" />
+                      </div>
+                      <div className="hc-form-group mb-0">
+                        <label className="hc-label">Ghi chú</label>
+                        <input className="hc-input" value={editForm.notes} onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Ghi chú cho ca này (tùy chọn)" />
+                      </div>
+                    </div>
+                  </div>
+                </Modal>
+              );
+            })()}
         </>
       ) : (
         /* SHIFTS DEFINITION TAB */
@@ -1191,62 +1245,65 @@ export default function AdminSchedulesPage() {
               </button>
             </div>
           ) : (
-            <div className="hc-card-body flush u-scroll-x">
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Ca làm việc</th>
-                    <th>Giờ bắt đầu</th>
-                    <th>Giờ kết thúc</th>
-                    <th>Mô tả</th>
-                    <th className="u-text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {shifts.map((shift) => (
-                    <tr key={shift.shiftId}>
-                      <td>
-                        <strong>{shift.shiftName || `Ca #${shift.shiftId}`}</strong>
-                      </td>
-                      <td>
-                        <span className="badge-time start">
-                          <i className="bi bi-box-arrow-in-right" /> {formatTime(shift.startTime)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className="badge-time end">
-                          <i className="bi bi-box-arrow-right" /> {formatTime(shift.endTime)}
-                        </span>
-                      </td>
-                      <td>{shift.description || "—"}</td>
-                      <td className="u-text-right">
-                        <div className="admin-shift-actions">
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-outline hc-btn-sm"
-                            onClick={() => {
-                              setEditShiftId(shift.shiftId);
-                              setShiftForm({
-                                shiftName: shift.shiftName || "",
-                                startTime: formatTime(shift.startTime) || "06:00",
-                                endTime: formatTime(shift.endTime) || "14:00",
-                                description: shift.description || "",
-                              });
-                              setShiftModalOpen(true);
+            <Paginated items={shifts}>
+              {(pageRows, pager) => (
+                <>
+                  <div className="hc-card-body flush u-scroll-x">
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Ca làm việc</th>
+                          <th>Giờ bắt đầu</th>
+                          <th>Giờ kết thúc</th>
+                          <th>Mô tả</th>
+                          <th className="col-actions">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((shift) => (
+                          <tr
+                            key={shift.shiftId}
+                            className="row-clickable"
+                            tabIndex={0}
+                            title="Nhấn để chỉnh sửa ca làm việc"
+                            onClick={() => openShiftEdit(shift)}
+                            onKeyDown={(e) => {
+                              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault();
+                                openShiftEdit(shift);
+                              }
                             }}
                           >
-                            <i className="bi bi-pencil" /> Sửa
-                          </button>
-                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm text-danger" onClick={() => handleDeleteShift(shift.shiftId)} title="Xóa ca này">
-                            <i className="bi bi-trash" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                            <td>
+                              <strong>{shift.shiftName || `Ca #${shift.shiftId}`}</strong>
+                            </td>
+                            <td>
+                              <span className="badge-time start">
+                                <i className="bi bi-box-arrow-in-right" /> {formatTime(shift.startTime)}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="badge-time end">
+                                <i className="bi bi-box-arrow-right" /> {formatTime(shift.endTime)}
+                              </span>
+                            </td>
+                            <td>{shift.description || "—"}</td>
+                            <td className="col-actions">
+                              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                <button type="button" className="hc-btn hc-btn-outline-danger hc-btn-sm" onClick={() => handleDeleteShift(shift.shiftId)} title="Xóa ca này">
+                                  <i className="bi bi-trash" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {pager}
+                </>
+              )}
+            </Paginated>
           )}
         </section>
       )}

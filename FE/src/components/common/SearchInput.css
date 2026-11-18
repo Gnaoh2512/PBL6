@@ -1,0 +1,19 @@
+/* Text / select field with a leading icon placed inside the control */
+.hc-input-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+.hc-input-wrap > i {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--hc-text-muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+.hc-input-wrap > .hc-input,
+.hc-input-wrap > .hc-select {
+  padding-left: 36px;
+}

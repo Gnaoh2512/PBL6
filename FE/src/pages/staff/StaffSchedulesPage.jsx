@@ -109,16 +109,6 @@ export default function StaffSchedulesPage() {
     year: "numeric",
   });
 
-  const counts = useMemo(
-    () => ({
-      total: schedules.length,
-      scheduled: schedules.filter((item) => (item.status || "SCHEDULED") === "SCHEDULED").length,
-      completed: schedules.filter((item) => item.status === "COMPLETED").length,
-      absent: schedules.filter((item) => item.status === "ABSENT").length,
-    }),
-    [schedules],
-  );
-
   const changeMonth = (amount) => {
     setSelectedSchedule(null);
     setVisibleMonth((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1));
@@ -135,45 +125,6 @@ export default function StaffSchedulesPage() {
           <i className={`bi bi-arrow-clockwise${loading ? " staff-schedule-spin" : ""}`} />
           Refresh
         </button>
-      </div>
-
-      <div className="hc-stats-grid staff-schedule-stats">
-        <div className="hc-stat-card">
-          <div className="hc-stat-icon" style={{ background: "var(--hc-primary-subtle)", color: "var(--hc-primary)" }}>
-            <i className="bi bi-calendar3" />
-          </div>
-          <div>
-            <div className="hc-stat-value">{counts.total}</div>
-            <div className="hc-stat-label">Shifts this month</div>
-          </div>
-        </div>
-        <div className="hc-stat-card">
-          <div className="hc-stat-icon" style={{ background: "var(--hc-warning-bg)", color: "var(--hc-warning)" }}>
-            <i className="bi bi-clock-history" />
-          </div>
-          <div>
-            <div className="hc-stat-value">{counts.scheduled}</div>
-            <div className="hc-stat-label">Scheduled</div>
-          </div>
-        </div>
-        <div className="hc-stat-card">
-          <div className="hc-stat-icon" style={{ background: "var(--hc-success-bg)", color: "var(--hc-success)" }}>
-            <i className="bi bi-check2-circle" />
-          </div>
-          <div>
-            <div className="hc-stat-value">{counts.completed}</div>
-            <div className="hc-stat-label">Completed</div>
-          </div>
-        </div>
-        <div className="hc-stat-card">
-          <div className="hc-stat-icon" style={{ background: "var(--hc-error-bg)", color: "var(--hc-error)" }}>
-            <i className="bi bi-calendar-x" />
-          </div>
-          <div>
-            <div className="hc-stat-value">{counts.absent}</div>
-            <div className="hc-stat-label">Absent</div>
-          </div>
-        </div>
       </div>
 
       <section className="hc-card staff-calendar-card">
@@ -241,6 +192,7 @@ export default function StaffSchedulesPage() {
                   <div
                     key={dateKey}
                     className={["staff-calendar-day", !inMonth ? "outside-month" : "", dateKey === today ? "is-today" : "", daySchedules.length ? "has-shifts" : ""].filter(Boolean).join(" ")}
+                    onClick={() => daySchedules.length > 0 && setSelectedSchedule(daySchedules[0])}
                   >
                     <div className="staff-calendar-day-number">{date.getDate()}</div>
                     <div className="staff-calendar-events">
@@ -249,7 +201,10 @@ export default function StaffSchedulesPage() {
                           type="button"
                           key={schedule.scheduleId}
                           className={`staff-calendar-event ${statusClass(schedule.status)}`}
-                          onClick={() => setSelectedSchedule(schedule)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSchedule(schedule);
+                          }}
                           title={`${getShiftName(schedule)} · ${getTimeRange(schedule)}`}
                         >
                           <strong>{getShiftName(schedule)}</strong>

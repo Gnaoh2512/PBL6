@@ -177,6 +177,41 @@ public class VoucherServiceImpl implements VoucherService {
         return mapToResponse(updated);
     }
 
+    @Override
+    @Transactional
+    public VoucherResponse updateVoucher(Integer voucherId, VoucherCreateRequest request) {
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy voucher với ID: " + voucherId));
+
+        String code = request.getCode().trim().toUpperCase();
+        if (!code.equalsIgnoreCase(voucher.getVoucherCode()) && voucherRepository.existsByCodeIgnoreCase(code)) {
+            throw new IllegalArgumentException("Mã voucher '" + code + "' đã tồn tại");
+        }
+        if (request.getUsageLimit() != null && voucher.getUsedCount() != null
+                && request.getUsageLimit() < voucher.getUsedCount()) {
+            throw new IllegalArgumentException("Giới hạn lượt dùng không được nhỏ hơn số lượt đã dùng (" + voucher.getUsedCount() + ")");
+        }
+        if (request.getStartDate() != null && request.getEndDate() != null
+                && request.getEndDate().isBefore(request.getStartDate())) {
+            throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu");
+        }
+
+        voucher.setCode(code);
+        voucher.setVoucherName(request.getVoucherName().trim());
+        voucher.setDiscountType(request.getDiscountType().toUpperCase());
+        voucher.setDiscountValue(request.getDiscountValue());
+        voucher.setMaxDiscountAmount(request.getMaxDiscountAmount());
+        voucher.setMinOrderAmount(request.getMinOrderAmount());
+        voucher.setStartDate(request.getStartDate());
+        voucher.setEndDate(request.getEndDate());
+        voucher.setUsageLimit(request.getUsageLimit());
+
+        Voucher saved = voucherRepository.save(voucher);
+        auditLogService.log("ƯU ĐÃI & VOUCHER", "UPDATE", "voucher", Long.valueOf(saved.getVoucherId()),
+                "Cập nhật mã ưu đãi: " + saved.getCode() + " - " + saved.getVoucherName());
+        return mapToResponse(saved);
+    }
+
     private String checkVoucherValidity(Voucher voucher, BigDecimal orderAmount) {
         if (!Boolean.TRUE.equals(voucher.getIsActive())) {
             return "Mã voucher này hiện đang tạm ngưng sử dụng";

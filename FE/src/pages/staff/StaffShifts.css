@@ -279,6 +279,7 @@
   gap: 14px;
 }
 .sh-shared-icon {
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
   display: grid;
@@ -302,6 +303,79 @@
   margin: 4px 0 0;
   font-size: 13px;
   color: var(--hc-text-secondary);
+}
+.sh-shared-right {
+  text-align: right;
+}
+
+/* close-shift footer: note on the left, actions on the right */
+.sh-close-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--hc-border);
+}
+.sh-close-note {
+  font-size: 13px;
+  color: var(--hc-text-secondary);
+}
+.sh-close-actions {
+  display: flex;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  /* banner: icon + title on top, the sync note underneath (full width) */
+  .sh-shared-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px;
+  }
+  .sh-shared-left {
+    align-items: flex-start;
+  }
+  .sh-shared-title {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    line-height: 1.35;
+  }
+  .sh-shared-right {
+    text-align: left;
+    padding-top: 12px;
+    border-top: 1px solid rgba(22, 101, 52, 0.18);
+  }
+
+  /* details: one consistent text size */
+  .sh-details {
+    gap: 16px;
+  }
+  .sh-details > div > strong,
+  .sh-details > div > div:not(.sh-detail-label) {
+    display: block;
+    margin-top: 2px;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+
+  /* close footer: note, then full-width buttons stacked */
+  .sh-close-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .sh-close-actions {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  .sh-close-actions > .hc-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* ---------- Navigation Tabs ---------- */

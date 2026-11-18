@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
-import { apiCall, formatDateTime, formatVND, getRoomTypeName, getRoomBasePrice } from "../../services/api";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
+import { apiCall, formatDateTime, formatVND, getRoomTypeName, getRoomBasePrice, getRoomTypeId } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import { useAuth } from "../../contexts/AuthContext";
+import SearchInput from "../../components/common/SearchInput";
+import Paginated from "../../components/common/TablePagination";
 
 const STATUS_META = {
   AVAILABLE: { label: "Trống", badge: "hc-badge-success" },
@@ -28,6 +31,12 @@ const STATUS_FILTER_OPTIONS = [
   { value: "MAINTENANCE", label: "Bảo trì" },
 ];
 
+const STATUS_FORM_OPTIONS = [
+  { value: "AVAILABLE", label: "Trống" },
+  { value: "CLEANING", label: "Đang dọn" },
+  { value: "MAINTENANCE", label: "Bảo trì" },
+];
+
 const CLEANING_PRIORITY_META = {
   LOW: { label: "Thấp", badge: "hc-badge-muted" },
   MEDIUM: { label: "Trung bình", badge: "hc-badge-info" },
@@ -38,6 +47,7 @@ const CLEANING_PRIORITY_META = {
 const CLEANING_STATUS_META = {
   PENDING: { label: "Chờ dọn", badge: "hc-badge-warning" },
   IN_PROGRESS: { label: "Đang dọn", badge: "hc-badge-info" },
+  AWAITING_INSPECTION: { label: "Chờ kiểm tra", badge: "hc-badge-primary" },
   COMPLETED: { label: "Đã hoàn tất", badge: "hc-badge-success" },
   CANCELED: { label: "Đã hủy", badge: "hc-badge-muted" },
 };
@@ -46,6 +56,7 @@ const CLEANING_STATUS_OPTIONS = [
   { value: "ALL", label: "Tất cả trạng thái dọn" },
   { value: "PENDING", label: "Chờ dọn" },
   { value: "IN_PROGRESS", label: "Đang dọn" },
+  { value: "AWAITING_INSPECTION", label: "Chờ kiểm tra" },
   { value: "COMPLETED", label: "Đã hoàn tất" },
 ];
 
@@ -58,8 +69,12 @@ const PRIORITY_OPTIONS = [
 
 export default function StaffRoomsPage() {
   const { addToast } = useToast();
+  const { hasRole } = useAuth();
+  const canEditRoom = hasRole(["ADMIN", "MANAGER"]);
+  // Housekeeping only sees (and completes) the cleaning tasks assigned to them — no room map, no assigning, no deleting
+  const isFieldStaff = !hasRole(["RECEPTIONIST", "MANAGER", "ADMIN"]);
 
-  const [activeTab, setActiveTab] = useState("ROOMS");
+  const [activeTab, setActiveTab] = useState(hasRole(["RECEPTIONIST", "MANAGER", "ADMIN"]) ? "ROOMS" : "CLEANING");
   const [rooms, setRooms] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
   const [cleaningRequests, setCleaningRequests] = useState([]);
@@ -71,6 +86,54 @@ export default function StaffRoomsPage() {
 
   const [updatingId, setUpdatingId] = useState(null);
 
+  // Edit room (admin / manager, vacant rooms only)
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editRoomId, setEditRoomId] = useState(null);
+  const [editForm, setEditForm] = useState({ roomNumber: "", roomTypeId: "", floor: 1, status: "AVAILABLE", note: "" });
+  const [savingRoom, setSavingRoom] = useState(false);
+
+  const openEditModal = (room) => {
+    setEditRoomId(room.roomId);
+    setEditForm({
+      roomNumber: room.roomNumber,
+      roomTypeId: String(getRoomTypeId(room) || roomTypes[0]?.roomTypeId || ""),
+      floor: room.floor || 1,
+      status: room.status || "AVAILABLE",
+      note: room.note || "",
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleSaveRoom = async (e) => {
+    e?.preventDefault?.();
+    if (!editForm.roomNumber.trim() || !editForm.roomTypeId) {
+      addToast("Vui lòng điền số phòng và chọn hạng phòng!", "warning");
+      return;
+    }
+    setSavingRoom(true);
+    try {
+      const res = await apiCall(`/api/admin/rooms/${editRoomId}`, {
+        method: "PUT",
+        body: {
+          roomNumber: editForm.roomNumber.trim(),
+          roomTypeId: parseInt(editForm.roomTypeId, 10),
+          floor: parseInt(editForm.floor, 10) || 1,
+          status: editForm.status,
+          note: editForm.note || null,
+        },
+      });
+      if (res && res.success) {
+        addToast(`Cập nhật phòng ${editForm.roomNumber} thành công!`, "success");
+        setEditModalOpen(false);
+        loadData();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi lưu thông tin phòng", "error");
+    } finally {
+      setSavingRoom(false);
+    }
+  };
+
   const openRoomDetails = async (room) => {
     setSelectedRoom(room);
     setRoomBookings([]);
@@ -79,12 +142,13 @@ export default function StaffRoomsPage() {
     try {
       const res = await apiCall(`/api/admin/rooms/${room.roomId}/bookings`, { silentError: true });
       if (res?.success) {
-        setRoomBookings(Array.isArray(res.data) ? res.data : []);
+        const all = Array.isArray(res.data) ? res.data : [];
+        setRoomBookings(all.filter((b) => b.status === "CHECKED_IN"));
       } else {
-        addToast(res?.message || "Không tải được thông tin đặt phòng.", "error");
+        addToast(res?.message || "Không tải được thông tin khách đang lưu trú.", "error");
       }
     } catch (err) {
-      addToast(err.message || "Không tải được thông tin đặt phòng.", "error");
+      addToast(err.message || "Không tải được thông tin khách đang lưu trú.", "error");
     } finally {
       setLoadingRoomBookings(false);
     }
@@ -112,8 +176,8 @@ export default function StaffRoomsPage() {
     setLoading(true);
     try {
       const [roomsRes, typesRes, cleanRes] = await Promise.all([
-        apiCall("/api/admin/rooms", { silentError: true }),
-        apiCall("/api/public/rooms/room-types", { silentError: true }),
+        isFieldStaff ? Promise.resolve(null) : apiCall("/api/admin/rooms", { silentError: true }),
+        isFieldStaff ? Promise.resolve(null) : apiCall("/api/public/rooms/room-types", { silentError: true }),
         apiCall("/api/staff/room-cleaning", { silentError: true }),
       ]);
 
@@ -125,7 +189,7 @@ export default function StaffRoomsPage() {
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, isFieldStaff]);
 
   useEffect(() => {
     loadData();
@@ -240,11 +304,56 @@ export default function StaffRoomsPage() {
         method: "POST",
       });
       if (res && res.success) {
-        addToast(`Đã hoàn tất dọn dẹp phòng ${item.roomNumber}! Phòng chuyển sang trạng thái TRỐNG (AVAILABLE).`, "success");
+        addToast(
+          isFieldStaff
+            ? `Đã báo dọn xong phòng ${item.roomNumber}. Chờ lễ tân/quản lý kiểm tra.`
+            : `Đã hoàn tất dọn dẹp phòng ${item.roomNumber}! Phòng chuyển sang trạng thái TRỐNG (AVAILABLE).`,
+          "success",
+        );
         await loadData();
       }
     } catch (err) {
       addToast(err.message || "Lỗi khi hoàn tất dọn phòng.", "error");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // Supervisor inspection: approve (room -> AVAILABLE) or send back to housekeeping
+  const [rejectTarget, setRejectTarget] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const handleApproveCleaning = async (item) => {
+    setUpdatingId(item.cleaningId);
+    try {
+      const res = await apiCall(`/api/staff/room-cleaning/${item.cleaningId}/approve`, { method: "POST" });
+      if (res && res.success) {
+        addToast(`Đã duyệt phòng ${item.roomNumber}. Phòng chuyển sang trạng thái TRỐNG (AVAILABLE).`, "success");
+        await loadData();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi khi duyệt phòng.", "error");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleRejectCleaning = async () => {
+    if (!rejectTarget) return;
+    setUpdatingId(rejectTarget.cleaningId);
+    try {
+      const res = await apiCall(`/api/staff/room-cleaning/${rejectTarget.cleaningId}/reject`, {
+        method: "POST",
+        body: { reason: rejectReason.trim() },
+      });
+      if (res && res.success) {
+        addToast(`Đã trả phòng ${rejectTarget.roomNumber} cho nhân viên dọn lại.`, "success");
+        setRejectTarget(null);
+        setRejectReason("");
+        await loadData();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi khi trả lại yêu cầu.", "error");
     } finally {
       setUpdatingId(null);
     }
@@ -281,6 +390,11 @@ export default function StaffRoomsPage() {
 
   const typeFilterOptions = [{ value: "ALL", label: "Tất cả hạng phòng" }, ...roomTypes.map((t) => ({ value: String(t.roomTypeId), label: t.typeName }))];
 
+  const typeFormOptions = roomTypes.map((t) => ({
+    value: String(t.roomTypeId),
+    label: `${t.typeName} - ${formatVND(t.basePrice)}/đêm (${t.capacity} khách)`,
+  }));
+
   const housekeeperOptions = [
     {
       value: "",
@@ -295,8 +409,8 @@ export default function StaffRoomsPage() {
     <div className="ops-page">
       <div className="hc-page-title u-bar">
         <div>
-          <h2>Sơ Đồ &amp; Buồng Phòng</h2>
-          <p>Theo dõi tình trạng vệ sinh phòng, phân công ca trực dọn phòng chặt chẽ và nghiệm thu buồng phòng.</p>
+          <h2>{isFieldStaff ? "Công Việc Dọn Phòng Của Tôi" : "Sơ Đồ & Buồng Phòng"}</h2>
+          <p>{isFieldStaff ? "Danh sách phòng được phân công cho bạn. Bấm Hoàn tất khi đã dọn xong." : "Theo dõi tình trạng vệ sinh phòng, phân công ca trực dọn phòng chặt chẽ và nghiệm thu buồng phòng."}</p>
         </div>
 
         <button type="button" className="hc-btn hc-btn-outline" onClick={loadData} disabled={loading}>
@@ -306,10 +420,12 @@ export default function StaffRoomsPage() {
 
       {/* Tabs */}
       <div className="hc-tab-group" style={{ marginBottom: "20px" }}>
-        <button type="button" className={`hc-tab-btn ${activeTab === "ROOMS" ? "active" : ""}`} onClick={() => setActiveTab("ROOMS")}>
-          <i className="bi bi-door-open u-mr-6"></i>
-          Sơ đồ phòng ({rooms.length})
-        </button>
+        {!isFieldStaff && (
+          <button type="button" className={`hc-tab-btn ${activeTab === "ROOMS" ? "active" : ""}`} onClick={() => setActiveTab("ROOMS")}>
+            <i className="bi bi-door-open u-mr-6"></i>
+            Sơ đồ phòng ({rooms.length})
+          </button>
+        )}
         <button type="button" className={`hc-tab-btn ${activeTab === "CLEANING" ? "active" : ""}`} onClick={() => setActiveTab("CLEANING")}>
           <i className="bi bi-brush u-mr-6"></i>
           Yêu cầu dọn phòng{" "}
@@ -321,12 +437,12 @@ export default function StaffRoomsPage() {
         </button>
       </div>
 
-      {activeTab === "ROOMS" && (
+      {!isFieldStaff && activeTab === "ROOMS" && (
         <div className="hc-card">
-          <div className="hc-card-body u-row-ruled">
-            <input
+          <div className="hc-card-body u-row-ruled m-fields">
+            <SearchInput
               type="search"
-              className="hc-input u-flex-240"
+              wrapClassName="u-flex-240"
               placeholder="Tìm theo số phòng..."
               aria-label="Tìm phòng"
               value={searchQuery}
@@ -350,92 +466,100 @@ export default function StaffRoomsPage() {
               <p>Không tìm thấy phòng nào phù hợp.</p>
             </div>
           ) : (
-            <div className="hc-card-body flush u-scroll-x">
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Số phòng</th>
-                    <th>Hạng phòng</th>
-                    <th>Tầng</th>
-                    <th>Đơn giá</th>
-                    <th>Trạng thái</th>
-                    <th className="u-text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRooms.map((r) => {
-                    const meta = STATUS_META[r.status] || STATUS_META.MAINTENANCE;
-                    const isUpdating = updatingId === r.roomId;
-                    return (
-                      <tr key={r.roomId}>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => openRoomDetails(r)}
-                            style={{
-                              border: 0,
-                              padding: 0,
-                              background: "transparent",
-                              color: "var(--hc-primary)",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              textDecoration: "underline",
-                              textUnderlineOffset: "3px",
-                            }}
-                            title="Xem khách đã đặt phòng này"
-                          >
-                            Phòng {r.roomNumber}
-                          </button>
-                        </td>
-                        <td>{getRoomTypeName(r)}</td>
-                        <td>Tầng {r.floor || 1}</td>
-                        <td>{formatVND(getRoomBasePrice(r))} / đêm</td>
-                        <td>
-                          <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
-                        </td>
-                        <td className="u-text-right">
-                          <div style={{ display: "inline-flex", gap: "6px", flexWrap: "wrap", justifyContent: "flex-end" }}>
-                            {r.status === "CLEANING" && (
-                              <button
-                                type="button"
-                                className="hc-btn hc-btn-outline hc-btn-sm"
-                                title="Xác nhận đã dọn xong"
-                                disabled={isUpdating}
-                                onClick={() => handleQuickStatus(r.roomId, "AVAILABLE")}
-                              >
-                                <i className="bi bi-check2"></i> Đã dọn xong
-                              </button>
-                            )}
-                            {(r.status === "AVAILABLE" || r.status === "CLEANING") && (
-                              <button
-                                type="button"
-                                className="hc-btn hc-btn-primary hc-btn-sm"
-                                title="Phân công nhân viên buồng phòng có ca trực"
-                                disabled={isUpdating}
-                                onClick={() => openAssignCleaningModal(r)}
-                              >
-                                <i className="bi bi-person-gear"></i> Phân công dọn
-                              </button>
-                            )}
-                            {r.status === "AVAILABLE" && (
-                              <button
-                                type="button"
-                                className="hc-btn hc-btn-outline hc-btn-sm"
-                                title="Bắt đầu dọn dẹp nhanh"
-                                disabled={isUpdating}
-                                onClick={() => handleQuickStatus(r.roomId, "CLEANING")}
-                              >
-                                <i className="bi bi-brush"></i> Dọn nhanh
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <Paginated items={filteredRooms}>
+              {(pageRows, pager) => (
+                <>
+                  <div className="hc-card-body flush u-scroll-x">
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Số phòng</th>
+                          <th>Hạng phòng</th>
+                          <th>Tầng</th>
+                          <th>Đơn giá</th>
+                          <th>Trạng thái</th>
+                          <th className="col-actions">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((r) => {
+                          const meta = STATUS_META[r.status] || STATUS_META.MAINTENANCE;
+                          const isUpdating = updatingId === r.roomId;
+                          return (
+                            <tr
+                              key={r.roomId}
+                              className="row-clickable"
+                              tabIndex={0}
+                              title="Xem khách đang lưu trú"
+                              onClick={() => openRoomDetails(r)}
+                              onKeyDown={(e) => {
+                                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                  e.preventDefault();
+                                  openRoomDetails(r);
+                                }
+                              }}
+                            >
+                              <td>
+                                <span className="row-title">Phòng {r.roomNumber}</span>
+                              </td>
+                              <td>{getRoomTypeName(r)}</td>
+                              <td>Tầng {r.floor || 1}</td>
+                              <td>{formatVND(getRoomBasePrice(r))} / đêm</td>
+                              <td>
+                                <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
+                              </td>
+                              <td className="col-actions">
+                                <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                  {canEditRoom && r.status === "AVAILABLE" && (
+                                    <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" title="Sửa thông tin phòng trống" disabled={isUpdating} onClick={() => openEditModal(r)}>
+                                      <i className="bi bi-pencil-square"></i> Sửa
+                                    </button>
+                                  )}
+                                  {r.status === "CLEANING" && (
+                                    <button
+                                      type="button"
+                                      className="hc-btn hc-btn-outline hc-btn-sm"
+                                      title="Xác nhận đã dọn xong"
+                                      disabled={isUpdating}
+                                      onClick={() => handleQuickStatus(r.roomId, "AVAILABLE")}
+                                    >
+                                      <i className="bi bi-check2"></i> Đã dọn xong
+                                    </button>
+                                  )}
+                                  {(r.status === "AVAILABLE" || r.status === "CLEANING") && (
+                                    <button
+                                      type="button"
+                                      className="hc-btn hc-btn-primary hc-btn-sm"
+                                      title="Phân công nhân viên buồng phòng có ca trực"
+                                      disabled={isUpdating}
+                                      onClick={() => openAssignCleaningModal(r)}
+                                    >
+                                      <i className="bi bi-person-gear"></i> Phân công dọn
+                                    </button>
+                                  )}
+                                  {r.status === "AVAILABLE" && (
+                                    <button
+                                      type="button"
+                                      className="hc-btn hc-btn-outline hc-btn-sm"
+                                      title="Bắt đầu dọn dẹp nhanh"
+                                      disabled={isUpdating}
+                                      onClick={() => handleQuickStatus(r.roomId, "CLEANING")}
+                                    >
+                                      <i className="bi bi-brush"></i> Dọn nhanh
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {pager}
+                </>
+              )}
+            </Paginated>
           )}
         </div>
       )}
@@ -462,88 +586,116 @@ export default function StaffRoomsPage() {
               <p>Chưa có yêu cầu dọn phòng nào.</p>
             </div>
           ) : (
-            <div className="hc-card-body flush u-scroll-x">
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Phòng</th>
-                    <th>Tầng</th>
-                    <th>Người dọn phòng</th>
-                    <th>Ưu tiên</th>
-                    <th>Trạng thái</th>
-                    <th>Thời gian</th>
-                    <th>Ghi chú</th>
-                    <th className="u-text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCleaning.map((c) => {
-                    const stMeta = CLEANING_STATUS_META[c.status] || { label: c.status, badge: "hc-badge-muted" };
-                    const priMeta = CLEANING_PRIORITY_META[c.priority] || CLEANING_PRIORITY_META.MEDIUM;
-                    const isBusy = updatingId === c.cleaningId;
-                    return (
-                      <tr key={c.cleaningId}>
-                        <td>
-                          <strong>Phòng {c.roomNumber}</strong>
-                          {c.bookingCode && <div className="u-hint-sm">#{c.bookingCode}</div>}
-                        </td>
-                        <td>Tầng {c.floor || 1}</td>
-                        <td>
-                          {c.assignedToName ? (
-                            <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                              <i className="bi bi-person-check-fill"></i> {c.assignedToName}
-                            </span>
-                          ) : (
-                            <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>Chưa phân công</span>
-                          )}
-                        </td>
-                        <td>
-                          <span className={`hc-badge ${priMeta.badge}`}>{priMeta.label}</span>
-                        </td>
-                        <td>
-                          <span className={`hc-badge ${stMeta.badge}`}>{stMeta.label}</span>
-                        </td>
-                        <td style={{ fontSize: "12px" }}>
-                          <div>Tạo: {formatDateTime(c.requestedAt)}</div>
-                          {c.completedAt && <div className="u-text-success">Xong: {formatDateTime(c.completedAt)}</div>}
-                        </td>
-                        <td style={{ maxWidth: "200px", fontSize: "12px", color: "var(--hc-text-secondary)" }}>{c.note || "—"}</td>
-                        <td className="u-text-right">
-                          <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
-                            {c.status !== "COMPLETED" && (
-                              <>
-                                <button
-                                  type="button"
-                                  className="hc-btn hc-btn-outline hc-btn-sm"
-                                  disabled={isBusy}
-                                  onClick={() => openAssignCleaningModal(c)}
-                                  title="Phân công lại nhân viên buồng phòng"
-                                >
-                                  <i className="bi bi-person-gear"></i> Phân công
-                                </button>
-                                <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={isBusy} onClick={() => handleCompleteCleaning(c)} title="Xác nhận đã dọn xong phòng này">
-                                  <i className="bi bi-check2-circle"></i> Hoàn tất
-                                </button>
-                                <button
-                                  type="button"
-                                  className="hc-btn hc-btn-outline hc-btn-sm"
-                                  disabled={isBusy}
-                                  onClick={() => handleDeleteCleaning(c.cleaningId)}
-                                  style={{ color: "#dc2626", borderColor: "#fca5a5" }}
-                                  title="Hủy yêu cầu dọn phòng"
-                                >
-                                  <i className="bi bi-trash"></i>
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <Paginated items={filteredCleaning}>
+              {(pageRows, pager) => (
+                <>
+                  <div className="hc-card-body flush u-scroll-x">
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Phòng</th>
+                          <th>Tầng</th>
+                          <th>Người dọn phòng</th>
+                          <th>Ưu tiên</th>
+                          <th>Trạng thái</th>
+                          <th>Thời gian</th>
+                          <th>Ghi chú</th>
+                          <th className="col-actions">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((c) => {
+                          const stMeta = CLEANING_STATUS_META[c.status] || { label: c.status, badge: "hc-badge-muted" };
+                          const priMeta = CLEANING_PRIORITY_META[c.priority] || CLEANING_PRIORITY_META.MEDIUM;
+                          const isBusy = updatingId === c.cleaningId;
+                          return (
+                            <tr key={c.cleaningId}>
+                              <td>
+                                <strong>Phòng {c.roomNumber}</strong>
+                                {c.bookingCode && <div className="u-hint-sm">#{c.bookingCode}</div>}
+                              </td>
+                              <td>Tầng {c.floor || 1}</td>
+                              <td>
+                                {c.assignedToName ? (
+                                  <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <i className="bi bi-person-check-fill"></i> {c.assignedToName}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>Chưa phân công</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`hc-badge ${priMeta.badge}`}>{priMeta.label}</span>
+                              </td>
+                              <td>
+                                <span className={`hc-badge ${stMeta.badge}`}>{stMeta.label}</span>
+                              </td>
+                              <td style={{ fontSize: "12px" }}>
+                                <div>Tạo: {formatDateTime(c.requestedAt)}</div>
+                                {c.completedAt && <div className="u-text-success">Xong: {formatDateTime(c.completedAt)}</div>}
+                              </td>
+                              <td style={{ maxWidth: "200px", fontSize: "12px", color: "var(--hc-text-secondary)" }}>{c.note || "—"}</td>
+                              <td className="col-actions">
+                                <div className="row-actions">
+                                  {c.status === "AWAITING_INSPECTION" && (
+                                    <>
+                                      {isFieldStaff ? (
+                                        <span className="u-hint-muted">Đang chờ kiểm tra</span>
+                                      ) : (
+                                        <>
+                                          <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={isBusy} onClick={() => handleApproveCleaning(c)} title="Phòng đạt chuẩn — chuyển sang Trống">
+                                            <i className="bi bi-patch-check"></i> Duyệt
+                                          </button>
+                                          <button type="button" className="hc-btn hc-btn-outline-danger hc-btn-sm" disabled={isBusy} onClick={() => { setRejectTarget(c); setRejectReason(""); }} title="Chưa đạt — trả lại để dọn lại">
+                                            <i className="bi bi-arrow-counterclockwise"></i> Trả lại
+                                          </button>
+                                        </>
+                                      )}
+                                    </>
+                                  )}
+                                  {(c.status === "PENDING" || c.status === "IN_PROGRESS") && (
+                                    <>
+                                      {!isFieldStaff && (
+                                        <button
+                                          type="button"
+                                          className="hc-btn hc-btn-outline hc-btn-sm"
+                                          disabled={isBusy}
+                                          onClick={() => openAssignCleaningModal(c)}
+                                          title="Phân công lại nhân viên buồng phòng"
+                                        >
+                                          <i className="bi bi-person-gear"></i> Phân công
+                                        </button>
+                                      )}
+                                      {c.status === "IN_PROGRESS" && (
+                                        <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={isBusy} onClick={() => handleCompleteCleaning(c)} title={isFieldStaff ? "Báo đã dọn xong, chờ kiểm tra" : "Xác nhận đã dọn xong phòng này"}>
+                                          <i className="bi bi-check2-circle"></i> Hoàn tất
+                                        </button>
+                                      )}
+                                      {!isFieldStaff && (
+                                        <button
+                                          type="button"
+                                          className="hc-btn hc-btn-outline-danger hc-btn-sm"
+                                          disabled={isBusy}
+                                          onClick={() => handleDeleteCleaning(c.cleaningId)}
+                                          title="Hủy yêu cầu dọn phòng"
+                                        >
+                                          <i className="bi bi-trash"></i>
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {pager}
+                </>
+              )}
+            </Paginated>
           )}
         </div>
       )}
@@ -555,7 +707,7 @@ export default function StaffRoomsPage() {
           setSelectedRoom(null);
           setRoomBookings([]);
         }}
-        title={`Thông tin đặt phòng — Phòng ${selectedRoom?.roomNumber || ""}`}
+        title={`Khách đang lưu trú — Phòng ${selectedRoom?.roomNumber || ""}`}
         subtitle={selectedRoom ? `${getRoomTypeName(selectedRoom)} · Tầng ${selectedRoom.floor || 1}` : ""}
         icon="bi-people"
         maxWidth="860px"
@@ -567,7 +719,7 @@ export default function StaffRoomsPage() {
         ) : roomBookings.length === 0 ? (
           <div className="hc-empty-state">
             <i className="bi bi-calendar-x"></i>
-            <p>Chưa có thông tin đặt phòng cho phòng này.</p>
+            <p>Hiện không có khách đang lưu trú tại phòng này.</p>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px", maxHeight: "65vh", overflowY: "auto" }}>
@@ -614,6 +766,76 @@ export default function StaffRoomsPage() {
             })}
           </div>
         )}
+      </Modal>
+
+      {/* Edit room modal (admin / manager, vacant rooms) */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Chỉnh Sửa Phòng"
+        subtitle={`Cập nhật thông tin phòng ${editForm.roomNumber}`}
+        icon="bi-pencil-square"
+        maxWidth="540px"
+        footer={
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setEditModalOpen(false)}>
+              Hủy
+            </button>
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={handleSaveRoom} disabled={savingRoom}>
+              {savingRoom ? "Đang lưu..." : "Lưu thông tin"}
+            </button>
+          </div>
+        }
+      >
+        <form onSubmit={handleSaveRoom}>
+          <div className="hc-form-group">
+            <label className="hc-label">
+              Số phòng <span className="u-text-error">*</span>
+            </label>
+            <input type="text" className="hc-input" value={editForm.roomNumber} onChange={(e) => setEditForm({ ...editForm, roomNumber: e.target.value })} required />
+          </div>
+          <div className="hc-form-group">
+            <label className="hc-label">
+              Hạng phòng <span className="u-text-error">*</span>
+            </label>
+            <SelectMenu value={editForm.roomTypeId} onChange={(value) => setEditForm({ ...editForm, roomTypeId: value })} options={typeFormOptions} ariaLabel="Hạng phòng" icon="bi-layers" />
+          </div>
+          <div className="u-grid-auto">
+            <div className="hc-form-group">
+              <label className="hc-label">Tầng</label>
+              <input type="number" className="hc-input" min="1" max="50" value={editForm.floor} onChange={(e) => setEditForm({ ...editForm, floor: e.target.value })} />
+            </div>
+            <div className="hc-form-group">
+              <label className="hc-label">Trạng thái phòng</label>
+              <SelectMenu value={editForm.status} onChange={(value) => setEditForm({ ...editForm, status: value })} options={STATUS_FORM_OPTIONS} ariaLabel="Trạng thái phòng" icon="bi-toggles" />
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reject inspection modal */}
+      <Modal
+        isOpen={!!rejectTarget}
+        onClose={() => updatingId === null && setRejectTarget(null)}
+        title="Trả lại yêu cầu dọn phòng"
+        subtitle={rejectTarget ? `Phòng ${rejectTarget.roomNumber} · nhân viên sẽ phải dọn lại` : undefined}
+        icon="bi-arrow-counterclockwise"
+        maxWidth="460px"
+        footer={
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setRejectTarget(null)} disabled={updatingId !== null}>
+              Hủy
+            </button>
+            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={handleRejectCleaning} disabled={updatingId !== null}>
+              {updatingId !== null ? "Đang xử lý..." : "Trả lại"}
+            </button>
+          </div>
+        }
+      >
+        <div className="hc-form-group">
+          <label className="hc-label">Lý do (tùy chọn)</label>
+          <textarea className="hc-input" rows={3} placeholder="VD: Chưa thay ga giường, nhà tắm còn ướt..." value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
+        </div>
       </Modal>
 
       {/* Modal Phân công Dọn phòng Chặt chẽ */}

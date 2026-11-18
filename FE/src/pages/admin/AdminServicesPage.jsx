@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
-import { apiCall, formatVND, getCategoryName } from "../../services/api";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
+import { apiCall, formatVND, getCategoryName, getCategoryTone } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import SearchInput from "../../components/common/SearchInput";
+import Paginated from "../../components/common/TablePagination";
 
 export default function AdminServicesPage() {
   const { addToast } = useToast();
@@ -212,11 +214,10 @@ export default function AdminServicesPage() {
       </div>
 
       <div className="hc-card">
-        <div className="hc-card-body u-row-ruled">
-          <input
+        <div className="hc-card-body u-row-ruled m-fields">
+          <SearchInput
             type="search"
-            className="hc-input"
-            style={{ flex: "1 1 280px" }}
+            wrapStyle={{ flex: "1 1 280px" }}
             placeholder="Tìm theo tên dịch vụ..."
             aria-label="Tìm dịch vụ"
             value={searchQuery}
@@ -237,73 +238,88 @@ export default function AdminServicesPage() {
             <p>Không tìm thấy dịch vụ nào.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush u-scroll-x">
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Tên dịch vụ</th>
-                  <th>Danh mục</th>
-                  <th>Đơn vị tính</th>
-                  <th>Đơn giá</th>
-                  <th>Trạng thái</th>
-                  <th className="u-text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredServices.map((s) => {
-                  const active = isServiceActive(s);
-                  const catName = getCategoryName(s.category);
-                  const isToggling = togglingId === s.serviceId;
+          <Paginated items={filteredServices}>
+            {(pageRows, pager) => (
+              <>
+                <div className="hc-card-body flush u-scroll-x">
+                  <table className="hc-table">
+                    <thead>
+                      <tr>
+                        <th>Tên dịch vụ</th>
+                        <th>Danh mục</th>
+                        <th>Đơn vị tính</th>
+                        <th>Đơn giá</th>
+                        <th>Trạng thái</th>
+                        <th className="col-actions">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((s) => {
+                        const active = isServiceActive(s);
+                        const catName = getCategoryName(s.category);
+                        const isToggling = togglingId === s.serviceId;
 
-                  return (
-                    <tr key={s.serviceId}>
-                      <td>
-                        <strong>{s.serviceName}</strong>
-                      </td>
-                      <td>
-                        <span className={`hc-badge ${catName !== "Khác" ? "hc-badge-primary" : "hc-badge-muted"}`}>{catName}</span>
-                      </td>
-                      <td>{s.unit || "Lần"}</td>
-                      <td>
-                        <strong>{formatVND(s.unitPrice)}</strong>
-                      </td>
-                      <td>
-                        <span className={`hc-badge ${active ? "hc-badge-success" : "hc-badge-muted"}`}>{active ? "Sẵn sàng" : "Tạm ngưng"}</span>
-                      </td>
-                      <td className="u-text-right">
-                        <div style={{ display: "inline-flex", gap: "8px", alignItems: "center" }}>
-                          <button
-                            type="button"
-                            className={`hc-btn hc-btn-sm ${active ? "hc-btn-outline" : "hc-btn-primary"}`}
-                            style={{ minWidth: "92px" }}
-                            onClick={() => handleToggleStatus(s)}
-                            disabled={isToggling}
-                            title={active ? "Tắt không cho phép khách gọi" : "Bật cho phép khách gọi"}
+                        return (
+                          <tr
+                            key={s.serviceId}
+                            className="row-clickable"
+                            tabIndex={0}
+                            title="Chỉnh sửa dịch vụ"
+                            onClick={() => openEditModal(s)}
+                            onKeyDown={(e) => {
+                              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault();
+                                openEditModal(s);
+                              }
+                            }}
                           >
-                            {isToggling ? (
-                              "Đang xử lý..."
-                            ) : active ? (
-                              <>
-                                <i className="bi bi-pause-circle"></i> Tắt gọi
-                              </>
-                            ) : (
-                              <>
-                                <i className="bi bi-play-circle"></i> Cho phép
-                              </>
-                            )}
-                          </button>
+                            <td>
+                              <strong>{s.serviceName}</strong>
+                            </td>
+                            <td>
+                              <span className={`hc-badge hc-badge-${getCategoryTone(catName)}`}>{catName}</span>
+                            </td>
+                            <td>{s.unit || "Lần"}</td>
+                            <td>
+                              <strong>{formatVND(s.unitPrice)}</strong>
+                            </td>
+                            <td>
+                              <span className={`hc-badge ${active ? "hc-badge-success" : "hc-badge-muted"}`}>{active ? "Sẵn sàng" : "Tạm ngưng"}</span>
+                            </td>
+                            <td className="col-actions">
+                              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  className={`hc-btn hc-btn-sm ${active ? "hc-btn-outline" : "hc-btn-primary"}`}
+                                  onClick={() => handleToggleStatus(s)}
+                                  disabled={isToggling}
+                                  title={active ? "Tắt không cho phép khách gọi" : "Bật cho phép khách gọi"}
+                                >
+                                  {isToggling ? (
+                                    "Đang xử lý..."
+                                  ) : active ? (
+                                    <>
+                                      <i className="bi bi-pause-circle"></i> Tắt gọi
+                                    </>
+                                  ) : (
+                                    <>
+                                      <i className="bi bi-play-circle"></i> Cho phép
+                                    </>
+                                  )}
+                                </button>
 
-                          <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => openEditModal(s)}>
-                            <i className="bi bi-pencil"></i> Sửa
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pager}
+              </>
+            )}
+          </Paginated>
         )}
       </div>
 
@@ -375,12 +391,6 @@ export default function AdminServicesPage() {
             <input type="number" className="hc-input" min="0" step="1000" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} required />
           </div>
 
-          <div style={{ marginTop: "16px" }}>
-            <label className="hc-switch">
-              <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-              <span>Cho phép gọi dịch vụ này</span>
-            </label>
-          </div>
         </form>
       </Modal>
     </div>

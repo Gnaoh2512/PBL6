@@ -36,11 +36,24 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
     private final AccountRepository accountRepository;
     private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
+    private final ShiftGuard shiftGuard;
 
     @Override
     @Transactional(readOnly = true)
     public List<RoomCleaningResponse> getAllRequests(String status, String priority, Integer roomId, Integer assignedToId) {
+        return getAllRequests(status, priority, roomId, assignedToId, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomCleaningResponse> getAllRequests(String status, String priority, Integer roomId, Integer assignedToId, String assignedToUsername) {
         List<RoomCleaningRequest> list = cleaningRepository.findAll();
+
+        if (assignedToUsername != null) {
+            list = list.stream()
+                    .filter(r -> r.getAssignedTo() != null && assignedToUsername.equalsIgnoreCase(r.getAssignedTo().getUsername()))
+                    .collect(Collectors.toList());
+        }
 
         if (roomId != null) {
             list = list.stream()
@@ -99,7 +112,7 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
         if (dto.getAssignedToId() != null) {
             assignedTo = accountRepository.findById(dto.getAssignedToId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên #" + dto.getAssignedToId()));
-            validateShiftIfScheduledDataExists(assignedTo, "ROLE_HOUSEKEEPING");
+            shiftGuard.ensureOnShift(assignedTo, "ROLE_HOUSEKEEPING", requester, "BUỒNG PHÒNG", "roomcleaning_request", null);
         }
 
         String priority = StringUtils.hasText(dto.getPriority()) ? dto.getPriority().trim().toUpperCase() : "MEDIUM";
@@ -150,7 +163,7 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
         if (dto.getAssignedToId() != null) {
             Account assignedTo = accountRepository.findById(dto.getAssignedToId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên #" + dto.getAssignedToId()));
-            validateShiftIfScheduledDataExists(assignedTo, "ROLE_HOUSEKEEPING");
+            shiftGuard.ensureOnShift(assignedTo, "ROLE_HOUSEKEEPING", accountRepository.findByUsername(username).orElse(null), "BUỒNG PHÒNG", "roomcleaning_request", id);
             req.setAssignedTo(assignedTo);
             if ("PENDING".equalsIgnoreCase(req.getStatus())) {
                 req.setStatus("IN_PROGRESS");
@@ -186,6 +199,12 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
         RoomCleaningRequest req = cleaningRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dọn phòng #" + id));
 
+        String oldStatus = req.getStatus();
+        if (!"PENDING".equalsIgnoreCase(oldStatus) && !"IN_PROGRESS".equalsIgnoreCase(oldStatus)) {
+            throw new IllegalStateException("Chỉ có thể phân công yêu cầu dọn phòng đang chờ hoặc đang dọn (hiện tại: " + oldStatus + ")");
+        }
+
+        Account actor = accountRepository.findByUsername(actorUsername).orElse(null);
         Account staff;
         if (staffAccountId != null) {
             staff = accountRepository.findById(staffAccountId)
@@ -195,7 +214,7 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + actorUsername));
         }
 
-        validateShiftIfScheduledDataExists(staff, "ROLE_HOUSEKEEPING");
+        shiftGuard.ensureOnShift(staff, "ROLE_HOUSEKEEPING", actor, "BUỒNG PHÒNG", "roomcleaning_request", id);
 
         req.setAssignedTo(staff);
         req.setStatus("IN_PROGRESS");
@@ -205,7 +224,8 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
 
         RoomCleaningRequest saved = cleaningRepository.save(req);
         auditLogService.log("BUỒNG PHÒNG", "ASSIGN_CLEANING", "roomcleaning_request", Long.valueOf(saved.getCleaningId()),
-                "Phân công nhân viên " + staff.getFullName() + " dọn phòng " + (req.getRoom() != null ? req.getRoom().getRoomNumber() : ""));
+                "Phân công nhân viên " + staff.getFullName() + " dọn phòng " + (req.getRoom() != null ? req.getRoom().getRoomNumber() : "")
+                        + " (" + oldStatus + " → IN_PROGRESS)");
 
         return RoomCleaningResponse.fromEntity(saved);
     }
@@ -213,25 +233,88 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
     @Override
     @Transactional
     public RoomCleaningResponse completeCleaning(Integer id, String note, String actorUsername) {
+        return completeCleaning(id, note, actorUsername, false);
+    }
+
+    /**
+     * Housekeeping (ownOnly = true) finishes the cleaning -> AWAITING_INSPECTION, the room stays CLEANING until a
+     * receptionist / manager / admin approves it. Supervisors completing directly skip the inspection step.
+     */
+    @Override
+    @Transactional
+    public RoomCleaningResponse completeCleaning(Integer id, String note, String actorUsername, boolean ownOnly) {
         RoomCleaningRequest req = cleaningRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dọn phòng #" + id));
 
-        if (req.getAssignedTo() == null && StringUtils.hasText(actorUsername)) {
-            accountRepository.findByUsername(actorUsername).ifPresent(req::setAssignedTo);
+        if (ownOnly && (req.getAssignedTo() == null || req.getAssignedTo().getUsername() == null
+                || !req.getAssignedTo().getUsername().equalsIgnoreCase(actorUsername))) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn chỉ có thể hoàn tất yêu cầu dọn phòng được phân công cho mình");
+        }
+        if (!"IN_PROGRESS".equalsIgnoreCase(req.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể hoàn tất yêu cầu dọn phòng đang dọn (hiện tại: " + req.getStatus() + ")");
         }
 
-        req.setStatus("COMPLETED");
         req.setCompletedAt(LocalDateTime.now());
         if (StringUtils.hasText(note)) {
             req.setNote(StringUtils.hasText(req.getNote()) ? req.getNote() + " | " + note : note);
         }
 
+        String roomLabel = req.getRoom() != null ? req.getRoom().getRoomNumber() : "#" + id;
+        String action;
+        String details;
+        if (ownOnly) {
+            req.setStatus("AWAITING_INSPECTION");
+            action = "SUBMIT_CLEANING";
+            details = "Dọn xong phòng " + roomLabel + ", chờ kiểm tra (IN_PROGRESS → AWAITING_INSPECTION) bởi " + actorUsername;
+        } else {
+            req.setStatus("COMPLETED");
+            releaseRoomAfterCleaning(req.getRoom());
+            action = "COMPLETE_CLEANING";
+            details = "Hoàn tất dọn phòng " + roomLabel + " (IN_PROGRESS → COMPLETED) bởi " + actorUsername;
+        }
+
+        RoomCleaningRequest saved = cleaningRepository.save(req);
+        auditLogService.log("BUỒNG PHÒNG", action, "roomcleaning_request", Long.valueOf(saved.getCleaningId()), details);
+        return RoomCleaningResponse.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public RoomCleaningResponse approveCleaning(Integer id, String actorUsername) {
+        RoomCleaningRequest req = cleaningRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dọn phòng #" + id));
+        if (!"AWAITING_INSPECTION".equalsIgnoreCase(req.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể duyệt yêu cầu đang chờ kiểm tra (hiện tại: " + req.getStatus() + ")");
+        }
+
+        req.setStatus("COMPLETED");
         releaseRoomAfterCleaning(req.getRoom());
 
         RoomCleaningRequest saved = cleaningRepository.save(req);
-        auditLogService.log("BUỒNG PHÒNG", "COMPLETE_CLEANING", "roomcleaning_request", Long.valueOf(saved.getCleaningId()),
-                "Hoàn tất dọn phòng " + (req.getRoom() != null ? req.getRoom().getRoomNumber() : "#" + id) + " bởi " + actorUsername);
+        auditLogService.log("BUỒNG PHÒNG", "APPROVE_CLEANING", "roomcleaning_request", Long.valueOf(saved.getCleaningId()),
+                "Duyệt phòng " + (req.getRoom() != null ? req.getRoom().getRoomNumber() : "#" + id)
+                        + " đạt chuẩn, phòng sẵn sàng đón khách (AWAITING_INSPECTION → COMPLETED) bởi " + actorUsername);
+        return RoomCleaningResponse.fromEntity(saved);
+    }
 
+    @Override
+    @Transactional
+    public RoomCleaningResponse rejectCleaning(Integer id, String reason, String actorUsername) {
+        RoomCleaningRequest req = cleaningRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dọn phòng #" + id));
+        if (!"AWAITING_INSPECTION".equalsIgnoreCase(req.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể trả lại yêu cầu đang chờ kiểm tra (hiện tại: " + req.getStatus() + ")");
+        }
+
+        req.setStatus("IN_PROGRESS");
+        req.setCompletedAt(null);
+        String remark = "Trả lại: " + (StringUtils.hasText(reason) ? reason.trim() : "chưa đạt, cần dọn lại");
+        req.setNote(StringUtils.hasText(req.getNote()) ? req.getNote() + " | " + remark : remark);
+
+        RoomCleaningRequest saved = cleaningRepository.save(req);
+        auditLogService.log("BUỒNG PHÒNG", "REJECT_CLEANING", "roomcleaning_request", Long.valueOf(saved.getCleaningId()),
+                "Trả lại phòng " + (req.getRoom() != null ? req.getRoom().getRoomNumber() : "#" + id)
+                        + " để dọn lại (AWAITING_INSPECTION → IN_PROGRESS) bởi " + actorUsername + " — " + remark);
         return RoomCleaningResponse.fromEntity(saved);
     }
 
@@ -252,16 +335,4 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
         }
     }
 
-    /**
-     * Nếu trong ngày/ca hiện tại có dữ liệu phân ca trực cho bộ phận đó thì kiểm tra Strict Shift Validation.
-     */
-    private void validateShiftIfScheduledDataExists(Account staff, String roleCode) {
-        var availableStaff = workScheduleService.getAvailableStaffInShift(LocalDate.now(), LocalTime.now(), roleCode);
-        if (!availableStaff.isEmpty()) {
-            boolean inShift = availableStaff.stream().anyMatch(s -> s.getAccountId().equals(staff.getAccountId()));
-            if (!inShift) {
-                throw new IllegalArgumentException("Nhân viên " + staff.getFullName() + " hiện không có trong lịch trực ca hiện tại!");
-            }
-        }
-    }
 }

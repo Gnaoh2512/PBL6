@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/staff/bookings")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('RECEPTIONIST', 'MANAGER', 'ADMIN')")
+@PreAuthorize(Roles.SUPERVISORS)
 public class StaffBookingController {
 
     private final StaffBookingService staffBookingService;
@@ -32,15 +33,6 @@ public class StaffBookingController {
             @RequestParam(required = false) String keyword) {
         List<BookingDetailResponse> bookings = staffBookingService.getAllBookings(status, keyword);
         return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách đơn đặt phòng thành công", bookings));
-    }
-
-    /**
-     * Lễ tân xem chi tiết đơn đặt phòng theo mã
-     */
-    @GetMapping("/{bookingCode}")
-    public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingByCode(@PathVariable String bookingCode) {
-        BookingDetailResponse booking = staffBookingService.getBookingByCode(bookingCode);
-        return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết đơn đặt phòng thành công", booking));
     }
 
     /**

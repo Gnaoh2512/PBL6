@@ -31,43 +31,6 @@ public class PublicRoomController {
     }
 
     /**
-     * Xem thông tin chi tiết một hạng phòng theo ID
-     */
-    @GetMapping("/room-types/{id}")
-    public ResponseEntity<ApiResponse<RoomTypeResponse>> getRoomTypeById(@PathVariable Integer id) {
-        RoomTypeResponse roomType = roomCatalogService.getRoomTypeById(id);
-        return ResponseEntity.ok(ApiResponse.ok(roomType));
-    }
-
-    /**
-     * Tìm kiếm phòng trống và báo giá dự kiến (GET query params)
-     * Ví dụ: /api/public/rooms/available?checkInDate=2026-10-01&checkOutDate=2026-10-03&guestCount=2
-     */
-    @GetMapping("/available")
-    public ResponseEntity<ApiResponse<List<AvailableRoomResponse>>> searchAvailableRoomsGet(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkInDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOutDate,
-            @RequestParam(required = false) Integer roomTypeId,
-            @RequestParam(required = false) Integer guestCount,
-            @RequestParam(required = false) java.math.BigDecimal minPrice,
-            @RequestParam(required = false) java.math.BigDecimal maxPrice,
-            @RequestParam(required = false) String sortBy) {
-
-        RoomSearchRequest request = RoomSearchRequest.builder()
-                .checkInDate(checkInDate)
-                .checkOutDate(checkOutDate)
-                .roomTypeId(roomTypeId)
-                .guestCount(guestCount)
-                .minPrice(minPrice)
-                .maxPrice(maxPrice)
-                .sortBy(sortBy)
-                .build();
-
-        List<AvailableRoomResponse> rooms = roomCatalogService.findAvailableRooms(request);
-        return ResponseEntity.ok(ApiResponse.ok(rooms));
-    }
-
-    /**
      * Tìm kiếm phòng trống và báo giá dự kiến (POST JSON body)
      */
     @PostMapping("/available")

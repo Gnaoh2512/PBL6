@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import Modal from "../../components/Modal";
+import Modal from "../../components/common/Modal";
 import { apiCall, formatVND, formatDateTime } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
 import "./StaffShifts.css";
+import SelectMenu from "../../components/common/SelectMenu";
+import Paginated from "../../components/common/TablePagination";
 
 const FLOAT_PRESETS = [500000, 1000000, 2000000, 3000000, 5000000];
 
@@ -13,7 +15,7 @@ export default function StaffShiftsPage() {
   const [historyShifts, setHistoryShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  const [, setRefreshing] = useState(false);
 
   // Open Shift Form State
   const [initialFloat, setInitialFloat] = useState(2000000);
@@ -147,7 +149,6 @@ export default function StaffShiftsPage() {
   const totalCashRevenue = Number(currentShift?.totalCashRevenue || 0);
   const totalBankRevenue = Number(currentShift?.totalBankRevenue || 0);
   const totalCardRevenue = Number(currentShift?.totalCardRevenue || 0);
-  const totalRefund = Number(currentShift?.totalRefund || 0);
   const totalRevenue = Number(currentShift?.totalRevenue || 0);
   // Total physical cash in the drawer
   const totalPhysicalFund = openingCash + totalCashRevenue;
@@ -217,52 +218,16 @@ export default function StaffShiftsPage() {
             Hệ thống ca thu ngân dùng chung đồng bộ giữa Lễ tân và Quản lý (Admin). Tự động ghi nhận mọi giao dịch phòng, cọc và dịch vụ.
           </p>
         </div>
-
-        <div className="u-row-10">
-          <button
-            type="button"
-            className="hc-btn hc-btn-outline"
-            onClick={() => (activeTab === "CURRENT" ? loadCurrentShift() : loadHistoryShifts())}
-            disabled={refreshing}
-            title="Đồng bộ dữ liệu mới nhất"
-          >
-            <i className={`bi bi-arrow-clockwise ${refreshing ? "spin-icon" : ""}`}></i>
-            {refreshing ? "Đang đồng bộ..." : "Đồng bộ ngay"}
-          </button>
-        </div>
       </div>
 
       {/* Tabs Switcher */}
-      <div className="sh-tabs">
-        <button
-          type="button"
-          className={`sh-tab ${activeTab === "CURRENT" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("CURRENT")}
-        >
+      <div className="hc-tab-group">
+        <button type="button" className={`hc-tab-btn ${activeTab === "CURRENT" ? "active" : ""}`} onClick={() => setActiveTab("CURRENT")}>
           <i className="bi bi-wallet2"></i>
           Ca trực hiện tại
-          {isShiftOpen && (
-            <span
-              style={{
-                background: "var(--hc-success, #16a34a)",
-                color: "#fff",
-                fontSize: "10px",
-                padding: "2px 7px",
-                borderRadius: "10px",
-                fontWeight: 700,
-                marginLeft: "4px",
-              }}
-            >
-              Đang mở
-            </span>
-          )}
+          {isShiftOpen && <span className="hc-badge hc-badge-success">Đang mở</span>}
         </button>
-
-        <button
-          type="button"
-          className={`sh-tab ${activeTab === "HISTORY" ? "is-active" : ""}`}
-          onClick={() => setActiveTab("HISTORY")}
-        >
+        <button type="button" className={`hc-tab-btn ${activeTab === "HISTORY" ? "active" : ""}`} onClick={() => setActiveTab("HISTORY")}>
           <i className="bi bi-clock-history"></i>
           Lịch sử các ca thu ngân
         </button>
@@ -298,7 +263,7 @@ export default function StaffShiftsPage() {
                   </div>
                 </div>
 
-                <div className="u-text-right">
+                <div className="sh-shared-right">
                   <span className="u-hint u-block">
                     Chế độ đồng bộ thời gian thực
                   </span>
@@ -340,96 +305,6 @@ export default function StaffShiftsPage() {
                   </div>
                 </div>
 
-                {/* Side Tile Summary */}
-                <div className="sh-side">
-                  <div className="sh-tile">
-                    <div className="sh-tile-icon" style={{ background: "var(--hc-success-bg)", color: "var(--hc-success)" }}>
-                      <i className="bi bi-graph-up-arrow"></i>
-                    </div>
-                    <div>
-                      <div className="sh-tile-label">Tổng doanh thu ca</div>
-                      <div className="sh-tile-value">{formatVND(totalRevenue)}</div>
-                      <div className="sh-tile-sub">{transactions.length} giao dịch phát sinh</div>
-                    </div>
-                  </div>
-
-                  <div className="sh-tile">
-                    <div className="sh-tile-icon" style={{ background: "var(--hc-primary-subtle)", color: "var(--hc-primary)" }}>
-                      <i className="bi bi-cash-stack"></i>
-                    </div>
-                    <div>
-                      <div className="sh-tile-label">Tiền mặt bàn giao đầu ca</div>
-                      <div className="sh-tile-value">{formatVND(openingCash)}</div>
-                      <div className="sh-tile-sub">Két tiền ban đầu</div>
-                    </div>
-                  </div>
-
-                  <div className="sh-tile">
-                    <div className="sh-tile-icon" style={{ background: "var(--hc-info-bg)", color: "var(--hc-info)" }}>
-                      <i className="bi bi-clock-history"></i>
-                    </div>
-                    <div>
-                      <div className="sh-tile-label">Thời gian mở ca</div>
-                      <div className="sh-tile-value">{new Date(currentShift.startTime).toLocaleTimeString("vi-VN")}</div>
-                      <div className="sh-tile-sub">{elapsedText}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4-Column Payment Breakdown Grid */}
-              <div className="sh-breakdown-grid">
-                <div className="sh-breakdown-card">
-                  <div className="sh-breakdown-head">
-                    <span className="sh-breakdown-lbl">Tiền Mặt (Cash)</span>
-                    <div className="sh-breakdown-icon" style={{ background: "#fef3c7", color: "#b45309" }}>
-                      <i className="bi bi-cash"></i>
-                    </div>
-                  </div>
-                  <div className="sh-breakdown-val" style={{ color: "#b45309" }}>
-                    {formatVND(totalCashRevenue)}
-                  </div>
-                  <div className="sh-breakdown-hint">Cộng dồn vào két tiền mặt ({cashCount} GD)</div>
-                </div>
-
-                <div className="sh-breakdown-card">
-                  <div className="sh-breakdown-head">
-                    <span className="sh-breakdown-lbl">VietQR / Chuyển Khoản</span>
-                    <div className="sh-breakdown-icon" style={{ background: "#e0e7ff", color: "#4338ca" }}>
-                      <i className="bi bi-qr-code-scan"></i>
-                    </div>
-                  </div>
-                  <div className="sh-breakdown-val" style={{ color: "#4338ca" }}>
-                    {formatVND(totalBankRevenue)}
-                  </div>
-                  <div className="sh-breakdown-hint">Tự động đối soát SePay / VietQR ({bankCount} GD)</div>
-                </div>
-
-                <div className="sh-breakdown-card">
-                  <div className="sh-breakdown-head">
-                    <span className="sh-breakdown-lbl">Thẻ Tín Dụng (POS)</span>
-                    <div className="sh-breakdown-icon" style={{ background: "#dbeafe", color: "#1d4ed8" }}>
-                      <i className="bi bi-credit-card"></i>
-                    </div>
-                  </div>
-                  <div className="sh-breakdown-val" style={{ color: "#1d4ed8" }}>
-                    {formatVND(totalCardRevenue)}
-                  </div>
-                  <div className="sh-breakdown-hint">Quẹt thẻ qua máy POS ({cardCount} GD)</div>
-                </div>
-
-                <div className="sh-breakdown-card">
-                  <div className="sh-breakdown-head">
-                    <span className="sh-breakdown-lbl">Hoàn Tiền (Refunds)</span>
-                    <div className="sh-breakdown-icon" style={{ background: "#fee2e2", color: "#b91c1c" }}>
-                      <i className="bi bi-arrow-return-left"></i>
-                    </div>
-                  </div>
-                  <div className="sh-breakdown-val" style={{ color: totalRefund > 0 ? "#b91c1c" : "inherit" }}>
-                    {formatVND(totalRefund)}
-                  </div>
-                  <div className="sh-breakdown-hint">Hoàn cọc hủy phòng ({refundCount} GD)</div>
-                </div>
               </div>
 
               {/* Shared Transactions Table Card */}
@@ -456,18 +331,21 @@ export default function StaffShiftsPage() {
                         />
                       </div>
 
-                      <select
-                        className="hc-select"
-                        value={txnFilter}
-                        onChange={(e) => setTxnFilter(e.target.value)}
-                        style={{ width: "auto" }}
-                      >
-                        <option value="ALL">Tất cả phương thức ({transactions.length})</option>
-                        <option value="CASH">💵 Tiền mặt ({cashCount})</option>
-                        <option value="BANK">📱 Chuyển khoản / VietQR ({bankCount})</option>
-                        <option value="CARD">💳 Thẻ tín dụng ({cardCount})</option>
-                        {refundCount > 0 && <option value="REFUND">🔄 Hoàn tiền ({refundCount})</option>}
-                      </select>
+                      <div style={{ minWidth: "240px" }}>
+                        <SelectMenu
+                          ariaLabel="Lọc phương thức thanh toán"
+                          icon="bi-funnel"
+                          value={txnFilter}
+                          onChange={setTxnFilter}
+                          options={[
+                            { value: "ALL", label: `Tất cả phương thức (${transactions.length})` },
+                            { value: "CASH", label: `Tiền mặt (${cashCount})` },
+                            { value: "BANK", label: `Chuyển khoản / VietQR (${bankCount})` },
+                            { value: "CARD", label: `Thẻ tín dụng (${cardCount})` },
+                            ...(refundCount > 0 ? [{ value: "REFUND", label: `Hoàn tiền (${refundCount})` }] : []),
+                          ]}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -483,108 +361,115 @@ export default function StaffShiftsPage() {
                       </p>
                     </div>
                   ) : (
-                    <table className="hc-table">
-                      <thead>
-                        <tr>
-                          <th>Mã GD</th>
-                          <th>Đơn đặt / Phòng</th>
-                          <th>Khách hàng</th>
-                          <th>Loại giao dịch</th>
-                          <th>Phương thức</th>
-                          <th className="u-text-right">Số tiền</th>
-                          <th>Thời gian</th>
-                          <th>Người thu</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredTransactions.map((t) => {
-                          const isRef = (t.type || "").toUpperCase() === "REFUND";
-                          const isCash = (t.method || "").toUpperCase() === "CASH";
-                          const isBank = ["BANK_TRANSFER", "VIETQR", "TRANSFER"].includes((t.method || "").toUpperCase());
+                    <Paginated items={filteredTransactions}>
+                      {(pageRows, pager) => (
+                        <>
+                          <table className="hc-table">
+                            <thead>
+                              <tr>
+                                <th>Mã GD</th>
+                                <th>Đơn đặt / Phòng</th>
+                                <th>Khách hàng</th>
+                                <th>Loại giao dịch</th>
+                                <th>Phương thức</th>
+                                <th className="u-text-right">Số tiền</th>
+                                <th>Thời gian</th>
+                                <th>Người thu</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pageRows.map((t) => {
+                                const isRef = (t.type || "").toUpperCase() === "REFUND";
+                                const isCash = (t.method || "").toUpperCase() === "CASH";
+                                const isBank = ["BANK_TRANSFER", "VIETQR", "TRANSFER"].includes((t.method || "").toUpperCase());
 
-                          return (
-                            <tr key={t.paymentId}>
-                              <td>
-                                <strong>#TXN-{t.paymentId}</strong>
-                              </td>
-                              <td>
-                                {t.bookingCode ? (
-                                  <div>
-                                    <strong className="u-text-primary">{t.bookingCode}</strong>
-                                    {t.roomNumber && (
-                                      <span style={{ marginLeft: "6px", fontSize: "12px", color: "var(--hc-text-secondary)" }}>
-                                        (P.{t.roomNumber})
+                                return (
+                                  <tr key={t.paymentId}>
+                                    <td>
+                                      <strong>#TXN-{t.paymentId}</strong>
+                                    </td>
+                                    <td>
+                                      {t.bookingCode ? (
+                                        <div>
+                                          <strong className="u-text-primary">{t.bookingCode}</strong>
+                                          {t.roomNumber && (
+                                            <span style={{ marginLeft: "6px", fontSize: "12px", color: "var(--hc-text-secondary)" }}>
+                                              (P.{t.roomNumber})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <span className="u-text-muted">—</span>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <div>{t.customerName || "Khách vãng lai"}</div>
+                                      {t.note && (
+                                        <div className="u-hint-sm">
+                                          {t.note}
+                                        </div>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <span
+                                        className={`hc-badge ${
+                                          isRef
+                                            ? "hc-badge-danger"
+                                            : t.type === "DEPOSIT"
+                                            ? "hc-badge-info"
+                                            : "hc-badge-success"
+                                        }`}
+                                      >
+                                        {t.type === "DEPOSIT"
+                                          ? "Đặt cọc"
+                                          : t.type === "SETTLEMENT"
+                                          ? "Tất toán"
+                                          : t.type === "REFUND"
+                                          ? "Hoàn tiền"
+                                          : t.type || "Thanh toán"}
                                       </span>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <span className="u-text-muted">—</span>
-                                )}
-                              </td>
-                              <td>
-                                <div>{t.customerName || "Khách vãng lai"}</div>
-                                {t.note && (
-                                  <div className="u-hint-sm">
-                                    {t.note}
-                                  </div>
-                                )}
-                              </td>
-                              <td>
-                                <span
-                                  className={`hc-badge ${
-                                    isRef
-                                      ? "hc-badge-danger"
-                                      : t.type === "DEPOSIT"
-                                      ? "hc-badge-info"
-                                      : "hc-badge-success"
-                                  }`}
-                                >
-                                  {t.type === "DEPOSIT"
-                                    ? "Đặt cọc"
-                                    : t.type === "SETTLEMENT"
-                                    ? "Tất toán"
-                                    : t.type === "REFUND"
-                                    ? "Hoàn tiền"
-                                    : t.type || "Thanh toán"}
-                                </span>
-                              </td>
-                              <td>
-                                {isCash ? (
-                                  <span className="sh-method-badge cash">
-                                    <i className="bi bi-cash"></i> Tiền mặt
-                                  </span>
-                                ) : isBank ? (
-                                  <span className="sh-method-badge bank">
-                                    <i className="bi bi-qr-code"></i> VietQR / CK
-                                  </span>
-                                ) : (
-                                  <span className="sh-method-badge card">
-                                    <i className="bi bi-credit-card"></i> Thẻ POS
-                                  </span>
-                                )}
-                              </td>
-                              <td
-                                style={{
-                                  textAlign: "right",
-                                  fontWeight: 700,
-                                  fontSize: "14px",
-                                  color: isRef ? "var(--hc-error, #dc2626)" : "var(--hc-success, #16a34a)",
-                                }}
-                              >
-                                {isRef ? "-" : "+"}
-                                {formatVND(t.amount)}
-                              </td>
-                              <td>{formatDateTime(t.paidAt)}</td>
-                              <td>
-                                <span className="hc-badge hc-badge-neutral">
-                                  {t.receivedByFullName || "Hệ thống"}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                                    </td>
+                                    <td>
+                                      {isCash ? (
+                                        <span className="sh-method-badge cash">
+                                          <i className="bi bi-cash"></i> Tiền mặt
+                                        </span>
+                                      ) : isBank ? (
+                                        <span className="sh-method-badge bank">
+                                          <i className="bi bi-qr-code"></i> VietQR / CK
+                                        </span>
+                                      ) : (
+                                        <span className="sh-method-badge card">
+                                          <i className="bi bi-credit-card"></i> Thẻ POS
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td
+                                      style={{
+                                        textAlign: "right",
+                                        fontWeight: 700,
+                                        fontSize: "14px",
+                                        color: isRef ? "var(--hc-error, #dc2626)" : "var(--hc-success, #16a34a)",
+                                      }}
+                                    >
+                                      {isRef ? "-" : "+"}
+                                      {formatVND(t.amount)}
+                                    </td>
+                                    <td>{formatDateTime(t.paidAt)}</td>
+                                    <td>
+                                      <span className="hc-badge hc-badge-neutral">
+                                        {t.receivedByFullName || "Hệ thống"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                          {pager}
+                        </>
+                      )}
+                    </Paginated>
                   )}
                 </div>
               </div>
@@ -627,23 +512,13 @@ export default function StaffShiftsPage() {
                     </div>
                   </div>
 
-                  <div
-                    style={{
-                      borderTop: "1px solid var(--hc-border)",
-                      paddingTop: "20px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      gap: "12px",
-                    }}
-                  >
-                    <div style={{ fontSize: "13px", color: "var(--hc-text-secondary)" }}>
+                  <div className="sh-close-footer">
+                    <div className="sh-close-note">
                       <i className="bi bi-info-circle u-mr-4"></i>
                       Cả Lễ tân và Quản lý (Admin) đều có quyền kiểm đếm và đóng ca quyết toán khi kết thúc ca làm việc.
                     </div>
 
-                    <div style={{ display: "flex", gap: "12px" }}>
+                    <div className="sh-close-actions">
                       <button type="button" className="hc-btn hc-btn-outline" onClick={() => loadCurrentShift()}>
                         <i className="bi bi-arrow-clockwise"></i> Cập nhật số dư
                       </button>
@@ -784,91 +659,99 @@ export default function StaffShiftsPage() {
                 </p>
               </div>
             ) : (
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th>Mã ca</th>
-                    <th>Thu ngân mở ca</th>
-                    <th>Thời gian trực</th>
-                    <th className="u-text-right">Tiền đầu ca</th>
-                    <th className="u-text-right">Doanh thu ca</th>
-                    <th className="u-text-right">Tiền bàn giao</th>
-                    <th className="u-text-right">Chênh lệch</th>
-                    <th>Bàn giao cho</th>
-                    <th>Trạng thái</th>
-                    <th className="u-text-center">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historyShifts.map((sh) => {
-                    const opCash = Number(sh.openingCash || 0);
-                    const cashRev = Number(sh.totalCashRevenue || 0);
-                    const theoCash = opCash + cashRev;
-                    const actCash = sh.closingCashActual != null ? Number(sh.closingCashActual) : null;
-                    const diffVal = actCash != null ? actCash - theoCash : 0;
-                    const isOpen = sh.status === "OPEN";
+              <Paginated items={historyShifts}>
+                {(pageRows, pager) => (
+                  <>
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Mã ca</th>
+                          <th>Thu ngân mở ca</th>
+                          <th>Thời gian trực</th>
+                          <th className="u-text-right">Tiền đầu ca</th>
+                          <th className="u-text-right">Doanh thu ca</th>
+                          <th className="u-text-right">Tiền bàn giao</th>
+                          <th className="u-text-right">Chênh lệch</th>
+                          <th>Bàn giao cho</th>
+                          <th>Trạng thái</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((sh) => {
+                          const opCash = Number(sh.openingCash || 0);
+                          const cashRev = Number(sh.totalCashRevenue || 0);
+                          const theoCash = opCash + cashRev;
+                          const actCash = sh.closingCashActual != null ? Number(sh.closingCashActual) : null;
+                          const diffVal = actCash != null ? actCash - theoCash : 0;
+                          const isOpen = sh.status === "OPEN";
 
-                    return (
-                      <tr key={sh.cashierShiftId}>
-                        <td>
-                          <strong>#{sh.cashierShiftId}</strong>
-                        </td>
-                        <td>
-                          <div>{sh.accountFullName || "Lễ tân"}</div>
-                          {sh.accountRole && (
-                            <div className="u-hint-sm">
-                              {sh.accountRole}
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ fontSize: "13px" }}>{formatDateTime(sh.startTime)}</div>
-                          <div className="u-hint">
-                            ➔ {sh.endTime ? formatDateTime(sh.endTime) : "Đang hoạt động"}
-                          </div>
-                        </td>
-                        <td className="u-text-right">{formatVND(opCash)}</td>
-                        <td style={{ textAlign: "right", fontWeight: 600, color: "var(--hc-primary)" }}>
-                          {formatVND(sh.totalRevenue || 0)}
-                          <div className="u-hint-sm">
-                            {sh.transactionCount || 0} GD
-                          </div>
-                        </td>
-                        <td style={{ textAlign: "right", fontWeight: 700 }}>
-                          {actCash != null ? formatVND(actCash) : "—"}
-                        </td>
-                        <td className="u-text-right">
-                          {actCash == null ? (
-                            "—"
-                          ) : diffVal === 0 ? (
-                            <span className="hc-badge hc-badge-success">Khớp 100%</span>
-                          ) : diffVal > 0 ? (
-                            <span className="hc-badge hc-badge-info">+{formatVND(diffVal)}</span>
-                          ) : (
-                            <span className="hc-badge hc-badge-danger">-{formatVND(Math.abs(diffVal))}</span>
-                          )}
-                        </td>
-                        <td>{sh.receivedByFullName || "—"}</td>
-                        <td>
-                          <span className={`hc-badge ${isOpen ? "hc-badge-success" : "hc-badge-neutral"}`}>
-                            {isOpen ? "ĐANG MỞ" : "ĐÃ ĐÓNG"}
-                          </span>
-                        </td>
-                        <td className="u-text-center">
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-outline hc-btn-sm"
-                            onClick={() => setSelectedHistoryShift(sh)}
-                            title="Xem chi tiết giao dịch ca này"
-                          >
-                            <i className="bi bi-eye"></i> Chi tiết
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          return (
+                            <tr
+                              key={sh.cashierShiftId}
+                              className="row-clickable"
+                              tabIndex={0}
+                              title="Xem chi tiết giao dịch ca này"
+                              onClick={() => setSelectedHistoryShift(sh)}
+                              onKeyDown={(e) => {
+                                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                  e.preventDefault();
+                                  setSelectedHistoryShift(sh);
+                                }
+                              }}
+                            >
+                              <td>
+                                <strong>#{sh.cashierShiftId}</strong>
+                              </td>
+                              <td>
+                                <div>{sh.accountFullName || "Lễ tân"}</div>
+                                {sh.accountRole && (
+                                  <div className="u-hint-sm">
+                                    {sh.accountRole}
+                                  </div>
+                                )}
+                              </td>
+                              <td>
+                                <div style={{ fontSize: "13px" }}>{formatDateTime(sh.startTime)}</div>
+                                <div className="u-hint">
+                                  ➔ {sh.endTime ? formatDateTime(sh.endTime) : "Đang hoạt động"}
+                                </div>
+                              </td>
+                              <td className="u-text-right">{formatVND(opCash)}</td>
+                              <td style={{ textAlign: "right", fontWeight: 600, color: "var(--hc-primary)" }}>
+                                {formatVND(sh.totalRevenue || 0)}
+                                <div className="u-hint-sm">
+                                  {sh.transactionCount || 0} GD
+                                </div>
+                              </td>
+                              <td style={{ textAlign: "right", fontWeight: 700 }}>
+                                {actCash != null ? formatVND(actCash) : "—"}
+                              </td>
+                              <td className="u-text-right">
+                                {actCash == null ? (
+                                  "—"
+                                ) : diffVal === 0 ? (
+                                  <span className="hc-badge hc-badge-success">Khớp 100%</span>
+                                ) : diffVal > 0 ? (
+                                  <span className="hc-badge hc-badge-info">+{formatVND(diffVal)}</span>
+                                ) : (
+                                  <span className="hc-badge hc-badge-danger">-{formatVND(Math.abs(diffVal))}</span>
+                                )}
+                              </td>
+                              <td>{sh.receivedByFullName || "—"}</td>
+                              <td>
+                                <span className={`hc-badge ${isOpen ? "hc-badge-success" : "hc-badge-neutral"}`}>
+                                  {isOpen ? "ĐANG MỞ" : "ĐÃ ĐÓNG"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             )}
           </div>
         </div>
@@ -879,6 +762,8 @@ export default function StaffShiftsPage() {
         isOpen={closeModalOpen}
         onClose={() => setCloseModalOpen(false)}
         title="Đối Soát Doanh Thu &amp; Đóng Ca Thu Ngân"
+        subtitle="Kiểm đếm tiền mặt và xác nhận kết thúc ca"
+        icon="bi-cash-stack"
         maxWidth="540px"
         footer={
           <div className="u-actions-end">
@@ -1004,60 +889,54 @@ export default function StaffShiftsPage() {
         isOpen={!!selectedHistoryShift}
         onClose={() => setSelectedHistoryShift(null)}
         title={`Chi Tiết Ca Thu Ngân #${selectedHistoryShift?.cashierShiftId || ""}`}
+        subtitle={
+          selectedHistoryShift
+            ? `${selectedHistoryShift.accountFullName || "Thu ngân"} · ${formatDateTime(selectedHistoryShift.startTime)} → ${selectedHistoryShift.endTime ? formatDateTime(selectedHistoryShift.endTime) : "đang hoạt động"}`
+            : undefined
+        }
+        icon="bi-cash-coin"
         maxWidth="760px"
+        headerExtra={
+          selectedHistoryShift ? (
+            <span className={`hc-badge ${selectedHistoryShift.status === "OPEN" ? "hc-badge-success" : "hc-badge-muted"}`}>{selectedHistoryShift.status === "OPEN" ? "Đang mở" : "Đã đóng"}</span>
+          ) : null
+        }
         footer={
-          <button
-            type="button"
-            className="hc-btn hc-btn-outline hc-btn-sm"
-            onClick={() => setSelectedHistoryShift(null)}
-          >
-            Đóng
-          </button>
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setSelectedHistoryShift(null)}>
+              Đóng
+            </button>
+          </div>
         }
       >
         {selectedHistoryShift && (
           <div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "12px",
-                padding: "14px",
-                background: "var(--hc-bg, #f8fafc)",
-                borderRadius: "8px",
-                marginBottom: "16px",
-                fontSize: "13px",
-              }}
-            >
-              <div>
-                <span className="u-text-secondary">Thu ngân:</span>{" "}
-                <strong>{selectedHistoryShift.accountFullName}</strong> ({selectedHistoryShift.accountRole || "Lễ tân"})
-              </div>
-              <div>
-                <span className="u-text-secondary">Trạng thái:</span>{" "}
-                <span className={`hc-badge ${selectedHistoryShift.status === "OPEN" ? "hc-badge-success" : "hc-badge-neutral"}`}>
-                  {selectedHistoryShift.status}
-                </span>
-              </div>
-              <div>
-                <span className="u-text-secondary">Bắt đầu:</span>{" "}
-                {formatDateTime(selectedHistoryShift.startTime)}
-              </div>
-              <div>
-                <span className="u-text-secondary">Kết thúc:</span>{" "}
-                {selectedHistoryShift.endTime ? formatDateTime(selectedHistoryShift.endTime) : "Đang hoạt động"}
-              </div>
-              <div>
-                <span className="u-text-secondary">Tiền đầu ca:</span>{" "}
-                <strong>{formatVND(selectedHistoryShift.openingCash)}</strong>
-              </div>
-              <div>
-                <span className="u-text-secondary">Tổng doanh thu:</span>{" "}
-                <strong className="u-text-primary">{formatVND(selectedHistoryShift.totalRevenue || 0)}</strong>
+            <div className="u-col-16">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px 18px", fontSize: "13px" }}>
+                <div>
+                  <small className="u-text-secondary u-block">Thu ngân</small>
+                  <strong>{selectedHistoryShift.accountFullName}</strong> ({selectedHistoryShift.accountRole || "Lễ tân"})
+                </div>
+                <div>
+                  <small className="u-text-secondary u-block">Bắt đầu</small>
+                  <strong>{formatDateTime(selectedHistoryShift.startTime)}</strong>
+                </div>
+                <div>
+                  <small className="u-text-secondary u-block">Kết thúc</small>
+                  <strong>{selectedHistoryShift.endTime ? formatDateTime(selectedHistoryShift.endTime) : "Đang hoạt động"}</strong>
+                </div>
+                <div>
+                  <small className="u-text-secondary u-block">Tiền đầu ca</small>
+                  <strong>{formatVND(selectedHistoryShift.openingCash)}</strong>
+                </div>
+                <div>
+                  <small className="u-text-secondary u-block">Tổng doanh thu</small>
+                  <strong className="u-text-primary">{formatVND(selectedHistoryShift.totalRevenue || 0)}</strong>
+                </div>
               </div>
             </div>
 
-            <div style={{ marginBottom: "12px", fontWeight: 700, fontSize: "14px" }}>
+            <div style={{ margin: "18px 0 10px", fontWeight: 700, fontSize: "14px" }}>
               Danh Sách Giao Dịch Trong Ca ({selectedHistoryShift.transactions?.length || 0})
             </div>
 
@@ -1067,47 +946,54 @@ export default function StaffShiftsPage() {
                   Ca này không ghi nhận giao dịch phát sinh nào.
                 </div>
               ) : (
-                <table className="hc-table">
-                  <thead>
-                    <tr>
-                      <th>Mã GD</th>
-                      <th>Đơn / Phòng</th>
-                      <th>Khách hàng</th>
-                      <th>Phương thức</th>
-                      <th className="u-text-right">Số tiền</th>
-                      <th>Thời gian</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedHistoryShift.transactions.map((t) => (
-                      <tr key={t.paymentId}>
-                        <td>#TXN-{t.paymentId}</td>
-                        <td>
-                          {t.bookingCode ? (
-                            <strong>{t.bookingCode}</strong>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td>{t.customerName || "Khách"}</td>
-                        <td>
-                          <span className="hc-badge hc-badge-neutral">{t.method}</span>
-                        </td>
-                        <td
-                          style={{
-                            textAlign: "right",
-                            fontWeight: 700,
-                            color: t.type === "REFUND" ? "var(--hc-error)" : "var(--hc-success)",
-                          }}
-                        >
-                          {t.type === "REFUND" ? "-" : "+"}
-                          {formatVND(t.amount)}
-                        </td>
-                        <td>{formatDateTime(t.paidAt)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <Paginated items={selectedHistoryShift.transactions}>
+                  {(pageRows, pager) => (
+                    <>
+                      <table className="hc-table">
+                        <thead>
+                          <tr>
+                            <th>Mã GD</th>
+                            <th>Đơn / Phòng</th>
+                            <th>Khách hàng</th>
+                            <th>Phương thức</th>
+                            <th className="u-text-right">Số tiền</th>
+                            <th>Thời gian</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.map((t) => (
+                            <tr key={t.paymentId}>
+                              <td>#TXN-{t.paymentId}</td>
+                              <td>
+                                {t.bookingCode ? (
+                                  <strong>{t.bookingCode}</strong>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                              <td>{t.customerName || "Khách"}</td>
+                              <td>
+                                <span className="hc-badge hc-badge-neutral">{t.method}</span>
+                              </td>
+                              <td
+                                style={{
+                                  textAlign: "right",
+                                  fontWeight: 700,
+                                  color: t.type === "REFUND" ? "var(--hc-error)" : "var(--hc-success)",
+                                }}
+                              >
+                                {t.type === "REFUND" ? "-" : "+"}
+                                {formatVND(t.amount)}
+                              </td>
+                              <td>{formatDateTime(t.paidAt)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {pager}
+                    </>
+                  )}
+                </Paginated>
               )}
             </div>
           </div>

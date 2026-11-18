@@ -8,6 +8,7 @@ import com.example.pbl6.security.CustomUserDetails;
 import com.example.pbl6.service.CashierShiftService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/staff/cashier-shifts")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'RECEPTIONIST')")
+@PreAuthorize(Roles.SUPERVISORS)
 public class StaffCashierShiftController {
 
     private final CashierShiftService cashierShiftService;
@@ -42,7 +43,7 @@ public class StaffCashierShiftController {
         return ApiResponse.ok("Cashier shift closed successfully", cashierShiftService.closeShift(id, userDetails, request));
     }
 
-    @GetMapping({"/me", "/current", "/open"})
+    @GetMapping("/me")
     public ApiResponse<CashierShiftResponse> getActiveShift(
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         return ApiResponse.ok(cashierShiftService.getActiveShift(userDetails));

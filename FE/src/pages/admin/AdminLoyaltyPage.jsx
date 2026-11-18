@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { apiCall, formatVND, formatDateTime } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
+import SearchInput from "../../components/common/SearchInput";
+import Paginated from "../../components/common/TablePagination";
 
 const TIER_COLORS = {
   SEASHELL: "#94a3b8",
@@ -93,6 +95,7 @@ export default function AdminLoyaltyPage() {
   const [adjustForm, setAdjustForm] = useState({ scoreAdjust: "", note: "" });
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -595,7 +598,7 @@ export default function AdminLoyaltyPage() {
       )}
 
       {/* Main Grid: Left Column (Customers + Tier Benefits) | Right Column (Customer Detail if selected) */}
-      <div style={{ display: "grid", gridTemplateColumns: selectedCustomer ? "1fr 380px" : "1fr", gap: "20px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px", alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 }}>
           {/* =========================================================================
              CARD 1: DANH SÁCH KHÁCH HÀNG
@@ -610,10 +613,10 @@ export default function AdminLoyaltyPage() {
               </div>
             </div>
 
-            <div className="hc-card-body u-row-ruled">
-              <input
+            <div className="hc-card-body u-row-ruled m-fields">
+              <SearchInput
                 type="search"
-                className="hc-input u-flex-240"
+                wrapClassName="u-flex-240"
                 placeholder="Tên, SĐT, email, số giấy tờ, quốc tịch, hạng..."
                 aria-label="Tìm kiếm hội viên"
                 value={search}
@@ -656,80 +659,77 @@ export default function AdminLoyaltyPage() {
                 <p>Không tìm thấy hội viên nào.</p>
               </div>
             ) : (
-              <div className="hc-card-body flush u-scroll-x">
-                <table className="hc-table">
-                  <thead>
-                    <tr>
-                      <th>Khách hàng</th>
-                      <th>Hạng</th>
-                      <th>Điểm</th>
-                      <th>Ngày lưu trú</th>
-                      <th>Tổng chi tiêu</th>
-                      <th className="u-text-right">Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((c) => {
-                      const isSelected = selectedCustomer?.customerId === c.customerId;
-                      return (
-                        <tr key={c.customerId} style={{ cursor: "pointer", background: isSelected ? "var(--hc-bg-light, rgba(2, 132, 199, 0.06))" : undefined }} onClick={() => selectCustomer(c)}>
-                          <td>
-                            <strong>{c.customerName || "—"}</strong>
-                            <br />
-                            <small className="u-text-secondary">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</small>
-                            <br />
-                            <small className="u-text-muted">{[c.idNumber && `${c.idType || "Giấy tờ"}: ${c.idNumber}`, c.nationality].filter(Boolean).join(" · ")}</small>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openTierEdit(c.tierCode);
-                              }}
-                              title="Bấm để chỉnh sửa hạng này"
-                              style={{ border: 0, cursor: "pointer", background: getTierColor(c.tierCode), color: "#fff", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: 700 }}
-                            >
-                              {c.tierName || c.tierCode || "—"}
-                            </button>
-                          </td>
-                          <td>
-                            <strong>{Number(c.totalScore || 0).toLocaleString("vi-VN")}</strong>
-                          </td>
-                          <td>{c.totalStayDays || 0} đêm</td>
-                          <td>{formatVND(c.totalSpent || 0)}</td>
-                          <td className="u-text-right u-nowrap">
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm u-mr-6"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEdit(c);
-                              }}
-                              title="Chỉnh sửa thông tin khách hàng"
-                            >
-                              <i className="bi bi-pencil"></i> Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                selectCustomer(c);
-                                setAdjustModal(true);
-                                setAdjustForm({ scoreAdjust: "", note: "" });
-                              }}
-                              title="Điều chỉnh điểm"
-                            >
-                              <i className="bi bi-plus-slash-minus"></i> Điều chỉnh
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <Paginated items={filtered}>
+                {(pageRows, pager) => (
+                  <>
+                    <div className="hc-card-body flush u-scroll-x">
+                      <table className="hc-table">
+                        <thead>
+                          <tr>
+                            <th>Khách hàng</th>
+                            <th>Hạng</th>
+                            <th>Điểm</th>
+                            <th>Ngày lưu trú</th>
+                            <th>Tổng chi tiêu</th>
+                            <th className="col-actions">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.map((c) => {
+                            const isSelected = selectedCustomer?.customerId === c.customerId;
+                            return (
+                              <tr key={c.customerId} style={{ cursor: "pointer", background: isSelected ? "var(--hc-bg-light, rgba(2, 132, 199, 0.06))" : undefined }} onClick={() => { selectCustomer(c); setDetailOpen(true); }}>
+                                <td>
+                                  <strong>{c.customerName || "—"}</strong>
+                                  <br />
+                                  <small className="u-text-secondary">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</small>
+                                  <br />
+                                  <small className="u-text-muted">{[c.idNumber && `${c.idType || "Giấy tờ"}: ${c.idNumber}`, c.nationality].filter(Boolean).join(" · ")}</small>
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openTierEdit(c.tierCode);
+                                    }}
+                                    title="Bấm để chỉnh sửa hạng này"
+                                    style={{ border: 0, cursor: "pointer", background: getTierColor(c.tierCode), color: "#fff", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: 700 }}
+                                  >
+                                    {c.tierName || c.tierCode || "—"}
+                                  </button>
+                                </td>
+                                <td>
+                                  <strong>{Number(c.totalScore || 0).toLocaleString("vi-VN")}</strong>
+                                </td>
+                                <td>{c.totalStayDays || 0} đêm</td>
+                                <td>{formatVND(c.totalSpent || 0)}</td>
+                                <td className="col-actions">
+                                  <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      className="hc-btn hc-btn-outline hc-btn-sm"
+                                      onClick={() => {
+                                        selectCustomer(c);
+                                        setAdjustModal(true);
+                                        setAdjustForm({ scoreAdjust: "", note: "" });
+                                      }}
+                                      title="Điều chỉnh điểm"
+                                    >
+                                      <i className="bi bi-plus-slash-minus"></i> Điều chỉnh
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             )}
           </div>
 
@@ -759,10 +759,10 @@ export default function AdminLoyaltyPage() {
             </div>
 
             {/* Filter Toolbar for Benefits */}
-            <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)", background: "var(--hc-bg-subtle, #f8fafc)" }}>
-              <input
+            <div className="hc-card-body m-fields" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)", background: "var(--hc-bg-subtle, #f8fafc)" }}>
+              <SearchInput
                 type="search"
-                className="hc-input u-flex-200"
+                wrapClassName="u-flex-200"
                 placeholder="Tìm tên đặc quyền, dịch vụ, mô tả..."
                 value={benefitSearch}
                 onChange={(e) => setBenefitSearch(e.target.value)}
@@ -789,173 +789,175 @@ export default function AdminLoyaltyPage() {
                 </button>
               </div>
             ) : (
-              <div className="hc-card-body flush u-scroll-x">
-                <table className="hc-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "130px" }}>Hạng áp dụng</th>
-                      <th>Tên đặc quyền &amp; Mô tả</th>
-                      <th>Loại quyền lợi</th>
-                      <th>Hạn mức (Quota)</th>
-                      <th>Trạng thái</th>
-                      <th style={{ textAlign: "right", width: "140px" }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBenefits.map((b) => (
-                      <tr key={b.tierBenefitId}>
-                        <td>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              background: getTierColor(b.tierCode),
-                              color: "#fff",
-                              borderRadius: "12px",
-                              padding: "2px 8px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {b.tierName || b.tierCode || "Mọi hạng"}
-                          </span>
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: "13.5px" }}>{b.benefitName}</strong>
-                          {b.description && (
-                            <div style={{ fontSize: "11.5px", color: "var(--hc-text-muted)", marginTop: "2px" }}>
-                              {b.description}
-                            </div>
-                          )}
-                        </td>
-                        <td>{renderBenefitTypeBadge(b)}</td>
-                        <td>{renderQuotaDisplay(b)}</td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => toggleBenefitActive(b)}
-                            title="Bấm để bật / tắt đặc quyền"
-                            style={{
-                              border: 0,
-                              cursor: "pointer",
-                              padding: "3px 8px",
-                              borderRadius: "12px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              background: b.isActive ? "var(--hc-success-bg, #dcfce7)" : "var(--hc-bg, #f1f5f9)",
-                              color: b.isActive ? "var(--hc-success, #15803d)" : "var(--hc-text-muted, #64748b)",
-                            }}
-                          >
-                            <i className={`bi ${b.isActive ? "bi-check-circle-fill" : "bi-pause-circle"} u-mr-4`}></i>
-                            {b.isActive ? "Đang áp dụng" : "Tạm dừng"}
-                          </button>
-                        </td>
-                        <td className="u-text-right u-nowrap">
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-outline hc-btn-sm u-mr-6"
-                            onClick={() => openEditBenefit(b)}
-                            title="Chỉnh sửa đặc quyền"
-                          >
-                            <i className="bi bi-pencil"></i> Sửa
-                          </button>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-ghost hc-btn-sm text-danger"
-                            onClick={() => deleteBenefit(b)}
-                            title="Xóa đặc quyền này"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Paginated items={filteredBenefits}>
+                {(pageRows, pager) => (
+                  <>
+                    <div className="hc-card-body flush u-scroll-x">
+                      <table className="hc-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: "130px" }}>Hạng áp dụng</th>
+                            <th>Tên đặc quyền &amp; Mô tả</th>
+                            <th>Loại quyền lợi</th>
+                            <th>Hạn mức (Quota)</th>
+                            <th>Trạng thái</th>
+                            <th className="col-actions">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.map((b) => (
+                            <tr
+                              key={b.tierBenefitId}
+                              className="row-clickable"
+                              tabIndex={0}
+                              title="Chỉnh sửa đặc quyền"
+                              onClick={() => openEditBenefit(b)}
+                              onKeyDown={(e) => {
+                                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                  e.preventDefault();
+                                  openEditBenefit(b);
+                                }
+                              }}
+                            >
+                              <td>
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    background: getTierColor(b.tierCode),
+                                    color: "#fff",
+                                    borderRadius: "12px",
+                                    padding: "2px 8px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {b.tierName || b.tierCode || "Mọi hạng"}
+                                </span>
+                              </td>
+                              <td>
+                                <strong style={{ fontSize: "13.5px" }}>{b.benefitName}</strong>
+                                {b.description && (
+                                  <div style={{ fontSize: "11.5px", color: "var(--hc-text-muted)", marginTop: "2px" }}>
+                                    {b.description}
+                                  </div>
+                                )}
+                              </td>
+                              <td>{renderBenefitTypeBadge(b)}</td>
+                              <td>{renderQuotaDisplay(b)}</td>
+                              <td>
+                                <span className={`hc-badge ${b.isActive ? "hc-badge-success" : "hc-badge-muted"}`}>
+                                  <i className={`bi ${b.isActive ? "bi-check-circle-fill" : "bi-pause-circle"}`}></i>
+                                  {b.isActive ? "Đang áp dụng" : "Tạm dừng"}
+                                </span>
+                              </td>
+                              <td className="col-actions">
+                                <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    className={`hc-btn hc-btn-sm ${b.isActive ? "hc-btn-outline" : "hc-btn-primary"}`}
+                                    onClick={() => toggleBenefitActive(b)}
+                                    title={b.isActive ? "Tạm dừng đặc quyền này" : "Áp dụng đặc quyền này"}
+                                  >
+                                    <i className={`bi ${b.isActive ? "bi-pause-circle" : "bi-play-circle"}`}></i> {b.isActive ? "Tạm dừng" : "Áp dụng"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="hc-btn hc-btn-outline-danger hc-btn-sm"
+                                    onClick={() => deleteBenefit(b)}
+                                    title="Xóa đặc quyền này"
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             )}
           </div>
         </div>
 
-        {/* Customer Detail Panel (Right Column when selected) */}
+      </div>
+
+      {/* Customer info modal */}
+      <Modal
+        isOpen={detailOpen && !!selectedCustomer}
+        onClose={() => {
+          if (adjustModal || editModal) return; // the stacked modal closes first
+          setDetailOpen(false);
+        }}
+        title={selectedCustomer?.customerName || "Chi tiết hội viên"}
+        subtitle={selectedCustomer ? [selectedCustomer.phone, selectedCustomer.email].filter(Boolean).join(" · ") || undefined : undefined}
+        icon="bi-person-vcard"
+        maxWidth="640px"
+        footer={
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setDetailOpen(false)}>
+              Đóng
+            </button>
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => selectedCustomer && openEdit(selectedCustomer)}>
+              Cập nhật thông tin
+            </button>
+            <button
+              type="button"
+              className="hc-btn hc-btn-primary hc-btn-sm"
+              onClick={() => {
+                setAdjustModal(true);
+                setAdjustForm({ scoreAdjust: "", note: "" });
+              }}
+            >
+              <i className="bi bi-plus-slash-minus"></i> Điều chỉnh điểm
+            </button>
+          </div>
+        }
+      >
         {selectedCustomer && (
-          <div className="hc-card" style={{ position: "sticky", top: "20px" }}>
-            <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "15px" }}>{selectedCustomer.customerName || "Chi tiết hội viên"}</div>
-                <div className="u-hint">{selectedCustomer.phone || selectedCustomer.email || ""}</div>
-              </div>
-              <div className="u-row-6">
-                <button
-                  type="button"
-                  className="hc-btn hc-btn-primary hc-btn-sm"
-                  onClick={() => {
-                    setAdjustModal(true);
-                    setAdjustForm({ scoreAdjust: "", note: "" });
-                  }}
-                >
-                  <i className="bi bi-plus-slash-minus"></i> Sửa điểm
-                </button>
-                <button
-                  type="button"
-                  className="hc-btn hc-btn-ghost hc-btn-sm"
-                  onClick={() => setSelectedId(null)}
-                  title="Đóng chi tiết"
-                >
-                  <i className="bi bi-x-lg"></i>
-                </button>
-              </div>
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              {[
+                { label: "Hạng hiện tại", value: selectedCustomer.tierName || selectedCustomer.tierCode, color: getTierColor(selectedCustomer.tierCode) },
+                { label: "Điểm tích lũy", value: `${Number(selectedCustomer.totalScore || 0).toLocaleString("vi-VN")} điểm` },
+                { label: "Tổng đêm lưu trú", value: `${selectedCustomer.totalStayDays || 0} đêm` },
+                { label: "Tổng chi tiêu", value: formatVND(selectedCustomer.totalSpent || 0) },
+              ].map((stat) => (
+                <div key={stat.label} style={{ background: "var(--hc-bg-light, #f8fafc)", borderRadius: "8px", padding: "10px 12px", border: "1px solid var(--hc-border-light)" }}>
+                  <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)", marginBottom: "4px" }}>{stat.label}</div>
+                  <div style={{ fontWeight: 700, fontSize: "14px", color: stat.color || "inherit" }}>{stat.value}</div>
+                </div>
+              ))}
             </div>
-            <div className="hc-card-body" style={{ padding: "16px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-                {[
-                  { label: "Hạng hiện tại", value: selectedCustomer.tierName || selectedCustomer.tierCode, color: getTierColor(selectedCustomer.tierCode) },
-                  { label: "Điểm tích lũy", value: `${Number(selectedCustomer.totalScore || 0).toLocaleString("vi-VN")} điểm` },
-                  { label: "Tổng đêm lưu trú", value: `${selectedCustomer.totalStayDays || 0} đêm` },
-                  { label: "Tổng chi tiêu", value: formatVND(selectedCustomer.totalSpent || 0) },
-                ].map((stat) => (
-                  <div key={stat.label} style={{ background: "var(--hc-bg-light, #f8fafc)", borderRadius: "8px", padding: "10px 12px", border: "1px solid var(--hc-border-light)" }}>
-                    <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)", marginBottom: "4px" }}>{stat.label}</div>
-                    <div style={{ fontWeight: 700, fontSize: "14px", color: stat.color || "inherit" }}>{stat.value}</div>
+
+            <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Lịch sử giao dịch điểm</div>
+            {txnLoading ? (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Đang tải...</div>
+            ) : transactions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "16px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Chưa có lịch sử giao dịch điểm.</div>
+            ) : (
+              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                {transactions.slice(0, 20).map((txn) => (
+                  <div key={txn.txnId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--hc-border-light)", fontSize: "13px" }}>
+                    <div>
+                      <div className="u-fw-600">{txn.txnType === "EARN" ? "Tích điểm" : "Điều chỉnh"}</div>
+                      <div className="u-hint-sm">{formatDateTime(txn.createdAt)}</div>
+                      {txn.note && <div className="u-hint-sm">{txn.note}</div>}
+                    </div>
+                    <div style={{ fontWeight: 700, color: Number(txn.scoreEarned) >= 0 ? "var(--hc-success)" : "var(--hc-error)" }}>
+                      {Number(txn.scoreEarned) >= 0 ? "+" : ""}
+                      {Number(txn.scoreEarned || 0).toLocaleString("vi-VN")}
+                    </div>
                   </div>
                 ))}
               </div>
-
-              <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Lịch sử giao dịch điểm</div>
-              {txnLoading ? (
-                <div style={{ textAlign: "center", padding: "20px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Đang tải...</div>
-              ) : transactions.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "16px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Chưa có lịch sử giao dịch điểm.</div>
-              ) : (
-                <div style={{ maxHeight: "280px", overflowY: "auto" }}>
-                  {transactions.slice(0, 20).map((txn) => (
-                    <div
-                      key={txn.txnId}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 0",
-                        borderBottom: "1px solid var(--hc-border-light)",
-                        fontSize: "13px",
-                      }}
-                    >
-                      <div>
-                        <div className="u-fw-600">{txn.txnType === "EARN" ? "Tích điểm" : "Điều chỉnh"}</div>
-                        <div className="u-hint-sm">{formatDateTime(txn.createdAt)}</div>
-                        {txn.note && <div className="u-hint-sm">{txn.note}</div>}
-                      </div>
-                      <div style={{ fontWeight: 700, color: Number(txn.scoreEarned) >= 0 ? "var(--hc-success)" : "var(--hc-error)" }}>
-                        {Number(txn.scoreEarned) >= 0 ? "+" : ""}
-                        {Number(txn.scoreEarned || 0).toLocaleString("vi-VN")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+            )}
+          </>
         )}
-      </div>
+      </Modal>
 
       {/* Adjust Modal */}
       <Modal

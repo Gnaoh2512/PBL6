@@ -1,5 +1,8 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { apiCall, formatDateTime } from "../../services/api";
+import "../../components/common/SearchInput.css";
+import SelectMenu from "../../components/common/SelectMenu";
+import Paginated from "../../components/common/TablePagination";
 
 const PREDEFINED_MODULES = [
   "ALL",
@@ -150,7 +153,7 @@ export default function AdminActivityLogPage() {
 
       <section className="hc-card">
         <div className="hc-card-header">
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="m-fields" style={{ display: "flex", gap: "12px", flexWrap: "wrap", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ position: "relative", minWidth: "320px", flex: 1, maxWidth: "450px" }}>
               <i className="bi bi-search" style={{ position: "absolute", left: "12px", top: "10px", color: "var(--hc-text-muted)" }}></i>
               <input
@@ -163,17 +166,14 @@ export default function AdminActivityLogPage() {
               />
             </div>
 
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <span style={{ fontSize: "13px", color: "var(--hc-text-secondary)", fontWeight: 500 }}>
-                <i className="bi bi-funnel"></i> Phân hệ:
-              </span>
-              <select className="hc-select" style={{ width: "220px", height: "38px", fontSize: "13px" }} value={moduleFilter} onChange={(e) => setModuleFilter(e.target.value)}>
-                {availableModules.map((m) => (
-                  <option key={m} value={m}>
-                    {m === "ALL" ? `Tất cả phân hệ (${logs.length})` : m}
-                  </option>
-                ))}
-              </select>
+            <div style={{ width: "220px" }}>
+              <SelectMenu
+                ariaLabel="Lọc phân hệ"
+                icon="bi-funnel"
+                value={moduleFilter}
+                onChange={setModuleFilter}
+                options={availableModules.map((m) => ({ value: m, label: m === "ALL" ? `Tất cả phân hệ (${logs.length})` : m }))}
+              />
             </div>
           </div>
         </div>
@@ -190,86 +190,93 @@ export default function AdminActivityLogPage() {
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="hc-table">
-                <thead>
-                  <tr>
-                    <th style={{ width: "160px" }}>Thời gian</th>
-                    <th style={{ width: "200px" }}>Người thực hiện</th>
-                    <th style={{ width: "150px" }}>Phân hệ</th>
-                    <th style={{ width: "140px" }}>Hành động</th>
-                    <th>Nội dung chi tiết thao tác</th>
-                    <th style={{ width: "100px", textAlign: "center" }}>Địa chỉ IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map((log, index) => {
-                    const account = log.account;
-                    const username = account?.username || log.username;
-                    const fullName = account?.fullName || log.performerName;
-                    const roleCode = log.performerRole || account?.role?.roleCode || account?.role?.roleName || "";
-                    const roleDisplay = roleCode ? roleCode.replace("ROLE_", "") : "";
-                    const isSystem = !account && (!username || username.toLowerCase() === "system" || username.toLowerCase() === "hệ thống");
+              <Paginated items={filteredLogs}>
+                {(pageRows, pager) => (
+                  <>
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: "160px" }}>Thời gian</th>
+                          <th style={{ width: "200px" }}>Người thực hiện</th>
+                          <th style={{ width: "150px" }}>Phân hệ</th>
+                          <th style={{ width: "140px" }}>Hành động</th>
+                          <th>Nội dung chi tiết thao tác</th>
+                          <th style={{ width: "100px", textAlign: "center" }}>Địa chỉ IP</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((log, index) => {
+                          const account = log.account;
+                          const username = account?.username || log.username;
+                          const fullName = account?.fullName || log.performerName;
+                          const roleCode = log.performerRole || account?.role?.roleCode || account?.role?.roleName || "";
+                          const roleDisplay = roleCode ? roleCode.replace("ROLE_", "") : "";
+                          const isSystem = !account && (!username || username.toLowerCase() === "system" || username.toLowerCase() === "hệ thống");
 
-                    const time = log.loggedAt || log.timestamp || log.createdAt;
+                          const time = log.loggedAt || log.timestamp || log.createdAt;
 
-                    return (
-                      <tr key={log.logId || index}>
-                        <td style={{ whiteSpace: "nowrap", fontSize: "13px", color: "var(--hc-text-secondary)" }}>
-                          <i className="bi bi-clock" style={{ marginRight: "6px", opacity: 0.7 }}></i>
-                          {formatDateTime(time)}
-                        </td>
-                        <td>
-                          {isSystem ? (
-                            <div className="u-row-6">
-                              <i className="bi bi-cpu text-secondary" style={{ fontSize: "15px" }}></i>
-                              <span className="hc-badge hc-badge-neutral u-fs-11">
-                                Hệ thống tự động
-                              </span>
-                            </div>
-                          ) : (
-                            <div>
-                              <div className="u-row-6">
-                                <i className="bi bi-person-circle text-primary" style={{ fontSize: "15px" }}></i>
-                                <strong style={{ color: "var(--hc-text-primary)" }}>{fullName && fullName !== username ? fullName : username || "Nhân sự"}</strong>
-                              </div>
-                              <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px" }}>
-                                {username && <span className="u-text-muted u-fs-11">@{username}</span>}
-                                {roleDisplay && (
-                                  <span className="hc-badge hc-badge-primary u-chip-xs">
-                                    {roleDisplay}
-                                  </span>
+                          return (
+                            <tr key={log.logId || index}>
+                              <td style={{ whiteSpace: "nowrap", fontSize: "13px", color: "var(--hc-text-secondary)" }}>
+                                <i className="bi bi-clock" style={{ marginRight: "6px", opacity: 0.7 }}></i>
+                                {formatDateTime(time)}
+                              </td>
+                              <td>
+                                {isSystem ? (
+                                  <div className="u-row-6">
+                                    <i className="bi bi-cpu text-secondary" style={{ fontSize: "15px" }}></i>
+                                    <span className="hc-badge hc-badge-neutral u-fs-11">
+                                      Hệ thống tự động
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div className="u-row-6">
+                                      <i className="bi bi-person-circle text-primary" style={{ fontSize: "15px" }}></i>
+                                      <strong style={{ color: "var(--hc-text-primary)" }}>{fullName && fullName !== username ? fullName : username || "Nhân sự"}</strong>
+                                    </div>
+                                    <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px" }}>
+                                      {username && <span className="u-text-muted u-fs-11">@{username}</span>}
+                                      {roleDisplay && (
+                                        <span className="hc-badge hc-badge-primary u-chip-xs">
+                                          {roleDisplay}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
                                 )}
-                              </div>
-                            </div>
-                          )}
-                        </td>
-                        <td>
-                          <span className="hc-badge hc-badge-info" style={{ fontSize: "11px", letterSpacing: "0.02em", fontWeight: 600 }}>
-                            {log.moduleName || "HỆ THỐNG"}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`hc-badge ${getActionBadgeClass(log.actionType || log.action)} u-fs-11`}>
-                            {getActionDisplayName(log.actionType || log.action)}
-                          </span>
-                        </td>
-                        <td>
-                          <div>
-                            <span style={{ lineHeight: 1.5 }}>{log.newValue || log.oldValue || "Thao tác trên bảng " + (log.targetTable || "dữ liệu")}</span>
-                            {log.targetTable && (
-                              <span style={{ fontSize: "11px", color: "var(--hc-text-muted)", marginLeft: "8px", whiteSpace: "nowrap" }}>
-                                [{log.targetTable}
-                                {log.targetId ? ` #${log.targetId}` : ""}]
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ fontSize: "12px", color: "var(--hc-text-muted)", fontFamily: "monospace", textAlign: "center" }}>{log.ipAddress || "127.0.0.1"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              </td>
+                              <td>
+                                <span className="hc-badge hc-badge-info" style={{ fontSize: "11px", letterSpacing: "0.02em", fontWeight: 600 }}>
+                                  {log.moduleName || "HỆ THỐNG"}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`hc-badge ${getActionBadgeClass(log.actionType || log.action)} u-fs-11`}>
+                                  {getActionDisplayName(log.actionType || log.action)}
+                                </span>
+                              </td>
+                              <td>
+                                <div>
+                                  <span style={{ lineHeight: 1.5 }}>{log.newValue || log.oldValue || "Thao tác trên bảng " + (log.targetTable || "dữ liệu")}</span>
+                                  {log.targetTable && (
+                                    <span style={{ fontSize: "11px", color: "var(--hc-text-muted)", marginLeft: "8px", whiteSpace: "nowrap" }}>
+                                      [{log.targetTable}
+                                      {log.targetId ? ` #${log.targetId}` : ""}]
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ fontSize: "12px", color: "var(--hc-text-muted)", fontFamily: "monospace", textAlign: "center" }}>{log.ipAddress || "127.0.0.1"}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             </div>
           )}
         </div>

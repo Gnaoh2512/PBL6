@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
 import { apiCall, formatDate, formatVND } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import SearchInput from "../../components/common/SearchInput";
+import Paginated from "../../components/common/TablePagination";
 
 const STATUS_META = {
   PENDING_DEPOSIT: { label: "Chờ đặt cọc", badge: "hc-badge-warning" },
@@ -119,12 +121,11 @@ export default function StaffBookingsPage() {
 
       <div className="hc-card">
         <div
-          className="hc-card-body u-row-ruled"
+          className="hc-card-body u-row-ruled m-fields"
         >
-          <input
+          <SearchInput
             type="search"
-            className="hc-input"
-            style={{ flex: "1 1 280px" }}
+            wrapStyle={{ flex: "1 1 280px" }}
             value={keyword}
             onChange={(event) => setKeyword(event.target.value)}
             placeholder="Tên khách, số điện thoại, mã đặt phòng"
@@ -148,98 +149,105 @@ export default function StaffBookingsPage() {
             <p>Không tìm thấy đặt phòng phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush u-scroll-x">
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Mã đặt phòng</th>
-                  <th>Khách</th>
-                  <th>Phòng</th>
-                  <th>Lưu trú</th>
-                  <th>Thanh toán</th>
-                  <th>Trạng thái</th>
-                  <th>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map((booking) => {
-                  const meta = STATUS_META[booking.status] || { label: booking.status, badge: "hc-badge-muted" };
-                  return (
-                    <tr key={booking.bookingCode}>
-                      <td>
-                        <strong>{booking.bookingCode}</strong>
-                        {booking.source && <div className="u-hint">{booking.source}</div>}
-                      </td>
-                      <td>
-                        {booking.customerName}
-                        <div className="u-hint">{booking.customerPhone}</div>
-                      </td>
-                      <td>
-                        {booking.roomType?.typeName || booking.roomNumber || "—"}
-                        {booking.roomNumber ? ` · ${booking.roomNumber}` : ""}
-                      </td>
-                      <td className="u-nowrap">
-                        {formatDate(booking.checkInDate)} – {formatDate(booking.checkOutDate)}
-                      </td>
-                      <td>
-                        {formatVND(booking.totalAmount || booking.totalRoomCharge)}
-                        {booking.depositPaid > 0 && <div className="u-hint">Cọc: {formatVND(booking.depositPaid)}</div>}
-                      </td>
-                      <td>
-                        <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                          {/* Xác nhận cọc (PENDING_DEPOSIT) */}
-                          {booking.status === "PENDING_DEPOSIT" && (
-                            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={!!working} onClick={() => updateBooking(booking, "confirm-deposit")}>
-                              {working === `${booking.bookingCode}-confirm-deposit` ? "Đang xử lý…" : "Xác nhận cọc"}
-                            </button>
-                          )}
+          <Paginated items={bookings}>
+            {(pageRows, pager) => (
+              <>
+                <div className="hc-card-body flush u-scroll-x">
+                  <table className="hc-table">
+                    <thead>
+                      <tr>
+                        <th>Mã đặt phòng</th>
+                        <th>Khách</th>
+                        <th>Phòng</th>
+                        <th>Lưu trú</th>
+                        <th>Thanh toán</th>
+                        <th>Trạng thái</th>
+                        <th className="col-actions">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((booking) => {
+                        const meta = STATUS_META[booking.status] || { label: booking.status, badge: "hc-badge-muted" };
+                        return (
+                          <tr key={booking.bookingCode}>
+                            <td>
+                              <strong>{booking.bookingCode}</strong>
+                              {booking.source && <div className="u-hint">{booking.source}</div>}
+                            </td>
+                            <td>
+                              {booking.customerName}
+                              <div className="u-hint">{booking.customerPhone}</div>
+                            </td>
+                            <td>
+                              {booking.roomType?.typeName || booking.roomNumber || "—"}
+                              {booking.roomNumber ? ` · ${booking.roomNumber}` : ""}
+                            </td>
+                            <td className="u-nowrap">
+                              {formatDate(booking.checkInDate)} – {formatDate(booking.checkOutDate)}
+                            </td>
+                            <td>
+                              {formatVND(booking.totalAmount || booking.totalRoomCharge)}
+                              {booking.depositPaid > 0 && <div className="u-hint">Cọc: {formatVND(booking.depositPaid)}</div>}
+                            </td>
+                            <td>
+                              <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
+                            </td>
+                            <td className="col-actions">
+                              <div className="row-actions">
+                                {/* Xác nhận cọc (PENDING_DEPOSIT) */}
+                                {booking.status === "PENDING_DEPOSIT" && (
+                                  <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={!!working} onClick={() => updateBooking(booking, "confirm-deposit")}>
+                                    {working === `${booking.bookingCode}-confirm-deposit` ? "Đang xử lý…" : "Xác nhận cọc"}
+                                  </button>
+                                )}
 
-                          {/* Check-in (chỉ khi CONFIRMED) */}
-                          {booking.status === "CONFIRMED" && (
-                            <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={!!working} onClick={() => updateBooking(booking, "check-in")}>
-                              {working === `${booking.bookingCode}-check-in` ? "Đang xử lý…" : "Check-in"}
-                            </button>
-                          )}
+                                {/* Check-in (chỉ khi CONFIRMED) */}
+                                {booking.status === "CONFIRMED" && (
+                                  <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" disabled={!!working} onClick={() => updateBooking(booking, "check-in")}>
+                                    {working === `${booking.bookingCode}-check-in` ? "Đang xử lý…" : "Check-in"}
+                                  </button>
+                                )}
 
-                          {/* Xem folio & check-out (CHECKED_IN) */}
-                          {booking.status === "CHECKED_IN" && (
-                            <Link className="hc-btn hc-btn-outline hc-btn-sm" to="/staff/rooms" title="Mở sơ đồ phòng để thực hiện quyết toán">
-                              <i className="bi bi-receipt"></i> Quyết toán
-                            </Link>
-                          )}
+                                {/* Xem folio & check-out (CHECKED_IN) */}
+                                {booking.status === "CHECKED_IN" && (
+                                  <Link className="hc-btn hc-btn-outline hc-btn-sm" to="/staff/rooms" title="Mở sơ đồ phòng để thực hiện quyết toán">
+                                    <i className="bi bi-receipt"></i> Quyết toán
+                                  </Link>
+                                )}
 
-                          {/* Hủy có hoàn cọc (CONFIRMED) */}
-                          {booking.status === "CONFIRMED" && (
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              disabled={!!working}
-                              onClick={() => {
-                                setRefundModal(booking);
-                                setRefundNote("");
-                              }}
-                            >
-                              Hủy & hoàn cọc
-                            </button>
-                          )}
+                                {/* Hủy có hoàn cọc (CONFIRMED) */}
+                                {booking.status === "CONFIRMED" && (
+                                  <button
+                                    type="button"
+                                    className="hc-btn hc-btn-outline hc-btn-sm"
+                                    disabled={!!working}
+                                    onClick={() => {
+                                      setRefundModal(booking);
+                                      setRefundNote("");
+                                    }}
+                                  >
+                                    Hủy & hoàn cọc
+                                  </button>
+                                )}
 
-                          {/* Hủy đơn giản */}
-                          {!["CANCELED", "CHECKED_OUT", "EXPIRED", "CHECKED_IN"].includes(booking.status) && (
-                            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" disabled={!!working} onClick={() => updateBooking(booking, "cancel")}>
-                              {working === `${booking.bookingCode}-cancel` ? "Đang hủy…" : "Hủy đơn"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                                {/* Hủy đơn giản */}
+                                {!["CANCELED", "CHECKED_OUT", "EXPIRED", "CHECKED_IN"].includes(booking.status) && (
+                                  <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" disabled={!!working} onClick={() => updateBooking(booking, "cancel")}>
+                                    {working === `${booking.bookingCode}-cancel` ? "Đang hủy…" : "Hủy đơn"}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pager}
+              </>
+            )}
+          </Paginated>
         )}
       </div>
 

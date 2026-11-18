@@ -1,0 +1,601 @@
+/* =====================================================================
+   Shared table style
+   - rows breathe (no clumping)
+   - action buttons: one row, aligned right, ordered by colour
+   - view switchers (tabs) share the same single-row, colour-coded look
+   ===================================================================== */
+
+/* very light hover tint shared by table rows and calendar cells */
+:root {
+  --hc-hover-bg: #f3f7f8;
+}
+
+/* ---------- Row spacing ---------- */
+.hc-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.hc-table th,
+.hc-table td {
+  padding-top: 18px;
+  padding-bottom: 18px;
+  line-height: 1.5;
+}
+.ops-page .hc-table th {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.ops-page .hc-table td {
+  padding-top: 18px;
+  padding-bottom: 18px;
+}
+.hc-table td > .u-hint-sm,
+.hc-table td > .admin-subtext,
+.hc-table td > div:not([class]) {
+  margin-top: 4px;
+}
+
+/* ---------- Clickable rows (click opens modal) ---------- */
+.row-clickable {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.row-clickable:hover {
+  background: rgba(41, 108, 122, 0.05);
+}
+.row-clickable:focus-visible {
+  outline: 2px solid var(--hc-primary);
+  outline-offset: -2px;
+}
+.row-clickable > td {
+  vertical-align: middle;
+}
+.row-clickable .row-title {
+  color: var(--hc-primary);
+  font-weight: 700;
+}
+
+/* Action column: shrinks to its buttons, pinned right */
+.hc-table th.col-actions,
+.hc-table td.col-actions {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+
+/* ---------- Action buttons: ONE row, right aligned, colour sorted ---------- */
+.row-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.row-actions--start {
+  justify-content: flex-end; /* kept for old markup: still right aligned */
+}
+.row-actions > .hc-btn {
+  flex: 0 0 auto;
+  width: fit-content;
+  white-space: nowrap;
+  order: 3; /* neutral / outline */
+}
+/* colour order, left -> right: primary, info, neutral, danger */
+.row-actions > .hc-btn-primary,
+.row-actions > .hc-btn-success {
+  order: 1;
+}
+.row-actions > .hc-btn-info {
+  order: 2;
+}
+.row-actions > .hc-btn-outline {
+  order: 3;
+}
+.row-actions > .hc-btn-danger,
+.row-actions > .hc-btn-outline-danger {
+  order: 4;
+}
+.row-actions > .hc-btn-outline-success {
+  order: 5; /* green sits rightmost */
+}
+
+/* tonal outline variants (replace inline colour styles) */
+.hc-btn-outline-danger {
+  background: #fff;
+  color: var(--hc-error, #dc2626);
+  border: 1.5px solid #fca5a5;
+}
+.hc-btn-outline-danger:hover:not(:disabled) {
+  background: var(--hc-error-bg, #fef2f2);
+  border-color: var(--hc-error, #dc2626);
+}
+.hc-btn-info {
+  background: #fff;
+  color: #0284c7;
+  border: 1.5px solid #7dd3fc;
+  font-weight: 600;
+}
+.hc-btn-info:hover:not(:disabled) {
+  background: #f0f9ff;
+  border-color: #0284c7;
+}
+
+/* ---------- Clickable status badge (opens the edit modal) ---------- */
+.badge-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+.badge-button:hover .hc-badge {
+  filter: brightness(0.96);
+}
+.badge-button > .bi {
+  font-size: 11px;
+  color: var(--hc-text-muted);
+}
+
+/* ---------- Choice list inside edit modals ---------- */
+.choice-list {
+  display: grid;
+  gap: 8px;
+}
+.choice-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1.5px solid var(--hc-border-light, #e2e8f0);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--hc-text);
+  font-weight: 600;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.choice-item:hover {
+  border-color: var(--hc-primary);
+  background: rgba(41, 108, 122, 0.04);
+}
+.choice-item.active {
+  border-color: var(--hc-primary);
+  background: rgba(41, 108, 122, 0.08);
+}
+.choice-item .hc-badge {
+  margin-left: auto;
+}
+
+/* ---------- View switchers (tabs): single row, left aligned ---------- */
+.hc-tab-group,
+.ops-page .hc-tab-group,
+.booking-experience .hc-tab-group,
+.services-experience .hc-tab-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: auto; /* aligned left */
+  padding: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid var(--ops-line, var(--hc-border-light, #e2e8f0));
+  border-radius: 12px;
+  background: #fff;
+}
+.hc-tab-group::-webkit-scrollbar {
+  display: none;
+}
+.hc-tab-btn,
+.ops-page .hc-tab-btn,
+.booking-experience .hc-tab-btn,
+.services-experience .hc-tab-btn {
+  --tab-tone: var(--hc-primary);
+  flex: 0 0 auto;
+  white-space: nowrap;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  color: var(--hc-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  background: transparent;
+  box-shadow: none;
+}
+.hc-tab-btn:hover,
+.ops-page .hc-tab-btn:hover {
+  color: var(--tab-tone);
+  background: color-mix(in srgb, var(--tab-tone) 8%, transparent);
+}
+.hc-tab-btn.active,
+.ops-page .hc-tab-btn.active {
+  color: #fff;
+  background: var(--tab-tone);
+  box-shadow: 0 3px 9px color-mix(in srgb, var(--tab-tone) 28%, transparent);
+}
+/* colour sorted: each position in the switcher has its own tone */
+.hc-tab-group > .hc-tab-btn:nth-child(1) {
+  --tab-tone: #296c7a;
+}
+.hc-tab-group > .hc-tab-btn:nth-child(2) {
+  --tab-tone: #b7791f;
+}
+.hc-tab-group > .hc-tab-btn:nth-child(3) {
+  --tab-tone: #6b46c1;
+}
+.hc-tab-group > .hc-tab-btn:nth-child(4) {
+  --tab-tone: #2f855a;
+}
+
+/* green outline button: same shape as the red one */
+.hc-btn-outline-success {
+  background: #fff;
+  color: var(--hc-success, #16a34a);
+  border: 1.5px solid #86d9a6;
+}
+.hc-btn-outline-success:hover:not(:disabled) {
+  background: var(--hc-success-bg, #ecfdf3);
+  border-color: var(--hc-success, #16a34a);
+}
+
+/* =====================================================================
+   Tags (badges): soft tinted chip with a status dot, one look everywhere
+   ===================================================================== */
+/* Default (neutral) tone. :where() keeps specificity at 0 so the tone classes
+   below always win, even inside .ops-page. (Before, ".ops-page .hc-badge"
+   reset the tone variables to grey, so only the dot was coloured.) */
+:where(.hc-badge, [class*="hc-badge-booking-"], [class*="hc-badge-service-"]) {
+  --tag-fg: #475467;
+  --tag-bg: #f2f4f7;
+  --tag-bd: #d9dee5;
+  --tag-dot: currentColor;
+}
+.hc-badge,
+.ops-page .hc-badge,
+[class*="hc-badge-booking-"],
+[class*="hc-badge-service-"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--tag-bd);
+  border-radius: 7px;
+  background: var(--tag-bg);
+  color: var(--tag-fg);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0;
+  white-space: nowrap;
+  animation: none;
+}
+/* status dot (skipped when the tag already carries an icon) */
+.hc-badge:not(:has(> i))::before,
+[class*="hc-badge-booking-"]:not(:has(> i))::before,
+[class*="hc-badge-service-"]:not(:has(> i))::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.hc-badge-primary {
+  --tag-fg: #1f5a67;
+  --tag-bg: #ecf6f8;
+  --tag-bd: #bddde4;
+}
+.hc-badge-success,
+.hc-badge-booking-CONFIRMED,
+.hc-badge-service-completed {
+  --tag-fg: #166534;
+  --tag-bg: #ecfdf3;
+  --tag-bd: #b7ebc6;
+}
+.hc-badge-warning,
+.hc-badge-booking-PENDING,
+.hc-badge-service-pending {
+  --tag-fg: #92400e;
+  --tag-bg: #fffaeb;
+  --tag-bd: #fcd9a0;
+}
+.hc-badge-error,
+.hc-badge-danger,
+.hc-badge-booking-CANCELLED {
+  --tag-fg: #b42318;
+  --tag-bg: #fef3f2;
+  --tag-bd: #fecdca;
+}
+.hc-badge-info,
+.hc-badge-booking-CHECKED_IN,
+.hc-badge-service-delivering {
+  --tag-fg: #075985;
+  --tag-bg: #f0f9ff;
+  --tag-bd: #b9e6fe;
+}
+.hc-badge-muted,
+.hc-badge-neutral,
+.hc-badge-secondary,
+.hc-badge-booking-CHECKED_OUT,
+.hc-badge-service-canceled {
+  --tag-fg: #475467;
+  --tag-bg: #f2f4f7;
+  --tag-bd: #d9dee5;
+}
+
+/* the service classes carry !important in GuestPages.css; match it */
+.hc-badge-service-pending,
+.hc-badge-service-delivering,
+.hc-badge-service-completed,
+.hc-badge-service-canceled {
+  background: var(--tag-bg) !important;
+  color: var(--tag-fg) !important;
+  border: 1px solid var(--tag-bd) !important;
+  font-weight: 600;
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 7px;
+}
+
+/* tag inside the filled active tab keeps contrast */
+.hc-tab-btn .hc-badge {
+  font-size: 10.5px;
+  padding: 2px 8px;
+}
+
+/* =====================================================================
+   Tag colours: each tone has a tinted fill, a matching border and a
+   vivid dot so tags read as colour at a glance
+   ===================================================================== */
+.hc-badge:not(:has(> i))::before,
+[class*="hc-badge-booking-"]:not(:has(> i))::before,
+[class*="hc-badge-service-"]:not(:has(> i))::before {
+  background: var(--tag-dot, currentColor);
+  opacity: 1;
+}
+.hc-badge-primary {
+  --tag-fg: #0f5c6b;
+  --tag-bg: #d9f0f4;
+  --tag-bd: #9fd3dd;
+  --tag-dot: #1597ad;
+}
+.hc-badge-success,
+.hc-badge-booking-CONFIRMED,
+.hc-badge-service-completed {
+  --tag-fg: #0f6b34;
+  --tag-bg: #d6f5e1;
+  --tag-bd: #8fdba9;
+  --tag-dot: #16a34a;
+}
+.hc-badge-warning,
+.hc-badge-booking-PENDING,
+.hc-badge-service-pending {
+  --tag-fg: #8a4b06;
+  --tag-bg: #ffecc2;
+  --tag-bd: #f6c765;
+  --tag-dot: #f59e0b;
+}
+.hc-badge-error,
+.hc-badge-danger,
+.hc-badge-booking-CANCELLED {
+  --tag-fg: #a3211a;
+  --tag-bg: #fddad6;
+  --tag-bd: #f6a29b;
+  --tag-dot: #dc2626;
+}
+.hc-badge-info,
+.hc-badge-booking-CHECKED_IN,
+.hc-badge-service-delivering {
+  --tag-fg: #0b4f8a;
+  --tag-bg: #d6ebff;
+  --tag-bd: #94c8f5;
+  --tag-dot: #2b8be0;
+}
+.hc-badge-violet {
+  --tag-fg: #5b21b6;
+  --tag-bg: #e9defd;
+  --tag-bd: #c4a8f5;
+  --tag-dot: #7c3aed;
+}
+.hc-badge-muted,
+.hc-badge-neutral,
+.hc-badge-secondary,
+.hc-badge-booking-CHECKED_OUT,
+.hc-badge-service-canceled {
+  --tag-fg: #3f4b5e;
+  --tag-bg: #e6eaf0;
+  --tag-bd: #c3ccd8;
+  --tag-dot: #64748b;
+}
+
+/* =====================================================================
+   Hover + cursor rules
+   - no lift / shadow on hover anywhere
+   - table rows and calendar cells get a darker background on hover
+   - everything interactive shows the pointer cursor
+   ===================================================================== */
+.hc-table tbody tr:hover > td,
+.ops-page .hc-table tbody tr:hover > td,
+.row-clickable:hover > td {
+  background-color: var(--hc-hover-bg);
+}
+.hc-table tbody tr:hover,
+.ops-page .hc-table tbody tr:hover,
+.row-clickable:hover {
+  background: transparent;
+}
+.hc-table tbody tr > td {
+  transition: background-color 0.12s ease;
+}
+
+button:not(:disabled),
+[role="button"],
+a[href],
+select:not(:disabled),
+summary,
+label.hc-switch,
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="date"],
+input[type="time"],
+tr[tabindex],
+[tabindex="0"]:not(input):not(textarea),
+.row-clickable,
+.hc-tab-btn,
+.choice-item,
+.badge-button {
+  cursor: pointer;
+}
+button:disabled,
+.hc-btn:disabled,
+select:disabled {
+  cursor: not-allowed;
+}
+
+/* calendars: every cell reacts */
+.staff-calendar-day,
+.admin-cal-daycell,
+.fc-daygrid-day,
+.tl-name,
+.tl-dayhead {
+  cursor: pointer;
+}
+.staff-calendar-day:hover,
+.admin-calendar-wrapper .admin-cal-daycell:hover,
+.fc-daygrid-day:hover {
+  background-color: var(--hc-hover-bg);
+}
+.staff-calendar-day.outside-month:hover {
+  background-color: #f0f5f6;
+}
+.staff-calendar-day.is-today:hover {
+  background-color: #d9eff3;
+}
+.tl-bar:hover,
+.fc-slot-row:hover,
+.staff-calendar-event:hover {
+  filter: brightness(0.97);
+}
+
+/* week / day timeline: darken the hovered day x staff cell (not the staff / day headers) */
+.tl-track:hover {
+  background-color: transparent;
+}
+.tl-cell-hover {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 0;
+  background: rgba(30, 64, 75, 0.05);
+  pointer-events: none;
+}
+
+/* Buttons inside table rows keep their own solid background: the row hover
+   tint must never show through them (outline buttons used to be transparent). */
+.hc-table td .hc-btn-outline,
+.ops-page .hc-table td .hc-btn-outline {
+  background-color: #fff;
+}
+.hc-table td .hc-btn-outline:hover:not(:disabled) {
+  background-color: var(--hc-primary-subtle);
+}
+.hc-table td .hc-btn-outline-danger:hover:not(:disabled) {
+  background-color: var(--hc-error-bg, #fef2f2);
+}
+.hc-table td .hc-btn-info:hover:not(:disabled) {
+  background-color: #f0f9ff;
+}
+.hc-table td .hc-btn-outline-success:hover:not(:disabled) {
+  background-color: var(--hc-success-bg, #ecfdf3);
+}
+
+/* =====================================================================
+   Staff service requests table: stable column spacing
+   - every cell stays on one line (no "180.000 / đ" or 4-line booking codes)
+   - only the service name + note column may wrap
+   - the wrapper scrolls horizontally when the screen is narrower
+   ===================================================================== */
+.requests-table {
+  width: 100%;
+  min-width: 1320px;
+}
+.requests-table th,
+.requests-table td {
+  white-space: nowrap;
+  padding-left: 14px;
+  padding-right: 14px;
+  vertical-align: middle;
+}
+.requests-table th:first-child,
+.requests-table td:first-child {
+  padding-left: 24px;
+}
+.requests-table th:last-child,
+.requests-table td:last-child {
+  padding-right: 24px;
+}
+/* service name + note: the one wrapping column */
+.requests-table th:nth-child(1),
+.requests-table td:nth-child(1) {
+  white-space: normal;
+  min-width: 190px;
+  max-width: 280px;
+}
+/* quantity: narrow, centred */
+.requests-table th:nth-child(5),
+.requests-table td:nth-child(5) {
+  text-align: center;
+  width: 84px;
+}
+/* amount: right aligned so figures line up */
+.requests-table th:nth-child(6),
+.requests-table td:nth-child(6) {
+  text-align: right;
+  min-width: 110px;
+}
+/* action buttons never shrink or wrap */
+.requests-table td.col-actions {
+  padding-left: 20px;
+}
+
+/* =====================================================================
+   Buttons: ONE height and ONE border thickness everywhere
+   (1px border, 42px high = same as inputs / selects in the same toolbar).
+   Sizes sm / lg and per-page overrides (.ops-page 40px, booking 43px,
+   navbar 36px, tonal outline 1.5px, calendar 1px ...) all collapse to this.
+   ===================================================================== */
+.hc-btn,
+.hc-btn-sm,
+.hc-btn-lg,
+.hc-btn-ghost,
+.hc-btn-outline-danger,
+.hc-btn-info,
+.hc-btn-outline-success,
+.admin-calendar-wrapper .admin-cal-btn:not(.is-view) {
+  box-sizing: border-box;
+  height: 42px !important;
+  min-height: 42px !important;
+  padding-block: 0 !important;
+  border-width: 1px !important;
+  line-height: 1 !important;
+}
+/* the tiny text-link buttons in the bulk-assign modal are not real buttons */
+.hc-btn.hc-btn-xs {
+  height: auto !important;
+  min-height: 0 !important;
+  padding-block: 2px !important;
+}

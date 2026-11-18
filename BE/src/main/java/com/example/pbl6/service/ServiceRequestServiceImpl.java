@@ -52,6 +52,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final FinancialCalculator financialCalculator;
     private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
+    private final ShiftGuard shiftGuard;
 
     @Override
     @Transactional
@@ -84,7 +85,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         if (dto.getAssignedToId() != null) {
             assignedStaff = accountRepository.findById(dto.getAssignedToId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên phục vụ #" + dto.getAssignedToId()));
-            validateShiftIfScheduledDataExists(assignedStaff);
+            shiftGuard.ensureOnShift(assignedStaff, "ROLE_SERVICE_STAFF", account, "YÊU CẦU DỊCH VỤ", "service_request", null);
         }
 
         // Luồng trạng thái: Nếu được phân công nhân viên (assigned_to != null), đổi trạng thái thành DELIVERING ngay
@@ -129,27 +130,13 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     @Override
     @Transactional
-    public ServiceRequestResponse cancelRequest(Integer requestId, String username) {
-        ServiceRequest request = serviceRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
-
-        if ("COMPLETED".equalsIgnoreCase(request.getStatus())) {
-            throw new IllegalStateException("Không thể hủy yêu cầu dịch vụ đã hoàn tất");
-        }
-
-        request.setStatus("CANCELED");
-        ServiceRequest saved = serviceRequestRepository.save(request);
-        updateMatchingServiceUsageStatus(saved, "CANCELED");
-
-        auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
-                "Hủy yêu cầu dịch vụ #" + requestId + " bởi " + username);
-
-        return ServiceRequestResponse.fromEntity(saved);
+    public List<ServiceRequestResponse> getAllRequests(String status) {
+        return getAllRequests(status, null, false);
     }
 
     @Override
     @Transactional
-    public List<ServiceRequestResponse> getAllRequests(String status) {
+    public List<ServiceRequestResponse> getAllRequests(String status, String actorUsername, boolean ownOnly) {
         try {
             syncServiceUsagesToRequests();
         } catch (Exception e) {
@@ -170,6 +157,15 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
             list = serviceRequestRepository.findAll();
         }
 
+        if (ownOnly) {
+            list = list.stream()
+                    // own tasks + the shared pool of unassigned pending requests that can be claimed
+                    .filter(r -> (r.getAssignedTo() != null && r.getAssignedTo().getUsername() != null
+                            && r.getAssignedTo().getUsername().equalsIgnoreCase(actorUsername))
+                            || (r.getAssignedTo() == null && "PENDING".equalsIgnoreCase(r.getStatus())))
+                    .collect(Collectors.toList());
+        }
+
         return list.stream()
                 .sorted((a, b) -> {
                     if (a.getServiceRequestId() != null && b.getServiceRequestId() != null) {
@@ -183,65 +179,23 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
     @Override
     @Transactional
-    public ServiceRequestResponse assignRequest(Integer requestId, String staffUsername) {
-        ServiceRequest request = serviceRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
-
-        Account staff = null;
-        if (StringUtils.hasText(staffUsername)) {
-            staff = accountRepository.findByUsername(staffUsername).orElse(null);
-        }
-
-        if (staff != null) {
-            request.setAssignedTo(staff);
-        }
-        // Khi assigned_to != null -> đổi trạng thái thành DELIVERING
-        request.setStatus("DELIVERING");
-        ServiceRequest saved = serviceRequestRepository.save(request);
-        updateMatchingServiceUsageStatus(saved, "DELIVERING");
-
-        String staffDisplay = staff != null ? (staff.getFullName() + " (" + staffUsername + ")") : staffUsername;
-        auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
-                "Nhân viên " + staffDisplay + " tiếp nhận xử lý yêu cầu dịch vụ #" + requestId);
-
-        return ServiceRequestResponse.fromEntity(saved);
-    }
-
-    @Override
-    @Transactional
-    public ServiceRequestResponse assignRequestToStaff(Integer requestId, Integer staffAccountId, String actorUsername) {
-        if (staffAccountId == null) {
-            return assignRequest(requestId, actorUsername);
-        }
-
-        ServiceRequest request = serviceRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
-
-        Account staff = accountRepository.findById(staffAccountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên phục vụ #" + staffAccountId));
-
-        validateShiftIfScheduledDataExists(staff);
-
-        request.setAssignedTo(staff);
-        // Khi được phân công nhân viên (assigned_to != null), đổi trạng thái thành DELIVERING
-        request.setStatus("DELIVERING");
-        ServiceRequest saved = serviceRequestRepository.save(request);
-        updateMatchingServiceUsageStatus(saved, "DELIVERING");
-
-        auditLogService.log("YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
-                "Phân công nhân viên " + staff.getFullName() + " phục vụ yêu cầu dịch vụ #" + requestId + " (bởi " + actorUsername + ")");
-
-        return ServiceRequestResponse.fromEntity(saved);
-    }
-
-    @Override
-    @Transactional
     public ServiceRequestResponse completeRequest(Integer requestId, String staffUsername) {
+        return completeRequest(requestId, staffUsername, false);
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse completeRequest(Integer requestId, String staffUsername, boolean ownOnly) {
         ServiceRequest request = serviceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
 
-        if (request.getAssignedTo() == null && StringUtils.hasText(staffUsername)) {
-            accountRepository.findByUsername(staffUsername).ifPresent(request::setAssignedTo);
+        if (ownOnly && (request.getAssignedTo() == null || request.getAssignedTo().getUsername() == null
+                || !request.getAssignedTo().getUsername().equalsIgnoreCase(staffUsername))) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn chỉ có thể hoàn tất yêu cầu được phân công cho mình");
+        }
+
+        if (!isDelivering(request.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể hoàn tất yêu cầu đang ở trạng thái Đang giao (hiện tại: " + request.getStatus() + ")");
         }
 
         request.setStatus("COMPLETED");
@@ -258,7 +212,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         updateMatchingServiceUsageStatus(saved, "COMPLETED");
 
         auditLogService.log("YÊU CẦU DỊCH VỤ", "COMPLETE", "service_request", Long.valueOf(saved.getServiceRequestId()),
-                "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " bởi nhân viên " + staffUsername);
+                "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " (Đang giao → Hoàn tất) bởi nhân viên " + staffUsername);
 
         return ServiceRequestResponse.fromEntity(saved);
     }
@@ -356,14 +310,94 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         return getRequestsByBookingId(booking.getBookingId());
     }
 
-    private void validateShiftIfScheduledDataExists(Account staff) {
-        var availableStaff = workScheduleService.getAvailableStaffInShift(LocalDate.now(), LocalTime.now(), "ROLE_SERVICE_STAFF");
-        if (!availableStaff.isEmpty()) {
-            boolean inShift = availableStaff.stream().anyMatch(s -> s.getAccountId().equals(staff.getAccountId()));
-            if (!inShift) {
-                throw new IllegalArgumentException("Nhân viên " + staff.getFullName() + " hiện không có trong lịch trực ca phục vụ dịch vụ!");
-            }
+    private static boolean isDelivering(String status) {
+        return "DELIVERING".equalsIgnoreCase(status) || "IN_PROGRESS".equalsIgnoreCase(status);
+    }
+
+    private Account findActor(String username) {
+        return StringUtils.hasText(username) ? accountRepository.findByUsername(username).orElse(null) : null;
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse assignRequest(Integer requestId, String staffUsername) {
+        // Legacy self-assign path: same rules as claiming a request from the pool
+        return claimRequest(requestId, staffUsername);
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse claimRequest(Integer requestId, String actorUsername) {
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
+        Account staff = accountRepository.findByUsername(actorUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + actorUsername));
+
+        if (!"PENDING".equalsIgnoreCase(request.getStatus()) || request.getAssignedTo() != null) {
+            throw new IllegalStateException("Yêu cầu này đã được nhận hoặc không còn ở trạng thái chờ xử lý");
         }
+        shiftGuard.ensureOnShift(staff, "ROLE_SERVICE_STAFF", staff, "YÊU CẦU DỊCH VỤ", "service_request", requestId);
+
+        request.setAssignedTo(staff);
+        request.setStatus("DELIVERING");
+        ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "DELIVERING");
+
+        auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "CLAIM", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Nhân viên " + staff.getFullName() + " (" + staff.getUsername() + ") nhận yêu cầu dịch vụ #" + requestId + " (Chờ xử lý → Đang giao)");
+        return ServiceRequestResponse.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse assignRequestToStaff(Integer requestId, Integer staffAccountId, String actorUsername) {
+        if (staffAccountId == null) {
+            throw new IllegalArgumentException("Vui lòng chọn nhân viên phục vụ để phân công");
+        }
+
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
+
+        String oldStatus = request.getStatus();
+        if (!"PENDING".equalsIgnoreCase(oldStatus) && !isDelivering(oldStatus)) {
+            throw new IllegalStateException("Chỉ có thể phân công yêu cầu đang chờ xử lý hoặc đang giao (hiện tại: " + oldStatus + ")");
+        }
+
+        Account staff = accountRepository.findById(staffAccountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên phục vụ #" + staffAccountId));
+        shiftGuard.ensureOnShift(staff, "ROLE_SERVICE_STAFF", findActor(actorUsername), "YÊU CẦU DỊCH VỤ", "service_request", requestId);
+
+        request.setAssignedTo(staff);
+        request.setStatus("DELIVERING");
+        ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "DELIVERING");
+
+        auditLogService.log("YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Phân công nhân viên " + staff.getFullName() + " phục vụ yêu cầu dịch vụ #" + requestId + " (" + oldStatus + " → DELIVERING, bởi " + actorUsername + ")");
+        return ServiceRequestResponse.fromEntity(saved);
+    }
+
+    @Override
+    @Transactional
+    public ServiceRequestResponse cancelRequest(Integer requestId, String username) {
+        ServiceRequest request = serviceRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
+
+        String oldStatus = request.getStatus();
+        if ("COMPLETED".equalsIgnoreCase(oldStatus)) {
+            throw new IllegalStateException("Không thể hủy yêu cầu dịch vụ đã hoàn tất");
+        }
+        if ("CANCELED".equalsIgnoreCase(oldStatus) || "CANCELLED".equalsIgnoreCase(oldStatus)) {
+            throw new IllegalStateException("Yêu cầu dịch vụ này đã được hủy trước đó");
+        }
+
+        request.setStatus("CANCELED");
+        ServiceRequest saved = serviceRequestRepository.save(request);
+        updateMatchingServiceUsageStatus(saved, "CANCELED");
+
+        auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
+                "Hủy yêu cầu dịch vụ #" + requestId + " (" + oldStatus + " → CANCELED) bởi " + username);
+        return ServiceRequestResponse.fromEntity(saved);
     }
 
     private void syncServiceUsagesToRequests() {

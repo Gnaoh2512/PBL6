@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
 import { apiCall, formatDateTime } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import "./StaffMaintenance.css";
+import Paginated from "../../components/common/TablePagination";
 
 const TECHNICIANS_ENDPOINT = "/api/staff/available-in-shift?roleCode=ROLE_MAINTENANCE";
 
@@ -26,7 +27,7 @@ const STATUS_OPTIONS = [{ value: "", label: "Tất cả trạng thái" }, ...Obj
 const PRIORITY_FILTER_OPTIONS = [{ value: "", label: "Mọi mức độ" }, ...Object.entries(PRIORITY_META).map(([value, meta]) => ({ value, label: meta.label }))];
 const PRIORITY_FORM_OPTIONS = Object.entries(PRIORITY_META).map(([value, meta]) => ({ value, label: meta.label }));
 
-const EMPTY_FORM = { roomId: "", equipmentId: "", title: "", description: "", priority: "MEDIUM" };
+const EMPTY_FORM = { roomId: "", title: "", description: "", priority: "MEDIUM" };
 
 const toTechnician = (item) => {
   const id = item.accountId ?? item.staffId ?? item.userId ?? item.id;
@@ -65,7 +66,6 @@ export default function StaffMaintenancePage() {
   const { addToast } = useToast();
   const [requests, setRequests] = useState([]);
   const [rooms, setRooms] = useState([]);
-  const [equipment, setEquipment] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -82,7 +82,7 @@ export default function StaffMaintenancePage() {
 
   // Preserved functional roles from original working file
   const canComplete = hasRole(["MAINTENANCE", "MANAGER", "ADMIN"]);
-  const canAssign = hasRole(["MAINTENANCE", "MANAGER", "ADMIN"]);
+  const canAssign = hasRole(["MANAGER", "ADMIN"]);
   const canConfirm = hasRole(["MANAGER", "RECEPTIONIST", "ADMIN"]);
   const canReport = hasRole(["HOUSEKEEPING", "RECEPTIONIST", "MANAGER", "ADMIN"]);
 
@@ -93,14 +93,12 @@ export default function StaffMaintenancePage() {
       if (priority) params.set("priority", priority);
       if (roomFilter) params.set("roomId", roomFilter);
       const query = params.size ? `?${params}` : "";
-      const [requestResult, roomResult, equipmentResult] = await Promise.allSettled([
+      const [requestResult, roomResult] = await Promise.allSettled([
         apiCall(`/api/staff/maintenance/requests${query}`, { silentError: true }),
         canReport ? apiCall("/api/admin/rooms", { silentError: true }) : Promise.resolve(null),
-        canReport ? apiCall("/api/staff/maintenance/equipment", { silentError: true }) : Promise.resolve(null),
       ]);
       setRequests(requestResult.status === "fulfilled" && requestResult.value?.success ? requestResult.value.data || [] : []);
       setRooms(roomResult.status === "fulfilled" && roomResult.value?.success ? roomResult.value.data || [] : []);
-      setEquipment(equipmentResult.status === "fulfilled" && equipmentResult.value?.success ? equipmentResult.value.data || [] : []);
     } catch (error) {
       addToast(error.message || "Không thể tải yêu cầu bảo trì.", "error");
     } finally {
@@ -142,7 +140,7 @@ export default function StaffMaintenancePage() {
     try {
       const result = await apiCall("/api/staff/maintenance/report", {
         method: "POST",
-        body: { ...form, roomId: Number(form.roomId), equipmentId: form.equipmentId ? Number(form.equipmentId) : null },
+        body: { ...form, roomId: Number(form.roomId) },
       });
       if (result?.success) {
         addToast("Đã gửi báo cáo bảo trì.", "success");
@@ -187,8 +185,6 @@ export default function StaffMaintenancePage() {
     }
   };
 
-  const roomEquipment = equipment.filter((item) => item.status !== "RETIRED" && String(item.roomId) === String(form.roomId));
-
   const roomFormOptions = [
     { value: "", label: "Chọn phòng" },
     ...rooms.map((room) => ({
@@ -196,15 +192,6 @@ export default function StaffMaintenancePage() {
       label: `Phòng ${room.roomNumber}${room.floor ? ` · Tầng ${room.floor}` : ""}`,
     })),
   ];
-  const equipmentOptions = form.roomId
-    ? [
-        { value: "", label: "Sự cố chung trong phòng" },
-        ...roomEquipment.map((item) => ({
-          value: String(item.equipmentId),
-          label: `${item.equipmentName}${item.serialNumber ? ` · ${item.serialNumber}` : ""}`,
-        })),
-      ]
-    : [{ value: "", label: "Chọn phòng trước" }];
   const roomFilterOptions = [{ value: "", label: "Tất cả phòng" }, ...rooms.map((room) => ({ value: String(room.roomId), label: `Phòng ${room.roomNumber}` }))];
   const technicianOptions = [
     {
@@ -223,7 +210,7 @@ export default function StaffMaintenancePage() {
   const selStatus = selected ? STATUS_META[selected.status] || { label: selected.status, badge: "hc-badge-muted" } : null;
   const selPriority = selected ? PRIORITY_META[selected.priority] || { label: selected.priority, badge: "hc-badge-muted" } : null;
   const showAssign = !!selected && canAssign && !selectedClosed;
-  const showComplete = !!selected && canComplete && !selectedClosed;
+  const showComplete = !!selected && canComplete && selected.status === "IN_PROGRESS";
   const showConfirm = !!selected && canConfirm && selected.status === "DONE";
   const busy = workingId !== null;
 
@@ -249,14 +236,11 @@ export default function StaffMaintenancePage() {
                   <label className="hc-label">
                     Phòng <span className="u-text-error">*</span>
                   </label>
-                  <SelectMenu value={form.roomId} onChange={(value) => setForm({ ...form, roomId: value, equipmentId: "" })} options={roomFormOptions} ariaLabel="Chọn phòng" icon="bi-door-open" />
+                  <SelectMenu value={form.roomId} onChange={(value) => setForm({ ...form, roomId: value })} options={roomFormOptions} ariaLabel="Chọn phòng" icon="bi-door-open" />
                 </div>
                 <div className="hc-form-group">
-                  <label className="hc-label">Thiết bị cụ thể</label>
-                  <div style={form.roomId ? undefined : { opacity: 0.6, pointerEvents: "none" }}>
-                    <SelectMenu value={form.equipmentId} onChange={(value) => setForm({ ...form, equipmentId: value })} options={equipmentOptions} ariaLabel="Chọn thiết bị" icon="bi-tools" />
-                  </div>
-                  {form.roomId && roomEquipment.length === 0 && <div className="hc-help-text">Phòng này chưa có thiết bị khả dụng để chọn.</div>}
+                  <label className="hc-label">Mức độ ưu tiên</label>
+                  <SelectMenu value={form.priority} onChange={(value) => setForm({ ...form, priority: value })} options={PRIORITY_FORM_OPTIONS} ariaLabel="Mức độ ưu tiên" icon="bi-flag" />
                 </div>
               </div>
 
@@ -268,20 +252,9 @@ export default function StaffMaintenancePage() {
                   <input className="hc-input" required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Mô tả ngắn sự cố" />
                 </div>
                 <div className="hc-form-group">
-                  <label className="hc-label">Mức độ ưu tiên</label>
-                  <SelectMenu value={form.priority} onChange={(value) => setForm({ ...form, priority: value })} options={PRIORITY_FORM_OPTIONS} ariaLabel="Mức độ ưu tiên" icon="bi-flag" />
+                  <label className="hc-label">Mô tả</label>
+                  <input className="hc-input" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Thông tin bổ sung" />
                 </div>
-              </div>
-
-              <div className="hc-form-group">
-                <label className="hc-label">Mô tả</label>
-                <textarea
-                  className="hc-textarea"
-                  rows="3"
-                  value={form.description}
-                  onChange={(event) => setForm({ ...form, description: event.target.value })}
-                  placeholder="Thông tin bổ sung"
-                ></textarea>
               </div>
 
               <button type="submit" className="hc-btn hc-btn-primary" disabled={submitting || !rooms.length}>
@@ -298,7 +271,7 @@ export default function StaffMaintenancePage() {
             <i className="bi bi-wrench-adjustable text-primary u-mr-8"></i>
             Danh sách yêu cầu
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-fields" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ minWidth: "180px" }}>
               <SelectMenu value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Lọc trạng thái" icon="bi-funnel" />
             </div>
@@ -326,55 +299,62 @@ export default function StaffMaintenancePage() {
             <p>Không có yêu cầu bảo trì phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush u-scroll-x">
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Sự cố</th>
-                  <th>Phòng</th>
-                  <th>Ưu tiên</th>
-                  <th>Người xử lý</th>
-                  <th>Báo lúc</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((request) => {
-                  const statusMeta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
-                  const priorityMeta = PRIORITY_META[request.priority] || { label: request.priority, badge: "hc-badge-muted" };
-                  return (
-                    <tr
-                      key={request.requestId}
-                      className="mt-row"
-                      tabIndex={0}
-                      onClick={() => openRequest(request)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          openRequest(request);
-                        }
-                      }}
-                    >
-                      <td>
-                        <strong>{request.title}</strong>
-                        {request.description && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.description}</div>}
-                        {request.equipmentName && <div className="u-hint">Thiết bị: {request.equipmentName}</div>}
-                      </td>
-                      <td>{request.roomNumber || "—"}</td>
-                      <td>
-                        <span className={`hc-badge ${priorityMeta.badge}`}>{priorityMeta.label}</span>
-                      </td>
-                      <td>{request.assignedToStaff || "Chưa phân công"}</td>
-                      <td>{formatDateTime(request.reportedAt)}</td>
-                      <td>
-                        <span className={`hc-badge ${statusMeta.badge}`}>{statusMeta.label}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Paginated items={requests}>
+            {(pageRows, pager) => (
+              <>
+                <div className="hc-card-body flush u-scroll-x">
+                  <table className="hc-table">
+                    <thead>
+                      <tr>
+                        <th>Sự cố</th>
+                        <th>Phòng</th>
+                        <th>Ưu tiên</th>
+                        <th>Người xử lý</th>
+                        <th>Báo lúc</th>
+                        <th>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((request) => {
+                        const statusMeta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
+                        const priorityMeta = PRIORITY_META[request.priority] || { label: request.priority, badge: "hc-badge-muted" };
+                        return (
+                          <tr
+                            key={request.requestId}
+                            className="mt-row"
+                            tabIndex={0}
+                            onClick={() => openRequest(request)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openRequest(request);
+                              }
+                            }}
+                          >
+                            <td>
+                              <strong>{request.title}</strong>
+                              {request.description && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.description}</div>}
+                              {request.equipmentName && <div className="u-hint">Thiết bị: {request.equipmentName}</div>}
+                            </td>
+                            <td>{request.roomNumber || "—"}</td>
+                            <td>
+                              <span className={`hc-badge ${priorityMeta.badge}`}>{priorityMeta.label}</span>
+                            </td>
+                            <td>{request.assignedToStaff || "Chưa phân công"}</td>
+                            <td>{formatDateTime(request.reportedAt)}</td>
+                            <td>
+                              <span className={`hc-badge ${statusMeta.badge}`}>{statusMeta.label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pager}
+              </>
+            )}
+          </Paginated>
         )}
       </div>
 
