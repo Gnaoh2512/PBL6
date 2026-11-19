@@ -486,9 +486,9 @@ export default function ServicesPage({ portal = false }) {
                     <tbody>
                       {pageRows.map((u, idx) => {
                         const canceled = u.status === "CANCELED" || u.status === "CANCELLED";
-                        const isBenefit = Boolean(u.tierBenefitId || u.benefitName || u.source === "LOYALTY");
+                        const isBenefit = Boolean(u.loyaltyBenefit);
                         return (
-                          <tr key={u.usageId || idx}>
+                          <tr key={u.usageId ?? `benefit-${u.serviceRequestId ?? idx}`}>
                             <td>
                               <strong>{u.serviceName || u.benefitName}</strong>
                               {isBenefit && (
@@ -500,11 +500,15 @@ export default function ServicesPage({ portal = false }) {
                             </td>
                             <td className="u-text-center">{renderServiceStatusBadge(u.status)}</td>
                             <td className="u-text-center">{u.quantity}</td>
-                            <td className="u-text-right">{formatVND(u.unitPrice || u.unitPriceApplied)}</td>
+                            <td className="u-text-right">{isBenefit ? "—" : formatVND(u.unitPrice || u.unitPriceApplied)}</td>
                             <td className="u-fw-600 u-text-right">
                               {canceled ? (
                                 <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }} title="Dịch vụ đã hủy, không tính tiền">
-                                  {formatVND(u.totalAmount || u.totalPrice)}
+                                  {isBenefit ? "Miễn phí" : formatVND(u.totalAmount || u.totalPrice)}
+                                </span>
+                              ) : isBenefit ? (
+                                <span className="u-text-success" title="Miễn phí theo đặc quyền hội viên">
+                                  Miễn phí
                                 </span>
                               ) : (
                                 formatVND(u.totalAmount || u.totalPrice)
@@ -659,11 +663,11 @@ export default function ServicesPage({ portal = false }) {
 
             <div className="svc-cat-tabs">
               <button type="button" className={`svc-cat-tab ${selectedCategory === "ALL" ? "active" : ""}`} onClick={() => setSelectedCategory("ALL")}>
-                <i className="bi bi-grid"></i> Tất cả ({services.length})
+                <i className="bi bi-grid"></i> Tất cả
               </button>
               {portal && (
                 <button type="button" className={`svc-cat-tab is-loyalty ${selectedCategory === "LOYALTY" ? "active" : ""}`} onClick={() => setSelectedCategory("LOYALTY")}>
-                  <i className="bi bi-gem"></i> Đặc quyền hội viên ({loyaltyBenefits.length})
+                  <i className="bi bi-gem"></i> Đặc quyền hội viên
                 </button>
               )}
               {categoryNames.map((c) => (

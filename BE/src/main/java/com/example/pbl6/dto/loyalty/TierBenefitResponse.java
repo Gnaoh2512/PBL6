@@ -20,8 +20,6 @@ public class TierBenefitResponse {
     private String tierName;
     private Integer serviceId;
     private String serviceName;
-    private Integer roomTypeId;
-    private String roomTypeName;
     private String benefitType;
     private String benefitName;
     private BigDecimal discountPercent;
@@ -43,8 +41,6 @@ public class TierBenefitResponse {
                 .tierName(entity.getTier() != null ? entity.getTier().getTierName() : null)
                 .serviceId(entity.getService() != null ? entity.getService().getServiceId() : null)
                 .serviceName(entity.getService() != null ? entity.getService().getServiceName() : null)
-                .roomTypeId(null)
-                .roomTypeName(null)
                 .benefitType(entity.getBenefitType())
                 .benefitName(entity.getBenefitName())
                 .discountPercent(entity.getDiscountPercent())

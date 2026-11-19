@@ -11,5 +11,4 @@ public interface MaintenanceRequestRepository extends JpaRepository<MaintenanceR
     List<MaintenanceRequest> findByRoom_RoomId(Integer roomId);
     List<MaintenanceRequest> findByStatus(String status);
     List<MaintenanceRequest> findByPriority(String priority);
-    List<MaintenanceRequest> findByAssignedTo_AccountId(Integer accountId);
 }

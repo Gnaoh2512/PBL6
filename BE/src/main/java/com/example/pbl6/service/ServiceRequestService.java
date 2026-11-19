@@ -19,9 +19,4 @@ public interface ServiceRequestService {
     ServiceRequestResponse completeRequest(Integer requestId, String staffUsername);
     /** ownOnly = true only lets the assigned staff member complete the request. */
     ServiceRequestResponse completeRequest(Integer requestId, String staffUsername, boolean ownOnly);
-    ServiceRequestResponse updateStatus(Integer requestId, String status, String staffUsername);
-    List<ServiceRequestResponse> getRequestsByCustomerId(Integer customerId);
-    List<ServiceRequestResponse> getRequestsByAccountId(Integer accountId);
-    List<ServiceRequestResponse> getRequestsByBookingId(Integer bookingId);
-    List<ServiceRequestResponse> getRequestsByBookingCode(String bookingCode);
 }

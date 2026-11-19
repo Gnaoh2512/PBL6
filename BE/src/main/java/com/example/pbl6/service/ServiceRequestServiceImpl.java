@@ -3,6 +3,7 @@ package com.example.pbl6.service;
 import com.example.pbl6.dto.servicerequest.CreateServiceRequestDto;
 import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.Account;
+import com.example.pbl6.entity.BenefitRedemption;
 import com.example.pbl6.entity.Booking;
 import com.example.pbl6.entity.BookingRoom;
 import com.example.pbl6.entity.Customer;
@@ -11,6 +12,7 @@ import com.example.pbl6.entity.ServiceRequest;
 import com.example.pbl6.entity.ServiceUsage;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;
+import com.example.pbl6.repository.BenefitRedemptionRepository;
 import com.example.pbl6.repository.BookingRepository;
 import com.example.pbl6.repository.BookingRoomRepository;
 import com.example.pbl6.repository.CustomerRepository;
@@ -27,12 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,6 +39,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ServiceRequestServiceImpl implements ServiceRequestService {
 
+    private final LoyaltyBenefitSupport loyaltyBenefitSupport;
+    private final BenefitRedemptionRepository benefitRedemptionRepository;
     private final ServiceRequestRepository serviceRequestRepository;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
@@ -50,7 +51,6 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
     private final InvoiceRepository invoiceRepository;
     private final ServiceUsageRepository serviceUsageRepository;
     private final FinancialCalculator financialCalculator;
-    private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
     private final ShiftGuard shiftGuard;
 
@@ -109,7 +109,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log(account, "YÊU CẦU DỊCH VỤ", "ORDER", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Đặt dịch vụ: " + service.getServiceName() + " x" + qty + " cho phòng " + room.getRoomNumber() + " (Đơn đặt: " + booking.getBookingCode() + ")");
 
-        return ServiceRequestResponse.fromEntity(saved);
+        return loyaltyBenefitSupport.toResponse(saved);
     }
 
     @Override
@@ -124,8 +124,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                         || (account.getEmail() != null && account.getEmail().equalsIgnoreCase(r.getCustomer().getEmail()))
                 ))
                 .sorted(Comparator.comparing(ServiceRequest::getServiceRequestId, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(ServiceRequestResponse::fromEntity)
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(), loyaltyBenefitSupport::toResponses));
     }
 
     @Override
@@ -173,8 +172,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
                     }
                     return 0;
                 })
-                .map(ServiceRequestResponse::fromEntity)
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(), loyaltyBenefitSupport::toResponses));
     }
 
     @Override
@@ -214,100 +212,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         auditLogService.log("YÊU CẦU DỊCH VỤ", "COMPLETE", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hoàn thành phục vụ yêu cầu dịch vụ #" + requestId + " (Đang giao → Hoàn tất) bởi nhân viên " + staffUsername);
 
-        return ServiceRequestResponse.fromEntity(saved);
-    }
-
-    @Override
-    @Transactional
-    public ServiceRequestResponse updateStatus(Integer requestId, String newStatus, String staffUsername) {
-        ServiceRequest request = serviceRequestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + requestId));
-
-        String upper = (newStatus != null && !newStatus.isBlank()) ? newStatus.trim().toUpperCase() : "PENDING";
-        if ("IN_PROGRESS".equalsIgnoreCase(upper)) {
-            upper = "DELIVERING";
-        }
-        request.setStatus(upper);
-
-        if (StringUtils.hasText(staffUsername) && request.getAssignedTo() == null
-                && ("DELIVERING".equalsIgnoreCase(upper) || "COMPLETED".equalsIgnoreCase(upper))) {
-            accountRepository.findByUsername(staffUsername).ifPresent(request::setAssignedTo);
-        }
-
-        if ("COMPLETED".equalsIgnoreCase(upper)) {
-            request.setCompletedAt(LocalDateTime.now());
-            if (request.getInvoice() == null && request.getBooking() != null) {
-                invoiceRepository.findByBooking_BookingId(request.getBooking().getBookingId()).stream()
-                        .findFirst()
-                        .ifPresent(request::setInvoice);
-            }
-        }
-
-        ServiceRequest saved = serviceRequestRepository.save(request);
-        updateMatchingServiceUsageStatus(saved, upper);
-
-        auditLogService.log("YÊU CẦU DỊCH VỤ", "UPDATE_STATUS", "service_request", Long.valueOf(saved.getServiceRequestId()),
-                "Đổi trạng thái yêu cầu #" + requestId + " sang " + upper + " bởi " + staffUsername);
-
-        return ServiceRequestResponse.fromEntity(saved);
-    }
-
-    @Override
-    @Transactional
-    public List<ServiceRequestResponse> getRequestsByCustomerId(Integer customerId) {
-        try {
-            syncServiceUsagesToRequests();
-        } catch (Exception ignored) {
-        }
-        return serviceRequestRepository.findByCustomer_CustomerId(customerId).stream()
-                .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(ServiceRequestResponse::fromEntity)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional
-    public List<ServiceRequestResponse> getRequestsByAccountId(Integer accountId) {
-        try {
-            syncServiceUsagesToRequests();
-        } catch (Exception ignored) {
-        }
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản #" + accountId));
-
-        Optional<Customer> custOpt = customerRepository.findByAccount_AccountId(accountId);
-        if (custOpt.isEmpty() && StringUtils.hasText(account.getEmail())) {
-            custOpt = customerRepository.findByEmail(account.getEmail());
-        }
-        if (custOpt.isEmpty() && StringUtils.hasText(account.getPhone())) {
-            custOpt = customerRepository.findByPhone(account.getPhone());
-        }
-
-        if (custOpt.isPresent()) {
-            return getRequestsByCustomerId(custOpt.get().getCustomerId());
-        }
-        return List.of();
-    }
-
-    @Override
-    @Transactional
-    public List<ServiceRequestResponse> getRequestsByBookingId(Integer bookingId) {
-        try {
-            syncServiceUsagesToRequests();
-        } catch (Exception ignored) {
-        }
-        return serviceRequestRepository.findByBooking_BookingId(bookingId).stream()
-                .sorted(Comparator.comparing(ServiceRequest::getRequestedAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .map(ServiceRequestResponse::fromEntity)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional
-    public List<ServiceRequestResponse> getRequestsByBookingCode(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode.trim().toUpperCase())
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
-        return getRequestsByBookingId(booking.getBookingId());
+        return loyaltyBenefitSupport.toResponse(saved);
     }
 
     private static boolean isDelivering(String status) {
@@ -345,7 +250,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
         auditLogService.log(staff, "YÊU CẦU DỊCH VỤ", "CLAIM", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Nhân viên " + staff.getFullName() + " (" + staff.getUsername() + ") nhận yêu cầu dịch vụ #" + requestId + " (Chờ xử lý → Đang giao)");
-        return ServiceRequestResponse.fromEntity(saved);
+        return loyaltyBenefitSupport.toResponse(saved);
     }
 
     @Override
@@ -374,7 +279,7 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
 
         auditLogService.log("YÊU CẦU DỊCH VỤ", "ASSIGN", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Phân công nhân viên " + staff.getFullName() + " phục vụ yêu cầu dịch vụ #" + requestId + " (" + oldStatus + " → DELIVERING, bởi " + actorUsername + ")");
-        return ServiceRequestResponse.fromEntity(saved);
+        return loyaltyBenefitSupport.toResponse(saved);
     }
 
     @Override
@@ -394,10 +299,24 @@ public class ServiceRequestServiceImpl implements ServiceRequestService {
         request.setStatus("CANCELED");
         ServiceRequest saved = serviceRequestRepository.save(request);
         updateMatchingServiceUsageStatus(saved, "CANCELED");
+        voidBenefitRedemption(saved, username);
 
         auditLogService.log("YÊU CẦU DỊCH VỤ", "CANCEL", "service_request", Long.valueOf(saved.getServiceRequestId()),
                 "Hủy yêu cầu dịch vụ #" + requestId + " (" + oldStatus + " → CANCELED) bởi " + username);
-        return ServiceRequestResponse.fromEntity(saved);
+        return loyaltyBenefitSupport.toResponse(saved);
+    }
+
+    /** A cancelled free-benefit request gives the guest that use of the benefit back. */
+    private void voidBenefitRedemption(ServiceRequest request, String username) {
+        benefitRedemptionRepository.findFirstByServiceRequest_ServiceRequestId(request.getServiceRequestId())
+                .filter(r -> BenefitRedemption.STATUS_APPLIED.equals(r.getStatus()))
+                .ifPresent(r -> {
+                    r.setStatus(BenefitRedemption.STATUS_VOIDED);
+                    r.setVoidedAt(LocalDateTime.now());
+                    r.setVoidReason("Yêu cầu dịch vụ đã bị hủy");
+                    r.setVoidedBy(findActor(username));
+                    benefitRedemptionRepository.save(r);
+                });
     }
 
     private void syncServiceUsagesToRequests() {

@@ -7,6 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * One use of a loyalty free-service benefit. Counts against the benefit quota while
+ * {@code status} is APPLIED; a cancelled service request voids it and gives the use back.
+ */
 @Entity
 @Table(name = "benefit_redemption")
 @Data
@@ -14,6 +18,9 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class BenefitRedemption {
+
+    public static final String STATUS_APPLIED = "APPLIED";
+    public static final String STATUS_VOIDED = "VOIDED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,26 +40,31 @@ public class BenefitRedemption {
     private Booking booking;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "invoice_id")
-    private Invoice invoice;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "service_usage_id")
-    private ServiceUsage serviceUsage;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_request_id")
     private ServiceRequest serviceRequest;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approved_by")
-    private Account approvedBy;
+    @Column(name = "idempotency_key", length = 64)
+    private String idempotencyKey;
 
     @Column(name = "value_amount", precision = 15, scale = 2, nullable = false)
     private BigDecimal valueAmount;
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    @Builder.Default
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = STATUS_APPLIED;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voided_by")
+    private Account voidedBy;
+
+    @Column(name = "voided_at")
+    private LocalDateTime voidedAt;
+
+    @Column(name = "void_reason", length = 255)
+    private String voidReason;
 
     @CreationTimestamp
     @Column(name = "redeemed_at", updatable = false)

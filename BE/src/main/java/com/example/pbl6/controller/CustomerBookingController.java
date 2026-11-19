@@ -1,16 +1,9 @@
 package com.example.pbl6.controller;
 
 import com.example.pbl6.common.ApiResponse;
-import com.example.pbl6.dto.billing.CancelBookingRequest;
-import com.example.pbl6.dto.billing.CancellationRefundResponse;
-import com.example.pbl6.dto.booking.BookingDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
-import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
-import com.example.pbl6.service.CustomerBillingService;
-import com.example.pbl6.service.CustomerBookingService;
 import com.example.pbl6.service.CustomerHistoryService;
-import com.example.pbl6.service.ServiceRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,10 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerBookingController {
 
-    private final CustomerBookingService customerBookingService;
     private final CustomerHistoryService customerHistoryService;
-    private final CustomerBillingService customerBillingService;
-    private final ServiceRequestService serviceRequestService;
 
     /**
      * Khách hàng xem danh sách lịch sử lưu trú & đặt phòng (hỗ trợ lọc status=CONFIRMED, CHECKED_IN, CHECKED_OUT, CANCELED)

@@ -355,7 +355,7 @@ export default function GuestDashboardPage() {
                                   ? new Date(req.requestedAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }) + " " + new Date(req.requestedAt).toLocaleDateString("vi-VN")
                                   : "—"}
                               </td>
-                              <td className="u-fw-600 u-text-right">{formatVND(req.feeAmount)}</td>
+                              <td className="u-fw-600 u-text-right">{req.isLoyaltyBenefit ? <span className="u-text-success">Miễn phí</span> : formatVND(req.feeAmount)}</td>
                             </tr>
                           ))}
                         </tbody>

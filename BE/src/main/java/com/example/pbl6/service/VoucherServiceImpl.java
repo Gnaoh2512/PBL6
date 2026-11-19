@@ -33,18 +33,6 @@ public class VoucherServiceImpl implements VoucherService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<VoucherResponse> getActiveVouchers() {
-        LocalDate today = LocalDate.now();
-        return voucherRepository.findByIsActiveTrue().stream()
-                .filter(v -> (v.getStartDate() == null || !today.isBefore(v.getStartDate())) &&
-                             (v.getEndDate() == null || !today.isAfter(v.getEndDate())) &&
-                             (v.getUsageLimit() == null || v.getUsedCount() < v.getUsageLimit()))
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<VoucherResponse> getAllVouchers() {
         return voucherRepository.findAll().stream()
                 .map(this::mapToResponse)

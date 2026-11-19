@@ -3,14 +3,12 @@ package com.example.pbl6.controller;
 import com.example.pbl6.common.ApiResponse;
 import com.example.pbl6.dto.voucher.VoucherApplyRequest;
 import com.example.pbl6.dto.voucher.VoucherApplyResponse;
-import com.example.pbl6.dto.voucher.VoucherResponse;
 import com.example.pbl6.service.VoucherService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/public/vouchers")

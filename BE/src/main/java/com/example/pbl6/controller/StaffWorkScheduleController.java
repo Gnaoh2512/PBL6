@@ -2,7 +2,6 @@ package com.example.pbl6.controller;
 
 import com.example.pbl6.common.ApiResponse;
 import com.example.pbl6.dto.schedule.AvailableStaffInShiftResponse;
-import com.example.pbl6.dto.schedule.DayScheduleTableResponse;
 import com.example.pbl6.dto.schedule.WorkScheduleResponse;
 import com.example.pbl6.security.CustomUserDetails;
 import com.example.pbl6.service.WorkScheduleService;
@@ -12,7 +11,6 @@ import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 

@@ -9,5 +9,4 @@ import java.util.Optional;
 @Repository
 public interface LoyaltyTierRepository extends JpaRepository<LoyaltyTier, Integer> {
     Optional<LoyaltyTier> findByTierCode(String tierCode);
-    Optional<LoyaltyTier> findByTierLevel(Integer tierLevel);
 }

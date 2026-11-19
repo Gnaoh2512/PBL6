@@ -9,5 +9,4 @@ import java.util.List;
 @Repository
 public interface TierBenefitRepository extends JpaRepository<TierBenefit, Integer> {
     List<TierBenefit> findByTier_TierIdAndIsActiveTrue(Integer tierId);
-    List<TierBenefit> findByTier_TierLevelLessThanEqualAndIsActiveTrue(Integer tierLevel);
 }

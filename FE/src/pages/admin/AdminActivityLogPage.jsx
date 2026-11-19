@@ -3,6 +3,7 @@ import { apiCall, formatDateTime } from "../../services/api";
 import "../../components/common/SearchInput.css";
 import SelectMenu from "../../components/common/SelectMenu";
 import Paginated from "../../components/common/TablePagination";
+import { roleLabel } from "../../utils/labels";
 
 const PREDEFINED_MODULES = [
   "ALL",
@@ -172,7 +173,7 @@ export default function AdminActivityLogPage() {
                 icon="bi-funnel"
                 value={moduleFilter}
                 onChange={setModuleFilter}
-                options={availableModules.map((m) => ({ value: m, label: m === "ALL" ? `Tất cả phân hệ (${logs.length})` : m }))}
+                options={availableModules.map((m) => ({ value: m, label: m === "ALL" ? "Tất cả phân hệ" : m }))}
               />
             </div>
           </div>
@@ -210,7 +211,7 @@ export default function AdminActivityLogPage() {
                           const username = account?.username || log.username;
                           const fullName = account?.fullName || log.performerName;
                           const roleCode = log.performerRole || account?.role?.roleCode || account?.role?.roleName || "";
-                          const roleDisplay = roleCode ? roleCode.replace("ROLE_", "") : "";
+                          const roleDisplay = roleCode ? roleLabel(roleCode, roleCode.replace("ROLE_", "")) : "";
                           const isSystem = !account && (!username || username.toLowerCase() === "system" || username.toLowerCase() === "hệ thống");
 
                           const time = log.loggedAt || log.timestamp || log.createdAt;
@@ -221,27 +222,17 @@ export default function AdminActivityLogPage() {
                                 <i className="bi bi-clock" style={{ marginRight: "6px", opacity: 0.7 }}></i>
                                 {formatDateTime(time)}
                               </td>
-                              <td>
+                              <td className="log-actor-cell">
                                 {isSystem ? (
-                                  <div className="u-row-6">
-                                    <i className="bi bi-cpu text-secondary" style={{ fontSize: "15px" }}></i>
-                                    <span className="hc-badge hc-badge-neutral u-fs-11">
-                                      Hệ thống tự động
-                                    </span>
+                                  <div className="log-actor">
+                                    <strong className="log-actor-name">Hệ thống tự động</strong>
                                   </div>
                                 ) : (
-                                  <div>
-                                    <div className="u-row-6">
-                                      <i className="bi bi-person-circle text-primary" style={{ fontSize: "15px" }}></i>
-                                      <strong style={{ color: "var(--hc-text-primary)" }}>{fullName && fullName !== username ? fullName : username || "Nhân sự"}</strong>
-                                    </div>
-                                    <div style={{ display: "flex", gap: "6px", alignItems: "center", marginTop: "2px" }}>
-                                      {username && <span className="u-text-muted u-fs-11">@{username}</span>}
-                                      {roleDisplay && (
-                                        <span className="hc-badge hc-badge-primary u-chip-xs">
-                                          {roleDisplay}
-                                        </span>
-                                      )}
+                                  <div className="log-actor">
+                                    <strong className="log-actor-name">{fullName && fullName !== username ? fullName : username || "Nhân sự"}</strong>
+                                    <div className="log-actor-meta">
+                                      {username && <span className="log-actor-user">@{username}</span>}
+                                      {roleDisplay && <span className="hc-badge hc-badge-primary u-chip-xs">{roleDisplay}</span>}
                                     </div>
                                   </div>
                                 )}

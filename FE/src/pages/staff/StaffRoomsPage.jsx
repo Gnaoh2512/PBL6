@@ -403,7 +403,6 @@ export default function StaffRoomsPage() {
     ...housekeepers.map((h) => ({ value: h.id, label: h.name })),
   ];
 
-  const pendingCleaningCount = cleaningRequests.filter((c) => c.status !== "COMPLETED" && c.status !== "CANCELED").length;
 
   return (
     <div className="ops-page">
@@ -423,17 +422,12 @@ export default function StaffRoomsPage() {
         {!isFieldStaff && (
           <button type="button" className={`hc-tab-btn ${activeTab === "ROOMS" ? "active" : ""}`} onClick={() => setActiveTab("ROOMS")}>
             <i className="bi bi-door-open u-mr-6"></i>
-            Sơ đồ phòng ({rooms.length})
+            Sơ đồ phòng
           </button>
         )}
         <button type="button" className={`hc-tab-btn ${activeTab === "CLEANING" ? "active" : ""}`} onClick={() => setActiveTab("CLEANING")}>
           <i className="bi bi-brush u-mr-6"></i>
-          Yêu cầu dọn phòng{" "}
-          {pendingCleaningCount > 0 && (
-            <span className="hc-badge hc-badge-warning" style={{ marginLeft: "6px" }}>
-              {pendingCleaningCount}
-            </span>
-          )}
+          Yêu cầu dọn phòng
         </button>
       </div>
 

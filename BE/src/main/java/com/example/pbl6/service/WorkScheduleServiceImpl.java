@@ -4,13 +4,9 @@ import com.example.pbl6.common.enums.ScheduleStatus;
 import com.example.pbl6.dto.schedule.AvailableStaffInShiftResponse;
 import com.example.pbl6.dto.schedule.BulkScheduleRequest;
 import com.example.pbl6.dto.schedule.BulkScheduleResponse;
-import com.example.pbl6.dto.schedule.CopyScheduleRequest;
-import com.example.pbl6.dto.schedule.DayScheduleBatchUpdateRequest;
-import com.example.pbl6.dto.schedule.DayScheduleTableResponse;
 import com.example.pbl6.dto.schedule.ScheduleStaffResponse;
 import com.example.pbl6.dto.schedule.WorkScheduleRequest;
 import com.example.pbl6.dto.schedule.WorkScheduleResponse;
-import com.example.pbl6.dto.schedule.WorkScheduleStatusUpdateRequest;
 import com.example.pbl6.dto.schedule.WorkScheduleUpdateRequest;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.Shift;
@@ -85,41 +81,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     @Transactional(readOnly = true)
-    public DayScheduleTableResponse getDayScheduleTable(LocalDate workDate, Integer shiftId, String role) {
-        LocalDate targetDate = workDate != null ? workDate : LocalDate.now();
-        List<WorkScheduleResponse> list = workScheduleRepository
-                .search(targetDate, targetDate, null, shiftId, normalizeRole(role)).stream()
-                .map(WorkScheduleResponse::fromEntity)
-                .toList();
-
-        int scheduled = 0;
-        int completed = 0;
-        int absent = 0;
-        int off = 0;
-        for (WorkScheduleResponse item : list) {
-            ScheduleStatus st = ScheduleStatus.parse(item.getStatus());
-            switch (st) {
-                case COMPLETED -> completed++;
-                case ABSENT -> absent++;
-                case OFF -> off++;
-                default -> scheduled++;
-            }
-        }
-
-        return DayScheduleTableResponse.builder()
-                .workDate(targetDate)
-                .dayOfWeek(targetDate.getDayOfWeek())
-                .totalSchedules(list.size())
-                .scheduledCount(scheduled)
-                .completedCount(completed)
-                .absentCount(absent)
-                .offCount(off)
-                .schedules(list)
-                .build();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public List<WorkScheduleResponse> searchSchedules(LocalDate from, LocalDate to,
                                                       Integer accountId, Integer shiftId, String role) {
         validateRange(from, to, MAX_QUERY_DAYS);
@@ -176,27 +137,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
             }
         }
         return available;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isStaffInActiveShift(Integer accountId, LocalDate date, LocalTime time) {
-        if (accountId == null) return false;
-        LocalDate targetDate = date != null ? date : LocalDate.now();
-        LocalTime targetTime = time != null ? time : LocalTime.now();
-        LocalDate prevDate = targetDate.minusDays(1);
-
-        List<WorkSchedule> schedules = workScheduleRepository.search(prevDate, targetDate, accountId, null, null);
-        for (WorkSchedule ws : schedules) {
-            ScheduleStatus st = ScheduleStatus.parse(ws.getStatus());
-            if (st == ScheduleStatus.OFF || st == ScheduleStatus.ABSENT) {
-                continue;
-            }
-            if (ws.getShift() != null && matchesShiftTime(ws.getWorkDate(), ws.getShift(), targetDate, targetTime)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean matchesShiftTime(LocalDate scheduleDate, Shift shift, LocalDate targetDate, LocalTime targetTime) {
@@ -348,72 +288,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
 
     @Override
     @Transactional
-    public WorkScheduleResponse updateScheduleStatus(Integer id, WorkScheduleStatusUpdateRequest request) {
-        requireAdminOrManagerForStatusChange();
-
-        WorkSchedule ws = workScheduleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("WorkSchedule", "id", id));
-
-        String before = describe(ws);
-        ScheduleStatus newStatus = ScheduleStatus.parse(request.getStatus());
-        ws.setStatus(newStatus.name());
-        if (request.getNotes() != null) {
-            ws.setNotes(request.getNotes());
-        }
-
-        WorkSchedule saved = workScheduleRepository.saveAndFlush(ws);
-        auditLogService.log(MODULE, "UPDATE_STATUS", TABLE, Long.valueOf(id), before, describe(saved));
-        return WorkScheduleResponse.fromEntity(saved);
-    }
-
-    @Override
-    @Transactional
-    public DayScheduleTableResponse batchUpdateDaySchedules(LocalDate workDate, DayScheduleBatchUpdateRequest request) {
-        requireAdminOrManagerForStatusChange();
-
-        LocalDate targetDate = workDate != null
-                ? workDate
-                : (request != null && request.getWorkDate() != null ? request.getWorkDate() : LocalDate.now());
-
-        if (request != null) {
-            if (request.getDeletedScheduleIds() != null) {
-                for (Integer delId : request.getDeletedScheduleIds()) {
-                    if (delId != null && workScheduleRepository.existsById(delId)) {
-                        deleteSchedule(delId);
-                    }
-                }
-            }
-
-            if (request.getItems() != null) {
-                for (DayScheduleBatchUpdateRequest.DayScheduleItemDto item : request.getItems()) {
-                    if (item == null) continue;
-                    LocalDate itemDate = item.getWorkDate() != null ? item.getWorkDate() : targetDate;
-                    if (item.getScheduleId() != null) {
-                        WorkScheduleUpdateRequest updateReq = new WorkScheduleUpdateRequest();
-                        updateReq.setAccountId(item.getAccountId());
-                        updateReq.setShiftId(item.getShiftId());
-                        updateReq.setWorkDate(itemDate);
-                        updateReq.setStatus(item.getStatus());
-                        updateReq.setNotes(item.getNotes());
-                        updateSchedule(item.getScheduleId(), updateReq);
-                    } else if (item.getAccountId() != null && item.getShiftId() != null) {
-                        WorkScheduleRequest createReq = new WorkScheduleRequest();
-                        createReq.setAccountId(item.getAccountId());
-                        createReq.setShiftId(item.getShiftId());
-                        createReq.setWorkDate(itemDate);
-                        createReq.setStatus(item.getStatus());
-                        createReq.setNotes(item.getNotes());
-                        createSchedule(createReq);
-                    }
-                }
-            }
-        }
-
-        return getDayScheduleTable(targetDate, null, null);
-    }
-
-    @Override
-    @Transactional
     public BulkScheduleResponse bulkAssign(BulkScheduleRequest request) {
         LocalDate startDate = request.getStartDate();
         if (startDate == null) {
@@ -455,54 +329,6 @@ public class WorkScheduleServiceImpl implements WorkScheduleService {
         auditLogService.log(MODULE, "BULK_ASSIGN", TABLE, (Long) null,
                 "Phân ca hàng loạt / lặp lại: " + shiftLabel(shift) + " cho " + accounts.size() + " nhân viên từ "
                         + startDate + " đến " + resolvedEndDate + " — " + summary(response));
-        return response;
-    }
-
-    @Override
-    @Transactional
-    public BulkScheduleResponse copySchedules(CopyScheduleRequest request) {
-        validateRange(request.getSourceStart(), request.getSourceEnd(), MAX_BULK_DAYS);
-        long baseOffset = ChronoUnit.DAYS.between(request.getSourceStart(), request.getTargetStart());
-        if (baseOffset == 0) {
-            throw new IllegalArgumentException("The target start date must differ from the source start date");
-        }
-
-        int repeats = (request.getRepeatCount() != null && request.getRepeatCount() > 1)
-                ? request.getRepeatCount()
-                : 1;
-        long sourceSpanDays = ChronoUnit.DAYS.between(request.getSourceStart(), request.getSourceEnd()) + 1;
-        LocalDate overallTargetEnd = request.getTargetStart().plusDays(sourceSpanDays * repeats - 1);
-        validateRange(request.getTargetStart(), overallTargetEnd, MAX_BULK_DAYS);
-
-        List<WorkSchedule> source = workScheduleRepository
-                .search(request.getSourceStart(), request.getSourceEnd(), null, null, null);
-
-        Set<Integer> accountIds = new LinkedHashSet<>();
-        source.forEach(ws -> accountIds.add(ws.getAccount().getAccountId()));
-        Map<Key, WorkSchedule> existing = loadExisting(accountIds, request.getTargetStart(), overallTargetEnd);
-
-        BulkCollector out = new BulkCollector();
-        for (int r = 0; r < repeats; r++) {
-            long offset = baseOffset + (r * sourceSpanDays);
-            for (WorkSchedule ws : source) {
-                Account account = ws.getAccount();
-                LocalDate targetDate = ws.getWorkDate().plusDays(offset);
-                if (!isSchedulable(account)) {
-                    out.skip(account, targetDate, "Account is no longer an active staff account");
-                    continue;
-                }
-                // Days off carry over; attendance results (completed / absent) start fresh as SCHEDULED.
-                ScheduleStatus status = ScheduleStatus.parse(ws.getStatus()) == ScheduleStatus.OFF
-                        ? ScheduleStatus.OFF : ScheduleStatus.SCHEDULED;
-                upsert(account, ws.getShift(), targetDate, ws.getNotes(), status,
-                        request.isOverwrite(), existing, out);
-            }
-        }
-
-        BulkScheduleResponse response = persist(out);
-        auditLogService.log(MODULE, "COPY", TABLE, (Long) null,
-                "Sao chép lịch làm việc từ " + request.getSourceStart() + " – " + request.getSourceEnd()
-                        + " sang " + request.getTargetStart() + " – " + overallTargetEnd + " — " + summary(response));
         return response;
     }
 

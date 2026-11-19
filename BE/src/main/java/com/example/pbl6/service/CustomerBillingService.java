@@ -24,11 +24,6 @@ public interface CustomerBillingService {
     ServiceUsageResponse orderInStayService(ServiceOrderRequest request, String username);
 
     /**
-     * Lấy danh sách dịch vụ đã sử dụng theo mã đơn đặt phòng
-     */
-    List<ServiceUsageResponse> getServicesUsed(String bookingCode);
-
-    /**
      * Lấy chi tiết Hóa đơn trực tiếp theo thời gian thực (Live Folio)
      * Tiền phòng + Dịch vụ + 10% VAT - Tiền cọc đã nộp = Số tiền còn lại + Mã VietQR tất toán
      */
@@ -54,13 +49,4 @@ public interface CustomerBillingService {
      */
     CancellationRefundResponse cancelWithFlexibleOptions(String bookingCode, CancelBookingRequest request, String username);
 
-    /**
-     * Hủy đặt phòng theo chính sách hoàn cọc mặc định (hoàn tiền)
-     */
-    CancellationRefundResponse cancelWithRefundPolicy(String bookingCode, String reason, String username);
-
-    /**
-     * Cập nhật trạng thái phục vụ của dịch vụ (PENDING -> DELIVERING -> COMPLETED)
-     */
-    ServiceUsageResponse updateServiceUsageStatus(Integer usageId, String status);
 }

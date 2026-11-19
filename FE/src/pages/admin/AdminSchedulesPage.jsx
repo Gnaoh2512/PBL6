@@ -175,7 +175,7 @@ function ScheduleTimeline({ view, timeline, now, onOpenDay, onEditShift }) {
   return (
     <div className="tl-scroll">
       <div className={`tl-grid ${isDay ? "is-day" : "is-week"}`} style={{ gridTemplateColumns: columns }}>
-        <div className="tl-corner">Nhân viên ({rows.length})</div>
+        <div className="tl-corner">Nhân viên</div>
         {isDay ? (
           <div className="tl-hours">
             {HOURS.map((h) => (

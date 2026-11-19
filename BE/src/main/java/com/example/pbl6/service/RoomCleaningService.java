@@ -8,9 +8,7 @@ import java.util.List;
 public interface RoomCleaningService {
     List<RoomCleaningResponse> getAllRequests(String status, String priority, Integer roomId, Integer assignedToId);
     List<RoomCleaningResponse> getAllRequests(String status, String priority, Integer roomId, Integer assignedToId, String assignedToUsername);
-    RoomCleaningResponse getById(Integer id);
     RoomCleaningResponse createRequest(RoomCleaningRequestDto dto, String username);
-    RoomCleaningResponse updateRequest(Integer id, RoomCleaningRequestDto dto, String username);
     RoomCleaningResponse assignStaff(Integer id, Integer staffAccountId, String actorUsername);
     RoomCleaningResponse completeCleaning(Integer id, String note, String actorUsername);
     RoomCleaningResponse completeCleaning(Integer id, String note, String actorUsername, boolean ownOnly);

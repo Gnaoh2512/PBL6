@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { getPrimaryRole } from "../../services/api";
+import { roleLabel } from "../../utils/labels";
 import "./PortalLayout.css";
 
 const portalLinks = {
@@ -155,7 +156,7 @@ export default function PortalLayout({ type }) {
             </span>
             <span>
               <b>{user?.fullName || user?.username || "Thành viên"}</b>
-              <small>{type === "guest" ? "Khách lưu trú" : getPrimaryRole(user).replace(/^ROLE_/, "") || "Nhân viên"}</small>
+              <small>{type === "guest" ? "Khách lưu trú" : roleLabel(getPrimaryRole(user), "Nhân viên")}</small>
             </span>
             <button aria-label="Đăng xuất" onClick={handleLogout}>
               <i className="bi bi-box-arrow-right" />

@@ -5,6 +5,7 @@ import { useToast } from "../../contexts/ToastContext";
 import "./StaffShifts.css";
 import SelectMenu from "../../components/common/SelectMenu";
 import Paginated from "../../components/common/TablePagination";
+import { roleLabel } from "../../utils/labels";
 
 const FLOAT_PRESETS = [500000, 1000000, 2000000, 3000000, 5000000];
 
@@ -185,14 +186,7 @@ export default function StaffShiftsPage() {
     });
   }, [transactions, txnFilter, txnSearch]);
 
-  const cashCount = transactions.filter((t) => (t.method || "").toUpperCase() === "CASH").length;
-  const bankCount = transactions.filter((t) =>
-    ["BANK_TRANSFER", "VIETQR", "TRANSFER"].includes((t.method || "").toUpperCase())
-  ).length;
-  const cardCount = transactions.filter((t) =>
-    ["CREDIT_CARD", "CARD"].includes((t.method || "").toUpperCase())
-  ).length;
-  const refundCount = transactions.filter((t) => (t.type || "").toUpperCase() === "REFUND").length;
+  const hasRefunds = transactions.some((t) => (t.type || "").toUpperCase() === "REFUND");
 
   // Discrepancy calculation in close modal
   const enteredActual = parseFloat(actualBalance);
@@ -225,7 +219,6 @@ export default function StaffShiftsPage() {
         <button type="button" className={`hc-tab-btn ${activeTab === "CURRENT" ? "active" : ""}`} onClick={() => setActiveTab("CURRENT")}>
           <i className="bi bi-wallet2"></i>
           Ca trực hiện tại
-          {isShiftOpen && <span className="hc-badge hc-badge-success">Đang mở</span>}
         </button>
         <button type="button" className={`hc-tab-btn ${activeTab === "HISTORY" ? "active" : ""}`} onClick={() => setActiveTab("HISTORY")}>
           <i className="bi bi-clock-history"></i>
@@ -250,27 +243,14 @@ export default function StaffShiftsPage() {
                   </div>
                   <div>
                     <h3 className="sh-shared-title">
-                      Ca Thu Ngân Chung Đang Hoạt Động #{currentShift.cashierShiftId}
-                      <span className="hc-badge hc-badge-success" style={{ fontSize: "12px", marginLeft: "6px" }}>
-                        Active
-                      </span>
+                      Ca Thu Ngân Chung Đang Hoạt Động
                     </h3>
                     <div className="sh-shared-sub">
                       Người mở ca: <strong>{currentShift.accountFullName || "Lễ tân"}</strong>{" "}
-                      {currentShift.accountRole ? `(${currentShift.accountRole})` : ""} · Bắt đầu lúc:{" "}
+                      {currentShift.accountRole ? `(${roleLabel(currentShift.accountRole, currentShift.accountRole)})` : ""} · Bắt đầu lúc:{" "}
                       <strong>{formatDateTime(currentShift.startTime)}</strong> ({elapsedText})
                     </div>
                   </div>
-                </div>
-
-                <div className="sh-shared-right">
-                  <span className="u-hint u-block">
-                    Chế độ đồng bộ thời gian thực
-                  </span>
-                  <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--hc-success)" }}>
-                    <i className="bi bi-check-circle-fill u-mr-4"></i>
-                    Lễ tân &amp; Admin cùng thao tác
-                  </span>
                 </div>
               </div>
 
@@ -316,7 +296,6 @@ export default function StaffShiftsPage() {
                         <i className="bi bi-list-check text-primary u-mr-8"></i>
                         Giao Dịch Chung Phát Sinh Trong Ca
                       </div>
-                      <span className="hc-badge hc-badge-primary">{transactions.length} GD</span>
                     </div>
 
                     <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
@@ -338,11 +317,11 @@ export default function StaffShiftsPage() {
                           value={txnFilter}
                           onChange={setTxnFilter}
                           options={[
-                            { value: "ALL", label: `Tất cả phương thức (${transactions.length})` },
-                            { value: "CASH", label: `Tiền mặt (${cashCount})` },
-                            { value: "BANK", label: `Chuyển khoản / VietQR (${bankCount})` },
-                            { value: "CARD", label: `Thẻ tín dụng (${cardCount})` },
-                            ...(refundCount > 0 ? [{ value: "REFUND", label: `Hoàn tiền (${refundCount})` }] : []),
+                            { value: "ALL", label: `Tất cả phương thức` },
+                            { value: "CASH", label: "Tiền mặt" },
+                            { value: "BANK", label: "Chuyển khoản / VietQR" },
+                            { value: "CARD", label: "Thẻ tín dụng" },
+                            ...(hasRefunds ? [{ value: "REFUND", label: "Hoàn tiền" }] : []),
                           ]}
                         />
                       </div>
@@ -479,12 +458,8 @@ export default function StaffShiftsPage() {
                 <div className="hc-card-header">
                   <div className="hc-card-title">
                     <i className="bi bi-file-earmark-text text-primary u-mr-8"></i>
-                    Thông Tin Quản Trị Ca Trực #{currentShift.cashierShiftId}
+                    Thông Tin Quản Trị Ca Trực
                   </div>
-                  <span className="hc-badge hc-badge-success" style={{ padding: "6px 14px", fontSize: "13px" }}>
-                    <span className="hc-pulse-dot" style={{ background: "var(--hc-success)", marginRight: "6px" }}></span>
-                    Đang mở — Đồng bộ Lễ tân &amp; Admin
-                  </span>
                 </div>
 
                 <div className="hc-card-body">
@@ -493,7 +468,7 @@ export default function StaffShiftsPage() {
                       <div className="sh-detail-label">Nhân sự phụ trách mở ca:</div>
                       <strong style={{ fontSize: "15px" }}>
                         {currentShift.accountFullName || "Nhân viên lễ tân"}{" "}
-                        {currentShift.accountRole ? `(${currentShift.accountRole})` : ""}
+                        {currentShift.accountRole ? `(${roleLabel(currentShift.accountRole, currentShift.accountRole)})` : ""}
                       </strong>
                     </div>
                     <div>
@@ -665,7 +640,6 @@ export default function StaffShiftsPage() {
                     <table className="hc-table">
                       <thead>
                         <tr>
-                          <th>Mã ca</th>
                           <th>Thu ngân mở ca</th>
                           <th>Thời gian trực</th>
                           <th className="u-text-right">Tiền đầu ca</th>
@@ -700,13 +674,10 @@ export default function StaffShiftsPage() {
                               }}
                             >
                               <td>
-                                <strong>#{sh.cashierShiftId}</strong>
-                              </td>
-                              <td>
                                 <div>{sh.accountFullName || "Lễ tân"}</div>
                                 {sh.accountRole && (
                                   <div className="u-hint-sm">
-                                    {sh.accountRole}
+                                    {roleLabel(sh.accountRole, sh.accountRole)}
                                   </div>
                                 )}
                               </td>
@@ -888,7 +859,7 @@ export default function StaffShiftsPage() {
       <Modal
         isOpen={!!selectedHistoryShift}
         onClose={() => setSelectedHistoryShift(null)}
-        title={`Chi Tiết Ca Thu Ngân #${selectedHistoryShift?.cashierShiftId || ""}`}
+        title={"Chi Tiết Ca Thu Ngân"}
         subtitle={
           selectedHistoryShift
             ? `${selectedHistoryShift.accountFullName || "Thu ngân"} · ${formatDateTime(selectedHistoryShift.startTime)} → ${selectedHistoryShift.endTime ? formatDateTime(selectedHistoryShift.endTime) : "đang hoạt động"}`
@@ -915,7 +886,7 @@ export default function StaffShiftsPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px 18px", fontSize: "13px" }}>
                 <div>
                   <small className="u-text-secondary u-block">Thu ngân</small>
-                  <strong>{selectedHistoryShift.accountFullName}</strong> ({selectedHistoryShift.accountRole || "Lễ tân"})
+                  <strong>{selectedHistoryShift.accountFullName}</strong> ({roleLabel(selectedHistoryShift.accountRole, "Lễ tân")})
                 </div>
                 <div>
                   <small className="u-text-secondary u-block">Bắt đầu</small>
@@ -937,7 +908,7 @@ export default function StaffShiftsPage() {
             </div>
 
             <div style={{ margin: "18px 0 10px", fontWeight: 700, fontSize: "14px" }}>
-              Danh Sách Giao Dịch Trong Ca ({selectedHistoryShift.transactions?.length || 0})
+              Danh Sách Giao Dịch Trong Ca
             </div>
 
             <div style={{ maxHeight: "320px", overflowY: "auto", border: "1px solid var(--hc-border)", borderRadius: "6px" }}>

@@ -6,26 +6,27 @@ import { useAuth } from "../../contexts/AuthContext";
 import "../../components/common/SearchInput.css";
 import SelectMenu from "../../components/common/SelectMenu";
 import Paginated from "../../components/common/TablePagination";
+import { roleLabel } from "../../utils/labels";
 
 const ROLE_FILTER_OPTIONS = [
   { value: "ALL", label: "Tất cả vai trò" },
-  { value: "ROLE_ADMIN", label: "Quản trị viên (Admin)" },
-  { value: "ROLE_MANAGER", label: "Quản lý (Manager)" },
-  { value: "ROLE_RECEPTIONIST", label: "Lễ tân (Receptionist)" },
-  { value: "ROLE_HOUSEKEEPING", label: "Buồng phòng (Housekeeping)" },
-  { value: "ROLE_MAINTENANCE", label: "Kỹ thuật (Maintenance)" },
-  { value: "ROLE_SERVICE_STAFF", label: "Nhân viên Dịch vụ (Service Staff)" },
-  { value: "ROLE_CUSTOMER", label: "Khách hàng (Customer)" },
+  { value: "ROLE_ADMIN", label: roleLabel("ADMIN") },
+  { value: "ROLE_MANAGER", label: roleLabel("MANAGER") },
+  { value: "ROLE_RECEPTIONIST", label: roleLabel("RECEPTIONIST") },
+  { value: "ROLE_HOUSEKEEPING", label: roleLabel("HOUSEKEEPING") },
+  { value: "ROLE_MAINTENANCE", label: roleLabel("MAINTENANCE") },
+  { value: "ROLE_SERVICE_STAFF", label: roleLabel("SERVICE_STAFF") },
+  { value: "ROLE_CUSTOMER", label: roleLabel("CUSTOMER") },
 ];
 
 const ROLE_FORM_OPTIONS = [
-  { value: "ROLE_RECEPTIONIST", label: "Lễ tân (ROLE_RECEPTIONIST)" },
-  { value: "ROLE_HOUSEKEEPING", label: "Buồng phòng (ROLE_HOUSEKEEPING)" },
-  { value: "ROLE_MAINTENANCE", label: "Kỹ thuật & Bảo trì (ROLE_MAINTENANCE)" },
-  { value: "ROLE_SERVICE_STAFF", label: "Nhân viên Dịch vụ (ROLE_SERVICE_STAFF)" },
-  { value: "ROLE_MANAGER", label: "Quản lý (ROLE_MANAGER)" },
-  { value: "ROLE_ADMIN", label: "Quản trị viên (ROLE_ADMIN)" },
-  { value: "ROLE_CUSTOMER", label: "Khách hàng (ROLE_CUSTOMER)" },
+  { value: "ROLE_RECEPTIONIST", label: roleLabel("RECEPTIONIST") },
+  { value: "ROLE_HOUSEKEEPING", label: roleLabel("HOUSEKEEPING") },
+  { value: "ROLE_MAINTENANCE", label: roleLabel("MAINTENANCE") },
+  { value: "ROLE_SERVICE_STAFF", label: roleLabel("SERVICE_STAFF") },
+  { value: "ROLE_MANAGER", label: roleLabel("MANAGER") },
+  { value: "ROLE_ADMIN", label: roleLabel("ADMIN") },
+  { value: "ROLE_CUSTOMER", label: roleLabel("CUSTOMER") },
 ];
 
 const STATUS_OPTIONS = [
@@ -294,7 +295,7 @@ export default function AdminAccountsPage() {
                             </td>
                             <td>{a.fullName || "---"}</td>
                             <td>
-                              <span className="hc-badge hc-badge-primary">{roleCodeOf(a.role).replace("ROLE_", "") || "—"}</span>
+                              <span className="hc-badge hc-badge-primary">{roleLabel(a.role, "—")}</span>
                             </td>
                             <td>{a.phone || "---"}</td>
                             <td>{a.email || "---"}</td>

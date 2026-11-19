@@ -18,9 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,7 +32,6 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
     private final RoomRepository roomRepository;
     private final BookingRepository bookingRepository;
     private final AccountRepository accountRepository;
-    private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
     private final ShiftGuard shiftGuard;
 
@@ -85,14 +82,6 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public RoomCleaningResponse getById(Integer id) {
-        RoomCleaningRequest entity = cleaningRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dọn phòng #" + id));
-        return RoomCleaningResponse.fromEntity(entity);
-    }
-
-    @Override
     @Transactional
     public RoomCleaningResponse createRequest(RoomCleaningRequestDto dto, String username) {
         Room room = roomRepository.findById(dto.getRoomId())
@@ -139,56 +128,6 @@ public class RoomCleaningServiceImpl implements RoomCleaningService {
         RoomCleaningRequest saved = cleaningRepository.save(req);
         auditLogService.log(requester, "BUỒNG PHÒNG", "CREATE_CLEANING", "roomcleaning_request", Long.valueOf(saved.getCleaningId()),
                 "Tạo yêu cầu dọn phòng " + room.getRoomNumber() + " (Mức độ: " + priority + ")");
-
-        return RoomCleaningResponse.fromEntity(saved);
-    }
-
-    @Override
-    @Transactional
-    public RoomCleaningResponse updateRequest(Integer id, RoomCleaningRequestDto dto, String username) {
-        RoomCleaningRequest req = cleaningRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dọn phòng #" + id));
-
-        if (dto.getRoomId() != null && (req.getRoom() == null || !dto.getRoomId().equals(req.getRoom().getRoomId()))) {
-            Room room = roomRepository.findById(dto.getRoomId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng #" + dto.getRoomId()));
-            req.setRoom(room);
-        }
-
-        if (dto.getBookingId() != null) {
-            Booking booking = bookingRepository.findById(dto.getBookingId()).orElse(null);
-            req.setBooking(booking);
-        }
-
-        if (dto.getAssignedToId() != null) {
-            Account assignedTo = accountRepository.findById(dto.getAssignedToId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhân viên #" + dto.getAssignedToId()));
-            shiftGuard.ensureOnShift(assignedTo, "ROLE_HOUSEKEEPING", accountRepository.findByUsername(username).orElse(null), "BUỒNG PHÒNG", "roomcleaning_request", id);
-            req.setAssignedTo(assignedTo);
-            if ("PENDING".equalsIgnoreCase(req.getStatus())) {
-                req.setStatus("IN_PROGRESS");
-                req.setStartedAt(LocalDateTime.now());
-            }
-        }
-
-        if (StringUtils.hasText(dto.getPriority())) {
-            req.setPriority(dto.getPriority().trim().toUpperCase());
-        }
-        if (StringUtils.hasText(dto.getStatus())) {
-            String newStatus = dto.getStatus().trim().toUpperCase();
-            req.setStatus(newStatus);
-            if ("COMPLETED".equalsIgnoreCase(newStatus)) {
-                req.setCompletedAt(LocalDateTime.now());
-                releaseRoomAfterCleaning(req.getRoom());
-            }
-        }
-        if (dto.getNote() != null) {
-            req.setNote(dto.getNote());
-        }
-
-        RoomCleaningRequest saved = cleaningRepository.save(req);
-        auditLogService.log("BUỒNG PHÒNG", "UPDATE_CLEANING", "roomcleaning_request", Long.valueOf(saved.getCleaningId()),
-                "Cập nhật yêu cầu dọn phòng #" + id + " bởi " + username);
 
         return RoomCleaningResponse.fromEntity(saved);
     }

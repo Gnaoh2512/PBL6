@@ -44,10 +44,6 @@ public class Invoice {
     @Column(name = "loyalty_discount_amount", precision = 15, scale = 2)
     private BigDecimal loyaltyDiscountAmount = BigDecimal.ZERO;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "discount_approved_by")
-    private Account discountApprovedBy;
-
     @Column(name = "deposit_applied", precision = 15, scale = 2)
     private BigDecimal depositApplied;
 

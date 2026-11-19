@@ -116,7 +116,6 @@ export default function AdminLoyaltyPage() {
 
   // External options for dropdowns (services & room types)
   const [services, setServices] = useState([]);
-  const [roomTypes, setRoomTypes] = useState([]);
 
   // Benefit Modal State
   const [benefitModal, setBenefitModal] = useState(false);
@@ -127,7 +126,6 @@ export default function AdminLoyaltyPage() {
     benefitType: "ROOM_DISCOUNT",
     discountPercent: "10",
     serviceId: "",
-    roomTypeId: "",
     quota: "",
     periodType: "YEAR",
     isActive: true,
@@ -148,19 +146,11 @@ export default function AdminLoyaltyPage() {
     }
   }, []);
 
-  // Load services and room types for benefit modal
-  const loadServicesAndRoomTypes = useCallback(async () => {
+  // Load services for benefit modal
+  const loadServices = useCallback(async () => {
     try {
-      const [svcRes, rtRes] = await Promise.allSettled([
-        apiCall("/api/admin/services", { silentError: true }),
-        apiCall("/api/public/rooms/room-types", { silentError: true }),
-      ]);
-      if (svcRes.status === "fulfilled") {
-        setServices(unwrapList(svcRes.value));
-      }
-      if (rtRes.status === "fulfilled") {
-        setRoomTypes(unwrapList(rtRes.value));
-      }
+      const res = await apiCall("/api/admin/services", { silentError: true });
+      setServices(unwrapList(res));
     } catch {
       // silent
     }
@@ -183,8 +173,8 @@ export default function AdminLoyaltyPage() {
     setLoading(false);
 
     loadBenefits();
-    loadServicesAndRoomTypes();
-  }, [loadBenefits, loadServicesAndRoomTypes]);
+    loadServices();
+  }, [loadBenefits, loadServices]);
 
   useEffect(() => {
     loadData();
@@ -352,7 +342,6 @@ export default function AdminLoyaltyPage() {
       benefitType: "ROOM_DISCOUNT",
       discountPercent: "10",
       serviceId: services[0]?.serviceId ? String(services[0].serviceId) : "",
-      roomTypeId: roomTypes[0]?.roomTypeId ? String(roomTypes[0].roomTypeId) : "",
       quota: "",
       periodType: "YEAR",
       isActive: true,
@@ -369,7 +358,6 @@ export default function AdminLoyaltyPage() {
       benefitType: b.benefitType || "ROOM_DISCOUNT",
       discountPercent: b.discountPercent != null ? String(b.discountPercent) : "",
       serviceId: b.serviceId ? String(b.serviceId) : "",
-      roomTypeId: b.roomTypeId ? String(b.roomTypeId) : "",
       quota: b.quota != null ? String(b.quota) : "",
       periodType: b.periodType || "YEAR",
       isActive: b.isActive ?? true,
@@ -397,6 +385,17 @@ export default function AdminLoyaltyPage() {
       }
     }
 
+    if (benefitForm.benefitType === "FREE_SERVICE") {
+      if (!benefitForm.serviceId) {
+        addToast("Vui lòng chọn dịch vụ được miễn phí.", "warning");
+        return;
+      }
+      if (benefitForm.quota === "" || Number(benefitForm.quota) < 1) {
+        addToast("Vui lòng nhập số lượt sử dụng (tối thiểu 1 lượt mỗi chu kỳ).", "warning");
+        return;
+      }
+    }
+
     setBenefitSubmitting(true);
     try {
       const payload = {
@@ -405,8 +404,7 @@ export default function AdminLoyaltyPage() {
         benefitType: benefitForm.benefitType,
         discountPercent: benefitForm.benefitType === "ROOM_DISCOUNT" && benefitForm.discountPercent ? Number(benefitForm.discountPercent) : null,
         serviceId: benefitForm.benefitType === "FREE_SERVICE" && benefitForm.serviceId ? Number(benefitForm.serviceId) : null,
-        roomTypeId: benefitForm.benefitType === "FREE_NIGHT" && benefitForm.roomTypeId ? Number(benefitForm.roomTypeId) : null,
-        quota: benefitForm.quota !== "" && benefitForm.quota != null ? Math.max(1, Number(benefitForm.quota)) : null,
+        quota: benefitForm.benefitType === "FREE_SERVICE" ? Math.max(1, Number(benefitForm.quota)) : null,
         periodType: benefitForm.periodType || "YEAR",
         isActive: Boolean(benefitForm.isActive),
         description: benefitForm.description.trim() || null,
@@ -482,8 +480,7 @@ export default function AdminLoyaltyPage() {
         (b.benefitName && b.benefitName.toLowerCase().includes(q)) ||
         (b.description && b.description.toLowerCase().includes(q)) ||
         (b.tierName && b.tierName.toLowerCase().includes(q)) ||
-        (b.serviceName && b.serviceName.toLowerCase().includes(q)) ||
-        (b.roomTypeName && b.roomTypeName.toLowerCase().includes(q));
+        (b.serviceName && b.serviceName.toLowerCase().includes(q));
       return matchTier && matchType && matchSearch;
     });
   }, [benefits, benefitTierFilter, benefitTypeFilter, benefitSearch]);
@@ -501,7 +498,6 @@ export default function AdminLoyaltyPage() {
     { value: "ALL", label: "Tất cả loại đặc quyền" },
     { value: "ROOM_DISCOUNT", label: "Giảm giá phòng" },
     { value: "FREE_SERVICE", label: "Miễn phí dịch vụ" },
-    { value: "FREE_NIGHT", label: "Đêm nghỉ miễn phí" },
   ];
 
   const renderBenefitTypeBadge = (b) => {
@@ -516,12 +512,6 @@ export default function AdminLoyaltyPage() {
         return (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#e0f2fe", color: "#0369a1", fontSize: 11, fontWeight: 700 }}>
             <i className="bi bi-stars"></i> Miễn phí DV {b.serviceName ? `(${b.serviceName})` : ""}
-          </span>
-        );
-      case "FREE_NIGHT":
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#fef3c7", color: "#b45309", fontSize: 11, fontWeight: 700 }}>
-            <i className="bi bi-moon-stars-fill"></i> Đêm nghỉ miễn phí {b.roomTypeName ? `(${b.roomTypeName})` : ""}
           </span>
         );
       default:
@@ -608,7 +598,7 @@ export default function AdminLoyaltyPage() {
               <div>
                 <h3 className="hc-card-title" style={{ margin: 0, fontSize: "15px", fontWeight: 700 }}>
                   <i className="bi bi-people u-text-primary u-mr-6"></i>
-                  Danh sách Khách hàng ({filtered.length})
+                  Danh sách Khách hàng
                 </h3>
               </div>
             </div>
@@ -742,7 +732,7 @@ export default function AdminLoyaltyPage() {
               <div>
                 <h3 className="hc-card-title" style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
                   <i className="bi bi-gift u-text-primary"></i>
-                  Đặc quyền hội viên ({filteredBenefits.length})
+                  Đặc quyền hội viên
                 </h3>
                 <span style={{ fontSize: "12.5px", color: "var(--hc-text-muted)" }}>
                   Cấu hình các ưu đãi, giảm giá phòng và dịch vụ miễn phí tự động theo hạng thành viên.
@@ -799,7 +789,7 @@ export default function AdminLoyaltyPage() {
                             <th style={{ width: "130px" }}>Hạng áp dụng</th>
                             <th>Tên đặc quyền &amp; Mô tả</th>
                             <th>Loại quyền lợi</th>
-                            <th>Hạn mức (Quota)</th>
+                            <th>Hạn mức</th>
                             <th>Trạng thái</th>
                             <th className="col-actions">Thao tác</th>
                           </tr>
@@ -1201,9 +1191,8 @@ export default function AdminLoyaltyPage() {
               value={benefitForm.benefitType}
               onChange={(benefitType) => setBenefitForm({ ...benefitForm, benefitType })}
               options={[
-                { value: "ROOM_DISCOUNT", label: "Giảm giá tiền phòng (ROOM_DISCOUNT)" },
-                { value: "FREE_SERVICE", label: "Dịch vụ miễn phí (FREE_SERVICE)" },
-                { value: "FREE_NIGHT", label: "Đêm nghỉ miễn phí (FREE_NIGHT)" },
+                { value: "ROOM_DISCOUNT", label: "Giảm giá tiền phòng" },
+                { value: "FREE_SERVICE", label: "Dịch vụ miễn phí" },
               ]}
               ariaLabel="Chọn loại đặc quyền"
               icon="bi-tag"
@@ -1236,13 +1225,13 @@ export default function AdminLoyaltyPage() {
           {benefitForm.benefitType === "FREE_SERVICE" && (
             <div className="hc-form-group">
               <label className="hc-label">
-                Dịch vụ được miễn phí
+                Dịch vụ được miễn phí <span className="u-text-error">*</span>
               </label>
               <SelectMenu
                 value={benefitForm.serviceId}
                 onChange={(serviceId) => setBenefitForm({ ...benefitForm, serviceId })}
                 options={[
-                  { value: "", label: "-- Không gắn dịch vụ cụ thể --" },
+                  { value: "", label: "-- Chọn dịch vụ --" },
                   ...services.map((s) => ({ value: String(s.serviceId), label: `${s.serviceName} (${formatVND(s.unitPrice || 0)})` })),
                 ]}
                 ariaLabel="Chọn dịch vụ"
@@ -1254,39 +1243,25 @@ export default function AdminLoyaltyPage() {
             </div>
           )}
 
-          {benefitForm.benefitType === "FREE_NIGHT" && (
-            <div className="hc-form-group">
-              <label className="hc-label">
-                Hạng phòng áp dụng đêm miễn phí
-              </label>
-              <SelectMenu
-                value={benefitForm.roomTypeId}
-                onChange={(roomTypeId) => setBenefitForm({ ...benefitForm, roomTypeId })}
-                options={[
-                  { value: "", label: "-- Mọi hạng phòng --" },
-                  ...roomTypes.map((rt) => ({ value: String(rt.roomTypeId), label: rt.typeName || `Hạng phòng #${rt.roomTypeId}` })),
-                ]}
-                ariaLabel="Chọn loại phòng"
-                icon="bi-door-closed"
-              />
-            </div>
-          )}
-
           {/* Hạn mức (Quota) & Kỳ hạn (Period) */}
+          {benefitForm.benefitType === "FREE_SERVICE" && (
           <div className="u-grid-2">
             <div className="hc-form-group">
-              <label className="hc-label">Số lượt sử dụng (Quota)</label>
+              <label className="hc-label">
+                Số lượt sử dụng <span className="u-text-error">*</span>
+              </label>
               <input
                 type="number"
                 min="1"
                 step="1"
                 className="hc-input"
-                placeholder="Để trống = Không giới hạn"
+                placeholder="VD: 1"
                 value={benefitForm.quota}
+                required
                 onChange={(e) => setBenefitForm({ ...benefitForm, quota: e.target.value })}
               />
               <small style={{ color: "var(--hc-text-muted)", fontSize: "11px", marginTop: 4, display: "block" }}>
-                Để trống nếu không giới hạn số lượt.
+                Số lượt khách được dùng miễn phí trong mỗi chu kỳ.
               </small>
             </div>
 
@@ -1296,15 +1271,16 @@ export default function AdminLoyaltyPage() {
                 value={benefitForm.periodType}
                 onChange={(periodType) => setBenefitForm({ ...benefitForm, periodType })}
                 options={[
-                  { value: "YEAR", label: "Mỗi năm (YEAR)" },
-                  { value: "MONTH", label: "Mỗi tháng (MONTH)" },
-                  { value: "DAY", label: "Mỗi ngày (DAY)" },
+                  { value: "YEAR", label: "Mỗi năm" },
+                  { value: "MONTH", label: "Mỗi tháng" },
+                  { value: "DAY", label: "Mỗi ngày" },
                 ]}
                 ariaLabel="Chu kỳ áp dụng"
                 icon="bi-calendar-check"
               />
             </div>
           </div>
+          )}
 
           {/* Trạng thái kích hoạt */}
           <div className="hc-form-group" style={{ marginTop: 8 }}>

@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomerHistoryServiceImpl implements CustomerHistoryService {
 
+    private final LoyaltyBenefitSupport loyaltyBenefitSupport;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
     private final CustomerRepository customerRepository;
@@ -224,12 +225,12 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
                 .totalPrice(u.getTotalPrice())
                 .status(u.getStatus())
                 .usedAt(u.getUsedAt())
-                .build()).collect(Collectors.toList());
+                .build()).collect(Collectors.collectingAndThen(Collectors.toList(),
+                        billLines -> loyaltyBenefitSupport.withBillLines(billLines, booking.getBookingId())));
 
         List<ServiceRequestResponse> serviceRequests = serviceRequestRepository.findByBooking_BookingId(booking.getBookingId())
                 .stream()
-                .map(ServiceRequestResponse::fromEntity)
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(), loyaltyBenefitSupport::toResponses));
 
         BigDecimal serviceCharge = usages.stream()
                 .filter(u -> !"CANCELED".equalsIgnoreCase(u.getStatus()) && !"CANCELLED".equalsIgnoreCase(u.getStatus()))

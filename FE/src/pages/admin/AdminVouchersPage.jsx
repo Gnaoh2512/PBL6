@@ -197,7 +197,7 @@ export default function AdminVouchersPage() {
         <div className="hc-card-header">
           <div className="hc-card-title">
             <i className="bi bi-ticket-detailed text-primary u-mr-8"></i>
-            Danh Sách Voucher Khuyến Mãi ({vouchers.length})
+            Danh Sách Voucher Khuyến Mãi
           </div>
           <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={loadVouchers}>
             <i className="bi bi-arrow-clockwise"></i> Làm mới

@@ -12,6 +12,5 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     List<ServiceRequest> findByBooking_BookingId(Integer bookingId);
     List<ServiceRequest> findByRoom_RoomId(Integer roomId);
     List<ServiceRequest> findByStatus(String status);
-    List<ServiceRequest> findByAssignedTo_AccountId(Integer accountId);
     List<ServiceRequest> findByServiceUsage_UsageId(Integer usageId);
 }

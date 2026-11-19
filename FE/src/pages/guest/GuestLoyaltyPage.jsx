@@ -151,9 +151,6 @@ export default function GuestLoyaltyPage() {
               <div className="guest-toolbar">
                 <div className="guest-toolbar-title">
                   <i className="bi bi-gift text-primary"></i> Quyền lợi theo hạng của bạn
-                  <span className="hc-badge hc-badge-primary" style={{ marginLeft: "6px", fontSize: "11px" }}>
-                    {benefits.length} quyền lợi
-                  </span>
                 </div>
               </div>
             </div>
@@ -222,11 +219,6 @@ export default function GuestLoyaltyPage() {
               <div className="guest-toolbar">
                 <div className="guest-toolbar-title">
                   <i className="bi bi-clock-history text-primary"></i> Lịch sử biến động điểm
-                  {filteredTransactions.length > 0 && (
-                    <span className="hc-badge hc-badge-primary" style={{ marginLeft: "6px", fontSize: "11px" }}>
-                      {filteredTransactions.length} giao dịch
-                    </span>
-                  )}
                 </div>
 
                 <div className="guest-toolbar-controls">

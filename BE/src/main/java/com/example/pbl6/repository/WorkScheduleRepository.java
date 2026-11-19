@@ -31,8 +31,6 @@ public interface WorkScheduleRepository extends JpaRepository<WorkSchedule, Inte
     List<WorkSchedule> findByAccount_AccountIdInAndWorkDateBetween(Collection<Integer> accountIds,
                                                                    LocalDate from, LocalDate to);
 
-    boolean existsByShift_ShiftId(Integer shiftId);
-
     long countByShift_ShiftId(Integer shiftId);
 
     /** Calendar query: all filters except the date range are optional (pass null to ignore). */

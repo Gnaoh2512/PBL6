@@ -12,11 +12,6 @@ import java.util.List;
 public interface VoucherService {
 
     /**
-     * Lấy danh sách các voucher đang có hiệu lực cho khách hàng
-     */
-    List<VoucherResponse> getActiveVouchers();
-
-    /**
      * Quản trị viên lấy tất cả voucher
      */
     List<VoucherResponse> getAllVouchers();

@@ -5,7 +5,6 @@ import com.example.pbl6.dto.booking.BookingDetailResponse;
 import com.example.pbl6.dto.booking.PaymentStatusResponse;
 import com.example.pbl6.dto.booking.SePayWebhookPayload;
 
-import java.util.List;
 
 public interface CustomerBookingService {
 
@@ -49,8 +48,4 @@ public interface CustomerBookingService {
      */
     int expireOverdueBookings();
 
-    /**
-     * Xem danh sách các đơn đặt phòng của khách hàng đã đăng nhập
-     */
-    List<BookingDetailResponse> getMyBookings(String currentUsername);
 }

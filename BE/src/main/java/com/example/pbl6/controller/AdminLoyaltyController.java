@@ -6,7 +6,6 @@ import com.example.pbl6.dto.loyalty.LoyaltyProfileResponse;
 import com.example.pbl6.dto.loyalty.LoyaltyTransactionResponse;
 import com.example.pbl6.dto.loyalty.TierBenefitRequest;
 import com.example.pbl6.dto.loyalty.TierBenefitResponse;
-import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.Customer;
 import com.example.pbl6.entity.CustomerLoyalty;
@@ -18,7 +17,6 @@ import com.example.pbl6.repository.CustomerRepository;
 import com.example.pbl6.repository.LoyaltyTierRepository;
 import com.example.pbl6.repository.LoyaltyTransactionRepository;
 import com.example.pbl6.service.LoyaltyService;
-import com.example.pbl6.service.ServiceRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -42,7 +40,6 @@ import java.util.stream.Collectors;
 public class AdminLoyaltyController {
 
     private final LoyaltyService loyaltyService;
-    private final ServiceRequestService serviceRequestService;
     private final CustomerRepository customerRepository;
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;

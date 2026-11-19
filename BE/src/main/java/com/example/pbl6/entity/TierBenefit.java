@@ -27,7 +27,7 @@ public class TierBenefit {
     private com.example.pbl6.entity.Service service;
 
     @Column(name = "benefit_type", nullable = false, length = 50)
-    private String benefitType; // ROOM_DISCOUNT | FREE_SERVICE | FREE_NIGHT
+    private String benefitType; // ROOM_DISCOUNT | FREE_SERVICE
 
     @Column(name = "benefit_name", nullable = false, length = 150)
     private String benefitName;
@@ -39,7 +39,7 @@ public class TierBenefit {
     private Integer quota;
 
     @Column(name = "period_type", length = 50)
-    private String periodType; // MONTH | YEAR
+    private String periodType; // DAY | MONTH | YEAR
 
     @Builder.Default
     @Column(name = "is_active")

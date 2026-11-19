@@ -4,7 +4,6 @@ import com.example.pbl6.dto.loyalty.*;
 import com.example.pbl6.entity.*;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.*;
-import com.example.pbl6.service.financial.FinancialCalculator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +23,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LoyaltyServiceImpl implements LoyaltyService {
 
+    private static final String BENEFIT_ROOM_DISCOUNT = "ROOM_DISCOUNT";
+    private static final String BENEFIT_FREE_SERVICE = "FREE_SERVICE";
+
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
     private final LoyaltyTierRepository loyaltyTierRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
@@ -33,11 +35,8 @@ public class LoyaltyServiceImpl implements LoyaltyService {
     private final AccountRepository accountRepository;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
-    private final InvoiceRepository invoiceRepository;
     private final ServiceRepository serviceRepository;
-    private final ServiceUsageRepository serviceUsageRepository;
     private final ServiceRequestRepository serviceRequestRepository;
-    private final FinancialCalculator financialCalculator;
 
     @Override
     @Transactional
@@ -105,259 +104,137 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         Integer currentTierId = loyalty.getTier() != null ? loyalty.getTier().getTierId() : null;
         List<TierBenefit> eligibleBenefits = currentTierId == null ? List.of()
                 : tierBenefitRepository.findByTier_TierIdAndIsActiveTrue(currentTierId).stream()
-                    .filter(b -> !"ROOM_DISCOUNT".equalsIgnoreCase(b.getBenefitType()))
+                    .filter(b -> !BENEFIT_ROOM_DISCOUNT.equalsIgnoreCase(b.getBenefitType()))
                     .sorted(Comparator.comparing(TierBenefit::getTierBenefitId))
                     .toList();
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startOfYear = LocalDateTime.of(now.getYear(), 1, 1, 0, 0);
-        LocalDateTime startOfMonth = LocalDateTime.of(now.getYear(), now.getMonthValue(), 1, 0, 0);
-        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
-
-        return eligibleBenefits.stream().map(b -> {
-            Integer remaining = null;
-            if (b.getQuota() != null) {
-                String periodType = b.getPeriodType();
-                LocalDateTime periodStart = "DAY".equalsIgnoreCase(periodType) ? startOfDay
-                        : "MONTH".equalsIgnoreCase(periodType) ? startOfMonth
-                        : startOfYear;
-                long used = benefitRedemptionRepository.countByCustomer_CustomerIdAndTierBenefit_TierBenefitIdAndRedeemedAtAfter(
-                        customer.getCustomerId(), b.getTierBenefitId(), periodStart);
-                remaining = Math.max(0, b.getQuota() - (int) used);
-            }
-            return TierBenefitResponse.fromEntity(b, remaining);
-        }).collect(Collectors.toList());
+        return eligibleBenefits.stream()
+                .map(b -> toResponse(b, remainingQuota(customer.getCustomerId(), b)))
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public TierBenefitResponse redeemBenefit(RedeemBenefitRequest req, String username) {
         Customer customer = getCustomerByUsername(username);
-        CustomerLoyalty loyalty = getOrCreateLoyalty(customer);
+
+        // Row lock on the customer's loyalty record: two simultaneous requests are processed one
+        // after the other, so the quota check below always sees the previous request.
+        getOrCreateLoyalty(customer);
+        CustomerLoyalty loyalty = customerLoyaltyRepository.findByCustomerIdForUpdate(customer.getCustomerId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hồ sơ thành viên"));
 
         TierBenefit benefit = tierBenefitRepository.findById(req.getTierBenefitId())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đặc quyền: " + req.getTierBenefitId()));
 
+        // A double click or retry carries the same key: answer with the first result, create nothing new.
+        if (StringUtils.hasText(req.getIdempotencyKey())
+                && benefitRedemptionRepository
+                        .findFirstByCustomer_CustomerIdAndIdempotencyKey(customer.getCustomerId(), req.getIdempotencyKey().trim())
+                        .isPresent()) {
+            return toResponse(benefit, remainingQuota(customer.getCustomerId(), benefit));
+        }
+
         if (Boolean.FALSE.equals(benefit.getIsActive())) {
             throw new IllegalStateException("Đặc quyền này hiện đang tạm ngưng áp dụng");
         }
-
-        if ("ROOM_DISCOUNT".equalsIgnoreCase(benefit.getBenefitType())) {
+        if (BENEFIT_ROOM_DISCOUNT.equalsIgnoreCase(benefit.getBenefitType())) {
             throw new IllegalArgumentException("Ưu đãi giảm giá phòng được tự động áp dụng vào hóa đơn, không cần yêu cầu thủ công");
         }
-
         if (loyalty.getTier() == null || benefit.getTier() == null
                 || !loyalty.getTier().getTierId().equals(benefit.getTier().getTierId())) {
             throw new IllegalArgumentException("Chỉ có thể sử dụng đặc quyền thuộc hạng thành viên hiện tại của bạn");
         }
+        if (benefit.getService() == null) {
+            throw new IllegalStateException("Đặc quyền này chưa được gắn với dịch vụ cụ thể");
+        }
 
-        LocalDateTime now = LocalDateTime.now();
-        String periodType = benefit.getPeriodType();
-        LocalDateTime periodStart = "DAY".equalsIgnoreCase(periodType) ? now.toLocalDate().atStartOfDay()
-                : "MONTH".equalsIgnoreCase(periodType) ? LocalDateTime.of(now.getYear(), now.getMonthValue(), 1, 0, 0)
-                : LocalDateTime.of(now.getYear(), 1, 1, 0, 0);
-
-        long used = benefitRedemptionRepository.countByCustomer_CustomerIdAndTierBenefit_TierBenefitIdAndRedeemedAtAfter(
-                customer.getCustomerId(), benefit.getTierBenefitId(), periodStart);
-
-        if (benefit.getQuota() != null && used >= benefit.getQuota()) {
+        Integer remaining = remainingQuota(customer.getCustomerId(), benefit);
+        if (remaining != null && remaining <= 0) {
             throw new IllegalStateException("Bạn đã sử dụng hết hạn mức ưu đãi này trong kỳ hiện tại");
         }
 
-        Booking booking = null;
-        if (req.getBookingId() != null) {
-            booking = bookingRepository.findById(req.getBookingId()).orElse(null);
-        } else if (req.getBookingCode() != null && !req.getBookingCode().isBlank()) {
-            booking = bookingRepository.findByBookingCode(req.getBookingCode().trim().toUpperCase()).orElse(null);
+        if (!StringUtils.hasText(req.getBookingCode())) {
+            throw new IllegalArgumentException("Vui lòng chọn đơn đặt phòng đang lưu trú để sử dụng dịch vụ miễn phí");
+        }
+        Booking booking = bookingRepository.findByBookingCode(req.getBookingCode().trim().toUpperCase())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + req.getBookingCode()));
+        if (booking.getCustomer() == null || !customer.getCustomerId().equals(booking.getCustomer().getCustomerId())) {
+            throw new IllegalArgumentException("Đơn đặt phòng không thuộc tài khoản của bạn");
+        }
+        if (!"CHECKED_IN".equalsIgnoreCase(booking.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể yêu cầu dịch vụ miễn phí khi đơn đặt phòng đã nhận phòng");
         }
 
-        ServiceUsage serviceUsage = null;
-        if (req.getServiceUsageId() != null) {
-            serviceUsage = serviceUsageRepository.findById(req.getServiceUsageId()).orElse(null);
-            if (serviceUsage != null && booking == null) {
-                booking = serviceUsage.getBooking();
-            }
+        List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
+        List<BookingRoom> checkedInRooms = bookingRooms.stream()
+                .filter(br -> br.getRoom() != null && "CHECKED_IN".equalsIgnoreCase(br.getStatus()))
+                .sorted(Comparator.comparing(br -> br.getRoom().getRoomId()))
+                .toList();
+        BookingRoom selectedRoom = checkedInRooms.size() == 1 ? checkedInRooms.get(0)
+                : checkedInRooms.isEmpty() && bookingRooms.size() == 1 && bookingRooms.get(0).getRoom() != null
+                    ? bookingRooms.get(0) : null;
+        if (selectedRoom == null) {
+            throw new IllegalStateException("Không xác định được duy nhất phòng đang lưu trú cho đơn đặt phòng này");
         }
 
-        Invoice activeInvoice = null;
-        if (booking != null) {
-            activeInvoice = invoiceRepository.findByBooking_BookingId(booking.getBookingId()).stream()
-                    .filter(inv -> !"CANCELED".equalsIgnoreCase(inv.getStatus()))
-                    .findFirst()
-                    .orElse(null);
-        }
+        ServiceRequest serviceRequest = serviceRequestRepository.save(ServiceRequest.builder()
+                .booking(booking)
+                .room(selectedRoom.getRoom())
+                .service(benefit.getService())
+                .customer(customer)
+                .quantity(1)
+                .feeAmount(BigDecimal.ZERO)
+                .status("PENDING")
+                .note(LoyaltyBenefitSupport.buildNote(benefit, req.getNote()))
+                .build());
 
-        // FREE_SERVICE without an explicit usage/request is a new guest service order.
-        // Keep it separate from paid ServiceUsage/ServiceRequest rows.
-        ServiceRequest redeemedServiceRequest = null;
-        boolean isFreeService = "FREE_SERVICE".equalsIgnoreCase(benefit.getBenefitType());
-        if (isFreeService && req.getServiceRequestId() != null) {
-            redeemedServiceRequest = serviceRequestRepository.findById(req.getServiceRequestId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu dịch vụ #" + req.getServiceRequestId()));
-            if (redeemedServiceRequest.getCustomer() == null
-                    || !customer.getCustomerId().equals(redeemedServiceRequest.getCustomer().getCustomerId())) {
-                throw new IllegalArgumentException("Yêu cầu dịch vụ không thuộc tài khoản của bạn");
-            }
-            if (redeemedServiceRequest.getBooking() != null) {
-                if (booking != null && !booking.getBookingId().equals(redeemedServiceRequest.getBooking().getBookingId())) {
-                    throw new IllegalArgumentException("Yêu cầu dịch vụ không thuộc đơn đặt phòng đã chọn");
-                }
-                if (booking == null) booking = redeemedServiceRequest.getBooking();
-            }
-            if (benefit.getService() == null || redeemedServiceRequest.getService() == null
-                    || !benefit.getService().getServiceId().equals(redeemedServiceRequest.getService().getServiceId())) {
-                throw new IllegalArgumentException("Yêu cầu dịch vụ không khớp với dịch vụ của đặc quyền");
-            }
-        }
-
-        if (isFreeService && serviceUsage != null) {
-            if (serviceUsage.getBooking() == null || serviceUsage.getBooking().getCustomer() == null
-                    || !customer.getCustomerId().equals(serviceUsage.getBooking().getCustomer().getCustomerId())) {
-                throw new IllegalArgumentException("Dịch vụ sử dụng không thuộc tài khoản của bạn");
-            }
-            if (booking != null && !booking.getBookingId().equals(serviceUsage.getBooking().getBookingId())) {
-                throw new IllegalArgumentException("Dịch vụ sử dụng không thuộc đơn đặt phòng đã chọn");
-            }
-        }
-
-        // Tính giá trị quyền lợi trước khi tạo request miễn phí.
-        BigDecimal discountedValue = calculateAndApplyBenefitDiscount(
-                benefit, booking, activeInvoice, serviceUsage, req.getServiceRequestId());
-
-        if (isFreeService && redeemedServiceRequest == null && serviceUsage == null) {
-            if (booking == null) {
-                throw new IllegalArgumentException("Vui lòng chọn đơn đặt phòng đang lưu trú để sử dụng dịch vụ miễn phí");
-            }
-            if (booking.getCustomer() == null
-                    || !customer.getCustomerId().equals(booking.getCustomer().getCustomerId())) {
-                throw new IllegalArgumentException("Đơn đặt phòng không thuộc tài khoản của bạn");
-            }
-            if (!"CHECKED_IN".equalsIgnoreCase(booking.getStatus())) {
-                throw new IllegalStateException("Chỉ có thể yêu cầu dịch vụ miễn phí khi đơn đặt phòng đã nhận phòng");
-            }
-            if (benefit.getService() == null) {
-                throw new IllegalStateException("Đặc quyền FREE_SERVICE chưa được cấu hình dịch vụ");
-            }
-
-            List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
-            List<BookingRoom> checkedInRooms = bookingRooms.stream()
-                    .filter(br -> br.getRoom() != null && "CHECKED_IN".equalsIgnoreCase(br.getStatus()))
-                    .sorted(Comparator.comparing(br -> br.getRoom().getRoomId()))
-                    .toList();
-            BookingRoom selectedRoom = checkedInRooms.size() == 1 ? checkedInRooms.get(0)
-                    : checkedInRooms.isEmpty() && bookingRooms.size() == 1 && bookingRooms.get(0).getRoom() != null
-                        ? bookingRooms.get(0) : null;
-            if (selectedRoom == null) {
-                throw new IllegalStateException("Không xác định được duy nhất phòng đang lưu trú cho đơn đặt phòng này");
-            }
-
-            String loyaltyNote = "[LOYALTY BENEFIT] [TIER_BENEFIT #" + benefit.getTierBenefitId()
-                    + "] " + benefit.getBenefitName();
-            if (StringUtils.hasText(req.getNote())) {
-                loyaltyNote += " — " + req.getNote().trim();
-            }
-            redeemedServiceRequest = serviceRequestRepository.save(ServiceRequest.builder()
-                    .booking(booking)
-                    .room(selectedRoom.getRoom())
-                    .service(benefit.getService())
-                    .customer(customer)
-                    .quantity(1)
-                    .feeAmount(BigDecimal.ZERO)
-                    .status("PENDING")
-                    .note(loyaltyNote)
-                    .build());
-        }
-
-        BenefitRedemption redemption = BenefitRedemption.builder()
+        BigDecimal waivedValue = benefit.getService().getUnitPrice() != null ? benefit.getService().getUnitPrice() : BigDecimal.ZERO;
+        benefitRedemptionRepository.save(BenefitRedemption.builder()
                 .customer(customer)
                 .tierBenefit(benefit)
                 .booking(booking)
-                .invoice(activeInvoice)
-                .serviceUsage(serviceUsage)
-                .serviceRequest(redeemedServiceRequest)
-                .valueAmount(discountedValue)
-                .note(req.getNote() != null ? req.getNote() : "Áp dụng đặc quyền hội viên: " + benefit.getBenefitName())
-                .build();
-        benefitRedemptionRepository.save(redemption);
+                .serviceRequest(serviceRequest)
+                .idempotencyKey(StringUtils.hasText(req.getIdempotencyKey()) ? req.getIdempotencyKey().trim() : null)
+                .valueAmount(waivedValue)
+                .note(StringUtils.hasText(req.getNote()) ? req.getNote().trim() : null)
+                .build());
 
         log.info("Khách hàng {} đã sử dụng đặc quyền #{} ({}) - Giá trị ưu đãi: {}",
-                username, benefit.getTierBenefitId(), benefit.getBenefitName(), discountedValue);
+                username, benefit.getTierBenefitId(), benefit.getBenefitName(), waivedValue);
 
-        Integer remaining = benefit.getQuota() != null ? Math.max(0, benefit.getQuota() - (int) used - 1) : null;
-        return TierBenefitResponse.fromEntity(benefit, remaining);
+        return toResponse(benefit, remaining != null ? remaining - 1 : null);
     }
 
-    private BigDecimal calculateAndApplyBenefitDiscount(
-            TierBenefit benefit,
-            Booking booking,
-            Invoice activeInvoice,
-            ServiceUsage serviceUsage,
-            Integer serviceRequestId
-    ) {
-        String type = benefit.getBenefitType() != null ? benefit.getBenefitType().toUpperCase() : "";
-        BigDecimal valueAmount = BigDecimal.ZERO;
+    // ------------------------------------------------------------------ Quota helpers
 
-        if ("FREE_SERVICE".equalsIgnoreCase(type)) {
-            if (serviceUsage != null) {
-                valueAmount = serviceUsage.getTotalPrice() != null ? serviceUsage.getTotalPrice() : BigDecimal.ZERO;
-                serviceUsage.setDiscountAmount(valueAmount);
-                serviceUsage.setTotalPrice(BigDecimal.ZERO);
-                serviceUsageRepository.save(serviceUsage);
-            } else if (serviceRequestId != null) {
-                ServiceRequest sr = serviceRequestRepository.findById(serviceRequestId).orElse(null);
-                if (sr != null) {
-                    valueAmount = sr.getFeeAmount() != null ? sr.getFeeAmount() : BigDecimal.ZERO;
-                    sr.setFeeAmount(BigDecimal.ZERO);
-                    serviceRequestRepository.save(sr);
-                }
-            } else if (benefit.getService() != null && benefit.getService().getUnitPrice() != null) {
-                valueAmount = benefit.getService().getUnitPrice();
-            }
-        } else if ("FREE_NIGHT".equalsIgnoreCase(type) && booking != null) {
-            List<BookingRoom> brs = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
-            if (!brs.isEmpty() && brs.get(0).getPriceApplied() != null) {
-                valueAmount = brs.get(0).getPriceApplied();
-            }
-        } else if ("ROOM_DISCOUNT".equalsIgnoreCase(type)) {
-            BigDecimal pct = benefit.getDiscountPercent() != null ? benefit.getDiscountPercent() : BigDecimal.ZERO;
-            if (booking != null) {
-                List<BookingRoom> brs = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
-                BigDecimal pricePerNight = (!brs.isEmpty() && brs.get(0).getPriceApplied() != null)
-                        ? brs.get(0).getPriceApplied()
-                        : BigDecimal.ZERO;
-                long nights = financialCalculator.calculateNights(booking.getCheckInDate(), booking.getCheckOutDate());
-                BigDecimal roomCharge = financialCalculator.calculateTotalRoomCharge(pricePerNight, nights);
-                valueAmount = roomCharge.multiply(pct).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            } else {
-                valueAmount = pct;
-            }
-        }
+    /** A free service may never be unlimited: with no quota configured it can be used once per period. */
+    private static Integer effectiveQuota(TierBenefit benefit) {
+        if (benefit.getQuota() != null) return benefit.getQuota();
+        return BENEFIT_FREE_SERVICE.equalsIgnoreCase(benefit.getBenefitType()) ? Integer.valueOf(1) : null;
+    }
 
-        // Nếu có Invoice đang mở, cộng dồn chiết khấu vào Invoice
-        if (activeInvoice != null && valueAmount.compareTo(BigDecimal.ZERO) > 0 && !"FREE_SERVICE".equalsIgnoreCase(type)) {
-            BigDecimal currentDiscount = activeInvoice.getDiscountAmount() != null ? activeInvoice.getDiscountAmount() : BigDecimal.ZERO;
-            BigDecimal newDiscount = currentDiscount.add(valueAmount);
-            activeInvoice.setDiscountAmount(newDiscount);
+    private static LocalDateTime periodStart(String periodType, LocalDateTime now) {
+        if ("DAY".equalsIgnoreCase(periodType)) return now.toLocalDate().atStartOfDay();
+        if ("MONTH".equalsIgnoreCase(periodType)) return LocalDateTime.of(now.getYear(), now.getMonthValue(), 1, 0, 0);
+        return LocalDateTime.of(now.getYear(), 1, 1, 0, 0);
+    }
 
-            BigDecimal roomCharge = activeInvoice.getRoomCharge() != null ? activeInvoice.getRoomCharge() : BigDecimal.ZERO;
-            BigDecimal serviceCharge = activeInvoice.getServiceCharge() != null ? activeInvoice.getServiceCharge() : BigDecimal.ZERO;
-            BigDecimal subtotal = roomCharge.add(serviceCharge);
-            BigDecimal tax = financialCalculator.calculateTax(subtotal);
-            activeInvoice.setTaxAmount(tax);
+    /** Uses left in the current period (voided uses do not count); null when the benefit has no limit. */
+    private Integer remainingQuota(Integer customerId, TierBenefit benefit) {
+        Integer quota = effectiveQuota(benefit);
+        if (quota == null) return null;
+        long used = benefitRedemptionRepository
+                .countByCustomer_CustomerIdAndTierBenefit_TierBenefitIdAndStatusAndRedeemedAtGreaterThanEqual(
+                        customerId, benefit.getTierBenefitId(), BenefitRedemption.STATUS_APPLIED,
+                        periodStart(benefit.getPeriodType(), LocalDateTime.now()));
+        return Math.max(0, quota - (int) used);
+    }
 
-            BigDecimal depositApplied = activeInvoice.getDepositApplied() != null ? activeInvoice.getDepositApplied() : BigDecimal.ZERO;
-            BigDecimal finalTotal = subtotal.add(tax).subtract(newDiscount).subtract(depositApplied);
-            activeInvoice.setTotalAmount(finalTotal.compareTo(BigDecimal.ZERO) > 0 ? finalTotal : BigDecimal.ZERO);
-            invoiceRepository.save(activeInvoice);
-        }
-
-        if (booking != null && valueAmount.compareTo(BigDecimal.ZERO) > 0) {
-            String noteAppend = "Áp dụng đặc quyền " + benefit.getBenefitName() + " (-" + valueAmount.longValue() + "đ)";
-            booking.setNote(StringUtils.hasText(booking.getNote()) ? booking.getNote() + " | " + noteAppend : noteAppend);
-            bookingRepository.save(booking);
-        }
-
-        return valueAmount;
+    private static TierBenefitResponse toResponse(TierBenefit benefit, Integer remaining) {
+        TierBenefitResponse response = TierBenefitResponse.fromEntity(benefit, remaining);
+        response.setQuota(effectiveQuota(benefit));
+        return response;
     }
 
     // ------------------------------------------------------------------ Admin CRUD for TierBenefit
@@ -374,36 +251,16 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         return list.stream()
                 .sorted(Comparator.comparing((TierBenefit b) -> b.getTier() != null ? b.getTier().getTierLevel() : 0)
                         .thenComparing(TierBenefit::getTierBenefitId))
-                .map(b -> TierBenefitResponse.fromEntity(b, b.getQuota()))
+                .map(b -> toResponse(b, effectiveQuota(b)))
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public TierBenefitResponse getTierBenefitById(Integer benefitId) {
-        TierBenefit benefit = tierBenefitRepository.findById(benefitId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đặc quyền #" + benefitId));
-        return TierBenefitResponse.fromEntity(benefit, benefit.getQuota());
     }
 
     @Override
     @Transactional
     public TierBenefitResponse createTierBenefit(TierBenefitRequest req) {
-        LoyaltyTier tier = resolveTier(req.getTierId(), req.getTierCode());
-
-        com.example.pbl6.entity.Service service = null;
-        if (req.getServiceId() != null) {
-            service = serviceRepository.findById(req.getServiceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ #" + req.getServiceId()));
-        }
-
-        if (req.getRoomTypeId() != null) {
-            throw new IllegalArgumentException("Schema V4 không hỗ trợ gắn đặc quyền với riêng một hạng phòng");
-        }
-
         TierBenefit benefit = TierBenefit.builder()
-                .tier(tier)
-                .service(service)
+                .tier(resolveTier(req.getTierId(), req.getTierCode()))
+                .service(req.getServiceId() != null ? findService(req.getServiceId()) : null)
                 .benefitType(req.getBenefitType().trim().toUpperCase())
                 .benefitName(req.getBenefitName().trim())
                 .discountPercent(req.getDiscountPercent())
@@ -412,9 +269,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
                 .isActive(req.getIsActive() != null ? req.getIsActive() : true)
                 .description(req.getDescription())
                 .build();
+        validateBenefit(benefit);
 
         TierBenefit saved = tierBenefitRepository.save(benefit);
-        return TierBenefitResponse.fromEntity(saved, saved.getQuota());
+        return toResponse(saved, effectiveQuota(saved));
     }
 
     @Override
@@ -427,12 +285,7 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             benefit.setTier(resolveTier(req.getTierId(), req.getTierCode()));
         }
         if (req.getServiceId() != null) {
-            com.example.pbl6.entity.Service service = serviceRepository.findById(req.getServiceId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ #" + req.getServiceId()));
-            benefit.setService(service);
-        }
-        if (req.getRoomTypeId() != null) {
-            throw new IllegalArgumentException("Schema V4 không hỗ trợ gắn đặc quyền với riêng một hạng phòng");
+            benefit.setService(findService(req.getServiceId()));
         }
         if (StringUtils.hasText(req.getBenefitType())) {
             benefit.setBenefitType(req.getBenefitType().trim().toUpperCase());
@@ -453,9 +306,41 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         if (req.getDescription() != null) {
             benefit.setDescription(req.getDescription());
         }
+        validateBenefit(benefit);
 
         TierBenefit saved = tierBenefitRepository.save(benefit);
-        return TierBenefitResponse.fromEntity(saved, saved.getQuota());
+        return toResponse(saved, effectiveQuota(saved));
+    }
+
+    private com.example.pbl6.entity.Service findService(Integer serviceId) {
+        return serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ #" + serviceId));
+    }
+
+    /** Only room discounts and free services exist; each has its own required fields. */
+    private void validateBenefit(TierBenefit benefit) {
+        String type = benefit.getBenefitType();
+        if (BENEFIT_ROOM_DISCOUNT.equals(type)) {
+            BigDecimal pct = benefit.getDiscountPercent();
+            if (pct == null || pct.signum() <= 0 || pct.compareTo(BigDecimal.valueOf(100)) > 0) {
+                throw new IllegalArgumentException("Phần trăm giảm giá phòng phải từ 1% đến 100%");
+            }
+            benefit.setService(null);
+            benefit.setQuota(null);
+        } else if (BENEFIT_FREE_SERVICE.equals(type)) {
+            if (benefit.getService() == null) {
+                throw new IllegalArgumentException("Đặc quyền dịch vụ miễn phí phải chọn dịch vụ áp dụng");
+            }
+            if (benefit.getQuota() == null || benefit.getQuota() < 1) {
+                throw new IllegalArgumentException("Đặc quyền dịch vụ miễn phí phải có số lượt sử dụng tối thiểu là 1");
+            }
+            benefit.setDiscountPercent(null);
+        } else {
+            throw new IllegalArgumentException("Loại đặc quyền không hợp lệ (chỉ hỗ trợ giảm giá phòng hoặc dịch vụ miễn phí)");
+        }
+        if (!"DAY".equals(benefit.getPeriodType()) && !"MONTH".equals(benefit.getPeriodType()) && !"YEAR".equals(benefit.getPeriodType())) {
+            throw new IllegalArgumentException("Chu kỳ áp dụng chỉ có thể là ngày, tháng hoặc năm");
+        }
     }
 
     @Override

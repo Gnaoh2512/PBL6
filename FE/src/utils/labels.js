@@ -84,7 +84,6 @@ export const BENEFIT_TYPE_LABEL = {
   PERCENT_DISCOUNT: "Giảm giá theo phần trăm",
   FIXED_DISCOUNT: "Giảm giá cố định",
   FREE_SERVICE: "Dịch vụ miễn phí",
-  FREE_NIGHT: "Tặng đêm nghỉ",
   ROOM_UPGRADE: "Nâng hạng phòng",
   UPGRADE: "Nâng hạng phòng",
   LATE_CHECKOUT: "Trả phòng muộn",
@@ -95,6 +94,28 @@ export const BENEFIT_TYPE_LABEL = {
   VOUCHER: "Mã ưu đãi",
 };
 export const benefitTypeLabel = (type) => BENEFIT_TYPE_LABEL[String(type || "").toUpperCase()] || "Ưu đãi hội viên";
+
+// ── Roles ──
+export const ROLE_LABEL = {
+  ADMIN: "Quản trị viên",
+  MANAGER: "Quản lý",
+  RECEPTIONIST: "Lễ tân",
+  HOUSEKEEPING: "Buồng phòng",
+  MAINTENANCE: "Kỹ thuật & Bảo trì",
+  SERVICE_STAFF: "Nhân viên dịch vụ",
+  CUSTOMER: "Khách hàng",
+};
+
+/** Accepts "ROLE_ADMIN", "ADMIN", "Service Staff", or a role object and returns the Vietnamese name. */
+export function roleLabel(role, fallback = "") {
+  const raw = typeof role === "object" && role ? role.roleCode || role.roleName || role.code || role.name : role;
+  const key = String(raw || "")
+    .trim()
+    .toUpperCase()
+    .replace(/^ROLE_/, "")
+    .replace(/[\s-]+/g, "_");
+  return ROLE_LABEL[key] || fallback;
+}
 
 // ── Payments (shown to staff and guests) ──
 export const PAYMENT_METHOD_LABEL = {

@@ -450,7 +450,7 @@ export default function HistoryPage({ portal = false }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 700, color: "var(--hc-primary-dark)" }}>
                   <i className="bi bi-stars u-mr-6"></i>
-                  Dịch vụ đã đăng ký & sử dụng ({bookingDetail.servicesUsed ? bookingDetail.servicesUsed.length : 0})
+                  Dịch vụ đã đăng ký & sử dụng
                 </span>
               </div>
 
@@ -470,9 +470,14 @@ export default function HistoryPage({ portal = false }) {
                           </thead>
                           <tbody>
                             {pageRows.map((u, idx) => (
-                              <tr key={u.usageId || idx}>
+                              <tr key={u.usageId ?? `benefit-${u.serviceRequestId ?? idx}`}>
                                 <td>
                                   <strong>{u.serviceName}</strong>
+                                  {u.loyaltyBenefit && (
+                                    <span className="hc-badge hc-badge-primary" style={{ marginLeft: "6px" }}>
+                                      <i className="bi bi-gem"></i> Đặc quyền
+                                    </span>
+                                  )}
                                   <div className="guest-cell-sub">
                                     {u.categoryName && <span>{u.categoryName} · </span>}
                                     {formatDateTime(u.usedAt || u.orderTime)}
@@ -482,7 +487,9 @@ export default function HistoryPage({ portal = false }) {
                                 <td className="u-text-left">{u.quantity}</td>
                                 <td className="u-fw-600 u-text-left">
                                   {u.status === "CANCELED" || u.status === "CANCELLED" ? (
-                                    <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }}>{formatVND(u.totalAmount || u.totalPrice)}</span>
+                                    <span style={{ textDecoration: "line-through", color: "var(--hc-text-muted)" }}>{u.loyaltyBenefit ? "Miễn phí" : formatVND(u.totalAmount || u.totalPrice)}</span>
+                                  ) : u.loyaltyBenefit ? (
+                                    <span className="u-text-success">Miễn phí</span>
                                   ) : (
                                     formatVND(u.totalAmount || u.totalPrice)
                                   )}

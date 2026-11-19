@@ -10,7 +10,5 @@ public interface RoomCatalogService {
 
     List<RoomTypeResponse> getAllRoomTypes();
 
-    RoomTypeResponse getRoomTypeById(Integer id);
-
     List<AvailableRoomResponse> findAvailableRooms(RoomSearchRequest request);
 }

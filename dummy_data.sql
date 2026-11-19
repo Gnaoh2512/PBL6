@@ -1,6 +1,6 @@
 -- =====================================================================
--- PBL6 HOTEL MANAGEMENT - DUMMY / DEMO DATA (V4 REFACTORED - NO FREE_NIGHT)
--- Run AFTER schema_v4_clean.sql.
+-- PBL6 HOTEL MANAGEMENT - DUMMY / DEMO DATA (V4 PRUNED)
+-- Run AFTER schema_v4_pruned.sql.
 -- Password for all accounts: 123456 (BCrypt hashed)
 -- =====================================================================
 
@@ -32,10 +32,10 @@ INSERT INTO service_category (category_id,category_name) VALUES
 (3,'Transportation'),
 (4,'Wellness');
 
-INSERT INTO shift (shift_id, shift_name, start_time, end_time) VALUES
-(1, 'MORNING',   '06:00:00', '14:00:00'),
-(2, 'AFTERNOON', '14:00:00', '22:00:00'),
-(3, 'NIGHT',     '22:00:00', '06:00:00');
+INSERT INTO shift (shift_id, shift_name, start_time, end_time, description) VALUES
+(1, 'MORNING',   '06:00:00', '14:00:00', 'Ca sáng'),
+(2, 'AFTERNOON', '14:00:00', '22:00:00', 'Ca chiều'),
+(3, 'NIGHT',     '22:00:00', '06:00:00', 'Ca đêm');
 
 INSERT INTO loyalty_tier (tier_id,tier_code,tier_name,tier_level,min_score,description) VALUES
 (1,'SEASHELL','Seashell',1,0.00,'Entry tier'),
@@ -144,7 +144,7 @@ VALUES
 (1,3,4,'2026-11-11 06:00:00','2026-11-11 14:00:00',5000000.00,6350000.00,'CLOSED',2,'Shift handed over to manager');
 
 -- ---------------------------------------------------------------------
--- 4. Loyalty benefits (No tier inheritance, no FREE_NIGHT)
+-- 4. Loyalty benefits (No tier inheritance; every free service has a quota)
 -- ---------------------------------------------------------------------
 INSERT INTO tier_benefit
 (tier_benefit_id,tier_id,service_id,benefit_type,benefit_name,discount_percent,quota,period_type,is_active,description)
@@ -216,16 +216,15 @@ VALUES
 UPDATE room SET status = 'OCCUPIED' WHERE room_id = 2;
 
 INSERT INTO invoice
-(invoice_id,invoice_number,booking_id,issued_by,discount_approved_by,room_charge,service_charge,tax_amount,discount_amount,deposit_applied,total_amount,status,issued_at)
+(invoice_id,invoice_number,booking_id,issued_by,room_charge,service_charge,tax_amount,discount_amount,deposit_applied,total_amount,status,issued_at)
 VALUES
-(1,'INV-2026-0001',1,3,2,3750000.00,360000.00,411000.00,562500.00,1000000.00,2958500.00,'PAID','2026-10-04 11:30:00'),
-(2,'INV-2026-0002',2,3,2,2500000.00,0.00,250000.00,375000.00,1000000.00,1375000.00,'PAID','2026-10-17 11:30:00'),
-(3,'INV-2026-0003',3,3,NULL,7200000.00,120000.00,732000.00,720000.00,1500000.00,5832000.00,'PAID','2026-11-08 11:30:00');
+(1,'INV-2026-0001',1,3,3750000.00,360000.00,411000.00,562500.00,1000000.00,2958500.00,'PAID','2026-10-04 11:30:00'),
+(2,'INV-2026-0002',2,3,2500000.00,0.00,250000.00,375000.00,1000000.00,1375000.00,'PAID','2026-10-17 11:30:00'),
+(3,'INV-2026-0003',3,3,7200000.00,120000.00,732000.00,720000.00,1500000.00,5832000.00,'PAID','2026-11-08 11:30:00');
 
 INSERT INTO service_usage
 (usage_id,booking_id,service_id,invoice_id,quantity,unit_price_applied,discount_amount,total_price,status,recorded_by,used_at)
 VALUES
-(1,3,3,3,1,120000.00,120000.00,0.00,'COMPLETED',6,'2026-11-06 09:00:00'),
 (2,1,1,1,2,180000.00,0.00,360000.00,'COMPLETED',6,'2026-10-02 07:30:00'),
 (3,3,5,3,1,250000.00,0.00,250000.00,'COMPLETED',6,'2026-11-06 19:00:00');
 
@@ -237,11 +236,6 @@ INSERT INTO voucher
 VALUES
 (1,1,'WELCOME10','Welcome 10 Percent','Demo voucher for first booking','PERCENT',10.00,1000000.00,1000000.00,100,1,'2026-01-01 00:00:00','2027-12-31 23:59:59',1),
 (2,1,'FLAT200','Flat 200K','Fixed discount demo','FIXED',200000.00,NULL,1500000.00,50,1,'2026-01-01 00:00:00','2027-12-31 23:59:59',1);
-
-INSERT INTO voucher_redemption
-(redemption_id,voucher_id,customer_id,booking_id,invoice_id,discount_applied,redeemed_at)
-VALUES
-(1,1,2,3,3,720000.00,'2026-11-08 10:00:00');
 
 INSERT INTO payment
 (payment_id,booking_id,invoice_id,cashier_shift_id,type,method,amount,received_by,approved_by,note,paid_at)
@@ -257,16 +251,20 @@ VALUES
 INSERT INTO service_request
 (service_request_id,booking_id,room_id,service_id,customer_id,assigned_to,invoice_id,quantity,fee_amount,status,note,requested_at,completed_at)
 VALUES
-(1,3,5,3,2,6,3,1,120000.00,'COMPLETED','Express laundry request','2026-11-06 08:30:00','2026-11-06 10:00:00'),
+(1,3,5,3,2,6,3,1,0.00,'COMPLETED','Hội viên hạng Coral dùng ưu đãi miễn phí.','2026-11-06 08:30:00','2026-11-06 10:00:00'),
 (2,4,1,2,3,6,NULL,1,350000.00,'DELIVERING','Airport pickup request assigned to service staff 1','2026-11-10 14:00:00',NULL),
-(3,3,5,1,2,NULL,NULL,2,360000.00,'PENDING','Breakfast set in-room dining requested by guest','2026-11-11 20:00:00',NULL);
+(3,3,5,1,2,NULL,NULL,2,360000.00,'PENDING','Breakfast set in-room dining requested by guest','2026-11-11 20:00:00',NULL),
+-- Loyalty benefit requests of customer 1 (Pearl) on the active stay BK-2026-0005, room 102
+(4,5,2,3,1,6,NULL,1,0.00,'DELIVERING','Hội viên hạng Pearl dùng ưu đãi miễn phí. Khách ghi chú: giao trước 16h.','2026-11-19 09:10:00',NULL),
+(5,5,2,1,1,6,NULL,1,0.00,'COMPLETED','Hội viên hạng Pearl dùng ưu đãi miễn phí.','2026-11-19 07:30:00','2026-11-19 08:00:00'),
+(6,5,2,2,1,NULL,NULL,1,0.00,'PENDING','Hội viên hạng Pearl dùng ưu đãi miễn phí. Khách ghi chú: đón lúc 6h sáng.','2026-11-19 09:20:00',NULL);
 
 -- Maintenance Requests (Assigned to ROLE_MAINTENANCE account 5)
 INSERT INTO maintenance_request
-(request_id,room_id,reported_by,assigned_to,confirmed_by,title,description,priority,status,resolution_note,reported_at,started_at,completed_at,confirmed_at)
+(request_id,room_id,equipment_id,reported_by,assigned_to,confirmed_by,title,description,priority,status,resolution_note,reported_at,started_at,completed_at,confirmed_at)
 VALUES
-(1,6,4,5,2,'Water heater not heating','Guest room water heater does not produce hot water','HIGH','CONFIRMED','Heating element replaced and tested','2026-11-08 08:00:00','2026-11-08 09:00:00','2026-11-08 11:00:00','2026-11-08 11:30:00'),
-(2,3,4,5,NULL,'TV remote not responding','Replace remote batteries','LOW','IN_PROGRESS',NULL,'2026-11-10 09:00:00','2026-11-10 10:00:00',NULL,NULL);
+(1,6,3,4,5,2,'Water heater not heating','Guest room water heater does not produce hot water','HIGH','CONFIRMED','Heating element replaced and tested','2026-11-08 08:00:00','2026-11-08 09:00:00','2026-11-08 11:00:00','2026-11-08 11:30:00'),
+(2,3,2,4,5,NULL,'TV remote not responding','Replace remote batteries','LOW','IN_PROGRESS',NULL,'2026-11-10 09:00:00','2026-11-10 10:00:00',NULL,NULL);
 
 -- Room Cleaning Requests (Assigned to ROLE_HOUSEKEEPING account 4)
 INSERT INTO roomcleaning_request
@@ -286,12 +284,15 @@ VALUES
 (3,2,3,NULL,'EARN',3,5832000.00,58.32,'Points earned from invoice 3','2026-11-08 11:40:00'),
 (4,3,NULL,2,'ADJUST',0,0.00,2.00,'Manual loyalty adjustment','2026-11-09 09:00:00');
 
+-- Free-service benefit uses only (room discounts are applied automatically on the invoice).
+-- Each use points at the service request it created; the quota trigger fills period_start / counters.
 INSERT INTO benefit_redemption
-(redemption_id,customer_id,tier_benefit_id,booking_id,invoice_id,service_usage_id,approved_by,value_amount,note,redeemed_at)
+(redemption_id,customer_id,tier_benefit_id,booking_id,service_request_id,idempotency_key,value_amount,note,status,redeemed_at)
 VALUES
-(1,1,8,1,1,NULL,2,562500.00,'Pearl 15 percent room discount','2026-10-04 11:45:00'),
-(2,1,8,2,2,NULL,2,375000.00,'Pearl 15 percent room discount','2026-10-17 11:45:00'),
-(3,2,6,3,3,1,2,120000.00,'Coral monthly laundry allowance','2026-11-08 11:45:00');
+(1,2,6,3,1,'seed-redeem-1',120000.00,NULL,'APPLIED','2026-11-06 08:30:00'),
+(2,1,10,5,4,'seed-redeem-2',120000.00,'giao trước 16h','APPLIED','2026-11-19 09:10:00'),
+(3,1,9,5,5,'seed-redeem-3',180000.00,NULL,'APPLIED','2026-11-19 07:30:00'),
+(4,1,11,5,6,'seed-redeem-4',350000.00,'đón lúc 6h sáng','APPLIED','2026-11-19 09:20:00');
 
 -- Insert audit_log values as standard text / formatted JSON strings
 INSERT INTO audit_log
@@ -310,4 +311,5 @@ UNION ALL SELECT 'work_schedules', COUNT(*) FROM work_schedule
 UNION ALL SELECT 'roomcleaning_requests', COUNT(*) FROM roomcleaning_request
 UNION ALL SELECT 'maintenance_requests', COUNT(*) FROM maintenance_request
 UNION ALL SELECT 'service_requests', COUNT(*) FROM service_request
+UNION ALL SELECT 'benefit_redemptions', COUNT(*) FROM benefit_redemption
 UNION ALL SELECT 'audit_logs', COUNT(*) FROM audit_log;

@@ -4,8 +4,6 @@ import com.example.pbl6.dto.room.AvailableRoomResponse;
 import com.example.pbl6.dto.room.RoomSearchRequest;
 import com.example.pbl6.dto.room.RoomTypeResponse;
 import com.example.pbl6.entity.Room;
-import com.example.pbl6.entity.RoomType;
-import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.RoomRepository;
 import com.example.pbl6.repository.RoomTypeRepository;
 import com.example.pbl6.service.financial.FinancialCalculator;
@@ -37,14 +35,6 @@ public class RoomCatalogServiceImpl implements RoomCatalogService {
         return roomTypeRepository.findAll().stream()
                 .map(RoomTypeResponse::fromEntity)
                 .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public RoomTypeResponse getRoomTypeById(Integer id) {
-        RoomType roomType = roomTypeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy loại phòng với ID: " + id));
-        return RoomTypeResponse.fromEntity(roomType);
     }
 
     @Override
