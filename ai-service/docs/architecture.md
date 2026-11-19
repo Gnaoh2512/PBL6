@@ -1,167 +1,142 @@
 # Kiến trúc trợ lý khách sạn
 
-Ngày: 2026-11-11, Asia/Ho_Chi_Minh.
+Cập nhật: **2026-11-19**, đối chiếu implementation tại baseline `e1ec7c8`. Tiến độ và bằng chứng nghiệm thu được quản lý trong [PROCESS.md](PROCESS.md).
 
-Trạng thái: có implementation D1 FAQ với Gemini REST, FTS5, Spring chat và widget opt-in; 3 E2E live pass. Batch Gemini còn timeout/dependency errors nên chưa đóng nghiệm thu toàn bộ; production chưa có nguồn duyệt. Các luồng nghiệp vụ/tool broker dưới đây vẫn là thiết kế D2–D4. Xem STATUS.md.
+**Đang sử dụng: RAG với luồng điều phối cố định cho FAQ**, tích hợp React/Vite → Spring Boot → Python/FastAPI → Gemini REST và SQLite FTS5/BM25. Đã có provider, ingestion, retrieval, Spring facade và widget opt-in. Business tool broker, booking và vòng agent nhiều bước vẫn thuộc D2–D4. D1 đã chạy với Gemini thật nhưng chưa đóng nghiệm thu độ ổn định/grounding; production chưa có corpus được duyệt.
 
-## Yêu cầu đã chốt
+## Phân chia trách nhiệm hiện tại
 
-- Trợ lý đặt ở góc dưới bên phải giao diện.
-- Hỗ trợ FAQ, phòng, giá phòng, dịch vụ, booking cá nhân cho khách đã đăng nhập và chính sách khách sạn.
-- Dựa trên kiến trúc Microsoft; phân chia thư mục và AGENTS.md cho từng phạm vi.
-- Giai đoạn đầu chỉ tra cứu. Các nút đặt/hủy/thanh toán dẫn đến luồng nghiệp vụ hiện có, chưa cho AI thao tác ghi.
-
-## Pattern Microsoft và cách áp dụng
-
-Microsoft mô tả RAG theo ba bước retrieve, augment, generate; nội dung truy xuất cần giữ metadata để truy nguồn. Dự án áp dụng vào FAQ, chính sách và hướng dẫn đã duyệt. Nguồn: [RAG và indexes](https://learn.microsoft.com/en-us/azure/foundry/concepts/retrieval-augmented-generation).
-
-Với câu hỏi cần nhiều nguồn, Microsoft mô tả retrieval như một tool, các tool có mô tả/tham số rõ và vòng điều phối có giới hạn. Dự án áp dụng vào câu hỏi kết hợp tài liệu với phòng/dịch vụ/booking. Nguồn: [Develop an agentic RAG solution](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/rag/rag-agentic).
-
-Đây là cách chuyển pattern sang React + Spring + Python của dự án; không phải cây thư mục mẫu bắt buộc của Microsoft. Không yêu cầu cài Azure, Microsoft Agent Framework hay dịch vụ tìm kiếm trả phí trong lần tổ chức này.
-
-### Các hướng đã cân nhắc
-
-| Hướng | Đánh đổi | Định hướng cho dự án |
+| Thành phần | Vai trò đã có | Điểm vào/source |
 | --- | --- | --- |
-| Một index chứa mọi dữ liệu | Truy xuất đơn giản nhưng giá/booking dễ cũ, dữ liệu cá nhân khó kiểm soát | Không chọn cho dữ liệu nghiệp vụ sống |
-| RAG tài liệu + tool nghiệp vụ có giới hạn | Tái sử dụng backend, có thể kiểm tra nguồn và quyền trước model | Đề xuất làm bản đầu |
-| Agent tự do truy cập SQL/nhiều API hoặc nền tảng cloud đầy đủ | Phạm vi vận hành, quyền và chi phí lớn hơn nhu cầu hiện tại | Chưa đưa vào phạm vi |
+| React/Vite | Widget góc dưới bên phải, gửi chat/reset tới Spring, hiện nguồn/nhãn demo, hủy request và bỏ phản hồi muộn khi đổi account | [AssistantWidget.jsx](../../FE/src/components/assistant/AssistantWidget.jsx), [api.js](../../FE/src/services/api.js) |
+| Spring Boot | Xác thực guest/member, ràng buộc phiên/owner, idempotency/TTL, budget, kiểm tra response/evidence/citation từ Python | [AssistantController.java](../../BE/src/main/java/com/example/pbl6/controller/assistant/AssistantController.java), [AssistantSessions.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantSessions.java), [AssistantClient.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantClient.java) |
+| FastAPI | API nội bộ với service auth, validation/body cap/request ID, lifecycle và health/readiness | [main.py](../app/main.py), [boundary.py](../app/api/boundary.py) |
+| FAQ orchestration | Classify ý định, một retrieval, tổng hợp câu trả lời từ evidence và kiểm tra citation registry | [faq.py](../app/orchestration/faq.py) |
+| Gemini adapter | REST countTokens/generateContent qua HTTPX; structured JSON, kiểm tra schema/usage, budget và lỗi | [gemini.py](../app/providers/gemini.py), [contracts.py](../app/providers/contracts.py) |
+| Ingestion/retrieval | Build snapshot Markdown offline, FTS5/BM25, metadata/checksum/approval/hiệu lực, trả tối đa ba evidence | [snapshot.py](../app/ingestion/snapshot.py), [index.py](../app/retrieval/index.py) |
+| Diagnostics | Events tổng hợp và timing HTTP theo request; bỏ dữ liệu nhạy cảm, queue timing có giới hạn | [diagnostics.py](../app/diagnostics.py), [http_timing.py](../app/providers/http_timing.py) |
 
-## Phân loại nguồn
+Python runtime dùng FastAPI/Uvicorn, Pydantic/Pydantic Settings, HTTPX và PyYAML; SQLite FTS5 có sẵn trong môi trường đã kiểm tra. Phiên bản khóa trong [requirements.lock](../requirements.lock). Chưa dùng LangChain, SDK Gemini, embedding model, vector database, Redis hoặc nền tảng Azure trong đường chạy này.
 
-| Nhóm | Nguồn chuẩn | Cách trả lời |
-| --- | --- | --- |
-| FAQ | Nội dung khách sạn duyệt | Retrieval + trích dẫn |
-| Chính sách | Tài liệu có phiên bản/ngày hiệu lực | Retrieval có lọc hiệu lực + trích dẫn |
-| Phòng | RoomCatalogService | Tool dữ liệu cấu trúc; ranker tùy chọn cho ưu tiên mềm |
-| Giá | Service nghiệp vụ hiện có | Trả số tiền/đơn vị từ backend; thiếu ngày ở thì hỏi lại |
-| Dịch vụ | Danh mục dịch vụ đang hoạt động | Tool lấy giá/trạng thái; retrieval cho hướng dẫn |
-| Booking cá nhân | Service booking/history, theo principal | Tool có kiểm tra ownership trước khi trả trường tối thiểu |
-
-FAQ dẫn về chính sách gốc khi giải thích quy định. Khi tài liệu và dữ liệu live khác nhau, giá/trạng thái lấy từ backend; mâu thuẫn quy định phải được báo để rà soát, không tự ghép thành chính sách mới.
-
-## Luồng online đề xuất
+## Luồng online D1 đã triển khai
 
 ```mermaid
 flowchart TD
-    U[Widget React: góc dưới bên phải] --> B[Spring assistant facade: xác thực và phiên]
-    B --> A[Python: hiểu câu hỏi và chọn nguồn]
-    A --> R[RAG: FAQ và chính sách đã duyệt]
-    R --> A
-    A --> T[Đề xuất tool call có schema]
-    T --> G[Spring broker: allowlist và kiểm tra quyền]
-    G --> S[Service phòng, giá, dịch vụ, booking]
-    S --> D[(MySQL: Spring truy cập)]
-    S --> M[DTO tối thiểu: kết quả đã được cấp quyền]
-    M --> A
-    A --> O[Câu trả lời, nguồn và dữ liệu cấu trúc]
-    O --> B
-    B --> U
+    U[Widget React] -->|POST /api/assistant/chat| S[Spring: auth, phiên, budget]
+    S -->|Service credential và DTO tối thiểu| P[FastAPI: /internal/assistant/turn]
+    P --> C[FAQ: classify ý định]
+    C --> G[Gemini REST qua HTTPX]
+    C -->|FAQ được phép| R[SQLite FTS5/BM25: tối đa 3 evidence]
+    R --> E{Có evidence?}
+    E -->|Có| A[Gemini: trả lời từ evidence]
+    E -->|Không| I[insufficient_evidence]
+    C -->|Ngoài khả năng D1| N[capability_unavailable]
+    A --> V[Kiểm tra schema và citation registry]
+    V --> F[Final, evidence, usage]
+    I --> F
+    N --> F
+    F --> S
+    S -->|Kiểm tra ID, mode, nguồn và giới hạn| U
 ```
 
-1. React gửi câu hỏi qua Spring; JWT chỉ tới Spring. Backend quyết định trạng thái guest/member; không tin account ID trong câu hỏi hoặc browser state.
-2. Python xử lý RAG cục bộ cho tài liệu công khai. Với dữ liệu nghiệp vụ, trả yêu cầu tool có tên/arguments đã định nghĩa; không tự kết nối MySQL hay gọi tùy ý HTTP.
-3. Spring giữ principal xuyên suốt request, kiểm tra tool và ownership, gọi service nghiệp vụ trực tiếp. Không gọi vòng HTTP vào route assistant.
-4. Spring gửi kết quả tối thiểu cho Python tổng hợp; không chuyển JWT hoặc khóa nội bộ vào prompt/tool result. Hai chiều Spring–Python dùng xác thực service do server cấu hình, tách khỏi JWT người dùng.
-5. Nếu còn thiếu dữ liệu, hỏi lại hoặc thực hiện vòng tool tiếp theo trong ngân sách. Mức khởi đầu đề xuất: tối đa 4 tool calls nghiệp vụ và 2 vòng trao đổi/request; deadline và token cap cấu hình khi triển khai, chưa có số đo.
-6. Spring đối chiếu call ID, request/phiên, reference và link trước khi trả UI. Chỉ chấp nhận citation trỏ đến chunk thực sự truy xuất; không tin citation model tự dựng.
+1. Browser dùng API Spring; JWT khách/cookie chỉ phục vụ xác thực và phiên tại Spring. Python nhận token service riêng, message/history đã giới hạn, context, allowedTools và budget; không nhận principal/JWT của khách.
+2. Python kiểm tra snapshot rồi tạo budget cho turn. Classifier Gemini trả intent và query; message/history được làm sạch một số mẫu credential/contact trước gửi model. Đây là lọc theo mẫu, không là bảo đảm loại bỏ mọi PII tự do người dùng nhập.
+3. Nếu intent là FAQ và được phép `search_knowledge`, truy vấn lexical trên snapshot bằng FTS5/BM25. Không có evidence thì trả `insufficient_evidence`. Câu cần chức năng chưa hỗ trợ trả `capability_unavailable`.
+4. Khi có evidence, Gemini tạo answer và citation IDs. Runtime từ chối citation rỗng/trùng/ngoài evidence registry. Kiểm tra này xác nhận danh tính nguồn trong lượt, chưa tự chấm được việc mọi claim đều được nguồn hỗ trợ.
+5. Python trả final/evidence/usage; Spring kiểm tra contract, ID, corpus mode, citation và budget, từ chối business tool calls. UI hiển thị text an toàn, nguồn và nhãn synthetic khi áp dụng.
+6. `DELETE /api/assistant/session` reset phiên tại Spring. Resume nội bộ trả `409 CONTINUATION_NOT_FOUND`; chưa có continuation hoặc vòng tool nghiệp vụ.
 
-Trạng thái trả lời dự kiến gồm: có câu trả lời, cần bổ sung thông tin, cần đăng nhập, không có kết quả, không đủ bằng chứng và lỗi phụ thuộc. Không biến timeout hoặc nguồn thiếu thành thông tin khách sạn tự suy đoán.
+Budget của đường Spring hiện tại là tối đa 20 giây tích lũy, 8000 input/2000 output tokens, một retrieval, tối đa hai generation. Mỗi generation gọi countTokens trước generateContent, nên một turn có thể có tối đa bốn HTTP calls provider; không retry. Validate index ban đầu diễn ra trước budget, các thao tác index còn đồng bộ, vì vậy không xem đây là bảo đảm wall-clock tuyệt đối cho toàn request.
 
-## Luồng offline: chuẩn bị tài liệu
+## Luồng offline và nguồn kiến thức
 
-Tài liệu được duyệt → kiểm tra metadata → chia theo tiêu đề/mục → embedding/index → snapshot có manifest → retrieval.
+```mermaid
+flowchart LR
+    M[Markdown trong allowlist] --> V[Kiểm tra metadata, approval, hiệu lực và mode]
+    V --> C[Chia section và chuẩn hóa text]
+    C --> D[SQLite FTS5 + metadata evidence]
+    D --> S[Snapshot + manifest + SHA-256]
+    S --> R[Load/query chỉ đọc và validate lại]
+```
 
-- Bản đầu lấy tài liệu từ Git, chưa tạo chức năng upload cho khách.
-- Chỉ nạp nguồn được cấu hình; không crawl URL do người hỏi cung cấp.
-- Metadata tối thiểu: document_id, title, category, version, effective_from, effective_to, approved, source_ref, chunk_id và checksum.
-- Tách tài liệu hết hiệu lực, chưa duyệt khỏi retrieval thông thường; không lấy file AGENTS.md/README.md hướng dẫn phát triển làm kiến thức khách sạn.
-- Cache/index là dữ liệu dẫn xuất, có thể tái tạo; đổi nội dung/model revision phải làm mất hiệu lực snapshot cũ.
-- Dữ liệu booking, thông tin liên hệ và lịch sử chat cá nhân không đi qua pipeline index công khai.
+- Ingestion chạy offline bằng module `app.ingestion.snapshot`, không tự build khi startup và không crawl/upload URL do khách cung cấp.
+- Snapshot nằm ở `.local/assistant-index/<mode>/<snapshotId>/`, có `index.sqlite` và `manifest.json`; output đã ignore, có thể tái tạo.
+- `demo_synthetic` chỉ nạp [fixture FAQ](../tests/fixtures/d1/faq.md); production chỉ nạp bốn file knowledge trong allowlist của `SOURCES`. Hai mode có snapshot riêng, không tự fallback.
+- Metadata nguồn gồm document ID/title/category/version/source reference, approval và ngày hiệu lực. Evidence giữ citation ID, document/version/chunk/section, excerpt và corpus mode.
+- [Knowledge hiện có](../knowledge/README.md) gồm FAQ chung, danh mục hạng phòng, thông tin schema booking và hướng dẫn dịch vụ; toàn bộ vẫn `approved=false`/pending review. Chưa có policy thật đủ điều kiện index. README/AGENTS không phải nguồn RAG.
+- Không nạp booking thật, thông tin liên hệ hoặc lịch sử chat cá nhân vào kho kiến thức chung. Giá/tồn phòng/trạng thái dịch vụ phải lấy từ service nghiệp vụ ở các bước sau.
 
-Khi chưa có corpus khách sạn được duyệt, D1 được dùng chế độ test/demo tường minh: chỉ đọc fixture synthetic được allowlist, tạo index/manifest riêng có nhãn synthetic, không ghi đè hoặc được cấu hình public/live chọn làm corpus thật. Giao diện demo phải hiện nhãn dữ liệu giả lập. Không tự chuyển sang fixture khi nguồn thật lỗi/thiếu.
+Lựa chọn FTS5 giúp có baseline cục bộ tái tạo được trên corpus nhỏ, không cần tải model hoặc vận hành vector service. Đánh đổi là tìm kiếm lexical hạn chế paraphrase; hiện chưa có semantic/hybrid retrieval hoặc ranker mới.
 
-## Cây thư mục
+## Khởi động, lỗi và quan sát
 
-Mỗi thư mục mới dưới đây có `AGENTS.md`. Các module D1 đã được thêm theo từng task; sơ đồ còn gồm phạm vi dự kiến D2–D4, không có nghĩa mọi tool đã triển khai.
+- Token/key/index được đọc qua [Settings](../app/settings.py); model mặc định `gemini-3.1-flash-lite`, không khẳng định đây là cấu hình thực tế của mọi process đang chạy.
+- Startup chỉ gắn FAQ sau khi index hợp lệ và probe Gemini thật thành công trong budget 5 giây. `/health` kiểm tra process sống; `/ready` kiểm tra cấu hình, index và trạng thái dependency.
+- Khi turn gặp `DEPENDENCY_UNAVAILABLE`, FastAPI giữ latch not-ready đến restart sau khắc phục. Deadline trả lỗi riêng, không tự retry/fallback. Không gọi model lại ở mỗi lần đọc `/ready`.
+- Service auth được kiểm tra trước body nội bộ; body cap 128 KiB, provider/response Spring cap 256 KiB. Swagger/OpenAPI không mở trong factory hiện tại.
+- Diagnostics D1.8 dùng UUID nội bộ, phase/category/duration/budget/status đã làm sạch. Timing D1.10 dùng HTTPX trace theo request, tối đa 32 samples và queue 128 records; worker ghi stderr, delivery best effort, không drain/join trên request path.
+- Thiếu phase hoặc terminal timing là unavailable, không suy 0 ms, connection reuse hoặc Gemini compute time. [D1.10_HTTP_TIMING.md](D1.10_HTTP_TIMING.md) giữ schema, cách diễn giải và giới hạn.
+
+## Kiến trúc mục tiêu D2–D4: chưa triển khai
+
+Spring tiếp tục sở hữu MySQL, xác thực, quyền, giá, tồn phòng và booking. Python chỉ đề xuất tool call typed; Spring sẽ kiểm tra allowlist/schema/ownership, gọi service trực tiếp rồi gửi DTO tối thiểu đã cấp quyền để tổng hợp.
+
+```mermaid
+flowchart LR
+    A[Python đề xuất tool call] -.-> B[Spring broker: kiểm tra quyền và allowlist]
+    B -.-> S[Service phòng, giá, dịch vụ, booking]
+    S -.-> D[(MySQL do Spring truy cập)]
+    S -.-> T[DTO tối thiểu được cấp quyền]
+    T -.-> A
+```
+
+Sơ đồ nét đứt là thiết kế tương lai; hiện D1 không thực thi chuỗi này. Mức tối đa bốn tool calls/hai vòng từng được đề xuất cho các bước sau chưa phải hành vi runtime D1.
+
+| Nhóm | Nguồn chuẩn / điểm tái sử dụng | Trạng thái assistant |
+| --- | --- | --- |
+| FAQ/chính sách | Tài liệu khách sạn duyệt, có version/hiệu lực | Pipeline FAQ chạy trên synthetic; corpus production chưa duyệt |
+| Phòng | `RoomCatalogService`; `/api/public/rooms/room-types`, `/available` | Chưa nối `search_rooms` |
+| Giá | Kết quả nghiệp vụ từ backend; đơn vị/currency/kỳ ở rõ ràng | Chưa nối tool; chưa tạo engine giá hoặc `get_room_quote` |
+| Dịch vụ | `CustomerBillingService`; `/api/public/services` | Chưa nối `list_services`; knowledge chỉ cho hướng dẫn |
+| Booking cá nhân | `CustomerBookingController`/`CustomerHistoryService` theo principal | Chưa mở tool; phải rà ownership/fallback email/SĐT trước |
+
+Không đưa giá hoặc booking vào index để thay thế dữ liệu sống. Không mở thao tác ghi đặt/hủy/thanh toán qua chat; các action sau này dẫn tới màn hình nghiệp vụ hợp lệ.
+
+## Bảo mật và giới hạn triển khai
+
+- Spring đang giữ phiên in-memory, gắn owner/TTL và kiểm soát kết quả sau reset; chưa có shared session store cho nhiều instance. FE xóa chat/hủy request khi đổi account, không lưu chat vào browser storage.
+- Không dùng conversation ID, mã booking hoặc email/SĐT chưa xác minh làm bằng chứng quyền. Quyền booking của D3 phải được kiểm tra trong Spring trước khi dữ liệu vào model.
+- Câu hỏi, knowledge, tool result và output model đều phải được xem là dữ liệu không đáng tin cậy; quyền/allowlist/budget thực thi bằng code ngoài prompt.
+- Không gửi JWT khách, provider key hoặc token nội bộ vào model/index/log. Diagnostics không lưu raw query/prompt/answer, URL/header, PII hoặc raw exception.
+- Spring mặc định `assistant.enabled=false`; FE bật tường minh bằng `VITE_ASSISTANT_ENABLED=true`, ẩn widget ở admin/staff. Demo synthetic chỉ được phép trong profile local.
+- Không có kết nối Python→MySQL. Gemini là dependency mạng ngoài; live batch mới nhất vẫn có 6/24 deadline, chưa xác định nguyên nhân sâu network/provider. Chưa có căn cứ gọi hệ thống sẵn sàng production.
+
+## Cây module thực tế
 
 ```text
-PBL6/
-├── AGENTS.md
-├── FE/
-│   ├── AGENTS.md
-│   └── src/components/assistant/  # Widget, tin nhắn, thẻ và nguồn
-├── BE/
-│   ├── AGENTS.md
-│   └── src/main/java/com/example/pbl6/
-│       ├── controller/assistant/ # HTTP, principal và phiên
-│       ├── service/assistant/    # Tool broker, orchestration, nghiệp vụ
-│       └── dto/assistant/        # Contract tối thiểu, không serialize entity
-└── ai-service/
-    ├── AGENTS.md
-    ├── app/
-    │   ├── AGENTS.md
-    │   ├── api/                 # Transport FastAPI nội bộ
-    │   ├── orchestration/       # Router ý định, vòng tool, tổng hợp
-    │   ├── retrieval/           # Tìm chunk, lọc metadata, citation
-    │   ├── tools/               # Khai báo tool, không giữ quyền của khách
-    │   ├── ingestion/           # Nạp/chia/index tài liệu offline
-    │   ├── providers/           # Adapter LLM/embedding/index
-    │   ├── schemas/             # Message, tool, evidence, error
-    │   └── prompts/             # Chỉ dẫn model, quản lý phiên bản
-    ├── knowledge/
-    │   ├── AGENTS.md
-    │   ├── faq/                 # Câu hỏi thường gặp đã duyệt
-    │   ├── policies/            # Chính sách gốc và hiệu lực
-    │   └── services/            # Hướng dẫn dịch vụ; giá từ backend
-    ├── tests/
-    │   ├── AGENTS.md
-    │   ├── unit/                # Logic cô lập
-    │   ├── integration/         # Contract/service thật
-    │   ├── evaluation/          # Chất lượng retrieval/câu trả lời
-    │   └── fixtures/            # Chỉ synthetic, có nhãn
-    └── docs/
-        ├── AGENTS.md
-        ├── architecture.md      # Kiến trúc và cây thư mục
-        ├── API.md               # Hợp đồng chat, tool và health đề xuất
-        ├── UI.md                # Widget góc dưới bên phải
-        ├── PLAN.md              # Lộ trình triển khai
-        ├── EVALUATION.md        # Kế hoạch đánh giá
-        └── STATUS.md            # Trạng thái thực tế
+ai-service/
+├── app/
+│   ├── main.py, settings.py, diagnostics.py
+│   ├── api/boundary.py
+│   ├── orchestration/faq.py
+│   ├── ingestion/snapshot.py
+│   ├── retrieval/index.py
+│   ├── providers/{contracts,gemini,http_timing}.py
+│   ├── schemas/{turn,faq}.py
+│   ├── prompts/faq.py
+│   └── tools/                 # Hiện chỉ có hướng dẫn, chưa có executor
+├── knowledge/                 # Bản nháp chờ duyệt, không phải corpus production
+├── tests/{unit,integration,evaluation,fixtures}/
+├── docs/
+│   ├── PROCESS.md             # Checklist, bằng chứng và việc tiếp theo
+│   ├── architecture.md        # Hiện tại và thiết kế D2–D4
+│   ├── API.md                 # Contract, phân biệt đã có/chưa có
+│   ├── UI.md, EVALUATION.md    # Đặc tả riêng, có ghi phạm vi hiện hành
+│   └── D1.*.md                # Báo cáo chuyên sâu còn giá trị
+├── requirements{,-dev}.txt, requirements.lock
+└── settings.example.env
 ```
 
-## Điểm tích hợp đã khảo sát trong repository
+Cách phân chia thư mục là lựa chọn của dự án. Pattern RAG và việc tổ chức retrieval như tool tham khảo tài liệu Microsoft; không có nghĩa dự án đang dùng Azure hay Microsoft Agent Framework. Các liên kết tham khảo gốc: [RAG và indexes](https://learn.microsoft.com/en-us/azure/foundry/concepts/retrieval-augmented-generation), [Agentic RAG](https://learn.microsoft.com/en-us/azure/architecture/ai-ml/guide/rag/rag-agentic).
 
-| Phần đang có | Tái sử dụng / giới hạn |
-| --- | --- |
-| FE/src/App.jsx | Router và AuthProvider; vị trí gắn widget một lần |
-| FE/src/contexts/AuthContext.jsx | Theo dõi login/logout; UI không tự quyết quyền |
-| FE/src/services/api.js | API client qua Spring; giữ convention hiện có |
-| RoomCatalogService; GET /api/public/rooms/room-types, /available | Danh mục và phòng trống theo ngày/số khách; chưa phải một engine giá động mới |
-| PublicBillingController; GET /api/public/services | Danh mục dịch vụ đang hoạt động qua CustomerBillingService |
-| CustomerBookingController; GET /api/customer/bookings/my-bookings | Danh sách booking của principal |
-| CustomerBookingController; GET /api/customer/bookings/history/{bookingCode} | Service có nhánh kiểm tra chủ booking; cần rà lại fallback email/SĐT trước tool AI |
-| Recommendation cũ | Facade đã gỡ khỏi source; không tái sử dụng proxy cũ cho assistant |
-
-Các đường dẫn HTTP trong bảng là API nghiệp vụ để tái sử dụng sau D1. [API.md](API.md) phân biệt phần chat/final FAQ đã hiện thực và tool-result/business tools chưa triển khai. D1 mở đúng POST chat/DELETE session bằng matcher riêng; không mở toàn bộ `/api/ai/**`.
-
-## Ranh giới bảo mật và phiên
-
-- Booking: chỉ quan hệ sở hữu đã được xác thực; không dùng email/SĐT chưa xác minh hoặc mã booking đơn lẻ làm bằng chứng quyền.
-- Lọc quyền trước khi dữ liệu vào context model; không lấy dữ liệu của nhiều người rồi yêu cầu model tự che.
-- Hội thoại được server ràng buộc theo phiên và account; conversation ID là tham chiếu, không là bằng chứng quyền. Đăng xuất/đổi account phải vô hiệu hóa truy cập phiên cũ và chặn phản hồi đến muộn.
-- Bản đầu đề xuất giữ trạng thái ngắn hạn trong bộ nhớ, có TTL cấu hình và không lưu lâu dài; chưa thêm database/Redis cho chat.
-- Nội dung tài liệu, câu hỏi và output model là dữ liệu không đáng tin cậy. Các giới hạn tool và quyền được thi hành trong code ngoài prompt.
-- Chỉ log request ID, tool name, mã kết quả và timing đã làm sạch; không ghi nội dung booking, raw prompt, token hoặc suy luận nội bộ của model.
-
-## Quyết định còn mở
-
-D1 chọn Gemini REST gemini-3.1-flash-lite và SQLite FTS5/BM25, không embedding, snapshot dưới .local/assistant-index tách mode. Lý do: corpus nhỏ, không tải model/vector service, baseline tái lập. Đánh đổi: lexical retrieval hạn chế paraphrase; live batch còn lỗi dependency/deadline. Schema theo API.md; latency/usage quan sát được ghi trong STATUS, chưa đo tổng chi phí. Hybrid/embedding/ranking hoặc business tools chỉ xem xét ở lát sau.
-
-## Đọc tiếp
-
-- [Bố cục widget](UI.md).
-- [Hợp đồng API đề xuất](API.md).
-- [Lộ trình triển khai](PLAN.md).
-- [Kế hoạch đánh giá](EVALUATION.md).
-- [Trạng thái thực tế](STATUS.md).
+Xem [README](../README.md) để chạy local, [API](API.md) để tích hợp, [UI](UI.md) và [EVALUATION](EVALUATION.md) cho đặc tả chi tiết. Trạng thái nghiệm thu lấy từ [PROCESS](PROCESS.md).

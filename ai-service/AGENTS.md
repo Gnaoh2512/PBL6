@@ -3,15 +3,15 @@
 ## Đọc trước khi sửa
 
 1. Đọc `../AGENTS.md`, kiểm tra `git status` và giữ thay đổi của người dùng ngoài phạm vi nhiệm vụ.
-2. Đọc `README.md`, `docs/STATUS.md` và `docs/architecture.md`.
-3. Đọc `docs/UI.md`, `docs/PLAN.md`, `docs/EVALUATION.md` và AGENTS.md thư mục con khi nhiệm vụ liên quan.
+2. Đọc `README.md`, `docs/PROCESS.md` và `docs/architecture.md`.
+3. Đọc `docs/UI.md`, `docs/EVALUATION.md` và AGENTS.md thư mục con khi nhiệm vụ liên quan.
 4. Khảo sát code trước khi tạo mới; không phục hồi source/test đã bị người dùng xóa.
 
 ## Phạm vi
 
 - Sáu nhóm: FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách. Widget góc dưới bên phải.
-- Đã có runtime khung FastAPI với schemas/auth/health/readiness; chưa có provider/index/RAG. Phân biệt phần hợp đồng chưa triển khai với phần đã được kiểm thử.
-- Tái sử dụng React/Vite, Spring Boot/MySQL và convention sẵn có; Python/FastAPI là hướng triển khai AI.
+- Đã có FastAPI, Gemini REST, ingestion/retrieval FTS5, FAQ orchestration, Spring facade và widget opt-in. D1 chưa đóng nghiệm thu live/grounding; business tools D2–D4 chưa triển khai. Đọc PROCESS.md để phân biệt code, kiểm thử offline và bằng chứng Gemini thật.
+- Tái sử dụng React/Vite, Spring Boot/MySQL và convention sẵn có; Python/FastAPI chạy FAQ/RAG.
 - Không tự mở rộng sang OCR, thanh toán, thao tác ghi booking, message broker, vector service hoặc triển khai cloud.
 - Theo yêu cầu người dùng, khi xong mỗi bước hãy làm trên nhánh riêng và commit đúng phạm vi; giữ nguyên staging của công việc khác. Không tự push/deploy hoặc refactor toàn dự án.
 
@@ -27,9 +27,9 @@
 
 ## Thực hiện và kiểm chứng
 
-- Chỉ làm lát được giao trong `docs/PLAN.md`; bổ sung module khi có hành vi kiểm chứng được.
-- Thay đổi contract phải đồng bộ Spring/Python/FE và tài liệu liên quan. Contract assistant chưa được triển khai.
+- Chỉ làm lát được giao trong `docs/PROCESS.md`; bổ sung module khi có hành vi kiểm chứng được.
+- Thay đổi contract phải đồng bộ Spring/Python/FE và tài liệu liên quan. Contract chat/final FAQ đã triển khai; business tool broker/continuation chưa triển khai.
 - Kiểm tra unit, integration, quyền và chất lượng theo phạm vi; phân biệt fake có nhãn với model/provider thật.
 - Khi chỉ sửa tài liệu: kiểm tra liên kết, cây thư mục và mâu thuẫn; không báo test runtime đã pass.
-- Ghi command/kết quả thực tế; số liệu chưa đo ghi “chưa đo”. Cập nhật `docs/STATUS.md` với thay đổi, kiểm tra, giới hạn và bước tiếp theo.
+- Ghi command/kết quả thực tế; số liệu chưa đo ghi “chưa đo”. Cập nhật `docs/PROCESS.md` với thay đổi, kiểm tra, giới hạn và bước tiếp theo.
 - Khi kết thúc, báo rõ dependency, model hoặc dịch vụ mới cài; nếu không cài gì thì nói rõ.

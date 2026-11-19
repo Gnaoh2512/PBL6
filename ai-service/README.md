@@ -2,7 +2,7 @@
 
 Trợ lý hỗ trợ FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách khách sạn. Widget đặt ở **góc dưới bên phải**.
 
-**Trạng thái:** có Gemini REST adapter, ingestion/index FTS5, FAQ orchestration, Spring facade và widget opt-in. Đã có FAQ end-to-end với Gemini thật và 3 E2E pass; batch live còn timeout/dependency errors nên D1 chưa được đóng nghiệm thu. Production chưa có corpus duyệt. Không có business tools hoặc runtime fallback sang fake.
+**Trạng thái:** có Gemini REST adapter, ingestion/index FTS5, FAQ orchestration, Spring facade và widget opt-in. Đã có FAQ end-to-end với Gemini thật và 3 E2E pass; batch live mới nhất D1.9 hoàn tất đúng trạng thái 18/24 ca, còn 6 deadline. D1 chưa đóng nghiệm thu độ ổn định/grounding; production chưa có corpus duyệt. Checklist và bằng chứng nằm trong [PROCESS.md](docs/PROCESS.md). Không có business tools hoặc runtime fallback sang fake.
 
 ## Cách chia trách nhiệm
 
@@ -22,9 +22,8 @@ Spring Boot giữ xác thực, quyền sở hữu booking và dữ liệu nghi�
 | [Kiến trúc](docs/architecture.md) | Sơ đồ luồng, cây thư mục và ranh giới dữ liệu |
 | [Hợp đồng API](docs/API.md) | Endpoint/tool đề xuất, dữ liệu trao đổi, xác thực, phiên và mã lỗi |
 | [Giao diện](docs/UI.md) | Widget góc dưới bên phải, desktop/mobile |
-| [Lộ trình](docs/PLAN.md) | Các lát triển khai và tiêu chí nghiệm thu |
+| [Process và tiến độ](docs/PROCESS.md) | Checklist, bằng chứng, giới hạn và bước tiếp theo |
 | [Đánh giá](docs/EVALUATION.md) | Chất lượng RAG/tool, phân quyền và hiệu năng |
-| [Trạng thái](docs/STATUS.md) | Đã làm, giới hạn và việc tiếp theo |
 
 ## Khởi chạy
 
@@ -70,7 +69,7 @@ Các payload lỗi trả requestId và error.code/message/retryable, không ph�
 
 Test paths chỉ gồm tests/unit và tests/integration của bước mới. Không gọi DB/cloud/model, không chạy các test của source cũ đang bị xóa. Contract test đọc ví dụ start/resume trong docs/API.md. HTTPX 0.28.1 hiện gây một cảnh báo deprecation từ Starlette TestClient; các kiểm thử vẫn pass, không lọc hoặc che cảnh báo. Cần đánh giá migration test client khi nâng dependency sau này.
 
-Knowledge giữ approved=false, không tự build index khi startup. Snapshot phải build offline, đúng mode và được kiểm tra lại khi load/query. Retrieval baseline, rà grounding trên các đáp án đã nhận và latency quan sát được ghi trong STATUS; không phải benchmark production.
+Knowledge giữ approved=false, không tự build index khi startup. Snapshot phải build offline, đúng mode và được kiểm tra lại khi load/query. Retrieval baseline, rà grounding trên các đáp án đã nhận và latency quan sát được ghi trong PROCESS; không phải benchmark production.
 
 ## D1 đang triển khai
 
@@ -153,7 +152,7 @@ Không có live run trong D1.10; D1 vẫn chưa được đóng nghiệm thu.
 
 ### Kiểm chứng live đã có và hướng dẫn riêng
 
-Để chạy browser bằng Gemini thật: từ FE đặt `$env:D1_LIVE_GEMINI='1'`, rồi `npm run test:e2e`. Key được Settings đọc từ ai-service/.env, không truyền trong command. Entrypoint live bắt buộc dùng snapshot synthetic và không sửa file .env. Đọc STATUS để phân biệt 3 E2E pass với batch 24 ca còn lỗi; không chạy lại batch vô hạn để chọn kết quả đẹp.
+Để chạy browser bằng Gemini thật: từ FE đặt `$env:D1_LIVE_GEMINI='1'`, rồi `npm run test:e2e`. Key được Settings đọc từ ai-service/.env, không truyền trong command. Entrypoint live bắt buộc dùng snapshot synthetic và không sửa file .env. Đọc PROCESS để phân biệt 3 E2E pass với batch 24 ca còn lỗi; không chạy lại batch vô hạn để chọn kết quả đẹp.
 
 - Python: các lệnh pytest/Ruff/pip check ở trên; thêm `tests/evaluation/run_d1.py --retrieval-only` cho baseline synthetic hoặc `--live` khi có GEMINI_API_KEY. Báo cáo trong `.local/assistant-evaluation/` đã ignore; có đáp án synthetic để người đánh giá rà grounding, không chứa prompt/credential.
 - Spring: `mvnw.cmd -o -Plocal-h2 -Dassistant.build.directory=target-assistant-d1 -Dtest=AssistantControllerTest,AssistantClientTest,AssistantSessionsTest,PublicRoomControllerTest,AuthControllerTest,CustomerHistoryServiceTest package`.
@@ -165,4 +164,4 @@ Không có live run trong D1.10; D1 vẫn chưa được đóng nghiệm thu.
 Build demo index offline từ `ai-service`: `.\.venv\Scripts\python.exe -m app.ingestion.snapshot --mode demo_synthetic`.
 Lệnh in đường dẫn snapshot để đặt `AI_INDEX_PATH`; đặt rõ `AI_CORPUS_MODE=demo_synthetic`. Output trong `.local/assistant-index/` đã ignore. Production không chấp nhận snapshot demo hoặc bản nháp chưa duyệt.
 
-Adapter Gemini REST và FAQ orchestration đã gắn vào route. GEMINI_API_KEY cấu hình ngoài Git; GEMINI_MODEL mặc định gemini-3.1-flash-lite. Không dùng SDK Gemini. HTTPX là dependency runtime. Startup probe tối đa 5 giây xác nhận provider; lỗi probe giữ not ready, restart sau khi sửa cấu hình/quota. Source corpus thật chưa được duyệt; không tự bật demo khi thiếu nguồn. Kết quả Gemini thật và giới hạn hiện hành xem STATUS.
+Adapter Gemini REST và FAQ orchestration đã gắn vào route. GEMINI_API_KEY cấu hình ngoài Git; GEMINI_MODEL mặc định gemini-3.1-flash-lite. Không dùng SDK Gemini. HTTPX là dependency runtime. Startup probe tối đa 5 giây xác nhận provider; lỗi probe giữ not ready, restart sau khi sửa cấu hình/quota. Source corpus thật chưa được duyệt; không tự bật demo khi thiếu nguồn. Kết quả Gemini thật và giới hạn hiện hành xem PROCESS.

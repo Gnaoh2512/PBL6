@@ -1,6 +1,6 @@
 # Python application — trợ lý khách sạn
 
-- Kế thừa `ai-service/AGENTS.md`. Khung FastAPI chạy bằng `uvicorn app.main:create_app --factory` từ ai-service; chưa có provider/index/orchestration.
+- Kế thừa `ai-service/AGENTS.md`. FastAPI chạy bằng `uvicorn app.main:create_app --factory` từ ai-service; đã có Gemini REST, ingestion/retrieval FTS5 và FAQ orchestration. Business tools/continuation chưa triển khai; trạng thái nghiệm thu ở `ai-service/docs/PROCESS.md`.
 - `api` gọi `orchestration`; orchestration dùng `retrieval`, khai báo `tools`, `schemas` và adapter `providers`.
 - `ingestion` chạy offline, không nằm trên đường xử lý mỗi câu chat. `prompts` chứa chỉ dẫn versioned.
 - Không thêm framework agent hoặc cloud SDK trước khi có yêu cầu triển khai và lý do phù hợp với lát đang làm.

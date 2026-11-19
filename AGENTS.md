@@ -4,10 +4,10 @@
 - Kiểm tra `git status` trước khi làm việc; giữ nguyên thay đổi chưa commit của người dùng.
 - Đọc `AGENTS.md` ở thư mục con liên quan. Hướng dẫn con bổ sung ranh giới cho phần đó; yêu cầu trực tiếp của người dùng có ưu tiên cao nhất.
 - Phạm vi trợ lý mới: `ai-service/docs/architecture.md`; lộ trình và đánh giá nằm cùng thư mục.
-- Trợ lý có khung FastAPI/auth/schema/health/readiness; provider/index/RAG/widget chưa triển khai. Chỉ coi phần có bằng chứng kiểm thử là đã chạy.
+- Trợ lý đã có FastAPI, Gemini REST, ingestion/retrieval FTS5, FAQ orchestration, Spring facade và widget opt-in. D1 chưa đóng nghiệm thu live/grounding; tools nghiệp vụ chưa triển khai. Tiến độ và bằng chứng nằm ở `ai-service/docs/PROCESS.md`; chỉ coi phần có bằng chứng kiểm thử là đã chạy.
 
 ## Kiến trúc và dữ liệu
-- React/Vite ở `FE/`; Spring Boot/MySQL ở `BE/`; Python/FastAPI là hướng triển khai AI đã đề xuất.
+- React/Vite ở `FE/`; Spring Boot/MySQL ở `BE/`; Python/FastAPI chạy FAQ/RAG ở `ai-service/`.
 - Spring sở hữu xác thực, quyền truy cập, dữ liệu nghiệp vụ, giá, tồn phòng và booking.
 - FAQ/chính sách lấy từ tài liệu được khách sạn duyệt; dữ liệu thay đổi lấy từ service nghiệp vụ.
 - Trợ lý phục vụ khách ở góc dưới bên phải. Phạm vi đầu chỉ đọc; các thao tác đặt/hủy/thanh toán đi qua màn hình nghiệp vụ hiện có.

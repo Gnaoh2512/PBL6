@@ -1,8 +1,8 @@
 # Hợp đồng API trợ lý khách sạn — v1 đề xuất
 
-Ngày khảo sát: 2026-11-13. Hợp đồng tổng thể v1; D1 FAQ đã có implementation và 3 E2E pass với Gemini thật. Batch live còn 9/24 ca timeout/dependency nên chưa đóng nghiệm thu D1; xem STATUS cho số đo và giới hạn. Business tool_calls/continuation vẫn chưa triển khai. Facade Recommendation đã gỡ trong c300a5b. Các giới hạn số dưới đây là thiết kế, không phải cam kết hiệu năng.
+Ngày khảo sát: 2026-11-13; đồng bộ trạng thái 2026-11-19. Hợp đồng tổng thể v1; D1 FAQ đã có implementation và 3 E2E pass với Gemini thật. Batch live D1.9 mới nhất còn 6/24 deadline; độ ổn định/grounding chưa đóng nghiệm thu, xem PROCESS cho số đo và giới hạn. Business tool_calls/continuation vẫn chưa triển khai. Facade Recommendation đã gỡ trong c300a5b. Các giới hạn dưới đây không phải cam kết hiệu năng; mục 10 và phần quyết định D1 phân biệt contract đã triển khai và thiết kế tương lai.
 
-Đọc cùng [kiến trúc](architecture.md), [lộ trình](PLAN.md), [đánh giá](EVALUATION.md) và [UI](UI.md).
+Đọc cùng [kiến trúc](architecture.md), [process và tiến độ](PROCESS.md), [đánh giá](EVALUATION.md) và [UI](UI.md).
 
 ## 1. API và service đã có trong code
 
@@ -307,7 +307,7 @@ Profile v1 là faq: cấu hình service auth hợp lệ, LLM sẵn sàng và ind
 
 ## 10. Giới hạn của bước tài liệu
 
-Bước 1 là đặc tả; Bước 2 là foundation. D1 hiện có Spring chat/reset, Gemini adapter, FTS5 và final FAQ; có cả kiểm thử mock có nhãn và E2E Gemini thật. Xem [README](../README.md) và [STATUS](STATUS.md) cho kết quả còn lỗi của batch live. Resume vẫn 409 vì D1 không cấp continuation; production readiness 503 khi thiếu LLM/index hoặc nguồn được duyệt. Tool nghiệp vụ và D2–D4 chưa triển khai.
+Bước 1 là đặc tả; Bước 2 là foundation. D1 hiện có Spring chat/reset, Gemini adapter, FTS5 và final FAQ; có cả kiểm thử mock có nhãn và E2E Gemini thật. Xem [README](../README.md) và [PROCESS](PROCESS.md) cho kết quả còn lỗi của batch live. Resume vẫn 409 vì D1 không cấp continuation; production readiness 503 khi thiếu LLM/index hoặc nguồn được duyệt. Tool nghiệp vụ và D2–D4 chưa triển khai.
 
 ## D1 — quyết định triển khai
 
@@ -317,4 +317,4 @@ assistant.enabled mặc định false. demo_synthetic chỉ được bật trong
 
 D1 chỉ nhận `search_knowledge` cho luồng FAQ; các request foundation vẫn được validate theo schema tổng thể nhưng không thực thi tool nghiệp vụ. Khi đủ provider/index, start trả `kind=final` với evidence registry và usage; `toolCalls=[]`, `continuationId=null`, `cards=[]`. Resume vẫn 409. FAQ answered phải có citation trong registry; output model sai trả 502 AI_PROTOCOL_ERROR. Booking, dữ liệu live và thao tác ghi trả capability_unavailable cho cả guest/member trong D1, không mời đăng nhập như thể có thể mở chức năng chưa triển khai.
 
-Gemini REST gemini-3.1-flash-lite, JSON schema; SQLite FTS5/BM25 local, không embedding. Nghiệm thu bằng demo_synthetic; production không nạp knowledge pending_review. Chỉ search_knowledge, tối đa hai generation calls, không retry; budget tích lũy như mục 2. Provider adapter đã có; các bước còn lại xem STATUS.
+Gemini REST gemini-3.1-flash-lite, JSON schema; SQLite FTS5/BM25 local, không embedding. Nghiệm thu bằng demo_synthetic; production không nạp knowledge pending_review. Chỉ search_knowledge, tối đa hai generation calls, không retry; budget tích lũy như mục 2. Provider adapter đã có; các bước còn lại xem PROCESS.
