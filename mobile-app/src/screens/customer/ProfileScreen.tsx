@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   Linking,
   Platform,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -17,8 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/authService';
 import { loyaltyService } from '../../services/loyaltyService';
+import { bookingService } from '../../services/bookingService';
 import { User } from '../../models/User';
 import { LoyaltyProfile, LoyaltyBenefit, LoyaltyTransaction } from '../../models/Loyalty';
+import { Booking } from '../../models/Booking';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -61,6 +65,14 @@ export default function ProfileScreen() {
   const [transactionsLoading, setTransactionsLoading] = useState<boolean>(true);
   const [transactionsError, setTransactionsError] = useState<string | null>(null);
 
+  // Redeem state
+  const [redeemModalVisible, setRedeemModalVisible] = useState(false);
+  const [redeemBenefit, setRedeemBenefit] = useState<LoyaltyBenefit | null>(null);
+  const [redeemBookings, setRedeemBookings] = useState<Booking[]>([]);
+  const [redeemBookingsLoading, setRedeemBookingsLoading] = useState(false);
+  const [redeemingId, setRedeemingId] = useState<number | null>(null);
+  const idempotencyKeyRef = useRef<string>('');
+
   const fetchProfile = useCallback(async (isPull = false) => {
     if (isPull) {
       setRefreshing(true);
@@ -72,7 +84,12 @@ export default function ProfileScreen() {
       setProfile(data);
       setUser(data);
     } catch (err: any) {
-      console.error('[ProfileScreen] fetch error:', err);
+      // 401 is handled by apiClient interceptor (auto-logout), skip error display
+      if (err?.response?.status === 401) {
+        console.log('[ProfileScreen] Token expired, logging out...');
+        return;
+      }
+      console.warn('[ProfileScreen] fetch error:', err);
       const msg =
         err?.response?.data?.message ||
         err?.message ||
@@ -92,6 +109,10 @@ export default function ProfileScreen() {
       const data = await loyaltyService.getProfile();
       setLoyaltyProfile(data);
     } catch (err: any) {
+      if (err?.response?.status === 401) {
+        console.log('[ProfileScreen] fetchLoyaltyProfile: token expired');
+        return;
+      }
       console.log('[ProfileScreen] fetchLoyaltyProfile error:', err);
       if (err?.response?.status === 404) {
         setIsNotMember(true);
@@ -115,6 +136,10 @@ export default function ProfileScreen() {
       const data = await loyaltyService.getBenefits();
       setBenefits(data);
     } catch (err: any) {
+      if (err?.response?.status === 401) {
+        console.log('[ProfileScreen] fetchLoyaltyBenefits: token expired');
+        return;
+      }
       console.log('[ProfileScreen] fetchLoyaltyBenefits error:', err);
       const msg =
         err?.response?.data?.message ||
@@ -133,6 +158,10 @@ export default function ProfileScreen() {
       const data = await loyaltyService.getTransactions();
       setTransactions(data);
     } catch (err: any) {
+      if (err?.response?.status === 401) {
+        console.log('[ProfileScreen] fetchLoyaltyTransactions: token expired');
+        return;
+      }
       console.log('[ProfileScreen] fetchLoyaltyTransactions error:', err);
       const msg =
         err?.response?.data?.message ||
@@ -158,6 +187,115 @@ export default function ProfileScreen() {
       setRefreshing(false);
     }
   }, [fetchProfile, fetchLoyaltyProfile, fetchLoyaltyBenefits, fetchLoyaltyTransactions]);
+
+  // ────── Redeem benefit flow ──────
+  const canRedeem = (b: LoyaltyBenefit): boolean => {
+    if (b.isActive === false) return false;
+    if (b.benefitType && b.benefitType.toUpperCase() !== 'FREE_SERVICE') return false;
+    if (b.quota != null && (b.remainingQuota == null || b.remainingQuota <= 0)) return false;
+    return true;
+  };
+
+  const fetchEligibleBookings = useCallback(async () => {
+    setRedeemBookingsLoading(true);
+    try {
+      const all = await bookingService.getMyBookings();
+      const eligible = all.filter((bk) => (bk.status || '').toUpperCase() === 'CHECKED_IN');
+      setRedeemBookings(eligible);
+      return eligible;
+    } catch (err: any) {
+      console.log('[ProfileScreen] fetchEligibleBookings error:', err);
+      setRedeemBookings([]);
+      return [];
+    } finally {
+      setRedeemBookingsLoading(false);
+    }
+  }, []);
+
+  const handleOpenRedeem = useCallback(async (benefit: LoyaltyBenefit) => {
+    setRedeemBenefit(benefit);
+    idempotencyKeyRef.current = '';
+    setRedeemModalVisible(true);
+    await fetchEligibleBookings();
+  }, [fetchEligibleBookings]);
+
+  const executeRedeem = useCallback(async (benefit: LoyaltyBenefit, booking: Booking) => {
+    setRedeemingId(benefit.tierBenefitId);
+    try {
+      const resp = await loyaltyService.redeemBenefit({
+        tierBenefitId: benefit.tierBenefitId,
+        bookingCode: booking.bookingCode || booking.id,
+        idempotencyKey: idempotencyKeyRef.current,
+      });
+      // Update remainingQuota locally
+      const updatedData = resp?.data || resp;
+      if (updatedData?.remainingQuota != null) {
+        setBenefits((prev) =>
+          prev.map((b) =>
+            b.tierBenefitId === benefit.tierBenefitId
+              ? { ...b, remainingQuota: updatedData.remainingQuota }
+              : b
+          )
+        );
+      }
+      idempotencyKeyRef.current = '';
+      setRedeemModalVisible(false);
+      const successMsg = 'Đã tạo yêu cầu dịch vụ miễn phí, nhân viên sẽ phục vụ tại phòng.';
+      if (Platform.OS === 'web') {
+        window.alert(successMsg);
+      } else {
+        Alert.alert('Thành công', successMsg);
+      }
+      // Reload loyalty + bookings in background
+      await Promise.allSettled([
+        fetchLoyaltyProfile(),
+        fetchLoyaltyBenefits(),
+        fetchLoyaltyTransactions(),
+        fetchEligibleBookings(),
+      ]);
+    } catch (err: any) {
+      const errMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể sử dụng đặc quyền.';
+      if (Platform.OS === 'web') {
+        window.alert(errMsg);
+      } else {
+        Alert.alert('Thông báo', errMsg);
+      }
+      // Reload loyalty benefits in background to keep quota in sync
+      fetchLoyaltyBenefits();
+    } finally {
+      setRedeemingId(null);
+    }
+  }, [fetchLoyaltyProfile, fetchLoyaltyBenefits, fetchLoyaltyTransactions, fetchEligibleBookings]);
+
+  const confirmRedeem = useCallback((benefit: LoyaltyBenefit, booking: Booking) => {
+    const msg = `Sử dụng đặc quyền "${benefit.benefitName}" cho đơn ${booking.bookingCode || booking.id}?`;
+    if (Platform.OS === 'web') {
+      if (!window.confirm(msg)) return;
+      executeRedeem(benefit, booking);
+    } else {
+      Alert.alert('Xác nhận sử dụng', msg, [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Xác nhận', onPress: () => executeRedeem(benefit, booking) },
+      ]);
+    }
+  }, [executeRedeem]);
+
+  const handleSelectBooking = useCallback((booking: Booking, benefit: LoyaltyBenefit) => {
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = Date.now() + '-' + Math.random().toString(36).slice(2, 10);
+    }
+    confirmRedeem(benefit, booking);
+  }, [confirmRedeem]);
+
+  const handleCloseRedeemModal = useCallback(() => {
+    if (redeemingId != null) return; // Don't close while redeeming
+    setRedeemModalVisible(false);
+    setRedeemBenefit(null);
+    idempotencyKeyRef.current = '';
+  }, [redeemingId]);
 
   useEffect(() => {
     refreshAll();
@@ -198,6 +336,31 @@ export default function ProfileScreen() {
     if (val === undefined || val === null || val === '') return 'Chưa cập nhật';
     return String(val);
   };
+
+  const formatPeriodType = (periodType?: string | null): string => {
+    if (!periodType) return '';
+    const pt = periodType.trim().toUpperCase();
+    if (pt === 'DAY' || pt === 'DAILY') return 'mỗi ngày';
+    if (pt === 'MONTH' || pt === 'MONTHLY') return 'mỗi tháng';
+    if (pt === 'YEAR' || pt === 'YEARLY' || pt === 'ANNUAL') return 'mỗi năm';
+    return periodType;
+  };
+
+  const formatBenefitQuota = (b: LoyaltyBenefit): string => {
+    const periodText = formatPeriodType(b.periodType);
+    if (b.remainingQuota != null) {
+      const quotaPart = b.quota ? `/${b.quota}` : '';
+      return `Còn lại: ${b.remainingQuota}${quotaPart} lượt${periodText ? ` (${periodText})` : ''}`;
+    }
+    if (b.quota != null) {
+      return `Hạn mức: ${b.quota} lượt${periodText ? ` (${periodText})` : ''}`;
+    }
+    if (periodText) {
+      return `Áp dụng ${periodText}`;
+    }
+    return '';
+  };
+
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -368,6 +531,9 @@ export default function ProfileScreen() {
                 <Ionicons name="gift-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
                 <Text style={styles.sectionHeaderTitle}>Ưu đãi của bạn</Text>
               </View>
+              <Text style={styles.roomDiscountNoteText}>
+                Ưu đãi giảm giá phòng theo hạng hội viên được tự động trừ trên hóa đơn.
+              </Text>
 
               {benefitsLoading && benefits.length === 0 ? (
                 <Card style={styles.loadingCard}>
@@ -396,8 +562,11 @@ export default function ProfileScreen() {
                 <Card style={styles.benefitsCard} padding={0}>
                   {benefits.map((b, idx) => {
                     const isLast = idx === benefits.length - 1;
+                    const showRedeem = canRedeem(b);
+                    const isRedeeming = redeemingId === b.tierBenefitId;
+                    const quotaText = formatBenefitQuota(b);
                     return (
-                      <View key={b.id || idx}>
+                      <View key={b.tierBenefitId || b.id || idx}>
                         <View style={styles.benefitItem}>
                           <View style={styles.benefitIconWrap}>
                             <Ionicons name="ribbon" size={18} color={COLORS.secondary} />
@@ -405,24 +574,29 @@ export default function ProfileScreen() {
                           <View style={{ flex: 1 }}>
                             <View style={styles.benefitTitleRow}>
                               <Text style={styles.benefitName}>{b.benefitName}</Text>
-                              {b.discountPercent ? (
-                                <View style={styles.discountBadge}>
-                                  <Text style={styles.discountBadgeText}>-{b.discountPercent}%</Text>
-                                </View>
-                              ) : null}
                             </View>
                             {b.description ? (
                               <Text style={styles.benefitDesc}>{b.description}</Text>
                             ) : null}
-                            {(b.remainingQuota != null || b.quota != null || b.periodType) && (
-                              <Text style={styles.benefitQuota}>
-                                {b.remainingQuota != null
-                                  ? `Còn lại: ${b.remainingQuota}${b.quota ? `/${b.quota}` : ''} lượt`
-                                  : b.quota
-                                  ? `Hạn mức: ${b.quota} lượt`
-                                  : ''}
-                                {b.periodType ? ` (${b.periodType})` : ''}
-                              </Text>
+                            {quotaText ? (
+                              <Text style={styles.benefitQuota}>{quotaText}</Text>
+                            ) : null}
+                            {showRedeem && (
+                              <TouchableOpacity
+                                style={styles.redeemBtn}
+                                onPress={() => handleOpenRedeem(b)}
+                                disabled={isRedeeming || redeemingId != null}
+                                activeOpacity={0.7}
+                              >
+                                {isRedeeming ? (
+                                  <ActivityIndicator size="small" color={COLORS.surface} />
+                                ) : (
+                                  <>
+                                    <Ionicons name="flash-outline" size={14} color={COLORS.surface} style={{ marginRight: 4 }} />
+                                    <Text style={styles.redeemBtnText}>Sử dụng</Text>
+                                  </>
+                                )}
+                              </TouchableOpacity>
                             )}
                           </View>
                         </View>
@@ -593,6 +767,105 @@ export default function ProfileScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* ── Redeem Bottom Sheet Modal ── */}
+      <Modal
+        visible={redeemModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCloseRedeemModal}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleCloseRedeemModal}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[
+              styles.modalSheet,
+              {
+                paddingBottom: Platform.OS === 'android'
+                  ? Math.max(insets.bottom, 48)
+                  : Math.max(insets.bottom, 16),
+              },
+            ]}
+            onPress={() => {}} // prevent close on sheet tap
+          >
+            {/* Handle bar */}
+            <View style={styles.modalHandleBar} />
+
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chọn đơn đặt phòng</Text>
+              <TouchableOpacity onPress={handleCloseRedeemModal} disabled={redeemingId != null}>
+                <Ionicons name="close" size={24} color={COLORS.text} />
+              </TouchableOpacity>
+            </View>
+
+            {redeemBenefit && (
+              <View style={styles.modalBenefitInfo}>
+                <Ionicons name="ribbon" size={16} color={COLORS.secondary} style={{ marginRight: 6 }} />
+                <Text style={styles.modalBenefitName} numberOfLines={1}>
+                  {redeemBenefit.benefitName}
+                </Text>
+              </View>
+            )}
+
+            {/* Content */}
+            {redeemBookingsLoading ? (
+              <View style={styles.modalLoadingWrap}>
+                <ActivityIndicator size="small" color={COLORS.primary} />
+                <Text style={styles.modalLoadingText}>Đang tải đơn đặt phòng...</Text>
+              </View>
+            ) : redeemBookings.length === 0 ? (
+              <View style={styles.modalEmptyWrap}>
+                <Ionicons name="bed-outline" size={40} color={COLORS.textMuted} />
+                <Text style={styles.modalEmptyText}>
+                  Chỉ dùng được khi bạn đang lưu trú (đã nhận phòng)
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={redeemBookings}
+                keyExtractor={(item) => item.bookingCode || item.id}
+                style={styles.modalList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.bookingItem}
+                    onPress={() => redeemBenefit && handleSelectBooking(item, redeemBenefit)}
+                    disabled={redeemingId != null}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.bookingItemLeft}>
+                      <View style={styles.bookingCodeRow}>
+                        <Text style={styles.bookingCode}>{item.bookingCode || item.id}</Text>
+                        <View style={[
+                          styles.bookingStatusBadge,
+                          { backgroundColor: '#ECFDF5' },
+                        ]}>
+                          <Text style={[
+                            styles.bookingStatusText,
+                            { color: '#065F46' },
+                          ]}>
+                            Đang ở
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.bookingRoom}>{item.roomName || item.roomType}</Text>
+                      <Text style={styles.bookingDate}>
+                        {formatDateTime(item.checkInDate)} – {formatDateTime(item.checkOutDate)}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                )}
+                ItemSeparatorComponent={() => <View style={styles.modalDivider} />}
+              />
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -905,6 +1178,47 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textMuted,
   },
+  roomDiscountNoteText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textLight,
+    marginBottom: SPACING.sm,
+    paddingHorizontal: 2,
+    lineHeight: 18,
+  },
+  benefitsGroupsContainer: {
+    gap: SPACING.md,
+  },
+  benefitGroupWrap: {
+    gap: SPACING.xs,
+  },
+  subGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    paddingHorizontal: 2,
+  },
+  subGroupTitle: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.primaryDark,
+  },
+  autoApplyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+    marginTop: 6,
+  },
+  autoApplyBadgeText: {
+    fontSize: FONTS.sizes.xs - 1,
+    fontWeight: FONTS.weights.semiBold,
+    color: '#047857',
+  },
   benefitsCard: {
     backgroundColor: COLORS.surface,
   },
@@ -999,5 +1313,188 @@ const styles = StyleSheet.create({
   txnScoreUnit: {
     fontSize: FONTS.sizes.xs - 1,
     color: COLORS.textMuted,
+  },
+  // ── Redeem button ──
+  redeemBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-start',
+  },
+  redeemBtnText: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.surface,
+  },
+  // ── Modal styles ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: COLORS.overlay,
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    maxHeight: '75%',
+    paddingHorizontal: SPACING.md,
+  },
+  modalHandleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  modalTitle: {
+    fontSize: FONTS.sizes.lg,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.text,
+  },
+  modalBenefitInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 6,
+    borderRadius: RADIUS.sm,
+    marginBottom: SPACING.md,
+  },
+  modalBenefitName: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: FONTS.weights.semiBold,
+    color: COLORS.text,
+    flex: 1,
+  },
+  modalLoadingWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xl,
+    gap: SPACING.sm,
+  },
+  modalLoadingText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textLight,
+  },
+  modalEmptyWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
+  },
+  modalEmptyText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalList: {
+    flexGrow: 0,
+  },
+  modalDivider: {
+    height: 1,
+    backgroundColor: COLORS.divider,
+  },
+  bookingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xs,
+  },
+  bookingItemLeft: {
+    flex: 1,
+  },
+  bookingCodeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: 4,
+  },
+  bookingCode: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.primary,
+  },
+  bookingStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+  },
+  bookingStatusText: {
+    fontSize: FONTS.sizes.xs - 1,
+    fontWeight: FONTS.weights.semiBold,
+  },
+  bookingRoom: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  bookingDate: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textMuted,
+  },
+  serviceItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.xs,
+  },
+  serviceName: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: FONTS.weights.semiBold,
+    color: COLORS.text,
+    marginBottom: 2,
+  },
+  serviceDetail: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textLight,
+  },
+  modalConfirmBtn: {
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.sm,
+  },
+  modalConfirmBtnText: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: FONTS.weights.bold,
+    color: COLORS.surface,
+  },
+  backToBookingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: SPACING.sm,
+  },
+  backToBookingsText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.primary,
+    fontWeight: FONTS.weights.medium,
+  },
+  skipServiceFooterBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.xs,
+  },
+  skipServiceFooterText: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textMuted,
+    textDecorationLine: 'underline',
   },
 });

@@ -21,6 +21,7 @@ import Button from '../../components/common/Button';
 import DateRangePicker, { DateRangeValue } from '../../components/booking/DateRangePicker';
 import { formatPrice } from '../../utils/priceUtils';
 import { countNights } from '../../utils/dateUtils';
+import { getRoomExtras } from '../../data/roomTypeExtras';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 const { width } = Dimensions.get('window');
@@ -33,6 +34,10 @@ export default function RoomDetailScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { room } = route.params;
+  const extras = getRoomExtras(Number(room.id), room.name);
+  const roomImages = room.images && room.images.length > 0 ? room.images : extras.images;
+  const roomArea = room.area || parseInt(extras.area) || 30;
+  const roomBedType = room.bedType || extras.bedType;
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [dateRange, setDateRange] = useState<DateRangeValue>({ checkIn: null, checkOut: null });
@@ -131,7 +136,7 @@ export default function RoomDetailScreen() {
             }}
             scrollEventThrottle={16}
           >
-            {room.images.map((uri, idx) => (
+            {roomImages.map((uri, idx) => (
               <Image key={idx} source={{ uri }} style={styles.image} resizeMode="cover" />
             ))}
           </ScrollView>
@@ -142,9 +147,9 @@ export default function RoomDetailScreen() {
           </TouchableOpacity>
 
           {/* Dots */}
-          {room.images.length > 1 && (
+          {roomImages.length > 1 && (
             <View style={styles.imageDots}>
-              {room.images.map((_, idx) => (
+              {roomImages.map((_, idx) => (
                 <View
                   key={idx}
                   style={[styles.dot, idx === currentImageIndex && styles.dotActive]}
@@ -172,11 +177,11 @@ export default function RoomDetailScreen() {
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="expand-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{room.area} m²</Text>
+              <Text style={styles.metaText}>{roomArea} m²</Text>
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="bed-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{room.bedType}</Text>
+              <Text style={styles.metaText}>{roomBedType}</Text>
             </View>
           </View>
 

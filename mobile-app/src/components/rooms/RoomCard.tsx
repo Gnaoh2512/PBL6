@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { Room } from '../../models/Room';
 import { formatPrice } from '../../utils/priceUtils';
+import { getRoomExtras } from '../../data/roomTypeExtras';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 const { width } = Dimensions.get('window');
@@ -13,6 +14,14 @@ interface RoomCardProps {
 }
 
 export default function RoomCard({ room, onPress }: RoomCardProps) {
+  const extras = getRoomExtras(Number(room.id), room.name);
+  const imageUri =
+    room.images && room.images.length > 0 && room.images[0]
+      ? room.images[0]
+      : extras.images[0];
+  const bedType = room.bedType || extras.bedType;
+  const area = room.area || parseInt(extras.area) || 30;
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -20,7 +29,7 @@ export default function RoomCard({ room, onPress }: RoomCardProps) {
       activeOpacity={0.9}
     >
       <Image
-        source={{ uri: room.images[0] }}
+        source={{ uri: imageUri }}
         style={styles.image}
         resizeMode="cover"
       />
@@ -41,11 +50,11 @@ export default function RoomCard({ room, onPress }: RoomCardProps) {
           </View>
           <View style={styles.metaItem}>
             <Ionicons name="expand-outline" size={14} color={COLORS.textLight} />
-            <Text style={styles.metaText}>{room.area} m²</Text>
+            <Text style={styles.metaText}>{area} m²</Text>
           </View>
           <View style={styles.metaItem}>
             <Ionicons name="bed-outline" size={14} color={COLORS.textLight} />
-            <Text style={styles.metaText} numberOfLines={1}>{room.bedType}</Text>
+            <Text style={styles.metaText} numberOfLines={1}>{bedType}</Text>
           </View>
         </View>
         <View style={styles.footer}>

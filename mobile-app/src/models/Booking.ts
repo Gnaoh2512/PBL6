@@ -58,4 +58,51 @@ export interface Booking {
   createdAt: Date;
   updatedAt: Date;
   voucherCode?: string;
+  servicesUsed?: BookingServiceUsed[];
+  serviceRequests?: BookingServiceRequest[];
+  paymentTransactions?: any[];
+}
+
+export interface BookingServiceUsed {
+  serviceUsageId?: number;
+  serviceId?: number;
+  serviceName: string;
+  quantity: number;
+  unit?: string;
+  unitPrice?: number;
+  totalAmount?: number;
+  totalPrice?: number; // Alias cho tương thích
+  orderTime?: string | number[] | Date;
+  note?: string;
+  status?: string;
+  loyaltyBenefit?: boolean;
+  isLoyaltyBenefit?: boolean;
+  benefitName?: string;
+}
+
+// Tương thích ngược với code ProfileScreen
+export type ServiceUsageItem = BookingServiceUsed;
+
+export type ServiceRequestStatus =
+  | 'PENDING'
+  | 'DELIVERING'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELED'
+  | 'CANCELLED'
+  | string;
+
+export interface BookingServiceRequest {
+  serviceRequestId: number;
+  serviceName: string;
+  roomNumber?: string;
+  quantity: number;
+  feeAmount?: number;
+  status: ServiceRequestStatus;
+  assignedToStaff?: string;
+  note?: string;
+  isLoyaltyBenefit?: boolean;
+  loyaltyBenefit?: boolean;
+  requestedAt?: string | number[] | Date;
+  completedAt?: string | number[] | Date;
 }

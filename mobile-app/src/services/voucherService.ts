@@ -1,12 +1,5 @@
 import apiClient, { ApiResponse } from './apiClient';
 
-export interface Voucher {
-  code: string;
-  voucherName: string;
-  discountType: 'PERCENTAGE' | 'FIXED';
-  discountValue: number;
-}
-
 export interface VoucherResult {
   voucherCode: string;
   code?: string;
@@ -17,11 +10,6 @@ export interface VoucherResult {
 }
 
 export const voucherService = {
-  getVouchers: async (): Promise<Voucher[]> => {
-    const response = await apiClient.get<ApiResponse<any[]>>('/api/public/vouchers');
-    return response.data.data;
-  },
-
   applyVoucher: async (code: string, orderAmount: number): Promise<VoucherResult> => {
     const cleanCode = (code || '').trim().toUpperCase();
     const payload = {
