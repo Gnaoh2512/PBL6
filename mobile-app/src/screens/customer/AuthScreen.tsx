@@ -52,7 +52,7 @@ export default function AuthScreen() {
     const errors: Record<string, string> = {};
 
     if (!username.trim()) {
-      errors.username = 'Vui lòng nhập tên đăng nhập';
+      errors.username = 'Vui lòng nhập tên đăng nhập hoặc email';
     }
     if (!password) {
       errors.password = 'Vui lòng nhập mật khẩu';
@@ -203,7 +203,7 @@ export default function AuthScreen() {
               />
               <TextInput
                 style={styles.input}
-                placeholder="Tên đăng nhập"
+                placeholder={mode === 'login' ? 'Tên đăng nhập hoặc email' : 'Tên đăng nhập'}
                 value={username}
                 onChangeText={(t) => {
                   setUsername(t);
@@ -326,6 +326,20 @@ export default function AuthScreen() {
               size="lg"
               style={styles.submitBtn}
             />
+
+            {mode === 'login' && (
+              <View style={styles.receptionHintBox}>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={16}
+                  color="#B45309"
+                  style={{ marginRight: 6, marginTop: 1 }}
+                />
+                <Text style={styles.receptionHintText}>
+                  Khách đã đăng ký tại quầy lễ tân: dùng email làm tên đăng nhập, số điện thoại làm mật khẩu (nhập đúng như đã đăng ký).
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -424,4 +438,20 @@ const styles = StyleSheet.create({
   forgotPassword: { alignSelf: 'flex-end', marginTop: SPACING.xs, marginBottom: SPACING.lg },
   forgotPasswordText: { color: COLORS.primary, fontSize: FONTS.sizes.sm, fontWeight: '500' },
   submitBtn: { marginTop: SPACING.md },
+  receptionHintBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm + 2,
+    marginTop: SPACING.md,
+  },
+  receptionHintText: {
+    fontSize: FONTS.sizes.xs,
+    color: '#92400E',
+    flex: 1,
+    lineHeight: 18,
+  },
 });

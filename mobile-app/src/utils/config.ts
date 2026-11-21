@@ -3,11 +3,18 @@ import { Platform } from 'react-native';
 
 const BACKEND_PORT = '9090';
 
-// Ép địa chỉ thủ công nếu cần (vd: 'http://172.31.98.73:9090'). Đặt thành null để dùng tự động.
-// Đặt IP backend ở đây nếu web không tự detect được.
-const MANUAL_OVERRIDE: string | null = 'http://192.168.1.11:9090';
+// Ép địa chỉ thủ công nếu cần (vd: 'http://192.168.1.11:9090'). Đặt thành null để dùng tự động.
+// Cách dùng qua biến môi trường (PowerShell):
+// $env:EXPO_PUBLIC_API_URL="http://192.168.x.x:9090"; npx expo start -c
+const MANUAL_OVERRIDE: string | null = null;
 
 const getApiBaseUrl = (): string => {
+  // 1. Ưu tiên cao nhất: biến môi trường EXPO_PUBLIC_API_URL
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // 2. Gán cứng thủ công nếu có
   if (MANUAL_OVERRIDE) return MANUAL_OVERRIDE;
 
   if (Platform.OS === 'web') {
@@ -31,3 +38,8 @@ const getApiBaseUrl = (): string => {
 };
 
 export const API_BASE_URL = getApiBaseUrl();
+
+// Feature flags
+export const FEATURES = {
+  customerCancelBooking: false,
+};

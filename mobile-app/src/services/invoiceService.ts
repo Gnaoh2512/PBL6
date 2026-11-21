@@ -44,12 +44,28 @@ export interface LiveFolio {
 
 export const invoiceService = {
   getFolio: async (bookingCode: string): Promise<LiveFolio> => {
-    const response = await apiClient.get<ApiResponse<any>>(`/api/public/bookings/${bookingCode}/folio`);
-    console.log('[invoiceService] getFolio raw response:', response.data);
-    const data = response.data?.data || {};
+    let data: any = null;
+    try {
+      const historyRes = await apiClient.get<ApiResponse<any>>(
+        `/api/customer/bookings/history/${bookingCode}`
+      );
+      console.log('[invoiceService] history detail raw response:', historyRes.data);
+      if (historyRes.data?.data) {
+        data = historyRes.data.data;
+      }
+    } catch (e) {
+      console.log('[invoiceService] history detail failed, trying folio endpoint...', e);
+    }
 
-    const services: FolioServiceItem[] = (data.services || []).map((s: any) => ({
-      usageId: s.usageId,
+    if (!data) {
+      const response = await apiClient.get<ApiResponse<any>>(`/api/public/bookings/${bookingCode}/folio`);
+      console.log('[invoiceService] getFolio raw response:', response.data);
+      data = response.data?.data || {};
+    }
+
+    const rawServices = data.servicesUsed || data.services || [];
+    const services: FolioServiceItem[] = rawServices.map((s: any) => ({
+      usageId: s.usageId ?? s.serviceUsageId,
       serviceId: s.serviceId,
       serviceName: s.serviceName || s.name || 'Dịch vụ',
       categoryName: s.categoryName || '',
@@ -57,35 +73,45 @@ export const invoiceService = {
       unit: s.unit || '',
       unitPriceApplied: s.unitPriceApplied ?? s.unitPrice ?? 0,
       discountAmount: s.discountAmount ?? 0,
-      totalPrice: s.totalPrice ?? s.subtotal ?? 0,
+      totalPrice: s.totalPrice ?? s.totalAmount ?? s.subtotal ?? 0,
       status: s.status || '',
-      usedAt: s.usedAt,
+      usedAt: s.usedAt ?? s.orderTime,
       // Compatibility aliases
       name: s.serviceName || s.name,
-      subtotal: s.totalPrice ?? s.subtotal,
+      subtotal: s.totalPrice ?? s.totalAmount ?? s.subtotal,
     }));
+
+    const roomCharge = data.roomCharge ?? data.totalRoomCharge ?? 0;
+    const serviceCharge = data.serviceCharge ?? data.totalServiceCharge ?? data.serviceCharges ?? 0;
+    const subtotal = data.subtotal ?? (roomCharge + serviceCharge);
+    const taxRate = data.taxRate ?? 10;
+    const taxAmount = data.taxAmount ?? Math.round(subtotal * (taxRate / 100));
+    const discountAmount = data.discountAmount ?? 0;
+    const totalAmount = data.totalAmount ?? (subtotal + taxAmount - discountAmount);
+    const depositPaid = data.depositPaid ?? 0;
+    const remainingBalance = data.remainingBalance ?? Math.max(0, totalAmount - depositPaid);
 
     return {
       bookingCode: data.bookingCode || bookingCode,
-      bookingStatus: data.bookingStatus || 'PENDING_DEPOSIT',
-      customerName: data.customerName || '',
-      customerPhone: data.customerPhone || '',
-      roomNumber: data.roomNumber || '',
-      roomTypeName: data.roomTypeName || '',
+      bookingStatus: (data.bookingStatus || data.status || 'PENDING_DEPOSIT').toString().toUpperCase(),
+      customerName: data.customerName || data.fullName || '',
+      customerPhone: data.customerPhone || data.phone || '',
+      roomNumber: data.roomNumber ? String(data.roomNumber) : '',
+      roomTypeName: data.roomTypeName || data.roomType?.typeName || '',
       checkInDate: data.checkInDate || '',
       checkOutDate: data.checkOutDate || '',
       nights: data.nights || 1,
-      pricePerNight: data.pricePerNight || 0,
-      roomCharge: data.roomCharge || 0,
-      serviceCharge: data.serviceCharge ?? data.serviceCharges ?? 0,
-      subtotal: data.subtotal || 0,
-      taxRate: data.taxRate ?? 10,
-      taxAmount: data.taxAmount || 0,
-      discountAmount: data.discountAmount || 0,
-      totalAmount: data.totalAmount || 0,
-      depositPaid: data.depositPaid || 0,
-      remainingBalance: data.remainingBalance ?? 0,
-      isFullySettled: data.isFullySettled ?? data.fullySettled ?? false,
+      pricePerNight: data.priceAppliedPerNight ?? data.pricePerNight ?? 0,
+      roomCharge,
+      serviceCharge,
+      subtotal,
+      taxRate,
+      taxAmount,
+      discountAmount,
+      totalAmount,
+      depositPaid,
+      remainingBalance,
+      isFullySettled: Boolean(data.isFullySettled ?? data.fullySettled ?? (remainingBalance === 0)),
       services,
       settlementQr: data.settlementQr,
     };

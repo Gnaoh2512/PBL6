@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +17,7 @@ import { RootStackParamList } from '../../navigation/AppNavigator';
 import { bookingService } from '../../services/bookingService';
 import { QRInfo } from '../../models/Booking';
 import { formatPrice } from '../../utils/priceUtils';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
+import { COLORS, FONTS, SPACING, RADIUS, HOTEL_INFO } from '../../utils/constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Payment'>;
 
@@ -26,38 +27,17 @@ export default function PaymentScreen({ navigation, route }: Props) {
 
   const [qrInfo, setQrInfo] = useState<QRInfo | null>(initialQrInfo || null);
   const [depositRequired, setDepositRequired] = useState<number | null>(initialDeposit ?? null);
-  const [loadingInfo, setLoadingInfo] = useState<boolean>(!initialQrInfo);
+  const [loadingInfo, setLoadingInfo] = useState<boolean>(false);
   const [isExpired, setIsExpired] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number>(15 * 60); // Mặc định 15 phút (900s)
 
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 1. Tải thông tin đơn/qrInfo nếu chưa có từ params
-  useEffect(() => {
-    let isMounted = true;
-    if (!initialQrInfo) {
-      setLoadingInfo(true);
-      bookingService
-        .getBookingByCode(bookingCode)
-        .then((b) => {
-          if (!isMounted) return;
-          console.log('[PaymentScreen] fetched booking detail:', b);
-          if (b.qrInfo) setQrInfo(b.qrInfo);
-          if (b.depositRequired) setDepositRequired(b.depositRequired);
-          if (b.status === 'EXPIRED') setIsExpired(true);
-          setLoadingInfo(false);
-        })
-        .catch((err) => {
-          if (!isMounted) return;
-          console.error('[PaymentScreen] failed to fetch booking detail:', err);
-          setLoadingInfo(false);
-        });
-    }
-    return () => {
-      isMounted = false;
-    };
-  }, [bookingCode, initialQrInfo]);
+  const handleCallHotel = () => {
+    const cleanPhone = HOTEL_INFO.phone.replace(/[^0-9+]/g, '');
+    Linking.openURL(`tel:${cleanPhone}`);
+  };
 
   // 2. Thiết lập đồng hồ đếm ngược 15 phút (hoặc theo expiredAt nếu có)
   useEffect(() => {
@@ -204,31 +184,44 @@ export default function PaymentScreen({ navigation, route }: Props) {
               <Text style={styles.countdownTime}>{timeFormatted}</Text>
             </View>
 
-            {/* Khối hiển thị thông tin chuyển khoản dạng chữ (TẠM BỎ QUA ảnh QR) */}
-            <View style={styles.infoCard}>
-              <View style={styles.cardHeader}>
-                <Ionicons name="wallet-outline" size={22} color={COLORS.primary} />
-                <Text style={styles.cardHeaderTitle}>Thông tin chuyển khoản</Text>
+            {/* Khối hiển thị thông tin chuyển khoản dạng chữ hoặc thông báo nếu không có qrInfo */}
+            {!qrInfo ? (
+              <View style={styles.noQrCard}>
+                <Ionicons name="information-circle-outline" size={44} color={COLORS.secondary} style={{ marginBottom: SPACING.sm }} />
+                <Text style={styles.noQrText}>
+                  Không lấy lại được thông tin chuyển khoản. Vui lòng liên hệ khách sạn để được hỗ trợ đặt cọc.
+                </Text>
+                <TouchableOpacity style={styles.callHotelBtn} onPress={handleCallHotel} activeOpacity={0.8}>
+                  <Ionicons name="call" size={16} color={COLORS.surface} style={{ marginRight: 6 }} />
+                  <Text style={styles.callHotelBtnText}>Gọi khách sạn ({HOTEL_INFO.phone})</Text>
+                </TouchableOpacity>
               </View>
+            ) : (
+              <View style={styles.infoCard}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="wallet-outline" size={22} color={COLORS.primary} />
+                  <Text style={styles.cardHeaderTitle}>Thông tin chuyển khoản</Text>
+                </View>
 
-              <View style={styles.divider} />
+                <View style={styles.divider} />
 
-              <InfoRow label="Mã đặt phòng" value={bookingCode} bold />
-              <InfoRow
-                label="Số tiền cọc cần chuyển"
-                value={formatPrice(depositAmount)}
-                highlight
-              />
-              <InfoRow label="Ngân hàng thụ hưởng" value={qrInfo?.bankId || 'MB (Ngân hàng Quân Đội)'} />
-              <InfoRow label="Số tài khoản" value={qrInfo?.accountNo || 'Chưa cập nhật'} bold />
-              <InfoRow label="Tên chủ tài khoản" value={qrInfo?.accountName || 'AZURE BAY HOTEL'} />
-              <InfoRow
-                label="Nội dung chuyển khoản"
-                value={qrInfo?.transferContent || bookingCode}
-                bold
-                highlight
-              />
-            </View>
+                <InfoRow label="Mã đặt phòng" value={bookingCode} bold />
+                <InfoRow
+                  label="Số tiền cọc cần chuyển"
+                  value={formatPrice(depositAmount)}
+                  highlight
+                />
+                <InfoRow label="Ngân hàng thụ hưởng" value={qrInfo?.bankId || 'MB (Ngân hàng Quân Đội)'} />
+                <InfoRow label="Số tài khoản" value={qrInfo?.accountNo || 'Chưa cập nhật'} bold />
+                <InfoRow label="Tên chủ tài khoản" value={qrInfo?.accountName || 'AZURE BAY HOTEL'} />
+                <InfoRow
+                  label="Nội dung chuyển khoản"
+                  value={qrInfo?.transferContent || bookingCode}
+                  bold
+                  highlight
+                />
+              </View>
+            )}
 
             {/* Trạng thái chờ */}
             <View style={styles.waitingBox}>
@@ -417,4 +410,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
   },
   homeBtnText: { color: COLORS.surface, fontWeight: FONTS.weights.bold, fontSize: FONTS.sizes.sm },
+  noQrCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+  noQrText: {
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.text,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: SPACING.lg,
+  },
+  callHotelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.sm + 2,
+    paddingHorizontal: SPACING.lg,
+  },
+  callHotelBtnText: {
+    color: COLORS.surface,
+    fontWeight: FONTS.weights.bold,
+    fontSize: FONTS.sizes.sm,
+  },
 });

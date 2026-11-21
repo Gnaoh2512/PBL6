@@ -1,7 +1,7 @@
 import apiClient, { ApiResponse } from './apiClient';
 import { Room, RoomAmenity } from '../models/Room';
 import { toApiDate } from '../utils/dateUtils';
-import { getRoomTypeExtras } from '../data/roomTypeExtras';
+import { getRoomExtras } from '../data/roomTypeExtras';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ const parseAmenities = (raw: string): RoomAmenity[] =>
 
 /** Map RoomTypeDto → Room (used in RoomsScreen list) */
 export const roomTypeToRoom = (item: RoomTypeDto): Room => {
-  const extras = getRoomTypeExtras(item.roomTypeId);
+  const extras = getRoomExtras(item.roomTypeId, item.typeName);
   return {
     id: item.roomTypeId.toString(),
     type: 'standard_double',
@@ -73,7 +73,8 @@ export const roomService = {
   },
 
   /**
-   * GET /api/public/rooms/available
+   * POST /api/public/rooms/available
+   * Body: { checkInDate, checkOutDate, guestCount, roomTypeId? } (YYYY-MM-DD local time)
    * Returns raw AvailableRoomDto array — callers filter by roomTypeId themselves.
    */
   getAvailableRooms: async (
@@ -82,15 +83,15 @@ export const roomService = {
     guestCount: number,
     roomTypeId?: number
   ): Promise<AvailableRoomDto[]> => {
-    const params: Record<string, any> = { checkInDate, checkOutDate, guestCount };
-    if (roomTypeId !== undefined) params.roomTypeId = roomTypeId;
+    const payload: Record<string, any> = { checkInDate, checkOutDate, guestCount };
+    if (roomTypeId !== undefined) payload.roomTypeId = roomTypeId;
 
     const url = '/api/public/rooms/available';
-    console.log('[roomService] getAvailableRooms →', url, params);
+    console.log('[roomService] getAvailableRooms request payload:', url, payload);
     try {
-      const response = await apiClient.get<ApiResponse<AvailableRoomDto[]>>(url, { params });
-      console.log('[roomService] getAvailableRooms ←', response.data);
-      return response.data.data ?? [];
+      const response = await apiClient.post<ApiResponse<AvailableRoomDto[]>>(url, payload);
+      console.log('[roomService] getAvailableRooms raw response:', response.data);
+      return response.data?.data ?? [];
     } catch (error: any) {
       console.error('[roomService] getAvailableRooms error:', error?.response?.data ?? error.message);
       throw error;
