@@ -232,20 +232,20 @@ export default function StaffRequestsPage() {
           <Paginated items={requests}>
             {(pageRows, pager) => (
               <>
-                <div className="hc-card-body flush u-scroll-x">
-                  <table className="hc-table requests-table">
+                <div className="hc-card-body flush u-scroll-x" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                  <table className="hc-table requests-table" style={{ width: "100%", minWidth: "1040px" }}>
                     <thead>
                       <tr>
-                        <th>Dịch vụ</th>
-                        <th>Loại dịch vụ</th>
-                        <th>Khách</th>
-                        <th>Phòng</th>
-                        <th>Số lượng</th>
-                        <th>Thành tiền</th>
-                        <th>Người phục vụ</th>
-                        <th>Yêu cầu lúc</th>
-                        <th>Trạng thái</th>
-                        <th className="col-actions">Thao tác</th>
+                        <th style={{ minWidth: "160px" }}>Dịch vụ</th>
+                        <th style={{ minWidth: "115px" }}>Loại dịch vụ</th>
+                        <th style={{ minWidth: "110px" }}>Khách</th>
+                        <th style={{ minWidth: "85px" }}>Phòng</th>
+                        <th style={{ width: "65px", textAlign: "center" }}>Số lượng</th>
+                        <th style={{ minWidth: "95px", textAlign: "right" }}>Thành tiền</th>
+                        <th style={{ minWidth: "140px" }}>Người phục vụ</th>
+                        <th style={{ minWidth: "120px" }}>Yêu cầu lúc</th>
+                        <th style={{ minWidth: "110px" }}>Trạng thái</th>
+                        <th className="col-actions" style={{ minWidth: "180px", textAlign: "right" }}>Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -284,28 +284,29 @@ export default function StaffRequestsPage() {
                               <strong>{request.roomNumber ? `Phòng ${request.roomNumber}` : "—"}</strong>
                               {request.bookingCode && <div className="u-hint-sm">#{request.bookingCode}</div>}
                             </td>
-                            <td>{request.quantity || 1}</td>
-                            <td>{isLoyaltyBenefit === true ? <span style={{ color: "var(--hc-success, #16a34a)", fontWeight: 600 }}>Miễn phí</span> : formatVND(request.feeAmount || 0)}</td>
-                            <td>
+                            <td style={{ textAlign: "center" }}>{request.quantity || 1}</td>
+                            <td style={{ textAlign: "right" }}>{isLoyaltyBenefit === true ? <span style={{ color: "var(--hc-success, #16a34a)", fontWeight: 600 }}>Miễn phí</span> : formatVND(request.feeAmount || 0)}</td>
+                            <td style={{ minWidth: "140px", whiteSpace: "nowrap" }}>
                               {request.assignedToStaff ? (
-                                <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                <span className="hc-badge hc-badge-info" style={{ display: "inline-flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}>
                                   <i className="bi bi-person-check-fill"></i>
                                   {request.assignedToStaff}
                                 </span>
                               ) : (
-                                <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic" }}>Chưa phân công</span>
+                                <span style={{ color: "var(--hc-text-muted)", fontSize: "12px", fontStyle: "italic", whiteSpace: "nowrap" }}>Chưa phân công</span>
                               )}
                             </td>
                             <td>{formatDateTime(getRequestTime(request))}</td>
                             <td>
                               <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
                             </td>
-                            <td className="col-actions">
-                              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                            <td className="col-actions" style={{ minWidth: "180px", whiteSpace: "nowrap" }}>
+                              <div className="row-actions" style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px", flexWrap: "nowrap" }} onClick={(e) => e.stopPropagation()}>
                                 {isServiceStaff && request.status === "PENDING" && !request.assignedToStaff && (
                                   <button
                                     type="button"
                                     className="hc-btn hc-btn-info hc-btn-sm"
+                                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                                     disabled={workingId !== null}
                                     onClick={() => updateRequest(request, "claim")}
                                     title="Nhận yêu cầu này từ hàng chờ"
@@ -317,6 +318,7 @@ export default function StaffRequestsPage() {
                                   <button
                                     type="button"
                                     className="hc-btn hc-btn-info hc-btn-sm"
+                                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                                     disabled={workingId !== null}
                                     onClick={() => openAssignModal(request)}
                                     title="Phân công nhân viên có ca trực phục vụ"
@@ -329,6 +331,7 @@ export default function StaffRequestsPage() {
                                     <button
                                       type="button"
                                       className="hc-btn hc-btn-primary hc-btn-sm u-fw-600"
+                                      style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                                       disabled={workingId !== null}
                                       onClick={() => setCompleteTarget(request)}
                                       title="Xác nhận đã giao dịch vụ lên phòng khách thành công"
@@ -339,6 +342,7 @@ export default function StaffRequestsPage() {
                                       <button
                                         type="button"
                                         className="hc-btn hc-btn-outline hc-btn-sm"
+                                        style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                                         disabled={workingId !== null}
                                         onClick={() => openAssignModal(request)}
                                         title="Đổi nhân viên phục vụ khác"
@@ -352,6 +356,7 @@ export default function StaffRequestsPage() {
                                   <button
                                     type="button"
                                     className="hc-btn hc-btn-outline-danger hc-btn-sm"
+                                    style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                                     disabled={workingId !== null}
                                     onClick={() => {
                                       if (window.confirm("Xác nhận hủy yêu cầu dịch vụ này?")) {
@@ -415,7 +420,7 @@ export default function StaffRequestsPage() {
         title={`Yêu cầu dịch vụ #${editTarget?.serviceRequestId || ""}`}
         subtitle={editTarget ? `${editTarget.serviceName || "Yêu cầu dịch vụ"}${editTarget.roomNumber ? ` · Phòng ${editTarget.roomNumber}` : ""}` : undefined}
         icon="bi-bell"
-        maxWidth="560px"
+        maxWidth="620px"
         headerExtra={
           editTarget ? (
             <span className={`hc-badge ${(STATUS_META[editTarget.status] || { badge: "hc-badge-muted" }).badge}`}>{(STATUS_META[editTarget.status] || { label: editTarget.status }).label}</span>
@@ -468,7 +473,7 @@ export default function StaffRequestsPage() {
         title={`Phân công phục vụ — Yêu cầu #${targetRequest?.serviceRequestId || ""}`}
         subtitle={targetRequest ? `${targetRequest.serviceName} · ${targetRequest.roomNumber ? `Phòng ${targetRequest.roomNumber}` : ""}` : undefined}
         icon="bi-bell"
-        maxWidth="560px"
+        maxWidth="620px"
       >
         {targetRequest && (
           <div className="u-col-16">
@@ -544,7 +549,7 @@ export default function StaffRequestsPage() {
               <button type="button" className="hc-btn hc-btn-outline" onClick={closeAssignModal} disabled={submittingAssign}>
                 Đóng
               </button>
-              <button type="button" className="hc-btn hc-btn-primary" onClick={handleConfirmAssign} disabled={submittingAssign || !selectedStaffId || serviceStaff.length === 0}>
+              <button type="button" className="hc-btn hc-btn-primary" style={{ whiteSpace: "nowrap" }} onClick={handleConfirmAssign} disabled={submittingAssign || !selectedStaffId || serviceStaff.length === 0}>
                 <i className="bi bi-check2-circle"></i>
                 {submittingAssign ? "Đang lưu…" : "Xác nhận phân công"}
               </button>

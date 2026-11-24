@@ -4,6 +4,7 @@ import com.example.pbl6.common.ApiResponse;
 import com.example.pbl6.dto.adminaccount.AccountAdminResponse;
 import com.example.pbl6.dto.adminaccount.AccountCreateRequest;
 import com.example.pbl6.dto.adminaccount.AccountUpdateRequest;
+import com.example.pbl6.dto.adminaccount.CustomerServiceHistoryItemResponse;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.AuditLog;
 import com.example.pbl6.service.AccountAdminService;
@@ -49,6 +50,12 @@ public class AdminAccountController {
     public ApiResponse<AccountAdminResponse> deactivateAccount(@PathVariable Integer accountId, Authentication authentication) {
         return ApiResponse.ok("Account deactivated successfully",
                 AccountAdminResponse.fromEntity(accountAdminService.deactivateAccount(accountId, authentication.getName())));
+    }
+
+    @GetMapping("/accounts/{accountId}/service-history")
+    @PreAuthorize(Roles.ADMIN_MANAGER)
+    public ApiResponse<List<CustomerServiceHistoryItemResponse>> getCustomerServiceHistory(@PathVariable Integer accountId) {
+        return ApiResponse.ok(accountAdminService.getCustomerServiceHistory(accountId));
     }
 
     @GetMapping("/audit-logs")

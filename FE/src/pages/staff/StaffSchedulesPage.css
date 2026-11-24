@@ -64,8 +64,15 @@
   display: inline-block;
 }
 
+.text-orange {
+  color: #ea580c !important;
+}
+.text-indigo {
+  color: #6366f1 !important;
+}
+
 .staff-legend-dot.scheduled {
-  background: var(--hc-warning);
+  background: var(--hc-info, #0284c7);
 }
 .staff-legend-dot.completed {
   background: var(--hc-success);

@@ -531,45 +531,68 @@ select:disabled {
    ===================================================================== */
 .requests-table {
   width: 100%;
-  min-width: 1320px;
+  min-width: 1040px;
 }
 .requests-table th,
 .requests-table td {
   white-space: nowrap;
-  padding-left: 14px;
-  padding-right: 14px;
+  padding-left: 10px;
+  padding-right: 10px;
   vertical-align: middle;
 }
 .requests-table th:first-child,
 .requests-table td:first-child {
-  padding-left: 24px;
+  padding-left: 18px;
 }
 .requests-table th:last-child,
 .requests-table td:last-child {
-  padding-right: 24px;
+  padding-right: 18px;
 }
 /* service name + note: the one wrapping column */
 .requests-table th:nth-child(1),
 .requests-table td:nth-child(1) {
   white-space: normal;
-  min-width: 190px;
-  max-width: 280px;
+  min-width: 160px;
+  max-width: 240px;
 }
 /* quantity: narrow, centred */
 .requests-table th:nth-child(5),
 .requests-table td:nth-child(5) {
   text-align: center;
-  width: 84px;
+  width: 65px;
 }
 /* amount: right aligned so figures line up */
 .requests-table th:nth-child(6),
 .requests-table td:nth-child(6) {
   text-align: right;
-  min-width: 110px;
+  min-width: 95px;
+}
+/* staff assigned column: ample room so "Chưa phân công" never wraps or clips */
+.requests-table th:nth-child(7),
+.requests-table td:nth-child(7) {
+  min-width: 135px;
+  white-space: nowrap;
 }
 /* action buttons never shrink or wrap */
+.requests-table th.col-actions,
 .requests-table td.col-actions {
-  padding-left: 20px;
+  width: auto;
+  min-width: 180px;
+  padding-left: 12px;
+  text-align: right;
+  white-space: nowrap;
+}
+.requests-table .row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.requests-table .row-actions > .hc-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  width: fit-content;
 }
 
 /* =====================================================================

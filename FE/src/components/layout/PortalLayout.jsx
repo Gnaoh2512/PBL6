@@ -15,7 +15,7 @@ const portalLinks = {
     { to: "/guest/profile", label: "Hồ sơ", icon: "bi-person-circle" },
   ],
   staff: [
-    { to: "/staff/overview", label: "Hôm nay", icon: "bi-grid", roles: ["ADMIN", "MANAGER", "RECEPTIONIST"] },
+    { to: "/staff/overview", label: "Hôm nay", icon: "bi-grid", roles: ["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "MAINTENANCE", "SERVICE_STAFF"] },
     { to: "/staff/rooms", label: "Sơ đồ phòng", short: "Phòng", icon: "bi-door-open", roles: ["RECEPTIONIST", "HOUSEKEEPING", "MANAGER", "ADMIN"] },
     { to: "/staff/bookings", label: "Đặt phòng", icon: "bi-calendar-check", roles: ["RECEPTIONIST", "MANAGER", "ADMIN"] },
     { to: "/staff/walkin", label: "Khách vãng lai", short: "Vãng lai", icon: "bi-person-plus", roles: ["RECEPTIONIST", "MANAGER", "ADMIN"] },

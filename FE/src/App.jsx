@@ -63,15 +63,7 @@ function ProtectedRoute({ allowedRoles = [], children }) {
 }
 
 function StaffPortalIndex() {
-  const { hasRole } = useAuth();
-  const destination = hasRole(["ADMIN", "MANAGER", "RECEPTIONIST"])
-    ? "/staff/overview"
-    : hasRole(["HOUSEKEEPING"])
-      ? "/staff/rooms?status=CLEANING"
-      : hasRole(["MAINTENANCE"])
-        ? "/staff/maintenance"
-        : "/staff/requests";
-  return <Navigate to={destination} replace />;
+  return <Navigate to="/staff/overview" replace />;
 }
 
 function StaffHistoryRedirect() {
@@ -137,7 +129,7 @@ export default function App() {
               <Route
                 path="overview"
                 element={
-                  <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "RECEPTIONIST"]}>
+                  <ProtectedRoute allowedRoles={["ADMIN", "MANAGER", "RECEPTIONIST", "HOUSEKEEPING", "MAINTENANCE", "SERVICE_STAFF"]}>
                     <PortalOverviewPage type="staff" />
                   </ProtectedRoute>
                 }

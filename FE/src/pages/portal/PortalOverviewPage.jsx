@@ -36,13 +36,28 @@ const TASK_STATUS = {
   CANCELLED: { label: "Đã hủy", badge: "hc-badge-muted" },
 };
 
+const PRIORITY_META = {
+  URGENT: { label: "Khẩn cấp", badge: "hc-badge-error" },
+  HIGH: { label: "Cao", badge: "hc-badge-error" },
+  MEDIUM: { label: "Trung bình", badge: "hc-badge-warning" },
+  NORMAL: { label: "Bình thường", badge: "hc-badge-info" },
+  LOW: { label: "Thấp", badge: "hc-badge-muted" },
+};
+
+const TASK_TYPE_META = {
+  cleaning: { label: "Dọn phòng", badge: "hc-badge-info", icon: "bi-stars", link: "/staff/rooms" },
+  maintenance: { label: "Bảo trì", badge: "hc-badge-warning", icon: "bi-tools", link: "/staff/maintenance" },
+  service: { label: "Dịch vụ", badge: "hc-badge-primary", icon: "bi-bell", link: "/staff/requests" },
+};
+
 const localISODate = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
 export default function PortalOverviewPage({ type }) {
-  const { hasRole } = useAuth();
+  const { user, hasRole } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [taskFilter, setTaskFilter] = useState("MY_TASKS"); // "MY_TASKS" | "ALL"
   const [shift, setShift] = useState(null);
   const [shiftChecked, setShiftChecked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,6 +71,7 @@ export default function PortalOverviewPage({ type }) {
       hasRole(["RECEPTIONIST", "MANAGER", "ADMIN"]) ? apiCall("/api/staff/bookings", { silentError: true }) : Promise.resolve(null),
       hasRole(["SERVICE_STAFF", "RECEPTIONIST", "MANAGER", "ADMIN"]) ? apiCall("/api/staff/service-requests", { silentError: true }) : Promise.resolve(null),
       hasRole(["MAINTENANCE", "HOUSEKEEPING", "RECEPTIONIST", "MANAGER", "ADMIN"]) ? apiCall("/api/staff/maintenance/requests", { silentError: true }) : Promise.resolve(null),
+      hasRole(["HOUSEKEEPING", "RECEPTIONIST", "MANAGER", "ADMIN"]) ? apiCall("/api/staff/room-cleaning", { silentError: true }) : Promise.resolve(null),
       type === "staff" && hasRole(["RECEPTIONIST", "MANAGER", "ADMIN"]) ? apiCall("/api/staff/cashier-shifts/me", { silentError: true }) : Promise.resolve(null),
     ];
     Promise.allSettled(requests).then((results) => {
@@ -67,8 +83,39 @@ export default function PortalOverviewPage({ type }) {
       };
       setRooms(list(0));
       setBookings(list(1));
-      setTasks([...list(2).map((task) => ({ ...task, taskType: "service" })), ...list(3).map((task) => ({ ...task, taskType: "maintenance" }))]);
-      setShift(value(4));
+
+      const serviceTasks = list(2).map((t) => ({
+        ...t,
+        taskType: "service",
+        uniqueKey: `service-${t.serviceRequestId}`,
+        title: t.serviceName || t.note || "Yêu cầu dịch vụ phòng",
+        assignedStaff: t.assignedToStaff,
+        assignedStaffId: t.assignedToId,
+        priority: "NORMAL",
+      }));
+
+      const maintenanceTasks = list(3).map((t) => ({
+        ...t,
+        taskType: "maintenance",
+        uniqueKey: `maint-${t.requestId}`,
+        title: t.title || (t.equipmentName ? `Bảo trì thiết bị: ${t.equipmentName}` : `Bảo trì phòng ${t.roomNumber}`),
+        assignedStaff: t.assignedToStaff,
+        assignedStaffId: null,
+        priority: t.priority || "MEDIUM",
+      }));
+
+      const cleaningTasks = list(4).map((t) => ({
+        ...t,
+        taskType: "cleaning",
+        uniqueKey: `clean-${t.cleaningId}`,
+        title: t.note ? `Dọn phòng: ${t.note}` : `Dọn phòng ${t.roomNumber}`,
+        assignedStaff: t.assignedToName,
+        assignedStaffId: t.assignedToId,
+        priority: t.priority || "MEDIUM",
+      }));
+
+      setTasks([...cleaningTasks, ...maintenanceTasks, ...serviceTasks]);
+      setShift(value(5));
       setShiftChecked(type === "staff" && hasRole(["RECEPTIONIST", "MANAGER", "ADMIN"]));
       setLoading(false);
     });
@@ -77,9 +124,47 @@ export default function PortalOverviewPage({ type }) {
     };
   }, [hasRole, type]);
 
+  const isAssignedToMe = (task) => {
+    if (!user) return false;
+    const myName = (user.fullName || "").trim().toLowerCase();
+    const myUsername = (user.username || "").trim().toLowerCase();
+    const myId = user.accountId || user.id;
+
+    if (task.assignedStaffId && myId && task.assignedStaffId === myId) return true;
+    if (task.assignedStaff) {
+      const s = String(task.assignedStaff).trim().toLowerCase();
+      if (s === myName || s === myUsername) return true;
+    }
+    return false;
+  };
+
   const arrivals = bookings.filter((b) => String(b.checkInDate).slice(0, 10) === today && b.status !== "CANCELED");
   const departures = bookings.filter((b) => String(b.checkOutDate).slice(0, 10) === today && b.status !== "CANCELED");
-  const activeTasks = tasks.filter((t) => !["COMPLETED", "CANCELED", "CANCELLED"].includes(t.status));
+  const activeTasks = tasks.filter((t) => {
+    const st = (t.status || "").toUpperCase();
+    return !["COMPLETED", "CONFIRMED", "CANCELED", "CANCELLED", "DONE"].includes(st);
+  });
+
+  const myActiveTasks = activeTasks.filter(isAssignedToMe);
+  const isFieldStaff = hasRole(["HOUSEKEEPING", "MAINTENANCE", "SERVICE_STAFF"]) && !hasRole(["ADMIN", "MANAGER"]);
+
+  const displayedTasks = (taskFilter === "MY_TASKS" && (myActiveTasks.length > 0 || isFieldStaff))
+    ? [...myActiveTasks]
+    : [...activeTasks];
+
+  const PRIORITY_ORDER = { URGENT: 1, HIGH: 2, MEDIUM: 3, NORMAL: 3, LOW: 4 };
+  displayedTasks.sort((a, b) => {
+    const aMe = isAssignedToMe(a) ? 0 : 1;
+    const bMe = isAssignedToMe(b) ? 0 : 1;
+    if (aMe !== bMe) return aMe - bMe;
+
+    const aPri = PRIORITY_ORDER[a.priority?.toUpperCase()] || 3;
+    const bPri = PRIORITY_ORDER[b.priority?.toUpperCase()] || 3;
+    if (aPri !== bPri) return aPri - bPri;
+
+    return (b.id || 0) - (a.id || 0);
+  });
+
   const statusCounts = rooms.reduce((counts, room) => {
     const status = room.status || "UNKNOWN";
     counts[status] = (counts[status] || 0) + 1;
@@ -216,48 +301,125 @@ export default function PortalOverviewPage({ type }) {
         </div>
       </div>
 
-      {activeTasks.length > 0 && (
+      {type === "staff" && (
         <div className="hc-card ov-full">
-          <div className="hc-card-header">
-            <div className="hc-card-title">
-              <i className="bi bi-flag text-primary u-mr-8"></i>
-              Công việc ưu tiên
+          <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+            <div className="hc-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <i className="bi bi-flag-fill text-primary"></i>
+              <span>Công việc ưu tiên</span>
+              {myActiveTasks.length > 0 && (
+                <span className="hc-badge hc-badge-primary" style={{ fontSize: "11px" }}>
+                  {myActiveTasks.length} việc được gán cho bạn
+                </span>
+              )}
             </div>
-          </div>
-          <Paginated items={activeTasks.slice(0, 5)}>
-            {(pageRows, pager) => (
-              <>
-                <div className="hc-card-body flush u-scroll-x">
-                  <table className="hc-table">
-                    <thead>
-                      <tr>
-                        <th>Yêu cầu</th>
-                        <th>Phòng</th>
-                        <th>Loại</th>
-                        <th>Trạng thái</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pageRows.map((task) => {
-                        const meta = TASK_STATUS[task.status] || { label: task.status, badge: "hc-badge-muted" };
-                        return (
-                          <tr key={`${task.taskType}-${task.serviceRequestId || task.requestId}`}>
-                            <td>{task.title || task.serviceName || task.description || "Yêu cầu cần xử lý"}</td>
-                            <td>{task.roomNumber || "—"}</td>
-                            <td>{task.taskType === "service" ? "Dịch vụ" : "Bảo trì"}</td>
-                            <td>
-                              <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-                {pager}
-              </>
+
+            {activeTasks.length > 0 && (
+              <div className="u-row-6">
+                <button
+                  type="button"
+                  className={`hc-btn hc-btn-sm ${taskFilter === "MY_TASKS" ? "hc-btn-primary" : "hc-btn-outline"}`}
+                  onClick={() => setTaskFilter("MY_TASKS")}
+                >
+                  <i className="bi bi-person-check"></i> Việc của tôi ({myActiveTasks.length})
+                </button>
+                <button
+                  type="button"
+                  className={`hc-btn hc-btn-sm ${taskFilter === "ALL" ? "hc-btn-primary" : "hc-btn-outline"}`}
+                  onClick={() => setTaskFilter("ALL")}
+                >
+                  <i className="bi bi-list-task"></i> Tất cả công việc ({activeTasks.length})
+                </button>
+              </div>
             )}
-          </Paginated>
+          </div>
+
+          {loading ? (
+            <div className="hc-loading-spinner" style={{ padding: "30px 0" }}>
+              <div className="hc-spinner"></div>
+            </div>
+          ) : displayedTasks.length === 0 ? (
+            <div className="hc-empty-state" style={{ padding: "30px 0" }}>
+              <i className="bi bi-check2-circle" style={{ fontSize: "32px", color: "var(--hc-success, #16a34a)" }}></i>
+              <p style={{ marginTop: "8px" }}>
+                {taskFilter === "MY_TASKS"
+                  ? "Bạn hiện không có công việc dọn phòng hoặc bảo trì nào đang chờ xử lý."
+                  : "Không có công việc ưu tiên nào cần xử lý lúc này."}
+              </p>
+            </div>
+          ) : (
+            <Paginated items={displayedTasks} pageSize={6}>
+              {(pageRows, pager) => (
+                <>
+                  <div className="hc-card-body flush u-scroll-x">
+                    <table className="hc-table">
+                      <thead>
+                        <tr>
+                          <th>Yêu cầu / Công việc</th>
+                          <th>Phòng</th>
+                          <th>Loại công việc</th>
+                          <th>Độ ưu tiên</th>
+                          <th>Người phụ trách</th>
+                          <th>Trạng thái</th>
+                          <th className="col-actions">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pageRows.map((task) => {
+                          const meta = TASK_STATUS[task.status] || { label: task.status, badge: "hc-badge-muted" };
+                          const typeMeta = TASK_TYPE_META[task.taskType] || { label: task.taskType, badge: "hc-badge-info", icon: "bi-tag", link: "#" };
+                          const priMeta = PRIORITY_META[task.priority?.toUpperCase()] || { label: task.priority || "Bình thường", badge: "hc-badge-muted" };
+                          const assignedToMe = isAssignedToMe(task);
+
+                          return (
+                            <tr key={task.uniqueKey} style={assignedToMe ? { background: "rgba(2, 132, 199, 0.04)" } : {}}>
+                              <td>
+                                <div style={{ fontWeight: 600 }}>{task.title}</div>
+                                {task.description && task.description !== task.title && (
+                                  <small style={{ color: "var(--hc-text-muted)" }}>{task.description}</small>
+                                )}
+                              </td>
+                              <td>
+                                <strong>Phòng {task.roomNumber || "—"}</strong>
+                              </td>
+                              <td>
+                                <span className={`hc-badge ${typeMeta.badge}`}>
+                                  <i className={`bi ${typeMeta.icon}`}></i> {typeMeta.label}
+                                </span>
+                              </td>
+                              <td>
+                                <span className={`hc-badge ${priMeta.badge}`}>
+                                  {priMeta.label}
+                                </span>
+                              </td>
+                              <td>
+                                {assignedToMe ? (
+                                  <span className="hc-badge hc-badge-primary">
+                                    <i className="bi bi-person-check-fill"></i> Bạn
+                                  </span>
+                                ) : (
+                                  <span>{task.assignedStaff || <em style={{ color: "var(--hc-text-muted)" }}>Chưa phân công</em>}</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`hc-badge ${meta.badge}`}>{meta.label}</span>
+                              </td>
+                              <td className="col-actions">
+                                <Link to={typeMeta.link} className="hc-btn hc-btn-outline hc-btn-sm" style={{ whiteSpace: "nowrap" }}>
+                                  Xem <i className="bi bi-arrow-right"></i>
+                                </Link>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {pager}
+                </>
+              )}
+            </Paginated>
+          )}
         </div>
       )}
     </div>
