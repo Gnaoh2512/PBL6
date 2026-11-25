@@ -53,6 +53,7 @@ public class DataInitializer implements CommandLineRunner {
         ensureShiftNames();
         repairSampleAccountRoles();
         ensureDemoStaffAccounts();
+        ensureCustomerAccountLinks();
         ensureCustomerServiceDemoBooking();
         ensureInitialAuditLogs();
     }
@@ -153,6 +154,21 @@ public class DataInitializer implements CommandLineRunner {
             account.setRole(role);
             account.setStatus("ACTIVE");
             accountRepository.save(account);
+        });
+    }
+
+    /** Ensures the built-in demo customer1 account is linked via FK to its seeded Customer profile. */
+    private void ensureCustomerAccountLinks() {
+        accountRepository.findByUsername("customer1").ifPresent(account -> {
+            if (customerRepository.findByAccount_AccountId(account.getAccountId()).isPresent()) return;
+            customerRepository.findByEmail("customer1@gmail.com").ifPresent(customer -> {
+                if (customer.getAccount() == null) {
+                    customer.setAccount(account);
+                    customerRepository.save(customer);
+                    log.info("Linked demo account customer1 (accountId={}) to customerId={}",
+                            account.getAccountId(), customer.getCustomerId());
+                }
+            });
         });
     }
 

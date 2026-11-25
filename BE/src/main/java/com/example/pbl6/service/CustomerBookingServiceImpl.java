@@ -91,8 +91,8 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
             throw new IllegalArgumentException("Phòng " + room.getRoomNumber() + " đã có người đặt trong khoảng thời gian này. Vui lòng chọn phòng khác!");
         }
 
-        // Tìm hoặc khởi tạo hồ sơ Khách hàng
-        Customer customer = findOrCreateCustomer(request);
+        // Tìm hoặc khởi tạo hồ sơ Khách hàng (ưu tiên hồ sơ gắn FK account nếu khách đang đăng nhập)
+        Customer customer = findOrCreateCustomer(request, currentUsername);
 
         // Tính toán số đêm và tiền cọc
         long nights = financialCalculator.calculateNights(checkInDate, checkOutDate);
@@ -536,7 +536,43 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         }
     }
 
-    private Customer findOrCreateCustomer(BookingCreateRequest request) {
+    private Customer findOrCreateCustomer(BookingCreateRequest request, String currentUsername) {
+        if (StringUtils.hasText(currentUsername)) {
+            Account account = accountRepository.findByUsername(currentUsername.trim()).orElse(null);
+            boolean isCustomerAccount = account != null && account.getRole() != null
+                    && ("ROLE_CUSTOMER".equalsIgnoreCase(account.getRole().getRoleCode())
+                    || "CUSTOMER".equalsIgnoreCase(account.getRole().getRoleCode()));
+            if (isCustomerAccount) {
+                Optional<Customer> linked = customerRepository.findByAccount_AccountId(account.getAccountId());
+                if (linked.isPresent()) {
+                    Customer customer = linked.get();
+                    boolean changed = false;
+                    if (StringUtils.hasText(request.getIdNumber()) && !StringUtils.hasText(customer.getIdNumber())) {
+                        customer.setIdNumber(request.getIdNumber().trim());
+                        changed = true;
+                    }
+                    if (StringUtils.hasText(request.getIdType()) && !StringUtils.hasText(customer.getIdType())) {
+                        customer.setIdType(request.getIdType().trim());
+                        changed = true;
+                    }
+                    if (StringUtils.hasText(request.getNationality()) && !StringUtils.hasText(customer.getNationality())) {
+                        customer.setNationality(request.getNationality().trim());
+                        changed = true;
+                    }
+                    return changed ? customerRepository.save(customer) : customer;
+                }
+                return customerRepository.save(Customer.builder()
+                        .account(account)
+                        .fullName(StringUtils.hasText(request.getFullName()) ? request.getFullName().trim() : account.getFullName())
+                        .phone(StringUtils.hasText(request.getPhone()) ? request.getPhone().trim() : account.getPhone())
+                        .email(StringUtils.hasText(request.getEmail()) ? request.getEmail().trim() : account.getEmail())
+                        .idType(StringUtils.hasText(request.getIdType()) ? request.getIdType().trim() : "CCCD")
+                        .idNumber(StringUtils.hasText(request.getIdNumber()) ? request.getIdNumber().trim() : null)
+                        .nationality(StringUtils.hasText(request.getNationality()) ? request.getNationality().trim() : "Việt Nam")
+                        .build());
+            }
+        }
+
         Customer customer = null;
 
         if (StringUtils.hasText(request.getIdNumber())) {

@@ -48,7 +48,7 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản người dùng: " + username));
 
-        Integer customerId = resolveCustomerId(account);
+        Integer customerId = resolveOwnedCustomerId(account);
         if (customerId == null) {
             return Collections.emptyList();
         }
@@ -70,19 +70,18 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         Account account = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
 
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
+        Integer customerId = resolveOwnedCustomerId(account);
+        String normalizedCode = StringUtils.hasText(bookingCode) ? bookingCode.trim().toUpperCase() : "";
+        Booking booking = StringUtils.hasText(normalizedCode)
+                ? bookingRepository.findByBookingCode(normalizedCode).orElse(null)
+                : null;
 
-        // Kiểm tra quyền sở hữu đơn đặt phòng của tài khoản thành viên
-        Integer customerId = resolveCustomerId(account);
-        if (booking.getCustomer() == null || !booking.getCustomer().getCustomerId().equals(customerId)) {
-            boolean matchPhone = StringUtils.hasText(account.getPhone()) &&
-                    account.getPhone().equals(booking.getCustomer() != null ? booking.getCustomer().getPhone() : null);
-            boolean matchEmail = StringUtils.hasText(account.getEmail()) &&
-                    account.getEmail().equalsIgnoreCase(booking.getCustomer() != null ? booking.getCustomer().getEmail() : null);
-            if (!matchPhone && !matchEmail) {
-                throw new IllegalArgumentException("Bạn không có quyền truy cập thông tin đơn đặt phòng này");
-            }
+        // Ownership is strictly bound to Customer.account.accountId; missing and foreign bookings return identical NOT_FOUND.
+        if (customerId == null
+                || booking == null
+                || booking.getCustomer() == null
+                || !customerId.equals(booking.getCustomer().getCustomerId())) {
+            throw new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode);
         }
 
         return buildDetailResponse(booking);
@@ -125,19 +124,13 @@ public class CustomerHistoryServiceImpl implements CustomerHistoryService {
         return buildDetailResponse(booking);
     }
 
-    private Integer resolveCustomerId(Account account) {
-        Optional<Customer> byAcc = customerRepository.findByAccount_AccountId(account.getAccountId());
-        if (byAcc.isPresent()) return byAcc.get().getCustomerId();
-
-        if (StringUtils.hasText(account.getEmail())) {
-            Optional<Customer> custOpt = customerRepository.findByEmail(account.getEmail());
-            if (custOpt.isPresent()) return custOpt.get().getCustomerId();
+    private Integer resolveOwnedCustomerId(Account account) {
+        if (account == null || account.getAccountId() == null) {
+            return null;
         }
-        if (StringUtils.hasText(account.getPhone())) {
-            Optional<Customer> custOpt = customerRepository.findByPhone(account.getPhone());
-            if (custOpt.isPresent()) return custOpt.get().getCustomerId();
-        }
-        return account.getAccountId();
+        return customerRepository.findByAccount_AccountId(account.getAccountId())
+                .map(Customer::getCustomerId)
+                .orElse(null);
     }
 
     private CustomerBookingHistorySummaryResponse mapToSummaryResponse(Booking booking) {
