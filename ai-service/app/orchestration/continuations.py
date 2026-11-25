@@ -1,0 +1,98 @@
+"""In-memory single-use continuation store for D2 broker tool_calls/resume cycles."""
+
+from collections.abc import Callable
+from dataclasses import dataclass
+from time import monotonic
+from uuid import UUID, uuid4
+
+from app.providers.contracts import DependencyError
+
+MAX_CONTINUATIONS = 1024
+MAX_TTL_SECONDS = 120.0
+
+
+class ContinuationNotFoundError(Exception):
+    """Raised when a continuation ID is unknown, expired, replayed, or mismatched."""
+
+
+@dataclass(frozen=True)
+class PendingCall:
+    call_id: UUID
+    name: str
+
+
+@dataclass(frozen=True)
+class ContinuationEntry:
+    continuation_id: UUID
+    conversation_id: UUID
+    turn_id: UUID
+    pending_calls: tuple[PendingCall, ...]
+    expires_at: float
+
+
+class ContinuationStore:
+    """Bounded, TTL-enforced, atomic single-use continuation registry."""
+
+    def __init__(
+        self,
+        *,
+        clock: Callable[[], float] = monotonic,
+        max_entries: int = MAX_CONTINUATIONS,
+        max_ttl_s: float = MAX_TTL_SECONDS,
+    ):
+        self._clock = clock
+        self._max_entries = max_entries
+        self._max_ttl_s = max_ttl_s
+        self._entries: dict[UUID, ContinuationEntry] = {}
+
+    def _prune(self, now: float) -> None:
+        expired = [cid for cid, entry in self._entries.items() if entry.expires_at <= now]
+        for cid in expired:
+            del self._entries[cid]
+
+    def create(
+        self,
+        *,
+        conversation_id: UUID,
+        turn_id: UUID,
+        pending_calls: list[PendingCall],
+        remaining_ms: int,
+    ) -> UUID:
+        if not pending_calls or remaining_ms <= 0:
+            raise DependencyError("DEADLINE_EXCEEDED")
+        now = self._clock()
+        self._prune(now)
+        if len(self._entries) >= self._max_entries:
+            raise DependencyError("DEPENDENCY_UNAVAILABLE")
+        ttl = min(self._max_ttl_s, remaining_ms / 1000.0)
+        continuation_id = uuid4()
+        self._entries[continuation_id] = ContinuationEntry(
+            continuation_id=continuation_id,
+            conversation_id=conversation_id,
+            turn_id=turn_id,
+            pending_calls=tuple(pending_calls),
+            expires_at=now + ttl,
+        )
+        return continuation_id
+
+    def consume(
+        self,
+        *,
+        continuation_id: UUID,
+        conversation_id: UUID,
+        turn_id: UUID,
+        tool_results: list,
+    ) -> ContinuationEntry:
+        now = self._clock()
+        self._prune(now)
+        # Atomic single-use pop: any replay or mismatched caller invalidates this continuation.
+        entry = self._entries.pop(continuation_id, None)
+        if entry is None or entry.expires_at <= now:
+            raise ContinuationNotFoundError()
+        if entry.conversation_id != conversation_id or entry.turn_id != turn_id:
+            raise ContinuationNotFoundError()
+        expected = {(call.call_id, call.name) for call in entry.pending_calls}
+        supplied = {(result.callId, result.name) for result in tool_results}
+        if len(tool_results) != len(entry.pending_calls) or expected != supplied:
+            raise ContinuationNotFoundError()
+        return entry

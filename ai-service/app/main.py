@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse
 from app.api.boundary import FoundationBoundary, error_response
 from app.diagnostics import Operation, Phase, context, step
 from app.indexing import IndexingError
+from app.orchestration.continuations import ContinuationNotFoundError
 from app.orchestration.faq import Faq
 from app.orchestration.verification.artifacts import load_verification_gate
 from app.providers.contracts import DependencyError, TurnBudget
@@ -175,8 +176,19 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
         if payload.requestId != request.state.request_id:
             return error_response(request.state.request_id, 422, "VALIDATION_ERROR")
         if isinstance(payload, ResumeTurn):
-            # No continuations can exist until orchestration is implemented.
-            return error_response(request.state.request_id, 409, "CONTINUATION_NOT_FOUND")
+            if state["faq"] is None:
+                return error_response(request.state.request_id, 409, "CONTINUATION_NOT_FOUND")
+            try:
+                return await state["faq"].resume(payload)
+            except ContinuationNotFoundError:
+                return error_response(request.state.request_id, 409, "CONTINUATION_NOT_FOUND")
+            except TimeoutError:
+                return error_response(
+                    request.state.request_id, 504, "DEADLINE_EXCEEDED", retryable=True
+                )
+            except DependencyError as error:
+                status = {"DEADLINE_EXCEEDED": 504, "AI_PROTOCOL_ERROR": 502}.get(error.code, 503)
+                return error_response(request.state.request_id, status, error.code, retryable=True)
         if state["faq"] is not None and not dependency_latched():
             try:
                 return await state["faq"].run(payload)
