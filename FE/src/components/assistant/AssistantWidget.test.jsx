@@ -7,7 +7,7 @@ import AssistantWidget, { AssistantChat } from './AssistantWidget';
 import { apiCall } from '../../services/api';
 
 vi.mock('../../services/api', () => ({ apiCall: vi.fn(), waitForAssistantSessionReset: () => Promise.resolve() }));
-const auth = vi.hoisted(() => ({ token: '' }));
+const auth = vi.hoisted(() => ({ token: '', isAuthenticated: false, hasRole: () => false }));
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
 
 const answer = { success: true, data: { status: 'answered', answer: 'Wi-Fi giả lập tại sảnh.',
@@ -59,6 +59,40 @@ describe('FAQ widget', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Dịch vụ tạm thời');
   });
 
+  it('omits floating callout text and adapts the 4th quick pill by customer login state', async () => {
+    vi.stubEnv('VITE_ASSISTANT_ENABLED', 'true');
+    auth.token = '';
+    auth.isAuthenticated = false;
+    auth.hasRole = () => false;
+    const user = userEvent.setup();
+    const view = render(<MemoryRouter><AssistantWidget /></MemoryRouter>);
+
+    expect(screen.queryByText('Hỏi đáp về khách sạn')).not.toBeInTheDocument();
+    await open(user);
+    expect(screen.getByRole('button', { name: 'Quy định nhận / trả phòng?', exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).not.toBeInTheDocument();
+
+    auth.token = 'customer-jwt';
+    auth.isAuthenticated = true;
+    auth.hasRole = roles => roles.includes('CUSTOMER');
+    view.rerender(<MemoryRouter><AssistantWidget /></MemoryRouter>);
+    await open(user);
+    expect(screen.getByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Quy định nhận / trả phòng?', exact: true })).not.toBeInTheDocument();
+
+    auth.token = 'staff-jwt';
+    auth.isAuthenticated = true;
+    auth.hasRole = () => false;
+    view.rerender(<MemoryRouter><AssistantWidget /></MemoryRouter>);
+    await open(user);
+    expect(screen.getByRole('button', { name: 'Quy định nhận / trả phòng?', exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).not.toBeInTheDocument();
+
+    auth.token = '';
+    auth.isAuthenticated = false;
+    auth.hasRole = () => false;
+  });
+
   it('handles D3 requires_login and renders personal booking cards cleanly', async () => {
     apiCall
       .mockResolvedValueOnce({
@@ -103,14 +137,18 @@ describe('FAQ widget', () => {
         },
       });
     const user = userEvent.setup();
-    render(<MemoryRouter><AssistantChat /></MemoryRouter>);
+    const guestView = render(<MemoryRouter><AssistantChat /></MemoryRouter>);
+    await open(user);
+    expect(screen.queryByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Câu hỏi'), 'Xem danh sách đơn đặt phòng của tôi');
+    await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
+    expect(await screen.findByRole('link', { name: 'Đăng nhập tài khoản' })).toHaveAttribute('href', '/login');
+    guestView.unmount();
+
+    render(<MemoryRouter><AssistantChat isCustomer /></MemoryRouter>);
     await open(user);
     await user.click(screen.getByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true }));
     expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Xem danh sách đơn đặt phòng của tôi');
-    await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
-    expect(await screen.findByRole('link', { name: 'Đăng nhập tài khoản' })).toHaveAttribute('href', '/login');
-
-    await user.type(screen.getByLabelText('Câu hỏi'), 'Chi tiết đơn BK-CUSTOMER1-DEMO');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText('BK-CUSTOMER1-DEMO')).toBeInTheDocument();
     expect(screen.getByText('Đang lưu trú')).toBeInTheDocument();

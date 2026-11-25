@@ -19,7 +19,7 @@ const ACTION_ROUTES = {
   open_login: '/login',
 };
 
-const QUICK_PILLS = [
+const PUBLIC_QUICK_PILLS = [
   {
     id: 'rooms',
     label: 'Giá phòng hiện tại?',
@@ -35,16 +35,24 @@ const QUICK_PILLS = [
   {
     id: 'policy',
     label: 'Chính sách đặt phòng?',
-    prompt: 'Chính sách đặt cọc và hủy phòng thế nào?',
+    prompt: 'Chính sách hủy đặt phòng hoàn cọc thế nào?',
     icon: 'doc',
   },
-  {
-    id: 'bookings',
-    label: 'Đơn đặt phòng của tôi',
-    prompt: 'Xem danh sách đơn đặt phòng của tôi',
-    icon: 'booking',
-  },
 ];
+
+const GUEST_FOURTH_PILL = {
+  id: 'checkin',
+  label: 'Quy định nhận / trả phòng?',
+  prompt: 'Giờ nhận phòng tiêu chuẩn và phí nhận phòng sớm tính thế nào?',
+  icon: 'clock',
+};
+
+const CUSTOMER_FOURTH_PILL = {
+  id: 'bookings',
+  label: 'Đơn đặt phòng của tôi',
+  prompt: 'Xem danh sách đơn đặt phòng của tôi',
+  icon: 'booking',
+};
 
 const BOOKING_STATUS_LABELS = {
   PENDING_DEPOSIT: 'Chờ cọc',
@@ -139,6 +147,14 @@ function PillIcon({ name }) {
       <svg className="assistant-pill-icon icon-doc" viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true">
         <path d="M6 2.8H11.5L15 6.3V16.2C15 16.8 14.5 17.2 14 17.2H6C5.4 17.2 5 16.8 5 16.2V3.8C5 3.2 5.4 2.8 6 2.8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
         <path d="M7.5 10H12.5M7.5 13H11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (name === 'clock') {
+    return (
+      <svg className="assistant-pill-icon icon-clock" viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true">
+        <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M10 6.2V10L12.6 11.6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
@@ -262,14 +278,16 @@ function AssistantCard({ card }) {
 }
 
 export default function AssistantWidget() {
-  const { token } = useAuth();
+  const { token, isAuthenticated, hasRole } = useAuth();
   const { pathname } = useLocation();
   if (import.meta.env.VITE_ASSISTANT_ENABLED !== 'true') return null;
   if (pathname.startsWith('/admin') || pathname.startsWith('/staff')) return null;
-  return <AssistantChat key={token || 'guest'} routeKey={pathname} />;
+  const isCustomer = Boolean(isAuthenticated ?? token) && (typeof hasRole === 'function' ? hasRole(['CUSTOMER']) : false);
+  return <AssistantChat key={token || 'guest'} routeKey={pathname} isCustomer={isCustomer} />;
 }
 
-export function AssistantChat({ routeKey = '' }) {
+export function AssistantChat({ routeKey = '', isCustomer = false }) {
+  const quickPills = [...PUBLIC_QUICK_PILLS, isCustomer ? CUSTOMER_FOURTH_PILL : GUEST_FOURTH_PILL];
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
@@ -422,7 +440,7 @@ export function AssistantChat({ routeKey = '' }) {
                   </div>
                 </div>
                 <div className="assistant-pill-list">
-                  {QUICK_PILLS.map(item => (
+                  {quickPills.map(item => (
                     <button
                       key={item.id}
                       type="button"
@@ -522,28 +540,17 @@ export function AssistantChat({ routeKey = '' }) {
         </section>
       )}
 
-      <div className="assistant-launcher-wrap">
-        {!open && (
-          <div className="assistant-callout" aria-hidden="true">
-            <span>Hỏi đáp về khách sạn</span>
-            <svg className="assistant-callout-arrow" viewBox="0 0 32 22" width="28" height="19" fill="none">
-              <path d="M5 3C7 12 15 17 26 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <path d="M21.5 13.5L26.5 17L21.5 20.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-        )}
-        <button
-          type="button"
-          className="assistant-launcher"
-          ref={launcher}
-          aria-label="Trợ lý"
-          aria-controls="assistant-panel"
-          aria-expanded={open}
-          onClick={() => (open ? close() : setOpen(true))}
-        >
-          <LauncherBubbleIcon />
-        </button>
-      </div>
+      <button
+        type="button"
+        className="assistant-launcher"
+        ref={launcher}
+        aria-label="Trợ lý"
+        aria-controls="assistant-panel"
+        aria-expanded={open}
+        onClick={() => (open ? close() : setOpen(true))}
+      >
+        <LauncherBubbleIcon />
+      </button>
     </aside>
   );
 }
