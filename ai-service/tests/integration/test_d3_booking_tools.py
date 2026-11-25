@@ -248,6 +248,8 @@ def test_get_my_booking_financials_not_found_and_validation(d3_index):
         second = client.post("/internal/assistant/turn", json=resume, headers=_headers())
         assert second.status_code == 200
         answer = second.json()["final"]["answer"]
+        assert "Đang lưu trú" in answer
+        assert "CHECKED_IN" not in answer
         assert "450.000 VND" in answer
         assert "1.650.000 VND" in answer
         assert "1.200.000 VND" in answer

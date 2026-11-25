@@ -98,7 +98,7 @@ public class AssistantOrchestrator {
                 ? client.exchange(
                         startPayload, requestId, allowedSet,
                         remainingToolCalls, remainingBrokerBatches,
-                        true, false, evidenceRegistry
+                        true, true, false, evidenceRegistry
                 )
                 : new AssistantClient.TurnStep("final", null, List.of(), client.turn(startPayload, requestId),
                         new AssistantClient.Usage(0, 0, 0, 0));
@@ -159,7 +159,7 @@ public class AssistantOrchestrator {
             step = client.exchange(
                     resumePayload, requestId, allowedSet,
                     remainingToolCalls, remainingBrokerBatches,
-                    remainingBrokerBatches > 0, hasBusinessLedger, evidenceRegistry
+                    d2ToolsActive, remainingBrokerBatches > 0, hasBusinessLedger, evidenceRegistry
             );
 
             remainingToolCalls -= step.usage().toolCallsUsed();

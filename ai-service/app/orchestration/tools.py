@@ -301,10 +301,7 @@ def _render_rooms(data: RoomList) -> tuple[str, str, list[dict]]:
             f"Tiền phòng dự kiến {format_vnd(item.totalRoomCharge)} · "
             f"Cọc dự kiến {item.depositPercentage}% ({format_vnd(item.estimatedDeposit)})."
         )
-    lines.append(
-        "Lưu ý: Đây là giá phòng dự kiến (room_charge_estimate), chưa bao gồm thuế VAT "
-        "và các dịch vụ phát sinh."
-    )
+    lines.append("Lưu ý: Đây là giá phòng dự kiến, chưa bao gồm thuế VAT và các dịch vụ phát sinh.")
     if data.hasMore:
         lines.append(
             "Vẫn còn thêm phòng trống phù hợp ngoài danh sách rút gọn này; bạn có thể thu hẹp "
@@ -363,7 +360,7 @@ def _render_booking_detail(data: BookingDetail) -> tuple[str, str, list[dict]]:
     room_part = f" · Hạng phòng: {data.roomTypeName}" if data.roomTypeName else ""
     lines = [
         f"Thông tin đơn đặt phòng {data.bookingCode}:",
-        f"- Trạng thái: {status_label} ({data.bookingStatus}){room_part}.",
+        f"- Trạng thái: {status_label}{room_part}.",
         f"- Kỳ lưu trú: {data.checkInDate.isoformat()} → {data.checkOutDate.isoformat()} "
         f"({data.nights} đêm, {data.guestCount} khách).",
     ]

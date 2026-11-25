@@ -183,7 +183,8 @@ def test_search_rooms_start_resume_and_replay_protection(d2_index):
         assert "1.500.000 VND" in answer
         assert "3.000.000 VND" in answer
         assert "900.000 VND" in answer
-        assert "room_charge_estimate" in answer
+        assert "giá phòng dự kiến" in answer.lower()
+        assert "room_charge_estimate" not in answer
         assert "còn thêm phòng trống" in answer.lower()
         # Deterministic resume uses 0 additional LLM calls.
         assert len(provider.calls) == 1
