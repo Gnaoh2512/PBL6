@@ -9,6 +9,5 @@ import java.util.List;
 @Repository
 public interface EquipmentRepository extends JpaRepository<Equipment, Integer> {
     List<Equipment> findByRoom_RoomId(Integer roomId);
-    List<Equipment> findByRoomIsNull();
     List<Equipment> findByStatus(String status);
 }

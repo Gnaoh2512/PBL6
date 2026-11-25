@@ -7,7 +7,6 @@ import com.example.pbl6.dto.auth.RegisterRequest;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.Customer;
 import com.example.pbl6.entity.CustomerLoyalty;
-import com.example.pbl6.entity.LoyaltyTier;
 import com.example.pbl6.entity.Role;
 import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.AccountRepository;

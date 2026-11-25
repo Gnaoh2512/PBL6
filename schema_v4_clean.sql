@@ -1,6 +1,8 @@
 -- =====================================================================
--- PBL6 HOTEL MANAGEMENT - CLEAN INSTALL SCHEMA (V4 FINAL - NO FREE_NIGHT)
--- Integrates Room Cleaning Requests, Shift Schedules, Loyalty V3 & Triggers.
+-- PBL6 HOTEL MANAGEMENT - CLEAN INSTALL SCHEMA (V4 FINAL - PRUNED)
+-- Same as schema_v4_clean.sql minus every table/column the application no longer uses,
+-- plus the two columns the code needs that v4 was missing (shift.description,
+-- maintenance_request.equipment_id). See SCHEMA_CHANGES.md for the full list.
 --
 -- DESTRUCTIVE: DROP DATABASE permanently deletes existing database.
 -- Requires MySQL 8.0.16+ (enforced CHECK constraints).
@@ -37,7 +39,8 @@ CREATE TABLE IF NOT EXISTS shift (
     shift_id INT AUTO_INCREMENT PRIMARY KEY,
     shift_name VARCHAR(50) NOT NULL COMMENT 'MORNING | AFTERNOON | NIGHT | FULL_DAY',
     start_time TIME NOT NULL,
-    end_time TIME NOT NULL
+    end_time TIME NOT NULL,
+    description TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS loyalty_tier (
@@ -145,8 +148,7 @@ CREATE TABLE IF NOT EXISTS customer_loyalty (
 CREATE TABLE IF NOT EXISTS tier_benefit (
     tier_benefit_id INT AUTO_INCREMENT PRIMARY KEY,
     tier_id INT NOT NULL,
-    service_id INT NULL COMMENT 'nullable, for FREE_SERVICE',
-    room_type_id INT NULL,
+    service_id INT NULL COMMENT 'FREE_SERVICE only',
     benefit_type VARCHAR(50) NOT NULL COMMENT 'ROOM_DISCOUNT | FREE_SERVICE',
     benefit_name VARCHAR(150) NOT NULL,
     discount_percent DECIMAL(5, 2) NULL COMMENT 'for ROOM_DISCOUNT',
@@ -154,12 +156,9 @@ CREATE TABLE IF NOT EXISTS tier_benefit (
     period_type VARCHAR(50) NULL COMMENT 'DAY | MONTH | YEAR (calendar quota period)',
     is_active BOOLEAN DEFAULT TRUE,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (tier_id) REFERENCES loyalty_tier(tier_id) ON DELETE CASCADE,
     FOREIGN KEY (service_id) REFERENCES service(service_id) ON DELETE SET NULL,
-    CONSTRAINT fk_tier_benefit_room_type FOREIGN KEY (room_type_id) REFERENCES room_type(room_type_id) ON DELETE SET NULL,
 
     INDEX idx_tb_type_service (benefit_type, service_id),
 
@@ -243,6 +242,7 @@ CREATE TABLE IF NOT EXISTS booking (
 CREATE TABLE IF NOT EXISTS maintenance_request (
     request_id INT AUTO_INCREMENT PRIMARY KEY,
     room_id INT NOT NULL,
+    equipment_id INT NULL COMMENT 'nullable, null = general issue',
     reported_by INT NOT NULL COMMENT 'account',
     assigned_to INT NULL COMMENT 'account, maintenance staff',
     confirmed_by INT NULL COMMENT 'account confirming completion',
@@ -256,6 +256,7 @@ CREATE TABLE IF NOT EXISTS maintenance_request (
     completed_at DATETIME NULL,
     confirmed_at DATETIME NULL,
     FOREIGN KEY (room_id) REFERENCES room(room_id) ON DELETE RESTRICT,
+    FOREIGN KEY (equipment_id) REFERENCES equipment(equipment_id) ON DELETE SET NULL,
     FOREIGN KEY (reported_by) REFERENCES account(account_id) ON DELETE RESTRICT,
     FOREIGN KEY (assigned_to) REFERENCES account(account_id) ON DELETE SET NULL,
     FOREIGN KEY (confirmed_by) REFERENCES account(account_id) ON DELETE SET NULL
@@ -298,9 +299,7 @@ CREATE TABLE IF NOT EXISTS invoice (
     invoice_number VARCHAR(50) UNIQUE,
     booking_id INT NOT NULL,
     issued_by INT,
-    discount_approved_by INT,
     canceled_by INT,
-    applied_tier_benefit_id INT NULL COMMENT 'Tracks which tier ROOM_DISCOUNT was auto-applied',
     room_charge DECIMAL(15, 2) DEFAULT 0.00,
     service_charge DECIMAL(15, 2) DEFAULT 0.00,
     tax_amount DECIMAL(15, 2) DEFAULT 0.00,
@@ -315,10 +314,8 @@ CREATE TABLE IF NOT EXISTS invoice (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE CASCADE,
-    FOREIGN KEY (discount_approved_by) REFERENCES account(account_id) ON DELETE SET NULL,
     FOREIGN KEY (canceled_by) REFERENCES account(account_id) ON DELETE SET NULL,
-    FOREIGN KEY (issued_by) REFERENCES account(account_id) ON DELETE SET NULL,
-    FOREIGN KEY (applied_tier_benefit_id) REFERENCES tier_benefit(tier_benefit_id) ON DELETE SET NULL
+    FOREIGN KEY (issued_by) REFERENCES account(account_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS service_usage (
@@ -384,20 +381,6 @@ CREATE TABLE IF NOT EXISTS service_request (
     CONSTRAINT uq_service_request_service_usage UNIQUE (service_usage_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS voucher_redemption (
-    redemption_id INT AUTO_INCREMENT PRIMARY KEY,
-    voucher_id INT NOT NULL,
-    customer_id INT NOT NULL,
-    booking_id INT NOT NULL,
-    invoice_id INT NULL COMMENT 'nullable until invoiced',
-    discount_applied DECIMAL(15, 2) NOT NULL COMMENT 'VND',
-    redeemed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (voucher_id) REFERENCES voucher(voucher_id) ON DELETE RESTRICT,
-    FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT,
-    FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE CASCADE,
-    FOREIGN KEY (invoice_id) REFERENCES invoice(invoice_id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS loyalty_transaction (
     txn_id INT AUTO_INCREMENT PRIMARY KEY,
     customer_id INT NOT NULL,
@@ -419,11 +402,8 @@ CREATE TABLE IF NOT EXISTS benefit_redemption (
     customer_id INT NOT NULL,
     tier_benefit_id INT NOT NULL,
     booking_id INT NULL,
-    invoice_id INT NULL,
-    service_usage_id INT NULL COMMENT 'nullable, for FREE_SERVICE',
-    service_request_id INT NULL COMMENT 'exact service request redeemed with FREE_SERVICE',
-    idempotency_key VARCHAR(64) NULL,
-    approved_by INT NULL COMMENT 'account, nullable',
+    service_request_id INT NULL COMMENT 'the free service request this use created',
+    idempotency_key VARCHAR(64) NULL COMMENT 'double-click / retry guard, unique per customer',
     value_amount DECIMAL(15, 2) NOT NULL COMMENT 'VND discounted or waived',
     note TEXT,
     redeemed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -432,22 +412,14 @@ CREATE TABLE IF NOT EXISTS benefit_redemption (
     voided_at DATETIME NULL,
     voided_by INT NULL COMMENT 'account who cancelled the redemption',
     void_reason VARCHAR(255) NULL,
-    benefit_type VARCHAR(50) NULL COMMENT 'copied from tier_benefit by trigger',
-    room_discount_booking_id INT GENERATED ALWAYS AS (
-        IF(status = 'APPLIED' AND benefit_type = 'ROOM_DISCOUNT', booking_id, NULL)
-    ) VIRTUAL,
 
     FOREIGN KEY (customer_id) REFERENCES customer(customer_id) ON DELETE RESTRICT,
     FOREIGN KEY (tier_benefit_id) REFERENCES tier_benefit(tier_benefit_id) ON DELETE RESTRICT,
     FOREIGN KEY (booking_id) REFERENCES booking(booking_id) ON DELETE SET NULL,
-    FOREIGN KEY (invoice_id) REFERENCES invoice(invoice_id) ON DELETE SET NULL,
-    FOREIGN KEY (service_usage_id) REFERENCES service_usage(usage_id) ON DELETE SET NULL,
     CONSTRAINT fk_benefit_redemption_service_request FOREIGN KEY (service_request_id) REFERENCES service_request(service_request_id) ON DELETE SET NULL,
-    FOREIGN KEY (approved_by) REFERENCES account(account_id) ON DELETE SET NULL,
     CONSTRAINT fk_redemption_voided_by FOREIGN KEY (voided_by) REFERENCES account(account_id) ON DELETE SET NULL,
 
     CONSTRAINT ck_redemption_status CHECK (status IN ('APPLIED','VOIDED')),
-    CONSTRAINT uq_one_room_discount_per_booking UNIQUE (room_discount_booking_id),
     CONSTRAINT uq_benefit_redemption_service_request UNIQUE (service_request_id),
     CONSTRAINT uq_benefit_redemption_customer_idempotency UNIQUE (customer_id, idempotency_key),
 
@@ -455,6 +427,8 @@ CREATE TABLE IF NOT EXISTS benefit_redemption (
     INDEX idx_redemption_booking (booking_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Quota guard used only by trg_benefit_redemption_*: the app counts uses itself under a row lock,
+-- this table makes the database refuse an over-quota insert even if something bypasses the app.
 CREATE TABLE IF NOT EXISTS benefit_usage_counter (
     customer_id INT NOT NULL,
     tier_benefit_id INT NOT NULL,
@@ -474,7 +448,7 @@ CREATE TABLE IF NOT EXISTS benefit_usage_counter (
 
 DELIMITER $$
 
--- Loyalty Benefit Triggers (No tier inheritance, no FREE_NIGHT)
+-- Loyalty Benefit Triggers (No tier inheritance)
 DROP TRIGGER IF EXISTS trg_benefit_redemption_bi$$
 CREATE TRIGGER trg_benefit_redemption_bi BEFORE INSERT ON benefit_redemption
 FOR EACH ROW
@@ -498,7 +472,6 @@ BEGIN
       FROM tier_benefit tb
       JOIN loyalty_tier bt ON bt.tier_id = tb.tier_id
      WHERE tb.tier_benefit_id = NEW.tier_benefit_id;
-    SET NEW.benefit_type = v_type;
 
     IF NEW.status = 'APPLIED' THEN
         SELECT lt.tier_level INTO v_customer_level
@@ -650,36 +623,3 @@ BEGIN
 END$$
 
 DELIMITER ;
-
--- View Customer Benefits (No tier inheritance: bt.tier_level = ct.tier_level)
-CREATE OR REPLACE VIEW v_customer_benefit_availability AS
-SELECT
-    cl.customer_id,
-    tb.tier_benefit_id,
-    tb.benefit_type,
-    tb.benefit_name,
-    tb.discount_percent,
-    tb.service_id,
-    tb.quota,
-    tb.period_type,
-    p.period_start,
-    COALESCE(u.used, 0) AS used_in_period,
-    CASE WHEN tb.quota IS NULL THEN NULL ELSE GREATEST(tb.quota - COALESCE(u.used, 0), 0) END AS remaining,
-    CASE WHEN tb.quota IS NULL OR COALESCE(u.used, 0) < tb.quota THEN 1 ELSE 0 END AS can_use_now
-FROM customer_loyalty cl
-JOIN loyalty_tier ct ON ct.tier_id = cl.tier_id
-JOIN loyalty_tier bt ON bt.tier_level = ct.tier_level
-JOIN tier_benefit tb ON tb.tier_id = bt.tier_id AND tb.is_active = 1
-JOIN (SELECT tier_benefit_id,
-             CASE period_type
-                 WHEN 'DAY'   THEN CURDATE()
-                 WHEN 'MONTH' THEN DATE_SUB(CURDATE(), INTERVAL DAYOFMONTH(CURDATE()) - 1 DAY)
-                 WHEN 'YEAR'  THEN MAKEDATE(YEAR(CURDATE()), 1)
-                 ELSE NULL END AS period_start
-      FROM tier_benefit) p ON p.tier_benefit_id = tb.tier_benefit_id
-LEFT JOIN (SELECT customer_id, tier_benefit_id, period_start, COUNT(*) AS used
-           FROM benefit_redemption WHERE status = 'APPLIED'
-           GROUP BY customer_id, tier_benefit_id, period_start) u
-       ON u.customer_id = cl.customer_id
-      AND u.tier_benefit_id = tb.tier_benefit_id
-      AND (u.period_start <=> p.period_start);

@@ -1,4 +1,5 @@
 export interface LoyaltyProfile {
+  tierId?: number | string;
   tierCode: string;
   tierName: string;
   tierLevel?: number;
@@ -23,6 +24,10 @@ export interface LoyaltyTransaction {
 
 export interface LoyaltyBenefit {
   id?: string | number;
+  tierBenefitId: number;
+  tierId?: number | string;
+  tierCode?: string;
+  tierLevel?: number;
   benefitName: string;
   benefitType: string;
   discountPercent?: number | null;
@@ -31,4 +36,16 @@ export interface LoyaltyBenefit {
   periodType?: string | null;
   description?: string;
   tierName?: string;
+  isActive?: boolean;
+  serviceId?: number | null;
+  serviceName?: string | null;
+  roomTypeId?: number | null;
+  roomTypeName?: string | null;
+}
+
+export interface RedeemBenefitRequest {
+  tierBenefitId: number;
+  bookingCode: string;
+  idempotencyKey?: string;
+  note?: string;
 }

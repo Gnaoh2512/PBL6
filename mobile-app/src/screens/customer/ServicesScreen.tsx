@@ -25,7 +25,10 @@ import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Services'>;
 
-const formatCurrency = (amount: number) => amount.toLocaleString('vi-VN') + ' ₫';
+const formatCurrency = (amount: number) => {
+  if (amount === 0) return 'Miễn phí';
+  return amount.toLocaleString('vi-VN') + ' ₫';
+};
 
 // Icon gán cứng theo categoryName kèm một icon mặc định cho danh mục lạ
 const getCategoryIcon = (categoryName: string): keyof typeof Ionicons.glyphMap => {
@@ -34,14 +37,21 @@ const getCategoryIcon = (categoryName: string): keyof typeof Ionicons.glyphMap =
     lower.includes('ẩm thực') ||
     lower.includes('đồ uống') ||
     lower.includes('f&b') ||
-    lower.includes('ăn')
+    lower.includes('ăn') ||
+    lower.includes('food') ||
+    lower.includes('beverage')
   ) {
     return 'restaurant-outline';
   }
   if (lower.includes('giặt') || lower.includes('ủi') || lower.includes('laundry')) {
     return 'shirt-outline';
   }
-  if (lower.includes('spa') || lower.includes('massage') || lower.includes('làm đẹp')) {
+  if (
+    lower.includes('spa') ||
+    lower.includes('massage') ||
+    lower.includes('làm đẹp') ||
+    lower.includes('wellness')
+  ) {
     return 'sparkles-outline';
   }
   if (lower.includes('đưa đón') || lower.includes('xe') || lower.includes('transport')) {
@@ -141,7 +151,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
         <View style={styles.serviceInfo}>
           <Text style={styles.serviceName}>{item.serviceName}</Text>
           <Text style={styles.servicePrice}>
-            {formatCurrency(item.unitPrice)} / {item.unit}
+            {item.unitPrice === 0 ? 'Miễn phí' : `${formatCurrency(item.unitPrice)} / ${item.unit}`}
           </Text>
         </View>
         <TouchableOpacity
@@ -244,7 +254,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
                     <Text style={styles.modalServiceName}>{selectedService.serviceName}</Text>
                     <Text style={styles.modalCategoryName}>{selectedService.categoryName}</Text>
                     <Text style={styles.modalServicePrice}>
-                      Đơn giá: {formatCurrency(selectedService.unitPrice)} / {selectedService.unit}
+                      Đơn giá: {selectedService.unitPrice === 0 ? 'Miễn phí' : `${formatCurrency(selectedService.unitPrice)} / ${selectedService.unit}`}
                     </Text>
                   </View>
 

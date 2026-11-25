@@ -46,8 +46,6 @@ public class ServiceRequest {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_usage_id")
-    @ToString.Exclude
-    @EqualsAndHashCode.Exclude
     private ServiceUsage serviceUsage;
 
     @Builder.Default

@@ -35,6 +35,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CustomerBookingServiceImpl implements CustomerBookingService {
 
+    private final LoyaltyBenefitSupport loyaltyBenefitSupport;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
     private final RoomRepository roomRepository;
@@ -434,31 +435,6 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
         return overdueBookings.size();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<BookingDetailResponse> getMyBookings(String currentUsername) {
-        Account account = accountRepository.findByUsername(currentUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + currentUsername));
-
-        List<Booking> bookings;
-        if (StringUtils.hasText(account.getEmail())) {
-            Optional<Customer> custOpt = customerRepository.findByEmail(account.getEmail());
-            if (custOpt.isPresent()) {
-                bookings = bookingRepository.findByCustomer_CustomerId(custOpt.get().getCustomerId());
-            } else {
-                bookings = bookingRepository.findByCustomer_CustomerId(account.getAccountId());
-            }
-        } else {
-            bookings = bookingRepository.findByCustomer_CustomerId(account.getAccountId());
-        }
-
-        return bookings.stream().map(b -> {
-            List<BookingRoom> brs = bookingRoomRepository.findByBooking_BookingId(b.getBookingId());
-            BookingRoom br = brs.isEmpty() ? null : brs.get(0);
-            return mapToDetailResponse(b, br, null);
-        }).toList();
-    }
-
     // ==========================================
     // LOGIC DÙNG CHUNG KHI TIỀN VỀ (WEBHOOK HOẶC DUYỆT TAY)
     // ==========================================
@@ -721,12 +697,12 @@ public class CustomerBookingServiceImpl implements CustomerBookingService {
                         .status(u.getStatus())
                         .usedAt(u.getUsedAt())
                         .build())
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(),
+                        billLines -> loyaltyBenefitSupport.withBillLines(billLines, booking.getBookingId())));
 
         List<ServiceRequestResponse> serviceRequests = serviceRequestRepository.findByBooking_BookingId(booking.getBookingId())
                 .stream()
-                .map(ServiceRequestResponse::fromEntity)
-                .collect(Collectors.toList());
+                .collect(Collectors.collectingAndThen(Collectors.toList(), loyaltyBenefitSupport::toResponses));
 
         return BookingDetailResponse.builder()
                 .bookingId(booking.getBookingId())

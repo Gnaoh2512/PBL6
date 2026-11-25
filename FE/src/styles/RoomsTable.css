@@ -1,0 +1,33 @@
+/* Room tables (admin + staff): whole row opens the room details */
+.rooms-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.rooms-row:hover {
+  background: rgba(41, 108, 122, 0.03);
+}
+.rooms-row:focus-visible {
+  outline: 2px solid var(--hc-primary);
+  outline-offset: -2px;
+}
+.rooms-row > td {
+  vertical-align: middle;
+}
+.rooms-row .room-number {
+  color: var(--hc-primary);
+  font-weight: 700;
+}
+
+/* action buttons: sized by their content, spaced by the flex parent */
+.room-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.room-actions > .hc-btn {
+  flex: 0 0 auto;
+  width: fit-content;
+  white-space: nowrap;
+}

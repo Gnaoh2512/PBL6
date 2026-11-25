@@ -11,5 +11,4 @@ public interface RoomCleaningRequestRepository extends JpaRepository<RoomCleanin
     List<RoomCleaningRequest> findByRoom_RoomId(Integer roomId);
     List<RoomCleaningRequest> findByStatus(String status);
     List<RoomCleaningRequest> findByPriority(String priority);
-    List<RoomCleaningRequest> findByAssignedTo_AccountId(Integer accountId);
 }

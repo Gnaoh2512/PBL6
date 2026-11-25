@@ -5,22 +5,21 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
 
 // Public Pages
-import HomePage from "./pages/HomePage";
-import BookingPage from "./pages/BookingPage";
-import ServicesPage from "./pages/ServicesPage";
-import GuestBookingsPage from "./pages/HistoryPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import GuestLayout from "./pages/GuestLayout";
-import GuestDashboardPage from "./pages/GuestDashboardPage";
-import GuestLoyaltyPage from "./pages/GuestLoyaltyPage";
-import PortalOverviewPage from "./pages/PortalOverviewPage";
+import HomePage from "./pages/public/HomePage";
+import BookingPage from "./pages/public/BookingPage";
+import ServicesPage from "./pages/public/ServicesPage";
+import GuestBookingsPage from "./pages/public/HistoryPage";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import GuestLayout from "./pages/guest/GuestLayout";
+import GuestDashboardPage from "./pages/guest/GuestDashboardPage";
+import GuestLoyaltyPage from "./pages/guest/GuestLoyaltyPage";
+import PortalOverviewPage from "./pages/portal/PortalOverviewPage";
 import StaffBookingsPage from "./pages/staff/StaffBookingsPage";
 import StaffRequestsPage from "./pages/staff/StaffRequestsPage";
 import StaffMaintenancePage from "./pages/staff/StaffMaintenancePage";
-import ProfilePage from "./pages/ProfilePage";
-import "./pages/operations-redesign.css";
-import "./pages/commerce-redesign.css";
+import ProfilePage from "./pages/guest/ProfilePage";
+import "./styles/redesign.css";
 
 // Staff Section
 import StaffLayout from "./pages/staff/StaffLayout";
@@ -197,6 +196,14 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={["MAINTENANCE", "HOUSEKEEPING", "RECEPTIONIST", "MANAGER", "ADMIN"]}>
                     <StaffMaintenancePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="equipment"
+                element={
+                  <ProtectedRoute allowedRoles={["RECEPTIONIST", "MAINTENANCE"]}>
+                    <AdminEquipmentPage />
                   </ProtectedRoute>
                 }
               />

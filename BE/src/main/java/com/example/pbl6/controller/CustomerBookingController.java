@@ -1,16 +1,9 @@
 package com.example.pbl6.controller;
 
 import com.example.pbl6.common.ApiResponse;
-import com.example.pbl6.dto.billing.CancelBookingRequest;
-import com.example.pbl6.dto.billing.CancellationRefundResponse;
-import com.example.pbl6.dto.booking.BookingDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
-import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
-import com.example.pbl6.service.CustomerBillingService;
-import com.example.pbl6.service.CustomerBookingService;
 import com.example.pbl6.service.CustomerHistoryService;
-import com.example.pbl6.service.ServiceRequestService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,22 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomerBookingController {
 
-    private final CustomerBookingService customerBookingService;
     private final CustomerHistoryService customerHistoryService;
-    private final CustomerBillingService customerBillingService;
-    private final ServiceRequestService serviceRequestService;
-
-    /**
-     * Khách hàng đã đăng nhập xem danh sách các đơn đặt phòng của mình
-     */
-    @GetMapping("/my-bookings")
-    public ResponseEntity<ApiResponse<List<BookingDetailResponse>>> getMyBookings(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(ApiResponse.error("Vui lòng đăng nhập để xem lịch sử đặt phòng"));
-        }
-        List<BookingDetailResponse> bookings = customerBookingService.getMyBookings(authentication.getName());
-        return ResponseEntity.ok(ApiResponse.ok(bookings));
-    }
 
     /**
      * Khách hàng xem danh sách lịch sử lưu trú & đặt phòng (hỗ trợ lọc status=CONFIRMED, CHECKED_IN, CHECKED_OUT, CANCELED)
@@ -70,44 +48,4 @@ public class CustomerBookingController {
         return ResponseEntity.ok(ApiResponse.ok("Lấy chi tiết đơn lưu trú thành công", detail));
     }
 
-    /**
-     * Lịch sử Dịch vụ theo Booking (Guest Portal):
-     * Bổ sung API lấy danh sách dịch vụ chi tiết gắn liền với một lượt đặt phòng cụ thể (bookingId hoặc bookingCode)
-     */
-    @GetMapping({"/{bookingIdentifier}/services", "/{bookingIdentifier}/service-requests"})
-    public ResponseEntity<ApiResponse<List<ServiceRequestResponse>>> getBookingServiceHistory(
-            @PathVariable String bookingIdentifier
-    ) {
-        List<ServiceRequestResponse> list;
-        try {
-            Integer bookingId = Integer.parseInt(bookingIdentifier.trim());
-            list = serviceRequestService.getRequestsByBookingId(bookingId);
-        } catch (NumberFormatException e) {
-            list = serviceRequestService.getRequestsByBookingCode(bookingIdentifier.trim());
-        }
-        return ResponseEntity.ok(ApiResponse.ok("Lấy danh sách dịch vụ theo lượt đặt phòng thành công", list));
-    }
-
-    /**
-     * Khách hàng chủ động yêu cầu hủy đặt phòng với các chính sách xử lý cọc linh hoạt:
-     * - CASH_REFUND: Hoàn tiền mặt/ngân hàng theo thời gian (>=3 ngày: 100%, 1-2 ngày: 50%, 0 ngày: 0%)
-     * - CREDIT_VOUCHER: Bảo lưu 100% cọc thành Voucher nghỉ dưỡng hạn 6 tháng cho lần đặt phòng kế tiếp
-     * - LOYALTY_POINTS: Quy đổi 100% cọc sang Điểm thưởng Coastal Bay Club cộng trực tiếp vào ví hội viên
-     */
-    @PostMapping("/{bookingCode}/cancel")
-    public ResponseEntity<ApiResponse<CancellationRefundResponse>> cancelMyBooking(
-            @PathVariable String bookingCode,
-            @RequestBody(required = false) CancelBookingRequest request,
-            Authentication authentication
-    ) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body(ApiResponse.error("Vui lòng đăng nhập để thực hiện hủy đặt phòng"));
-        }
-        if (request == null) {
-            request = CancelBookingRequest.builder().build();
-        }
-        CancellationRefundResponse response = customerBillingService.cancelWithFlexibleOptions(
-                bookingCode, request, authentication.getName());
-        return ResponseEntity.ok(ApiResponse.ok(response.getMessage(), response));
-    }
 }

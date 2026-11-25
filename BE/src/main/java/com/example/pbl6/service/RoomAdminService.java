@@ -2,6 +2,7 @@ package com.example.pbl6.service;
 
 import com.example.pbl6.dto.adminroom.RoomRequest;
 import com.example.pbl6.dto.adminroom.RoomTypeRequest;
+import com.example.pbl6.dto.booking.BookingDetailResponse;
 import com.example.pbl6.entity.Room;
 import com.example.pbl6.entity.RoomType;
 
@@ -12,4 +13,5 @@ public interface RoomAdminService {
     Room updateRoom(Integer id, RoomRequest request);
     Room updateRoomStatus(Integer id, String status);
     java.util.List<Room> getAllRooms();
+    java.util.List<BookingDetailResponse> getRoomBookings(Integer roomId);
 }

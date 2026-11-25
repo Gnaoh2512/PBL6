@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { apiCall } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
+import { useAuth } from "../../contexts/AuthContext";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
+import SearchInput from "../../components/common/SearchInput";
+import Paginated from "../../components/common/TablePagination";
 
 const STATUS_LABELS = {
   WORKING: "Đang hoạt động",
@@ -66,6 +69,11 @@ const EMPTY_FORM = {
 
 export default function AdminEquipmentPage() {
   const { addToast } = useToast();
+  const { hasRole } = useAuth();
+  // Manager/admin own the asset register; maintenance can edit details; receptionist can only read + change status
+  const canCreate = hasRole(["ADMIN", "MANAGER"]);
+  const canEdit = hasRole(["ADMIN", "MANAGER", "MAINTENANCE"]);
+  const canRetire = hasRole(["ADMIN", "MANAGER"]);
   const [equipment, setEquipment] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +116,7 @@ export default function AdminEquipmentPage() {
   };
 
   const openEdit = (item) => {
+    if (!canEdit) return;
     setEditTarget(item);
     setForm({
       roomId: item.roomId ? String(item.roomId) : "",
@@ -189,26 +198,29 @@ export default function AdminEquipmentPage() {
     ...rooms.map((r) => ({ value: String(r.roomId), label: `Phòng ${r.roomNumber}${r.floor ? ` · Tầng ${r.floor}` : ""}` })),
   ];
 
-  const statusFormOptions = Object.entries(STATUS_LABELS).map(([v, label]) => ({ value: v, label }));
+  const statusFormOptions = Object.entries(STATUS_LABELS)
+    .filter(([v]) => canRetire || v !== "RETIRED")
+    .map(([v, label]) => ({ value: v, label }));
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Thiết Bị &amp; Tài Sản</h2>
           <p>Theo dõi và quản lý tình trạng cơ sở vật chất, thiết bị trong khách sạn.</p>
         </div>
-        <button type="button" className="hc-btn hc-btn-primary" onClick={openCreate}>
-          <i className="bi bi-plus-lg"></i> Thêm Thiết Bị
-        </button>
+        {canCreate && (
+          <button type="button" className="hc-btn hc-btn-primary" onClick={openCreate}>
+            <i className="bi bi-plus-lg"></i> Thêm Thiết Bị
+          </button>
+        )}
       </div>
 
       <div className="hc-card">
-        <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
-          <input
+        <div className="hc-card-body u-row-ruled m-fields">
+          <SearchInput
             type="search"
-            className="hc-input"
-            style={{ flex: "1 1 240px" }}
+            wrapClassName="u-flex-240"
             placeholder="Tìm theo tên, số serial..."
             aria-label="Tìm thiết bị"
             value={search}
@@ -254,57 +266,73 @@ export default function AdminEquipmentPage() {
             <p>Không tìm thấy thiết bị nào phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Tên thiết bị</th>
-                  <th>Số serial</th>
-                  <th>Vị trí</th>
-                  <th>Trạng thái</th>
-                  <th>Ghi chú</th>
-                  <th style={{ textAlign: "right" }}>Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => (
-                  <tr key={item.equipmentId}>
-                    <td>
-                      <strong>{item.equipmentName}</strong>
-                    </td>
-                    <td>{item.serialNumber || "—"}</td>
-                    <td>{getRoomLabel(item)}</td>
-                    <td>
-                      <span className={`hc-badge ${STATUS_COLORS[item.status] || "hc-badge-muted"}`}>{STATUS_LABELS[item.status] || item.status}</span>
-                    </td>
-                    <td style={{ maxWidth: 200, fontSize: "13px", color: "var(--hc-text-secondary)" }}>{item.note || "—"}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "inline-flex", gap: "6px", alignItems: "center" }}>
-                        <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => openEdit(item)} title="Chỉnh sửa thông tin">
-                          <i className="bi bi-pencil"></i> Sửa
-                        </button>
-                        {item.status !== "WORKING" && (
-                          <button type="button" className="hc-btn hc-btn-success hc-btn-sm" onClick={() => handleStatusChange(item, "WORKING")} title="Đánh dấu hoạt động">
-                            Hoạt động
-                          </button>
-                        )}
-                        {item.status !== "UNDER_REPAIR" && item.status !== "RETIRED" && (
-                          <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => handleStatusChange(item, "UNDER_REPAIR")} title="Đưa vào sửa chữa">
-                            Sửa chữa
-                          </button>
-                        )}
-                        {item.status !== "BROKEN" && item.status !== "RETIRED" && (
-                          <button type="button" className="hc-btn hc-btn-ghost hc-btn-sm" style={{ color: "var(--hc-error)" }} onClick={() => handleStatusChange(item, "BROKEN")} title="Đánh dấu hỏng">
-                            Hỏng
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Paginated items={filtered}>
+            {(pageRows, pager) => (
+              <>
+                <div className="hc-card-body flush u-scroll-x">
+                  <table className="hc-table">
+                    <thead>
+                      <tr>
+                        <th>Tên thiết bị</th>
+                        <th>Số serial</th>
+                        <th>Vị trí</th>
+                        <th>Trạng thái</th>
+                        <th>Ghi chú</th>
+                        <th className="col-actions">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((item) => (
+                        <tr
+                          key={item.equipmentId}
+                          className={canEdit ? "row-clickable" : undefined}
+                          tabIndex={canEdit ? 0 : undefined}
+                          title={canEdit ? "Chỉnh sửa thông tin" : undefined}
+                          onClick={() => openEdit(item)}
+                          onKeyDown={(e) => {
+                            if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                              e.preventDefault();
+                              openEdit(item);
+                            }
+                          }}
+                        >
+                          <td>
+                            <strong>{item.equipmentName}</strong>
+                          </td>
+                          <td>{item.serialNumber || "—"}</td>
+                          <td>{getRoomLabel(item)}</td>
+                          <td>
+                            <span className={`hc-badge ${STATUS_COLORS[item.status] || "hc-badge-muted"}`}>{STATUS_LABELS[item.status] || item.status}</span>
+                          </td>
+                          <td style={{ maxWidth: 200, fontSize: "13px", color: "var(--hc-text-secondary)" }}>{item.note || "—"}</td>
+                          <td className="col-actions">
+                            <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                              {item.status !== "WORKING" && (
+                                <button type="button" className="hc-btn hc-btn-outline-success hc-btn-sm" onClick={() => handleStatusChange(item, "WORKING")} title="Đánh dấu hoạt động">
+                                  Hoạt động
+                                </button>
+                              )}
+                              {item.status !== "UNDER_REPAIR" && item.status !== "RETIRED" && (
+                                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => handleStatusChange(item, "UNDER_REPAIR")} title="Đưa vào sửa chữa">
+                                  Sửa chữa
+                                </button>
+                              )}
+                              {item.status !== "BROKEN" && item.status !== "RETIRED" && (
+                                <button type="button" className="hc-btn hc-btn-outline-danger hc-btn-sm" onClick={() => handleStatusChange(item, "BROKEN")} title="Đánh dấu hỏng">
+                                  Hỏng
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {pager}
+              </>
+            )}
+          </Paginated>
         )}
       </div>
 
@@ -317,7 +345,7 @@ export default function AdminEquipmentPage() {
         icon={editTarget ? "bi-pencil-square" : "bi-cpu"}
         maxWidth="540px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setModalOpen(false)}>
               Hủy
             </button>
@@ -330,7 +358,7 @@ export default function AdminEquipmentPage() {
         <form onSubmit={handleSubmit}>
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên thiết bị <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên thiết bị <span className="u-text-error">*</span>
             </label>
             <input
               type="text"
@@ -342,7 +370,7 @@ export default function AdminEquipmentPage() {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+          <div className="u-grid-auto">
             <div className="hc-form-group">
               <label className="hc-label">Vị trí phòng</label>
               <SelectMenu value={form.roomId} onChange={(val) => setForm({ ...form, roomId: val })} options={roomFormOptions} ariaLabel="Chọn vị trí phòng" icon="bi-door-closed" />

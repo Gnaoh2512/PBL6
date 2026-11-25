@@ -9,5 +9,4 @@ import java.util.List;
 @Repository
 public interface ServiceUsageRepository extends JpaRepository<ServiceUsage, Integer> {
     List<ServiceUsage> findByBooking_BookingId(Integer bookingId);
-    List<ServiceUsage> findByInvoice_InvoiceId(Integer invoiceId);
 }

@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 public class CustomerBillingServiceImpl implements CustomerBillingService {
 
     private final ServiceRepository serviceRepository;
-    private final ServiceCategoryRepository serviceCategoryRepository;
     private final ServiceUsageRepository serviceUsageRepository;
     private final BookingRepository bookingRepository;
     private final BookingRoomRepository bookingRoomRepository;
@@ -56,6 +55,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
     private final CashierShiftService cashierShiftService;
     private final RoomCleaningRequestRepository roomCleaningRequestRepository;
     private final AuditLogService auditLogService;
+    private final LoyaltyBenefitSupport loyaltyBenefitSupport;
 
     @Override
     @Transactional(readOnly = true)
@@ -196,17 +196,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ServiceUsageResponse> getServicesUsed(String bookingCode) {
-        Booking booking = bookingRepository.findByBookingCode(bookingCode)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
-
-        return serviceUsageRepository.findByBooking_BookingId(booking.getBookingId()).stream()
-                .map(this::mapToServiceUsageResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
     public LiveFolioResponse getLiveFolio(String bookingCode) {
         Booking booking = bookingRepository.findByBookingCode(bookingCode)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy đơn đặt phòng: " + bookingCode));
@@ -336,7 +325,7 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .depositPaid(depositPaid)
                 .remainingBalance(remainingBalance)
                 .isFullySettled(isFullySettled)
-                .services(usageResponses)
+                .services(loyaltyBenefitSupport.withBillLines(usageResponses, booking.getBookingId()))
                 .settlementQr(settlementQr)
                 .build();
     }
@@ -548,16 +537,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
 
         settleCheckout(booking.getBookingCode(), request, "SYSTEM_WEBHOOK");
         return true;
-    }
-
-    @Override
-    @Transactional
-    public CancellationRefundResponse cancelWithRefundPolicy(String bookingCode, String reason, String username) {
-        CancelBookingRequest request = CancelBookingRequest.builder()
-                .reason(reason)
-                .refundOption("CASH_REFUND")
-                .build();
-        return cancelWithFlexibleOptions(bookingCode, request, username);
     }
 
     @Override
@@ -785,43 +764,6 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
                 .build();
     }
 
-    @Override
-    @Transactional
-    public ServiceUsageResponse updateServiceUsageStatus(Integer usageId, String status) {
-        ServiceUsage usage = serviceUsageRepository.findById(usageId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dịch vụ đã gọi với mã: " + usageId));
-
-        String upperStatus = (status != null && !status.isBlank()) ? status.trim().toUpperCase() : "PENDING";
-        if ("IN_PROGRESS".equalsIgnoreCase(upperStatus)) {
-            upperStatus = "DELIVERING";
-        }
-        usage.setStatus(upperStatus);
-        ServiceUsage saved = serviceUsageRepository.save(usage);
-
-        // Đồng bộ ServiceRequest tương ứng nếu có
-        try {
-            if (usage.getBooking() != null && usage.getService() != null) {
-                List<ServiceRequest> requests = serviceRequestRepository.findByBooking_BookingId(usage.getBooking().getBookingId());
-                for (ServiceRequest r : requests) {
-                    if (r.getService() != null && r.getService().getServiceId().equals(usage.getService().getServiceId())
-                            && !"CANCELED".equalsIgnoreCase(r.getStatus())) {
-                        r.setStatus(upperStatus);
-                        if ("COMPLETED".equalsIgnoreCase(upperStatus)) {
-                            r.setCompletedAt(LocalDateTime.now());
-                        }
-                        serviceRequestRepository.save(r);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Không thể đồng bộ ServiceRequest: {}", e.getMessage());
-        }
-
-        recalculateActiveInvoice(usage.getBooking());
-
-        return mapToServiceUsageResponse(saved);
-    }
-
     private void recalculateActiveInvoice(Booking booking) {
         if (booking == null) return;
         try {
@@ -874,19 +816,11 @@ public class CustomerBillingServiceImpl implements CustomerBillingService {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
-        List<BookingRoom> bookingRooms = bookingRoomRepository.findByBooking_BookingId(booking.getBookingId());
-        Integer bookedRoomTypeId = bookingRooms.stream()
-                .filter(br -> br.getRoom() != null && br.getRoom().getRoomType() != null)
-                .map(br -> br.getRoom().getRoomType().getRoomTypeId())
-                .findFirst().orElse(null);
-
         BigDecimal highestPercent = tierBenefitRepository
                 .findByTier_TierIdAndIsActiveTrue(loyalty.getTier().getTierId()).stream()
                 .filter(b -> "ROOM_DISCOUNT".equalsIgnoreCase(b.getBenefitType()))
                 .filter(b -> b.getDiscountPercent() != null
                         && b.getDiscountPercent().compareTo(BigDecimal.ZERO) > 0)
-                .filter(b -> b.getRoomType() == null || (bookedRoomTypeId != null
-                        && bookedRoomTypeId.equals(b.getRoomType().getRoomTypeId())))
                 .map(TierBenefit::getDiscountPercent)
                 .max(BigDecimal::compareTo)
                 .orElse(BigDecimal.ZERO);

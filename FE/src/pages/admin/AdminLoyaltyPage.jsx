@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { apiCall, formatVND, formatDateTime } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
+import SearchInput from "../../components/common/SearchInput";
+import Paginated from "../../components/common/TablePagination";
 
 const TIER_COLORS = {
   SEASHELL: "#94a3b8",
@@ -93,6 +95,7 @@ export default function AdminLoyaltyPage() {
   const [adjustForm, setAdjustForm] = useState({ scoreAdjust: "", note: "" });
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
   const [editModal, setEditModal] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
   const [editSubmitting, setEditSubmitting] = useState(false);
 
@@ -113,7 +116,6 @@ export default function AdminLoyaltyPage() {
 
   // External options for dropdowns (services & room types)
   const [services, setServices] = useState([]);
-  const [roomTypes, setRoomTypes] = useState([]);
 
   // Benefit Modal State
   const [benefitModal, setBenefitModal] = useState(false);
@@ -124,7 +126,6 @@ export default function AdminLoyaltyPage() {
     benefitType: "ROOM_DISCOUNT",
     discountPercent: "10",
     serviceId: "",
-    roomTypeId: "",
     quota: "",
     periodType: "YEAR",
     isActive: true,
@@ -145,19 +146,11 @@ export default function AdminLoyaltyPage() {
     }
   }, []);
 
-  // Load services and room types for benefit modal
-  const loadServicesAndRoomTypes = useCallback(async () => {
+  // Load services for benefit modal
+  const loadServices = useCallback(async () => {
     try {
-      const [svcRes, rtRes] = await Promise.allSettled([
-        apiCall("/api/admin/services", { silentError: true }),
-        apiCall("/api/public/rooms/room-types", { silentError: true }),
-      ]);
-      if (svcRes.status === "fulfilled") {
-        setServices(unwrapList(svcRes.value));
-      }
-      if (rtRes.status === "fulfilled") {
-        setRoomTypes(unwrapList(rtRes.value));
-      }
+      const res = await apiCall("/api/admin/services", { silentError: true });
+      setServices(unwrapList(res));
     } catch {
       // silent
     }
@@ -180,8 +173,8 @@ export default function AdminLoyaltyPage() {
     setLoading(false);
 
     loadBenefits();
-    loadServicesAndRoomTypes();
-  }, [loadBenefits, loadServicesAndRoomTypes]);
+    loadServices();
+  }, [loadBenefits, loadServices]);
 
   useEffect(() => {
     loadData();
@@ -349,7 +342,6 @@ export default function AdminLoyaltyPage() {
       benefitType: "ROOM_DISCOUNT",
       discountPercent: "10",
       serviceId: services[0]?.serviceId ? String(services[0].serviceId) : "",
-      roomTypeId: roomTypes[0]?.roomTypeId ? String(roomTypes[0].roomTypeId) : "",
       quota: "",
       periodType: "YEAR",
       isActive: true,
@@ -366,7 +358,6 @@ export default function AdminLoyaltyPage() {
       benefitType: b.benefitType || "ROOM_DISCOUNT",
       discountPercent: b.discountPercent != null ? String(b.discountPercent) : "",
       serviceId: b.serviceId ? String(b.serviceId) : "",
-      roomTypeId: b.roomTypeId ? String(b.roomTypeId) : "",
       quota: b.quota != null ? String(b.quota) : "",
       periodType: b.periodType || "YEAR",
       isActive: b.isActive ?? true,
@@ -394,6 +385,17 @@ export default function AdminLoyaltyPage() {
       }
     }
 
+    if (benefitForm.benefitType === "FREE_SERVICE") {
+      if (!benefitForm.serviceId) {
+        addToast("Vui lòng chọn dịch vụ được miễn phí.", "warning");
+        return;
+      }
+      if (benefitForm.quota === "" || Number(benefitForm.quota) < 1) {
+        addToast("Vui lòng nhập số lượt sử dụng (tối thiểu 1 lượt mỗi chu kỳ).", "warning");
+        return;
+      }
+    }
+
     setBenefitSubmitting(true);
     try {
       const payload = {
@@ -402,8 +404,7 @@ export default function AdminLoyaltyPage() {
         benefitType: benefitForm.benefitType,
         discountPercent: benefitForm.benefitType === "ROOM_DISCOUNT" && benefitForm.discountPercent ? Number(benefitForm.discountPercent) : null,
         serviceId: benefitForm.benefitType === "FREE_SERVICE" && benefitForm.serviceId ? Number(benefitForm.serviceId) : null,
-        roomTypeId: benefitForm.benefitType === "FREE_NIGHT" && benefitForm.roomTypeId ? Number(benefitForm.roomTypeId) : null,
-        quota: benefitForm.quota !== "" && benefitForm.quota != null ? Math.max(1, Number(benefitForm.quota)) : null,
+        quota: benefitForm.benefitType === "FREE_SERVICE" ? Math.max(1, Number(benefitForm.quota)) : null,
         periodType: benefitForm.periodType || "YEAR",
         isActive: Boolean(benefitForm.isActive),
         description: benefitForm.description.trim() || null,
@@ -479,8 +480,7 @@ export default function AdminLoyaltyPage() {
         (b.benefitName && b.benefitName.toLowerCase().includes(q)) ||
         (b.description && b.description.toLowerCase().includes(q)) ||
         (b.tierName && b.tierName.toLowerCase().includes(q)) ||
-        (b.serviceName && b.serviceName.toLowerCase().includes(q)) ||
-        (b.roomTypeName && b.roomTypeName.toLowerCase().includes(q));
+        (b.serviceName && b.serviceName.toLowerCase().includes(q));
       return matchTier && matchType && matchSearch;
     });
   }, [benefits, benefitTierFilter, benefitTypeFilter, benefitSearch]);
@@ -498,7 +498,6 @@ export default function AdminLoyaltyPage() {
     { value: "ALL", label: "Tất cả loại đặc quyền" },
     { value: "ROOM_DISCOUNT", label: "Giảm giá phòng" },
     { value: "FREE_SERVICE", label: "Miễn phí dịch vụ" },
-    { value: "FREE_NIGHT", label: "Đêm nghỉ miễn phí" },
   ];
 
   const renderBenefitTypeBadge = (b) => {
@@ -513,12 +512,6 @@ export default function AdminLoyaltyPage() {
         return (
           <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#e0f2fe", color: "#0369a1", fontSize: 11, fontWeight: 700 }}>
             <i className="bi bi-stars"></i> Miễn phí DV {b.serviceName ? `(${b.serviceName})` : ""}
-          </span>
-        );
-      case "FREE_NIGHT":
-        return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#fef3c7", color: "#b45309", fontSize: 11, fontWeight: 700 }}>
-            <i className="bi bi-moon-stars-fill"></i> Đêm nghỉ miễn phí {b.roomTypeName ? `(${b.roomTypeName})` : ""}
           </span>
         );
       default:
@@ -537,14 +530,14 @@ export default function AdminLoyaltyPage() {
     const periodLabel = b.periodType === "DAY" ? "ngày" : b.periodType === "MONTH" ? "tháng" : "năm";
     return (
       <span>
-        <strong>{b.quota} lượt</strong> <small style={{ color: "var(--hc-text-muted)" }}>/ {periodLabel}</small>
+        <strong>{b.quota} lượt</strong> <small className="u-text-muted">/ {periodLabel}</small>
       </span>
     );
   };
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Quản Lý Chương Trình Loyalty</h2>
           <p>Xem hạng thành viên, điểm tích lũy và điều chỉnh điểm thưởng cho khách hàng.</p>
@@ -595,7 +588,7 @@ export default function AdminLoyaltyPage() {
       )}
 
       {/* Main Grid: Left Column (Customers + Tier Benefits) | Right Column (Customer Detail if selected) */}
-      <div style={{ display: "grid", gridTemplateColumns: selectedCustomer ? "1fr 380px" : "1fr", gap: "20px", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px", alignItems: "start" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 }}>
           {/* =========================================================================
              CARD 1: DANH SÁCH KHÁCH HÀNG
@@ -604,23 +597,22 @@ export default function AdminLoyaltyPage() {
             <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid var(--hc-border-light)" }}>
               <div>
                 <h3 className="hc-card-title" style={{ margin: 0, fontSize: "15px", fontWeight: 700 }}>
-                  <i className="bi bi-people" style={{ marginRight: 6, color: "var(--hc-primary)" }}></i>
-                  Danh sách Khách hàng ({filtered.length})
+                  <i className="bi bi-people u-text-primary u-mr-6"></i>
+                  Danh sách Khách hàng
                 </h3>
               </div>
             </div>
 
-            <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)" }}>
-              <input
+            <div className="hc-card-body u-row-ruled m-fields">
+              <SearchInput
                 type="search"
-                className="hc-input"
-                style={{ flex: "1 1 240px" }}
+                wrapClassName="u-flex-240"
                 placeholder="Tên, SĐT, email, số giấy tờ, quốc tịch, hạng..."
                 aria-label="Tìm kiếm hội viên"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <div style={{ flex: "0 0 220px" }}>
+              <div className="u-flex-220">
                 <SelectMenu value={tierFilter} onChange={setTierFilter} options={tierFilterOptions} ariaLabel="Lọc hạng thành viên" icon="bi-funnel" />
               </div>
             </div>
@@ -657,81 +649,77 @@ export default function AdminLoyaltyPage() {
                 <p>Không tìm thấy hội viên nào.</p>
               </div>
             ) : (
-              <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
-                <table className="hc-table">
-                  <thead>
-                    <tr>
-                      <th>Khách hàng</th>
-                      <th>Hạng</th>
-                      <th>Điểm</th>
-                      <th>Ngày lưu trú</th>
-                      <th>Tổng chi tiêu</th>
-                      <th style={{ textAlign: "right" }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((c) => {
-                      const isSelected = selectedCustomer?.customerId === c.customerId;
-                      return (
-                        <tr key={c.customerId} style={{ cursor: "pointer", background: isSelected ? "var(--hc-bg-light, rgba(2, 132, 199, 0.06))" : undefined }} onClick={() => selectCustomer(c)}>
-                          <td>
-                            <strong>{c.customerName || "—"}</strong>
-                            <br />
-                            <small style={{ color: "var(--hc-text-secondary)" }}>{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</small>
-                            <br />
-                            <small style={{ color: "var(--hc-text-muted)" }}>{[c.idNumber && `${c.idType || "Giấy tờ"}: ${c.idNumber}`, c.nationality].filter(Boolean).join(" · ")}</small>
-                          </td>
-                          <td>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openTierEdit(c.tierCode);
-                              }}
-                              title="Bấm để chỉnh sửa hạng này"
-                              style={{ border: 0, cursor: "pointer", background: getTierColor(c.tierCode), color: "#fff", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: 700 }}
-                            >
-                              {c.tierName || c.tierCode || "—"}
-                            </button>
-                          </td>
-                          <td>
-                            <strong>{Number(c.totalScore || 0).toLocaleString("vi-VN")}</strong>
-                          </td>
-                          <td>{c.totalStayDays || 0} đêm</td>
-                          <td>{formatVND(c.totalSpent || 0)}</td>
-                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              style={{ marginRight: 6 }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEdit(c);
-                              }}
-                              title="Chỉnh sửa thông tin khách hàng"
-                            >
-                              <i className="bi bi-pencil"></i> Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="hc-btn hc-btn-outline hc-btn-sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                selectCustomer(c);
-                                setAdjustModal(true);
-                                setAdjustForm({ scoreAdjust: "", note: "" });
-                              }}
-                              title="Điều chỉnh điểm"
-                            >
-                              <i className="bi bi-plus-slash-minus"></i> Điều chỉnh
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <Paginated items={filtered}>
+                {(pageRows, pager) => (
+                  <>
+                    <div className="hc-card-body flush u-scroll-x">
+                      <table className="hc-table">
+                        <thead>
+                          <tr>
+                            <th>Khách hàng</th>
+                            <th>Hạng</th>
+                            <th>Điểm</th>
+                            <th>Ngày lưu trú</th>
+                            <th>Tổng chi tiêu</th>
+                            <th className="col-actions">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.map((c) => {
+                            const isSelected = selectedCustomer?.customerId === c.customerId;
+                            return (
+                              <tr key={c.customerId} style={{ cursor: "pointer", background: isSelected ? "var(--hc-bg-light, rgba(2, 132, 199, 0.06))" : undefined }} onClick={() => { selectCustomer(c); setDetailOpen(true); }}>
+                                <td>
+                                  <strong>{c.customerName || "—"}</strong>
+                                  <br />
+                                  <small className="u-text-secondary">{[c.phone, c.email].filter(Boolean).join(" · ") || "—"}</small>
+                                  <br />
+                                  <small className="u-text-muted">{[c.idNumber && `${c.idType || "Giấy tờ"}: ${c.idNumber}`, c.nationality].filter(Boolean).join(" · ")}</small>
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openTierEdit(c.tierCode);
+                                    }}
+                                    title="Bấm để chỉnh sửa hạng này"
+                                    style={{ border: 0, cursor: "pointer", background: getTierColor(c.tierCode), color: "#fff", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: 700 }}
+                                  >
+                                    {c.tierName || c.tierCode || "—"}
+                                  </button>
+                                </td>
+                                <td>
+                                  <strong>{Number(c.totalScore || 0).toLocaleString("vi-VN")}</strong>
+                                </td>
+                                <td>{c.totalStayDays || 0} đêm</td>
+                                <td>{formatVND(c.totalSpent || 0)}</td>
+                                <td className="col-actions">
+                                  <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                    <button
+                                      type="button"
+                                      className="hc-btn hc-btn-outline hc-btn-sm"
+                                      onClick={() => {
+                                        selectCustomer(c);
+                                        setAdjustModal(true);
+                                        setAdjustForm({ scoreAdjust: "", note: "" });
+                                      }}
+                                      title="Điều chỉnh điểm"
+                                    >
+                                      <i className="bi bi-plus-slash-minus"></i> Điều chỉnh
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             )}
           </div>
 
@@ -743,8 +731,8 @@ export default function AdminLoyaltyPage() {
             <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", borderBottom: "1px solid var(--hc-border-light)" }}>
               <div>
                 <h3 className="hc-card-title" style={{ margin: "0 0 4px", fontSize: "15px", fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
-                  <i className="bi bi-gift" style={{ color: "var(--hc-primary)" }}></i>
-                  Đặc quyền hội viên ({filteredBenefits.length})
+                  <i className="bi bi-gift u-text-primary"></i>
+                  Đặc quyền hội viên
                 </h3>
                 <span style={{ fontSize: "12.5px", color: "var(--hc-text-muted)" }}>
                   Cấu hình các ưu đãi, giảm giá phòng và dịch vụ miễn phí tự động theo hạng thành viên.
@@ -761,11 +749,10 @@ export default function AdminLoyaltyPage() {
             </div>
 
             {/* Filter Toolbar for Benefits */}
-            <div className="hc-card-body" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)", background: "var(--hc-bg-subtle, #f8fafc)" }}>
-              <input
+            <div className="hc-card-body m-fields" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", borderBottom: "1px solid var(--hc-border-light)", background: "var(--hc-bg-subtle, #f8fafc)" }}>
+              <SearchInput
                 type="search"
-                className="hc-input"
-                style={{ flex: "1 1 200px" }}
+                wrapClassName="u-flex-200"
                 placeholder="Tìm tên đặc quyền, dịch vụ, mô tả..."
                 value={benefitSearch}
                 onChange={(e) => setBenefitSearch(e.target.value)}
@@ -792,174 +779,175 @@ export default function AdminLoyaltyPage() {
                 </button>
               </div>
             ) : (
-              <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
-                <table className="hc-table">
-                  <thead>
-                    <tr>
-                      <th style={{ width: "130px" }}>Hạng áp dụng</th>
-                      <th>Tên đặc quyền &amp; Mô tả</th>
-                      <th>Loại quyền lợi</th>
-                      <th>Hạn mức (Quota)</th>
-                      <th>Trạng thái</th>
-                      <th style={{ textAlign: "right", width: "140px" }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredBenefits.map((b) => (
-                      <tr key={b.tierBenefitId}>
-                        <td>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              background: getTierColor(b.tierCode),
-                              color: "#fff",
-                              borderRadius: "12px",
-                              padding: "2px 8px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {b.tierName || b.tierCode || "Mọi hạng"}
-                          </span>
-                        </td>
-                        <td>
-                          <strong style={{ fontSize: "13.5px" }}>{b.benefitName}</strong>
-                          {b.description && (
-                            <div style={{ fontSize: "11.5px", color: "var(--hc-text-muted)", marginTop: "2px" }}>
-                              {b.description}
-                            </div>
-                          )}
-                        </td>
-                        <td>{renderBenefitTypeBadge(b)}</td>
-                        <td>{renderQuotaDisplay(b)}</td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => toggleBenefitActive(b)}
-                            title="Bấm để bật / tắt đặc quyền"
-                            style={{
-                              border: 0,
-                              cursor: "pointer",
-                              padding: "3px 8px",
-                              borderRadius: "12px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              background: b.isActive ? "var(--hc-success-bg, #dcfce7)" : "var(--hc-bg, #f1f5f9)",
-                              color: b.isActive ? "var(--hc-success, #15803d)" : "var(--hc-text-muted, #64748b)",
-                            }}
-                          >
-                            <i className={`bi ${b.isActive ? "bi-check-circle-fill" : "bi-pause-circle"}`} style={{ marginRight: 4 }}></i>
-                            {b.isActive ? "Đang áp dụng" : "Tạm dừng"}
-                          </button>
-                        </td>
-                        <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-outline hc-btn-sm"
-                            style={{ marginRight: 6 }}
-                            onClick={() => openEditBenefit(b)}
-                            title="Chỉnh sửa đặc quyền"
-                          >
-                            <i className="bi bi-pencil"></i> Sửa
-                          </button>
-                          <button
-                            type="button"
-                            className="hc-btn hc-btn-ghost hc-btn-sm text-danger"
-                            onClick={() => deleteBenefit(b)}
-                            title="Xóa đặc quyền này"
-                          >
-                            <i className="bi bi-trash"></i>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Paginated items={filteredBenefits}>
+                {(pageRows, pager) => (
+                  <>
+                    <div className="hc-card-body flush u-scroll-x">
+                      <table className="hc-table">
+                        <thead>
+                          <tr>
+                            <th style={{ width: "130px" }}>Hạng áp dụng</th>
+                            <th>Tên đặc quyền &amp; Mô tả</th>
+                            <th>Loại quyền lợi</th>
+                            <th>Hạn mức</th>
+                            <th>Trạng thái</th>
+                            <th className="col-actions">Thao tác</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pageRows.map((b) => (
+                            <tr
+                              key={b.tierBenefitId}
+                              className="row-clickable"
+                              tabIndex={0}
+                              title="Chỉnh sửa đặc quyền"
+                              onClick={() => openEditBenefit(b)}
+                              onKeyDown={(e) => {
+                                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                  e.preventDefault();
+                                  openEditBenefit(b);
+                                }
+                              }}
+                            >
+                              <td>
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    background: getTierColor(b.tierCode),
+                                    color: "#fff",
+                                    borderRadius: "12px",
+                                    padding: "2px 8px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  {b.tierName || b.tierCode || "Mọi hạng"}
+                                </span>
+                              </td>
+                              <td>
+                                <strong style={{ fontSize: "13.5px" }}>{b.benefitName}</strong>
+                                {b.description && (
+                                  <div style={{ fontSize: "11.5px", color: "var(--hc-text-muted)", marginTop: "2px" }}>
+                                    {b.description}
+                                  </div>
+                                )}
+                              </td>
+                              <td>{renderBenefitTypeBadge(b)}</td>
+                              <td>{renderQuotaDisplay(b)}</td>
+                              <td>
+                                <span className={`hc-badge ${b.isActive ? "hc-badge-success" : "hc-badge-muted"}`}>
+                                  <i className={`bi ${b.isActive ? "bi-check-circle-fill" : "bi-pause-circle"}`}></i>
+                                  {b.isActive ? "Đang áp dụng" : "Tạm dừng"}
+                                </span>
+                              </td>
+                              <td className="col-actions">
+                                <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    type="button"
+                                    className={`hc-btn hc-btn-sm ${b.isActive ? "hc-btn-outline" : "hc-btn-primary"}`}
+                                    onClick={() => toggleBenefitActive(b)}
+                                    title={b.isActive ? "Tạm dừng đặc quyền này" : "Áp dụng đặc quyền này"}
+                                  >
+                                    <i className={`bi ${b.isActive ? "bi-pause-circle" : "bi-play-circle"}`}></i> {b.isActive ? "Tạm dừng" : "Áp dụng"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="hc-btn hc-btn-outline-danger hc-btn-sm"
+                                    onClick={() => deleteBenefit(b)}
+                                    title="Xóa đặc quyền này"
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {pager}
+                  </>
+                )}
+              </Paginated>
             )}
           </div>
         </div>
 
-        {/* Customer Detail Panel (Right Column when selected) */}
+      </div>
+
+      {/* Customer info modal */}
+      <Modal
+        isOpen={detailOpen && !!selectedCustomer}
+        onClose={() => {
+          if (adjustModal || editModal) return; // the stacked modal closes first
+          setDetailOpen(false);
+        }}
+        title={selectedCustomer?.customerName || "Chi tiết hội viên"}
+        subtitle={selectedCustomer ? [selectedCustomer.phone, selectedCustomer.email].filter(Boolean).join(" · ") || undefined : undefined}
+        icon="bi-person-vcard"
+        maxWidth="640px"
+        footer={
+          <div className="u-actions-end">
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setDetailOpen(false)}>
+              Đóng
+            </button>
+            <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => selectedCustomer && openEdit(selectedCustomer)}>
+              Cập nhật thông tin
+            </button>
+            <button
+              type="button"
+              className="hc-btn hc-btn-primary hc-btn-sm"
+              onClick={() => {
+                setAdjustModal(true);
+                setAdjustForm({ scoreAdjust: "", note: "" });
+              }}
+            >
+              <i className="bi bi-plus-slash-minus"></i> Điều chỉnh điểm
+            </button>
+          </div>
+        }
+      >
         {selectedCustomer && (
-          <div className="hc-card" style={{ position: "sticky", top: "20px" }}>
-            <div className="hc-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: "15px" }}>{selectedCustomer.customerName || "Chi tiết hội viên"}</div>
-                <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>{selectedCustomer.phone || selectedCustomer.email || ""}</div>
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                <button
-                  type="button"
-                  className="hc-btn hc-btn-primary hc-btn-sm"
-                  onClick={() => {
-                    setAdjustModal(true);
-                    setAdjustForm({ scoreAdjust: "", note: "" });
-                  }}
-                >
-                  <i className="bi bi-plus-slash-minus"></i> Sửa điểm
-                </button>
-                <button
-                  type="button"
-                  className="hc-btn hc-btn-ghost hc-btn-sm"
-                  onClick={() => setSelectedId(null)}
-                  title="Đóng chi tiết"
-                >
-                  <i className="bi bi-x-lg"></i>
-                </button>
-              </div>
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+              {[
+                { label: "Hạng hiện tại", value: selectedCustomer.tierName || selectedCustomer.tierCode, color: getTierColor(selectedCustomer.tierCode) },
+                { label: "Điểm tích lũy", value: `${Number(selectedCustomer.totalScore || 0).toLocaleString("vi-VN")} điểm` },
+                { label: "Tổng đêm lưu trú", value: `${selectedCustomer.totalStayDays || 0} đêm` },
+                { label: "Tổng chi tiêu", value: formatVND(selectedCustomer.totalSpent || 0) },
+              ].map((stat) => (
+                <div key={stat.label} style={{ background: "var(--hc-bg-light, #f8fafc)", borderRadius: "8px", padding: "10px 12px", border: "1px solid var(--hc-border-light)" }}>
+                  <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)", marginBottom: "4px" }}>{stat.label}</div>
+                  <div style={{ fontWeight: 700, fontSize: "14px", color: stat.color || "inherit" }}>{stat.value}</div>
+                </div>
+              ))}
             </div>
-            <div className="hc-card-body" style={{ padding: "16px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
-                {[
-                  { label: "Hạng hiện tại", value: selectedCustomer.tierName || selectedCustomer.tierCode, color: getTierColor(selectedCustomer.tierCode) },
-                  { label: "Điểm tích lũy", value: `${Number(selectedCustomer.totalScore || 0).toLocaleString("vi-VN")} điểm` },
-                  { label: "Tổng đêm lưu trú", value: `${selectedCustomer.totalStayDays || 0} đêm` },
-                  { label: "Tổng chi tiêu", value: formatVND(selectedCustomer.totalSpent || 0) },
-                ].map((stat) => (
-                  <div key={stat.label} style={{ background: "var(--hc-bg-light, #f8fafc)", borderRadius: "8px", padding: "10px 12px", border: "1px solid var(--hc-border-light)" }}>
-                    <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)", marginBottom: "4px" }}>{stat.label}</div>
-                    <div style={{ fontWeight: 700, fontSize: "14px", color: stat.color || "inherit" }}>{stat.value}</div>
+
+            <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Lịch sử giao dịch điểm</div>
+            {txnLoading ? (
+              <div style={{ textAlign: "center", padding: "20px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Đang tải...</div>
+            ) : transactions.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "16px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Chưa có lịch sử giao dịch điểm.</div>
+            ) : (
+              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                {transactions.slice(0, 20).map((txn) => (
+                  <div key={txn.txnId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: "1px solid var(--hc-border-light)", fontSize: "13px" }}>
+                    <div>
+                      <div className="u-fw-600">{txn.txnType === "EARN" ? "Tích điểm" : "Điều chỉnh"}</div>
+                      <div className="u-hint-sm">{formatDateTime(txn.createdAt)}</div>
+                      {txn.note && <div className="u-hint-sm">{txn.note}</div>}
+                    </div>
+                    <div style={{ fontWeight: 700, color: Number(txn.scoreEarned) >= 0 ? "var(--hc-success)" : "var(--hc-error)" }}>
+                      {Number(txn.scoreEarned) >= 0 ? "+" : ""}
+                      {Number(txn.scoreEarned || 0).toLocaleString("vi-VN")}
+                    </div>
                   </div>
                 ))}
               </div>
-
-              <div style={{ fontWeight: 600, fontSize: "13px", marginBottom: "8px" }}>Lịch sử giao dịch điểm</div>
-              {txnLoading ? (
-                <div style={{ textAlign: "center", padding: "20px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Đang tải...</div>
-              ) : transactions.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "16px 0", color: "var(--hc-text-secondary)", fontSize: "13px" }}>Chưa có lịch sử giao dịch điểm.</div>
-              ) : (
-                <div style={{ maxHeight: "280px", overflowY: "auto" }}>
-                  {transactions.slice(0, 20).map((txn) => (
-                    <div
-                      key={txn.txnId}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: "8px 0",
-                        borderBottom: "1px solid var(--hc-border-light)",
-                        fontSize: "13px",
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{txn.txnType === "EARN" ? "Tích điểm" : "Điều chỉnh"}</div>
-                        <div style={{ color: "var(--hc-text-secondary)", fontSize: "11px" }}>{formatDateTime(txn.createdAt)}</div>
-                        {txn.note && <div style={{ color: "var(--hc-text-secondary)", fontSize: "11px" }}>{txn.note}</div>}
-                      </div>
-                      <div style={{ fontWeight: 700, color: Number(txn.scoreEarned) >= 0 ? "var(--hc-success)" : "var(--hc-error)" }}>
-                        {Number(txn.scoreEarned) >= 0 ? "+" : ""}
-                        {Number(txn.scoreEarned || 0).toLocaleString("vi-VN")}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+            )}
+          </>
         )}
-      </div>
+      </Modal>
 
       {/* Adjust Modal */}
       <Modal
@@ -970,7 +958,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-plus-slash-minus"
         maxWidth="480px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setAdjustModal(false)}>
               Hủy
             </button>
@@ -987,7 +975,7 @@ export default function AdminLoyaltyPage() {
 
           <div className="hc-form-group">
             <label className="hc-label">
-              Số điểm điều chỉnh <span style={{ color: "var(--hc-error)" }}>*</span>
+              Số điểm điều chỉnh <span className="u-text-error">*</span>
             </label>
             <input
               type="number"
@@ -1022,7 +1010,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-person-lines-fill"
         maxWidth="680px"
         footer={
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setEditModal(false)}>
               Hủy
             </button>
@@ -1047,7 +1035,7 @@ export default function AdminLoyaltyPage() {
             ].map(([key, label, type, required, list]) => (
               <div className="hc-form-group" key={key}>
                 <label className="hc-label">
-                  {label} {required && <span style={{ color: "var(--hc-error)" }}>*</span>}
+                  {label} {required && <span className="u-text-error">*</span>}
                 </label>
                 <input className="hc-input" type={type} list={list} value={editForm[key] || ""} onChange={(e) => setEditForm({ ...editForm, [key]: e.target.value })} />
               </div>
@@ -1082,7 +1070,7 @@ export default function AdminLoyaltyPage() {
               </div>
             ))}
           </div>
-          <small style={{ color: "var(--hc-text-secondary)", fontSize: 11 }}>Muốn cộng/trừ điểm và lưu lý do trong lịch sử, hãy dùng nút "Điều chỉnh" ở danh sách.</small>
+          <small className="u-hint-sm">Muốn cộng/trừ điểm và lưu lý do trong lịch sử, hãy dùng nút "Điều chỉnh" ở danh sách.</small>
         </form>
       </Modal>
 
@@ -1095,7 +1083,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-gem"
         maxWidth="520px"
         footer={
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setTierModal(false)}>
               Hủy
             </button>
@@ -1109,15 +1097,15 @@ export default function AdminLoyaltyPage() {
           <div className="hc-form-group">
             <label className="hc-label">Mã hạng</label>
             <input className="hc-input" type="text" value={tierTarget?.tierCode || ""} disabled readOnly />
-            <small style={{ color: "var(--hc-text-secondary)", fontSize: 11 }}>Mã hạng dùng để liên kết trong hệ thống nên không thể đổi.</small>
+            <small className="u-hint-sm">Mã hạng dùng để liên kết trong hệ thống nên không thể đổi.</small>
           </div>
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên hạng <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên hạng <span className="u-text-error">*</span>
             </label>
             <input className="hc-input" type="text" value={tierForm.tierName} onChange={(e) => setTierForm({ ...tierForm, tierName: e.target.value })} required />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+          <div className="u-grid-auto">
             <div className="hc-form-group">
               <label className="hc-label">Cấp độ (thứ tự hạng)</label>
               <input className="hc-input" type="number" min="1" step="1" value={tierForm.tierLevel} onChange={(e) => setTierForm({ ...tierForm, tierLevel: e.target.value })} />
@@ -1137,7 +1125,7 @@ export default function AdminLoyaltyPage() {
               placeholder="Quyền lợi hoặc ghi chú về hạng này..."
             ></textarea>
           </div>
-          <small style={{ color: "var(--hc-text-secondary)", fontSize: 11 }}>
+          <small className="u-hint-sm">
             Hiện có {customers.filter((c) => c.tierCode === tierTarget?.tierCode).length} khách ở hạng này. Đổi điểm tối thiểu không xếp hạng lại khách ngay; hạng được tính lại khi điểm của khách thay đổi.
           </small>
         </form>
@@ -1154,7 +1142,7 @@ export default function AdminLoyaltyPage() {
         icon="bi-gift"
         maxWidth="560px"
         footer={
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setBenefitModal(false)}>
               Hủy bỏ
             </button>
@@ -1168,7 +1156,7 @@ export default function AdminLoyaltyPage() {
           {/* Hạng thành viên áp dụng */}
           <div className="hc-form-group">
             <label className="hc-label">
-              Hạng thành viên áp dụng <span style={{ color: "var(--hc-error)" }}>*</span>
+              Hạng thành viên áp dụng <span className="u-text-error">*</span>
             </label>
             <SelectMenu
               value={benefitForm.tierId}
@@ -1182,7 +1170,7 @@ export default function AdminLoyaltyPage() {
           {/* Tên đặc quyền */}
           <div className="hc-form-group">
             <label className="hc-label">
-              Tên đặc quyền <span style={{ color: "var(--hc-error)" }}>*</span>
+              Tên đặc quyền <span className="u-text-error">*</span>
             </label>
             <input
               type="text"
@@ -1197,15 +1185,14 @@ export default function AdminLoyaltyPage() {
           {/* Loại đặc quyền */}
           <div className="hc-form-group">
             <label className="hc-label">
-              Loại đặc quyền <span style={{ color: "var(--hc-error)" }}>*</span>
+              Loại đặc quyền <span className="u-text-error">*</span>
             </label>
             <SelectMenu
               value={benefitForm.benefitType}
               onChange={(benefitType) => setBenefitForm({ ...benefitForm, benefitType })}
               options={[
-                { value: "ROOM_DISCOUNT", label: "Giảm giá tiền phòng (ROOM_DISCOUNT)" },
-                { value: "FREE_SERVICE", label: "Dịch vụ miễn phí (FREE_SERVICE)" },
-                { value: "FREE_NIGHT", label: "Đêm nghỉ miễn phí (FREE_NIGHT)" },
+                { value: "ROOM_DISCOUNT", label: "Giảm giá tiền phòng" },
+                { value: "FREE_SERVICE", label: "Dịch vụ miễn phí" },
               ]}
               ariaLabel="Chọn loại đặc quyền"
               icon="bi-tag"
@@ -1216,7 +1203,7 @@ export default function AdminLoyaltyPage() {
           {benefitForm.benefitType === "ROOM_DISCOUNT" && (
             <div className="hc-form-group">
               <label className="hc-label">
-                Phần trăm giảm giá phòng (%) <span style={{ color: "var(--hc-error)" }}>*</span>
+                Phần trăm giảm giá phòng (%) <span className="u-text-error">*</span>
               </label>
               <input
                 type="number"
@@ -1238,13 +1225,13 @@ export default function AdminLoyaltyPage() {
           {benefitForm.benefitType === "FREE_SERVICE" && (
             <div className="hc-form-group">
               <label className="hc-label">
-                Dịch vụ được miễn phí
+                Dịch vụ được miễn phí <span className="u-text-error">*</span>
               </label>
               <SelectMenu
                 value={benefitForm.serviceId}
                 onChange={(serviceId) => setBenefitForm({ ...benefitForm, serviceId })}
                 options={[
-                  { value: "", label: "-- Không gắn dịch vụ cụ thể --" },
+                  { value: "", label: "-- Chọn dịch vụ --" },
                   ...services.map((s) => ({ value: String(s.serviceId), label: `${s.serviceName} (${formatVND(s.unitPrice || 0)})` })),
                 ]}
                 ariaLabel="Chọn dịch vụ"
@@ -1256,39 +1243,25 @@ export default function AdminLoyaltyPage() {
             </div>
           )}
 
-          {benefitForm.benefitType === "FREE_NIGHT" && (
+          {/* Hạn mức (Quota) & Kỳ hạn (Period) */}
+          {benefitForm.benefitType === "FREE_SERVICE" && (
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">
-                Hạng phòng áp dụng đêm miễn phí
+                Số lượt sử dụng <span className="u-text-error">*</span>
               </label>
-              <SelectMenu
-                value={benefitForm.roomTypeId}
-                onChange={(roomTypeId) => setBenefitForm({ ...benefitForm, roomTypeId })}
-                options={[
-                  { value: "", label: "-- Mọi hạng phòng --" },
-                  ...roomTypes.map((rt) => ({ value: String(rt.roomTypeId), label: rt.typeName || `Hạng phòng #${rt.roomTypeId}` })),
-                ]}
-                ariaLabel="Chọn loại phòng"
-                icon="bi-door-closed"
-              />
-            </div>
-          )}
-
-          {/* Hạn mức (Quota) & Kỳ hạn (Period) */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="hc-form-group">
-              <label className="hc-label">Số lượt sử dụng (Quota)</label>
               <input
                 type="number"
                 min="1"
                 step="1"
                 className="hc-input"
-                placeholder="Để trống = Không giới hạn"
+                placeholder="VD: 1"
                 value={benefitForm.quota}
+                required
                 onChange={(e) => setBenefitForm({ ...benefitForm, quota: e.target.value })}
               />
               <small style={{ color: "var(--hc-text-muted)", fontSize: "11px", marginTop: 4, display: "block" }}>
-                Để trống nếu không giới hạn số lượt.
+                Số lượt khách được dùng miễn phí trong mỗi chu kỳ.
               </small>
             </div>
 
@@ -1298,15 +1271,16 @@ export default function AdminLoyaltyPage() {
                 value={benefitForm.periodType}
                 onChange={(periodType) => setBenefitForm({ ...benefitForm, periodType })}
                 options={[
-                  { value: "YEAR", label: "Mỗi năm (YEAR)" },
-                  { value: "MONTH", label: "Mỗi tháng (MONTH)" },
-                  { value: "DAY", label: "Mỗi ngày (DAY)" },
+                  { value: "YEAR", label: "Mỗi năm" },
+                  { value: "MONTH", label: "Mỗi tháng" },
+                  { value: "DAY", label: "Mỗi ngày" },
                 ]}
                 ariaLabel="Chu kỳ áp dụng"
                 icon="bi-calendar-check"
               />
             </div>
           </div>
+          )}
 
           {/* Trạng thái kích hoạt */}
           <div className="hc-form-group" style={{ marginTop: 8 }}>

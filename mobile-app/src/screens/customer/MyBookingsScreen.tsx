@@ -29,6 +29,7 @@ import Button from '../../components/common/Button';
 import HeaderBackButton from '../../components/common/HeaderBackButton';
 import { formatPrice } from '../../utils/priceUtils';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
+import { FEATURES } from '../../utils/config';
 
 type RefundOptionType = 'CASH_REFUND' | 'CREDIT_VOUCHER' | 'LOYALTY_POINTS';
 
@@ -66,6 +67,7 @@ export default function MyBookingsScreen() {
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [cancelResult, setCancelResult] = useState<CancelResultData | null>(null);
   const [copiedVoucher, setCopiedVoucher] = useState(false);
+
 
   // Nếu đã đăng nhập → tải lịch sử ngay
   const loadMyBookings = async () => {
@@ -119,6 +121,7 @@ export default function MyBookingsScreen() {
   const handleOrderService = (bookingCode: string) => {
     navigation.navigate('Services', { bookingCode });
   };
+
 
   // ─── XỬ LÝ HỦY ĐƠN ─────────────────────────────────────────────
   const handlePressCancel = (booking: Booking) => {
@@ -332,7 +335,7 @@ export default function MyBookingsScreen() {
             onPayDeposit={handlePayDeposit}
             onOrderService={handleOrderService}
             isLoggedIn={true}
-            onCancelBooking={handlePressCancel}
+            onCancelBooking={FEATURES.customerCancelBooking ? handlePressCancel : undefined}
             isCancelling={isCancelling}
           />
         )}
@@ -355,14 +358,16 @@ export default function MyBookingsScreen() {
       />
 
       {/* ─── MODAL HỦY ĐƠN ĐÃ CỌC (CONFIRMED) ─── */}
-      <Modal
-        visible={cancelModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setCancelModalVisible(false)}
-        statusBarTranslucent
-        navigationBarTranslucent
-      >
+      {FEATURES.customerCancelBooking && (
+        <>
+          <Modal
+            visible={cancelModalVisible}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setCancelModalVisible(false)}
+            statusBarTranslucent
+            navigationBarTranslucent
+          >
         <View style={styles.modalOverlay}>
           <View style={styles.modalSheet}>
             {/* Modal Header */}
@@ -622,6 +627,8 @@ export default function MyBookingsScreen() {
           </View>
         </View>
       </Modal>
+        </>
+      )}
     </View>
   );
 }

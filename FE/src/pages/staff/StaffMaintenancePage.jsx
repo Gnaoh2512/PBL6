@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import Modal from "../../components/Modal";
-import SelectMenu from "../../components/SelectMenu";
+import Modal from "../../components/common/Modal";
+import SelectMenu from "../../components/common/SelectMenu";
 import { apiCall, formatDateTime } from "../../services/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import "./StaffMaintenance.css";
+import Paginated from "../../components/common/TablePagination";
 
 const TECHNICIANS_ENDPOINT = "/api/staff/available-in-shift?roleCode=ROLE_MAINTENANCE";
 
@@ -26,7 +27,7 @@ const STATUS_OPTIONS = [{ value: "", label: "Tất cả trạng thái" }, ...Obj
 const PRIORITY_FILTER_OPTIONS = [{ value: "", label: "Mọi mức độ" }, ...Object.entries(PRIORITY_META).map(([value, meta]) => ({ value, label: meta.label }))];
 const PRIORITY_FORM_OPTIONS = Object.entries(PRIORITY_META).map(([value, meta]) => ({ value, label: meta.label }));
 
-const EMPTY_FORM = { roomId: "", equipmentId: "", title: "", description: "", priority: "MEDIUM" };
+const EMPTY_FORM = { roomId: "", title: "", description: "", priority: "MEDIUM" };
 
 const toTechnician = (item) => {
   const id = item.accountId ?? item.staffId ?? item.userId ?? item.id;
@@ -65,7 +66,6 @@ export default function StaffMaintenancePage() {
   const { addToast } = useToast();
   const [requests, setRequests] = useState([]);
   const [rooms, setRooms] = useState([]);
-  const [equipment, setEquipment] = useState([]);
   const [technicians, setTechnicians] = useState([]);
   const [status, setStatus] = useState("");
   const [priority, setPriority] = useState("");
@@ -82,7 +82,7 @@ export default function StaffMaintenancePage() {
 
   // Preserved functional roles from original working file
   const canComplete = hasRole(["MAINTENANCE", "MANAGER", "ADMIN"]);
-  const canAssign = hasRole(["MAINTENANCE", "MANAGER", "ADMIN"]);
+  const canAssign = hasRole(["MANAGER", "ADMIN"]);
   const canConfirm = hasRole(["MANAGER", "RECEPTIONIST", "ADMIN"]);
   const canReport = hasRole(["HOUSEKEEPING", "RECEPTIONIST", "MANAGER", "ADMIN"]);
 
@@ -93,14 +93,12 @@ export default function StaffMaintenancePage() {
       if (priority) params.set("priority", priority);
       if (roomFilter) params.set("roomId", roomFilter);
       const query = params.size ? `?${params}` : "";
-      const [requestResult, roomResult, equipmentResult] = await Promise.allSettled([
+      const [requestResult, roomResult] = await Promise.allSettled([
         apiCall(`/api/staff/maintenance/requests${query}`, { silentError: true }),
         canReport ? apiCall("/api/admin/rooms", { silentError: true }) : Promise.resolve(null),
-        canReport ? apiCall("/api/staff/maintenance/equipment", { silentError: true }) : Promise.resolve(null),
       ]);
       setRequests(requestResult.status === "fulfilled" && requestResult.value?.success ? requestResult.value.data || [] : []);
       setRooms(roomResult.status === "fulfilled" && roomResult.value?.success ? roomResult.value.data || [] : []);
-      setEquipment(equipmentResult.status === "fulfilled" && equipmentResult.value?.success ? equipmentResult.value.data || [] : []);
     } catch (error) {
       addToast(error.message || "Không thể tải yêu cầu bảo trì.", "error");
     } finally {
@@ -142,7 +140,7 @@ export default function StaffMaintenancePage() {
     try {
       const result = await apiCall("/api/staff/maintenance/report", {
         method: "POST",
-        body: { ...form, roomId: Number(form.roomId), equipmentId: form.equipmentId ? Number(form.equipmentId) : null },
+        body: { ...form, roomId: Number(form.roomId) },
       });
       if (result?.success) {
         addToast("Đã gửi báo cáo bảo trì.", "success");
@@ -187,8 +185,6 @@ export default function StaffMaintenancePage() {
     }
   };
 
-  const roomEquipment = equipment.filter((item) => item.status !== "RETIRED" && String(item.roomId) === String(form.roomId));
-
   const roomFormOptions = [
     { value: "", label: "Chọn phòng" },
     ...rooms.map((room) => ({
@@ -196,15 +192,6 @@ export default function StaffMaintenancePage() {
       label: `Phòng ${room.roomNumber}${room.floor ? ` · Tầng ${room.floor}` : ""}`,
     })),
   ];
-  const equipmentOptions = form.roomId
-    ? [
-        { value: "", label: "Sự cố chung trong phòng" },
-        ...roomEquipment.map((item) => ({
-          value: String(item.equipmentId),
-          label: `${item.equipmentName}${item.serialNumber ? ` · ${item.serialNumber}` : ""}`,
-        })),
-      ]
-    : [{ value: "", label: "Chọn phòng trước" }];
   const roomFilterOptions = [{ value: "", label: "Tất cả phòng" }, ...rooms.map((room) => ({ value: String(room.roomId), label: `Phòng ${room.roomNumber}` }))];
   const technicianOptions = [
     {
@@ -223,13 +210,13 @@ export default function StaffMaintenancePage() {
   const selStatus = selected ? STATUS_META[selected.status] || { label: selected.status, badge: "hc-badge-muted" } : null;
   const selPriority = selected ? PRIORITY_META[selected.priority] || { label: selected.priority, badge: "hc-badge-muted" } : null;
   const showAssign = !!selected && canAssign && !selectedClosed;
-  const showComplete = !!selected && canComplete && !selectedClosed;
+  const showComplete = !!selected && canComplete && selected.status === "IN_PROGRESS";
   const showConfirm = !!selected && canConfirm && selected.status === "DONE";
   const busy = workingId !== null;
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ textAlign: "left" }}>
+      <div className="hc-page-title u-text-left">
         <h2>Bảo trì & sự cố</h2>
         <p>Báo cáo, theo dõi và nghiệm thu các yêu cầu sửa chữa.</p>
       </div>
@@ -238,7 +225,7 @@ export default function StaffMaintenancePage() {
         <div className="hc-card" style={{ marginBottom: "24px" }}>
           <div className="hc-card-header">
             <div className="hc-card-title">
-              <i className="bi bi-exclamation-triangle text-primary" style={{ marginRight: "8px" }}></i>
+              <i className="bi bi-exclamation-triangle text-primary u-mr-8"></i>
               Tạo yêu cầu bảo trì
             </div>
           </div>
@@ -247,25 +234,9 @@ export default function StaffMaintenancePage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
                 <div className="hc-form-group">
                   <label className="hc-label">
-                    Phòng <span style={{ color: "var(--hc-error)" }}>*</span>
+                    Phòng <span className="u-text-error">*</span>
                   </label>
-                  <SelectMenu value={form.roomId} onChange={(value) => setForm({ ...form, roomId: value, equipmentId: "" })} options={roomFormOptions} ariaLabel="Chọn phòng" icon="bi-door-open" />
-                </div>
-                <div className="hc-form-group">
-                  <label className="hc-label">Thiết bị cụ thể</label>
-                  <div style={form.roomId ? undefined : { opacity: 0.6, pointerEvents: "none" }}>
-                    <SelectMenu value={form.equipmentId} onChange={(value) => setForm({ ...form, equipmentId: value })} options={equipmentOptions} ariaLabel="Chọn thiết bị" icon="bi-tools" />
-                  </div>
-                  {form.roomId && roomEquipment.length === 0 && <div className="hc-help-text">Phòng này chưa có thiết bị khả dụng để chọn.</div>}
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
-                <div className="hc-form-group">
-                  <label className="hc-label">
-                    Tiêu đề <span style={{ color: "var(--hc-error)" }}>*</span>
-                  </label>
-                  <input className="hc-input" required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Mô tả ngắn sự cố" />
+                  <SelectMenu value={form.roomId} onChange={(value) => setForm({ ...form, roomId: value })} options={roomFormOptions} ariaLabel="Chọn phòng" icon="bi-door-open" />
                 </div>
                 <div className="hc-form-group">
                   <label className="hc-label">Mức độ ưu tiên</label>
@@ -273,15 +244,17 @@ export default function StaffMaintenancePage() {
                 </div>
               </div>
 
-              <div className="hc-form-group">
-                <label className="hc-label">Mô tả</label>
-                <textarea
-                  className="hc-textarea"
-                  rows="3"
-                  value={form.description}
-                  onChange={(event) => setForm({ ...form, description: event.target.value })}
-                  placeholder="Thông tin bổ sung"
-                ></textarea>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+                <div className="hc-form-group">
+                  <label className="hc-label">
+                    Tiêu đề <span className="u-text-error">*</span>
+                  </label>
+                  <input className="hc-input" required value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Mô tả ngắn sự cố" />
+                </div>
+                <div className="hc-form-group">
+                  <label className="hc-label">Mô tả</label>
+                  <input className="hc-input" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Thông tin bổ sung" />
+                </div>
               </div>
 
               <button type="submit" className="hc-btn hc-btn-primary" disabled={submitting || !rooms.length}>
@@ -295,10 +268,10 @@ export default function StaffMaintenancePage() {
       <div className="hc-card">
         <div className="hc-card-header">
           <div className="hc-card-title">
-            <i className="bi bi-wrench-adjustable text-primary" style={{ marginRight: "8px" }}></i>
+            <i className="bi bi-wrench-adjustable text-primary u-mr-8"></i>
             Danh sách yêu cầu
           </div>
-          <div style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
+          <div className="m-fields" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
             <div style={{ minWidth: "180px" }}>
               <SelectMenu value={status} onChange={setStatus} options={STATUS_OPTIONS} ariaLabel="Lọc trạng thái" icon="bi-funnel" />
             </div>
@@ -326,55 +299,62 @@ export default function StaffMaintenancePage() {
             <p>Không có yêu cầu bảo trì phù hợp.</p>
           </div>
         ) : (
-          <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Sự cố</th>
-                  <th>Phòng</th>
-                  <th>Ưu tiên</th>
-                  <th>Người xử lý</th>
-                  <th>Báo lúc</th>
-                  <th>Trạng thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((request) => {
-                  const statusMeta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
-                  const priorityMeta = PRIORITY_META[request.priority] || { label: request.priority, badge: "hc-badge-muted" };
-                  return (
-                    <tr
-                      key={request.requestId}
-                      className="mt-row"
-                      tabIndex={0}
-                      onClick={() => openRequest(request)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          openRequest(request);
-                        }
-                      }}
-                    >
-                      <td>
-                        <strong>{request.title}</strong>
-                        {request.description && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.description}</div>}
-                        {request.equipmentName && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)" }}>Thiết bị: {request.equipmentName}</div>}
-                      </td>
-                      <td>{request.roomNumber || "—"}</td>
-                      <td>
-                        <span className={`hc-badge ${priorityMeta.badge}`}>{priorityMeta.label}</span>
-                      </td>
-                      <td>{request.assignedToStaff || "Chưa phân công"}</td>
-                      <td>{formatDateTime(request.reportedAt)}</td>
-                      <td>
-                        <span className={`hc-badge ${statusMeta.badge}`}>{statusMeta.label}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <Paginated items={requests}>
+            {(pageRows, pager) => (
+              <>
+                <div className="hc-card-body flush u-scroll-x">
+                  <table className="hc-table">
+                    <thead>
+                      <tr>
+                        <th>Sự cố</th>
+                        <th>Phòng</th>
+                        <th>Ưu tiên</th>
+                        <th>Người xử lý</th>
+                        <th>Báo lúc</th>
+                        <th>Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((request) => {
+                        const statusMeta = STATUS_META[request.status] || { label: request.status, badge: "hc-badge-muted" };
+                        const priorityMeta = PRIORITY_META[request.priority] || { label: request.priority, badge: "hc-badge-muted" };
+                        return (
+                          <tr
+                            key={request.requestId}
+                            className="mt-row"
+                            tabIndex={0}
+                            onClick={() => openRequest(request)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                openRequest(request);
+                              }
+                            }}
+                          >
+                            <td>
+                              <strong>{request.title}</strong>
+                              {request.description && <div style={{ fontSize: "12px", color: "var(--hc-text-secondary)", marginTop: "2px" }}>{request.description}</div>}
+                              {request.equipmentName && <div className="u-hint">Thiết bị: {request.equipmentName}</div>}
+                            </td>
+                            <td>{request.roomNumber || "—"}</td>
+                            <td>
+                              <span className={`hc-badge ${priorityMeta.badge}`}>{priorityMeta.label}</span>
+                            </td>
+                            <td>{request.assignedToStaff || "Chưa phân công"}</td>
+                            <td>{formatDateTime(request.reportedAt)}</td>
+                            <td>
+                              <span className={`hc-badge ${statusMeta.badge}`}>{statusMeta.label}</span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {pager}
+              </>
+            )}
+          </Paginated>
         )}
       </div>
 
@@ -483,7 +463,7 @@ export default function StaffMaintenancePage() {
                 </h4>
                 {loadingTechnicians ? (
                   <div style={{ padding: "8px 0", color: "var(--hc-text-secondary)", fontSize: "0.875rem" }}>
-                    <i className="bi bi-arrow-clockwise admin-schedule-spin" style={{ marginRight: "6px" }}></i>
+                    <i className="bi bi-arrow-clockwise admin-schedule-spin u-mr-6"></i>
                     Đang kiểm tra lịch trực của kỹ thuật viên...
                   </div>
                 ) : technicians.length === 0 ? (
@@ -501,7 +481,7 @@ export default function StaffMaintenancePage() {
                       gap: "8px",
                     }}
                   >
-                    <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: "1.1rem", color: "#f59e0b", flexShrink: 0 }}></i>
+                    <i className="bi bi-exclamation-triangle-fill u-star"></i>
                     <div>
                       <strong>Không có kỹ thuật viên trong ca trực:</strong> Hiện không có nhân viên bảo trì nào có lịch trực hoạt động trong ca hiện tại. Vui lòng phân công ca tại mục <strong>Quản lý Lịch làm việc</strong>.
                     </div>
@@ -543,7 +523,7 @@ export default function StaffMaintenancePage() {
                     onChange={(event) => setResolutionNote(event.target.value)}
                   ></textarea>
                 </div>
-                <button type="button" className="hc-btn hc-btn-primary" style={{ width: "100%" }} disabled={busy} onClick={() => updateRequest(selected, "complete")}>
+                <button type="button" className="hc-btn hc-btn-primary u-w-full" disabled={busy} onClick={() => updateRequest(selected, "complete")}>
                   <i className="bi bi-check2-circle"></i> {workingId === selected.requestId ? "Đang xử lý…" : "Hoàn tất yêu cầu"}
                 </button>
               </div>
@@ -554,7 +534,7 @@ export default function StaffMaintenancePage() {
                 <h4 className="mt-panel-title">
                   <i className="bi bi-patch-check"></i> Nghiệm thu
                 </h4>
-                <button type="button" className="hc-btn hc-btn-primary" style={{ width: "100%" }} disabled={busy} onClick={() => updateRequest(selected, "confirm")}>
+                <button type="button" className="hc-btn hc-btn-primary u-w-full" disabled={busy} onClick={() => updateRequest(selected, "confirm")}>
                   <i className="bi bi-patch-check"></i> Xác nhận nghiệm thu
                 </button>
               </div>

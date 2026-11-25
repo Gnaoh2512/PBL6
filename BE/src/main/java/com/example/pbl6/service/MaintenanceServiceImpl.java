@@ -17,9 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,8 +30,8 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     private final RoomRepository roomRepository;
     private final EquipmentRepository equipmentRepository;
     private final AccountRepository accountRepository;
-    private final WorkScheduleService workScheduleService;
     private final AuditLogService auditLogService;
+    private final ShiftGuard shiftGuard;
 
     @Override
     @Transactional
@@ -74,6 +72,13 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     @Override
     @Transactional(readOnly = true)
     public List<MaintenanceRequestResponse> getAllRequests(String status, String priority, Integer roomId) {
+        return getAllRequests(status, priority, roomId, null, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MaintenanceRequestResponse> getAllRequests(String status, String priority, Integer roomId,
+                                                           String assignedToUsername, String reportedByUsername) {
         List<MaintenanceRequest> list;
         if (roomId != null) {
             list = maintenanceRequestRepository.findByRoom_RoomId(roomId);
@@ -85,6 +90,17 @@ public class MaintenanceServiceImpl implements MaintenanceService {
             list = maintenanceRequestRepository.findAll();
         }
 
+        if (assignedToUsername != null) {
+            list = list.stream()
+                    .filter(r -> r.getAssignedTo() != null && assignedToUsername.equalsIgnoreCase(r.getAssignedTo().getUsername()))
+                    .collect(Collectors.toList());
+        }
+        if (reportedByUsername != null) {
+            list = list.stream()
+                    .filter(r -> r.getReportedBy() != null && reportedByUsername.equalsIgnoreCase(r.getReportedBy().getUsername()))
+                    .collect(Collectors.toList());
+        }
+
         return list.stream()
                 .map(MaintenanceRequestResponse::fromEntity)
                 .collect(Collectors.toList());
@@ -93,20 +109,24 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     @Override
     @Transactional
     public MaintenanceRequestResponse assignTechnician(Integer requestId, Integer technicianId) {
+        return assignTechnician(requestId, technicianId, null);
+    }
+
+    @Override
+    @Transactional
+    public MaintenanceRequestResponse assignTechnician(Integer requestId, Integer technicianId, String actorUsername) {
         MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu bảo trì #" + requestId));
 
+        String oldStatus = request.getStatus();
+        if (!"OPEN".equalsIgnoreCase(oldStatus) && !"IN_PROGRESS".equalsIgnoreCase(oldStatus)) {
+            throw new IllegalStateException("Chỉ có thể phân công yêu cầu bảo trì đang mở hoặc đang xử lý (hiện tại: " + oldStatus + ")");
+        }
+
         Account tech = accountRepository.findById(technicianId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy kỹ thuật viên #" + technicianId));
-
-        // Strict Shift Validation nếu trong ca hiện tại có lịch trực cho kỹ thuật viên
-        var availableStaff = workScheduleService.getAvailableStaffInShift(LocalDate.now(), LocalTime.now(), "ROLE_MAINTENANCE");
-        if (!availableStaff.isEmpty()) {
-            boolean inShift = availableStaff.stream().anyMatch(s -> s.getAccountId().equals(tech.getAccountId()));
-            if (!inShift) {
-                throw new IllegalArgumentException("Kỹ thuật viên " + tech.getFullName() + " hiện không có trong lịch trực ca bảo trì hiện tại!");
-            }
-        }
+        Account actor = actorUsername != null ? accountRepository.findByUsername(actorUsername).orElse(null) : null;
+        shiftGuard.ensureOnShift(tech, "ROLE_MAINTENANCE", actor, "BẢO TRÌ", "maintenance_request", requestId);
 
         request.setAssignedTo(tech);
         request.setStatus("IN_PROGRESS");
@@ -121,7 +141,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
 
         auditLogService.log("BẢO TRÌ", "ASSIGN", "maintenance_request", Long.valueOf(saved.getRequestId()),
                 "Phân công kỹ thuật viên " + tech.getFullName() + " (" + tech.getUsername() + ") xử lý yêu cầu bảo trì phòng " +
-                        (saved.getRoom() != null ? saved.getRoom().getRoomNumber() : "N/A"));
+                        (saved.getRoom() != null ? saved.getRoom().getRoomNumber() : "N/A") + " (" + oldStatus + " → IN_PROGRESS)");
 
         return MaintenanceRequestResponse.fromEntity(saved);
     }
@@ -129,8 +149,23 @@ public class MaintenanceServiceImpl implements MaintenanceService {
     @Override
     @Transactional
     public MaintenanceRequestResponse completeWork(Integer requestId, CompleteMaintenanceDto dto, String technicianUsername) {
+        return completeWork(requestId, dto, technicianUsername, false);
+    }
+
+    @Override
+    @Transactional
+    public MaintenanceRequestResponse completeWork(Integer requestId, CompleteMaintenanceDto dto, String technicianUsername, boolean ownOnly) {
         MaintenanceRequest request = maintenanceRequestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu bảo trì #" + requestId));
+
+        if (ownOnly && (request.getAssignedTo() == null || request.getAssignedTo().getUsername() == null
+                || !request.getAssignedTo().getUsername().equalsIgnoreCase(technicianUsername))) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn chỉ có thể hoàn tất yêu cầu bảo trì được phân công cho mình");
+        }
+
+        if (!"IN_PROGRESS".equalsIgnoreCase(request.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể báo hoàn tất yêu cầu bảo trì đang xử lý (hiện tại: " + request.getStatus() + ")");
+        }
 
         request.setStatus("DONE");
         request.setCompletedAt(LocalDateTime.now());
@@ -138,10 +173,7 @@ public class MaintenanceServiceImpl implements MaintenanceService {
             request.setResolutionNote(dto.getResolutionNote());
         }
 
-        if (request.getEquipment() != null) {
-            request.getEquipment().setStatus("WORKING");
-            equipmentRepository.save(request.getEquipment());
-        }
+        // Equipment stays UNDER_REPAIR until the receptionist/manager confirms the work (see confirmCompletion)
 
         MaintenanceRequest saved = maintenanceRequestRepository.save(request);
 
@@ -160,6 +192,15 @@ public class MaintenanceServiceImpl implements MaintenanceService {
 
         Account confirmer = accountRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tài khoản: " + username));
+
+        if (!"DONE".equalsIgnoreCase(request.getStatus())) {
+            throw new IllegalStateException("Chỉ có thể nghiệm thu yêu cầu bảo trì đã được kỹ thuật viên báo hoàn tất (hiện tại: " + request.getStatus() + ")");
+        }
+
+        if (request.getEquipment() != null) {
+            request.getEquipment().setStatus("WORKING");
+            equipmentRepository.save(request.getEquipment());
+        }
 
         request.setConfirmedBy(confirmer);
         request.setStatus("CONFIRMED");

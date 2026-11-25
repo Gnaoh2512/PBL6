@@ -1,0 +1,50 @@
+.walkin-layout {
+  max-width: 880px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* switch cards: toggle on the left, text wraps beside it */
+.walkin-toggle {
+  background: var(--hc-bg);
+  padding: 14px 18px;
+  border-radius: var(--hc-radius-md);
+  margin-bottom: 20px;
+  border: 1px solid var(--hc-border);
+}
+.walkin-toggle .hc-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+}
+.walkin-toggle .hc-switch input {
+  flex: 0 0 40px;
+  margin-top: 2px;
+}
+.walkin-toggle-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+}
+.walkin-toggle-text .u-hint {
+  margin-top: 2px;
+  line-height: 1.45;
+}
+
+.walkin-pay-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .walkin-toggle {
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .walkin-pay-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

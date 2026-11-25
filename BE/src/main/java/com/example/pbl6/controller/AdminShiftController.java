@@ -6,6 +6,7 @@ import com.example.pbl6.dto.shift.ShiftResponse;
 import com.example.pbl6.service.ShiftService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/shifts")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+@PreAuthorize(Roles.ADMIN_MANAGER)
 public class AdminShiftController {
 
     private final ShiftService shiftService;

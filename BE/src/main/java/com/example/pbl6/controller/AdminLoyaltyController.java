@@ -6,7 +6,6 @@ import com.example.pbl6.dto.loyalty.LoyaltyProfileResponse;
 import com.example.pbl6.dto.loyalty.LoyaltyTransactionResponse;
 import com.example.pbl6.dto.loyalty.TierBenefitRequest;
 import com.example.pbl6.dto.loyalty.TierBenefitResponse;
-import com.example.pbl6.dto.servicerequest.ServiceRequestResponse;
 import com.example.pbl6.entity.Account;
 import com.example.pbl6.entity.Customer;
 import com.example.pbl6.entity.CustomerLoyalty;
@@ -18,11 +17,11 @@ import com.example.pbl6.repository.CustomerRepository;
 import com.example.pbl6.repository.LoyaltyTierRepository;
 import com.example.pbl6.repository.LoyaltyTransactionRepository;
 import com.example.pbl6.service.LoyaltyService;
-import com.example.pbl6.service.ServiceRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,11 +36,10 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/loyalty")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+@PreAuthorize(Roles.ADMIN_MANAGER)
 public class AdminLoyaltyController {
 
     private final LoyaltyService loyaltyService;
-    private final ServiceRequestService serviceRequestService;
     private final CustomerRepository customerRepository;
     private final CustomerLoyaltyRepository customerLoyaltyRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
@@ -93,15 +91,6 @@ public class AdminLoyaltyController {
     public ResponseEntity<ApiResponse<List<LoyaltyTransactionResponse>>> getCustomerTransactions(@PathVariable Integer id) {
         return ResponseEntity.ok(ApiResponse.ok(loyaltyTransactionRepository.findByCustomer_CustomerIdOrderByCreatedAtDesc(id)
                 .stream().map(LoyaltyTransactionResponse::fromEntity).toList()));
-    }
-
-    /**
-     * Lịch sử Dịch vụ theo Khách hàng (Admin Portal)
-     */
-    @GetMapping({"/customers/{id}/service-requests", "/customers/{id}/services"})
-    public ResponseEntity<ApiResponse<List<ServiceRequestResponse>>> getCustomerServiceRequests(@PathVariable Integer id) {
-        return ResponseEntity.ok(ApiResponse.ok("Lấy lịch sử dịch vụ của khách hàng thành công",
-                serviceRequestService.getRequestsByCustomerId(id)));
     }
 
     /**
@@ -226,19 +215,14 @@ public class AdminLoyaltyController {
 
     // ------------------------------------------------------------------ CRUD for TierBenefit (Admin Portal)
 
-    @GetMapping({"/benefits", "/tier-benefits"})
+    @GetMapping("/benefits")
     public ResponseEntity<ApiResponse<List<TierBenefitResponse>>> getAllTierBenefits(
             @RequestParam(required = false) Integer tierId
     ) {
         return ResponseEntity.ok(ApiResponse.ok(loyaltyService.getAllTierBenefits(tierId)));
     }
 
-    @GetMapping({"/benefits/{id}", "/tier-benefits/{id}"})
-    public ResponseEntity<ApiResponse<TierBenefitResponse>> getTierBenefitById(@PathVariable Integer id) {
-        return ResponseEntity.ok(ApiResponse.ok(loyaltyService.getTierBenefitById(id)));
-    }
-
-    @PostMapping({"/benefits", "/tier-benefits"})
+    @PostMapping("/benefits")
     public ResponseEntity<ApiResponse<TierBenefitResponse>> createTierBenefit(
             @Valid @RequestBody TierBenefitRequest request
     ) {
@@ -247,7 +231,7 @@ public class AdminLoyaltyController {
                 .body(ApiResponse.ok("Tạo đặc quyền hạng thành viên thành công", created));
     }
 
-    @PutMapping({"/benefits/{id}", "/tier-benefits/{id}"})
+    @PutMapping("/benefits/{id}")
     public ResponseEntity<ApiResponse<TierBenefitResponse>> updateTierBenefit(
             @PathVariable Integer id,
             @RequestBody TierBenefitRequest request
@@ -256,7 +240,7 @@ public class AdminLoyaltyController {
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật đặc quyền hạng thành viên thành công", updated));
     }
 
-    @DeleteMapping({"/benefits/{id}", "/tier-benefits/{id}"})
+    @DeleteMapping("/benefits/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteTierBenefit(@PathVariable Integer id) {
         loyaltyService.deleteTierBenefit(id);
         return ResponseEntity.ok(ApiResponse.ok("Đã xóa đặc quyền hạng thành viên", null));

@@ -27,6 +27,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -48,6 +50,8 @@ class CustomerHistoryServiceTest {
     private ServiceUsageRepository serviceUsageRepository;
     @Mock
     private ServiceRequestRepository serviceRequestRepository;
+    @Mock
+    private LoyaltyBenefitSupport loyaltyBenefitSupport;
     @Mock
     private VietQrService vietQrService;
 
@@ -148,6 +152,9 @@ class CustomerHistoryServiceTest {
         when(bookingRepository.findByBookingCode("BK-20261001-A1B2")).thenReturn(Optional.of(mockBooking));
         when(bookingRoomRepository.findByBooking_BookingId(100)).thenReturn(List.of(mockBookingRoom));
         when(serviceUsageRepository.findByBooking_BookingId(100)).thenReturn(Collections.emptyList());
+        when(loyaltyBenefitSupport.withBillLines(anyList(), eq(100)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(loyaltyBenefitSupport.toResponses(Collections.emptyList())).thenReturn(Collections.emptyList());
 
         Payment depositPayment = Payment.builder()
                 .paymentId(1)

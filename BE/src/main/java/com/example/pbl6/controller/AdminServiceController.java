@@ -7,6 +7,7 @@ import com.example.pbl6.entity.ServiceCategory;
 import com.example.pbl6.service.ServiceAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/services")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN') or hasRole('MANAGER')")
+@PreAuthorize(Roles.ADMIN_MANAGER)
 public class AdminServiceController {
 
     private final ServiceAdminService serviceAdminService;

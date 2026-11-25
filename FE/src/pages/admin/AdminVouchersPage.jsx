@@ -1,13 +1,39 @@
 import React, { useState, useEffect } from "react";
-import Modal from "../../components/Modal";
+import Modal from "../../components/common/Modal";
 import { apiCall, formatVND, formatDate } from "../../services/api";
 import { useToast } from "../../contexts/ToastContext";
+import SelectMenu from "../../components/common/SelectMenu";
+import DatePicker from "../../components/common/DatePicker";
+import Paginated from "../../components/common/TablePagination";
 
 export default function AdminVouchersPage() {
   const { addToast } = useToast();
 
   const [vouchers, setVouchers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [detailId, setDetailId] = useState(null);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const openDetail = (v) => {
+    setDetailId(v.voucherId);
+    setEditForm({
+      code: v.code || "",
+      voucherName: v.voucherName || "",
+      discountType: v.discountType === "PERCENTAGE" ? "PERCENT" : v.discountType || "PERCENT",
+      discountValue: v.discountValue ?? "",
+      maxDiscountAmount: v.maxDiscountAmount ?? "",
+      minOrderAmount: v.minOrderAmount ?? 0,
+      startDate: v.startDate || "",
+      endDate: v.endDate || "",
+      usageLimit: v.usageLimit ?? "",
+    });
+  };
+
+  const closeDetail = () => {
+    setDetailId(null);
+    setEditForm(null);
+  };
 
   // Create Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -104,11 +130,59 @@ export default function AdminVouchersPage() {
     }
   };
 
+  const handleSaveEdit = async (e) => {
+    e?.preventDefault?.();
+    if (!editForm) return;
+    const isPercentEdit = editForm.discountType === "PERCENT" || editForm.discountType === "PERCENTAGE";
+    if (!editForm.code.trim() || !editForm.voucherName.trim()) {
+      addToast("Vui lòng điền đầy đủ mã voucher và tên chương trình!", "warning");
+      return;
+    }
+    if (!editForm.discountValue || parseFloat(editForm.discountValue) <= 0) {
+      addToast("Giá trị giảm phải lớn hơn 0!", "warning");
+      return;
+    }
+    if (isPercentEdit && parseFloat(editForm.discountValue) > 100) {
+      addToast("Phần trăm giảm không thể vượt quá 100%!", "warning");
+      return;
+    }
+    if (editForm.startDate && editForm.endDate && editForm.endDate < editForm.startDate) {
+      addToast("Ngày kết thúc phải sau ngày bắt đầu!", "warning");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      const res = await apiCall(`/api/admin/vouchers/${detailId}`, {
+        method: "PUT",
+        body: {
+          code: editForm.code.trim().toUpperCase(),
+          voucherName: editForm.voucherName.trim(),
+          discountType: editForm.discountType,
+          discountValue: parseFloat(editForm.discountValue),
+          maxDiscountAmount: isPercentEdit && editForm.maxDiscountAmount ? parseFloat(editForm.maxDiscountAmount) : null,
+          minOrderAmount: parseFloat(editForm.minOrderAmount) || 0,
+          startDate: editForm.startDate || null,
+          endDate: editForm.endDate || null,
+          usageLimit: parseInt(editForm.usageLimit) || null,
+        },
+      });
+      if (res && res.success) {
+        addToast("Đã cập nhật voucher!", "success");
+        closeDetail();
+        loadVouchers();
+      }
+    } catch (err) {
+      addToast(err.message || "Lỗi cập nhật voucher", "error");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const isVoucherActive = (v) => v.isActive === true;
 
   return (
     <div className="ops-page">
-      <div className="hc-page-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", textAlign: "left" }}>
+      <div className="hc-page-title u-bar">
         <div>
           <h2>Quản Lý Mã Khuyến Mãi (Vouchers)</h2>
           <p>Tạo chiến dịch ưu đãi, cấu hình mức giảm giá và quản lý bật/tắt kích hoạt voucher</p>
@@ -122,15 +196,15 @@ export default function AdminVouchersPage() {
       <div className="hc-card">
         <div className="hc-card-header">
           <div className="hc-card-title">
-            <i className="bi bi-ticket-detailed text-primary" style={{ marginRight: "8px" }}></i>
-            Danh Sách Voucher Khuyến Mãi ({vouchers.length})
+            <i className="bi bi-ticket-detailed text-primary u-mr-8"></i>
+            Danh Sách Voucher Khuyến Mãi
           </div>
           <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={loadVouchers}>
             <i className="bi bi-arrow-clockwise"></i> Làm mới
           </button>
         </div>
 
-        <div className="hc-card-body flush" style={{ overflowX: "auto" }}>
+        <div className="hc-card-body flush u-scroll-x">
           {loading ? (
             <div className="hc-loading-spinner">
               <div className="hc-spinner"></div>
@@ -141,76 +215,222 @@ export default function AdminVouchersPage() {
               <p>Chưa có mã voucher nào. Nhấn &quot;Tạo Voucher Mới&quot; để bắt đầu.</p>
             </div>
           ) : (
-            <table className="hc-table">
-              <thead>
-                <tr>
-                  <th>Mã Voucher</th>
-                  <th>Tên chương trình</th>
-                  <th>Loại giảm</th>
-                  <th>Mức giảm</th>
-                  <th>Giảm tối đa</th>
-                  <th>Đơn tối thiểu</th>
-                  <th>Thời hạn áp dụng</th>
-                  <th>Lượt dùng</th>
-                  <th>Kích hoạt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {vouchers.map((v) => {
-                  const active = isVoucherActive(v);
-                  const isPercent = v.discountType === "PERCENT" || v.discountType === "PERCENTAGE";
-                  return (
-                    <tr key={v.voucherId} style={{ opacity: active ? 1 : 0.55 }}>
-                      <td>
-                        <span className="hc-badge hc-badge-warning" style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.04em" }}>
-                          {v.code}
-                        </span>
-                      </td>
-                      <td>
-                        <strong>{v.voucherName}</strong>
-                      </td>
-                      <td>
-                        <span className={`hc-badge ${isPercent ? "hc-badge-info" : "hc-badge-secondary"}`} style={{ fontSize: "11px" }}>
-                          {isPercent ? "Phần trăm" : "Số tiền cố định"}
-                        </span>
-                      </td>
-                      <td>
-                        <strong style={{ color: "var(--hc-secondary-dark)" }}>{isPercent ? `${v.discountValue}%` : formatVND(v.discountValue)}</strong>
-                      </td>
-                      <td>
-                        {isPercent ? (
-                          v.maxDiscountAmount && Number(v.maxDiscountAmount) > 0 ? (
-                            <strong style={{ color: "var(--hc-primary, #0284c7)", fontWeight: 600 }}>{formatVND(v.maxDiscountAmount)}</strong>
-                          ) : (
-                            <span className="hc-badge" style={{ background: "#f1f5f9", color: "#64748b", fontSize: "11px", border: "1px solid #cbd5e1" }}>
-                              Không giới hạn
-                            </span>
-                          )
-                        ) : (
-                          <span style={{ color: "var(--hc-text-muted)", fontSize: "12px" }}>Cố định ({formatVND(v.discountValue)})</span>
-                        )}
-                      </td>
-                      <td>{formatVND(v.minOrderAmount || 0)}</td>
-                      <td style={{ fontSize: "13px", color: "var(--hc-text-secondary)" }}>
-                        {v.startDate ? formatDate(v.startDate) : "—"} → {v.endDate ? formatDate(v.endDate) : "—"}
-                      </td>
-                      <td>
-                        {v.usedCount || 0} / {v.usageLimit ?? "∞"}
-                      </td>
-                      <td>
-                        <label className="hc-switch" title={active ? "Đang bật — nhấn để tắt" : "Đang tắt — nhấn để bật"}>
-                          <input type="checkbox" checked={active} onChange={() => handleToggleVoucher(v.voucherId)} />
-                          <span style={{ color: active ? "var(--hc-success)" : "var(--hc-text-muted)", fontSize: 12 }}>{active ? "Đang bật" : "Đã tắt"}</span>
-                        </label>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <Paginated items={vouchers}>
+              {(pageRows, pager) => (
+                <>
+                  <table className="hc-table">
+                    <thead>
+                      <tr>
+                        <th>Mã Voucher</th>
+                        <th>Tên chương trình</th>
+                        <th>Loại giảm</th>
+                        <th>Mức giảm</th>
+                        <th>Giảm tối đa</th>
+                        <th>Đơn tối thiểu</th>
+                        <th>Thời hạn áp dụng</th>
+                        <th>Lượt dùng</th>
+                        <th>Kích hoạt</th>
+                        <th className="col-actions">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pageRows.map((v) => {
+                        const active = isVoucherActive(v);
+                        const isPercent = v.discountType === "PERCENT" || v.discountType === "PERCENTAGE";
+                        return (
+                          <tr
+                            key={v.voucherId}
+                            className="row-clickable"
+                            style={{ opacity: active ? 1 : 0.55 }}
+                            tabIndex={0}
+                            title="Xem & chỉnh sửa voucher"
+                            onClick={() => openDetail(v)}
+                            onKeyDown={(e) => {
+                              if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                                e.preventDefault();
+                                openDetail(v);
+                              }
+                            }}
+                          >
+                            <td>
+                              <span className="hc-badge hc-badge-warning" style={{ fontSize: "13px", fontWeight: 700, letterSpacing: "0.04em" }}>
+                                {v.code}
+                              </span>
+                            </td>
+                            <td>
+                              <strong>{v.voucherName}</strong>
+                            </td>
+                            <td>
+                              <span className={`hc-badge ${isPercent ? "hc-badge-info" : "hc-badge-secondary"} u-fs-11`}>
+                                {isPercent ? "Phần trăm" : "Số tiền cố định"}
+                              </span>
+                            </td>
+                            <td>
+                              <strong style={{ color: "var(--hc-secondary-dark)" }}>{isPercent ? `${v.discountValue}%` : formatVND(v.discountValue)}</strong>
+                            </td>
+                            <td>
+                              {isPercent ? (
+                                v.maxDiscountAmount && Number(v.maxDiscountAmount) > 0 ? (
+                                  <strong style={{ color: "var(--hc-primary, #0284c7)", fontWeight: 600 }}>{formatVND(v.maxDiscountAmount)}</strong>
+                                ) : (
+                                  <span className="hc-badge" style={{ background: "#f1f5f9", color: "#64748b", fontSize: "11px", border: "1px solid #cbd5e1" }}>
+                                    Không giới hạn
+                                  </span>
+                                )
+                              ) : (
+                                <span className="u-hint-muted">Cố định ({formatVND(v.discountValue)})</span>
+                              )}
+                            </td>
+                            <td>{formatVND(v.minOrderAmount || 0)}</td>
+                            <td style={{ fontSize: "13px", color: "var(--hc-text-secondary)" }}>
+                              {v.startDate ? formatDate(v.startDate) : "—"} → {v.endDate ? formatDate(v.endDate) : "—"}
+                            </td>
+                            <td>
+                              {v.usedCount || 0} / {v.usageLimit ?? "∞"}
+                            </td>
+                            <td>
+                              <span className={`hc-badge ${active ? "hc-badge-success" : "hc-badge-muted"}`}>
+                                <i className={`bi ${active ? "bi-check-circle-fill" : "bi-pause-circle"}`}></i> {active ? "Đang bật" : "Đã tắt"}
+                              </span>
+                            </td>
+                            <td className="col-actions">
+                              <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  className={`hc-btn hc-btn-sm ${active ? "hc-btn-outline" : "hc-btn-primary"}`}
+                                  onClick={() => handleToggleVoucher(v.voucherId)}
+                                  title={active ? "Đang bật — nhấn để tắt" : "Đang tắt — nhấn để bật"}
+                                >
+                                  <i className={`bi ${active ? "bi-pause-circle" : "bi-play-circle"}`}></i> {active ? "Tắt" : "Bật"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {pager}
+                </>
+              )}
+            </Paginated>
           )}
         </div>
       </div>
+
+      {/* Voucher detail / edit modal */}
+      {(() => {
+        const v = vouchers.find((item) => item.voucherId === detailId);
+        if (!v || !editForm) return null;
+        const active = isVoucherActive(v);
+        const isPercentEdit = editForm.discountType === "PERCENT" || editForm.discountType === "PERCENTAGE";
+        return (
+          <Modal
+            isOpen
+            onClose={closeDetail}
+            title={`Voucher ${v.code}`}
+            subtitle={`Đã dùng ${v.usedCount || 0} / ${v.usageLimit ?? "∞"} lượt · chỉnh sửa thông tin chương trình`}
+            icon="bi-ticket-detailed"
+            maxWidth="560px"
+            headerExtra={<span className={`hc-badge ${active ? "hc-badge-success" : "hc-badge-muted"}`}>{active ? "Đang bật" : "Đã tắt"}</span>}
+            footer={
+              <div className="u-actions-end">
+                <button type="button" className={`hc-btn hc-btn-sm ${active ? "hc-btn-outline-danger" : "hc-btn-outline"}`} onClick={() => handleToggleVoucher(v.voucherId)}>
+                  <i className={`bi ${active ? "bi-pause-circle" : "bi-play-circle"}`}></i> {active ? "Tắt voucher" : "Bật voucher"}
+                </button>
+                <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={closeDetail}>
+                  Hủy
+                </button>
+                <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" onClick={handleSaveEdit} disabled={savingEdit}>
+                  {savingEdit ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            }
+          >
+            <form onSubmit={handleSaveEdit}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
+                <div className="hc-form-group">
+                  <label className="hc-label">
+                    Mã Code <span className="u-text-error">*</span>
+                  </label>
+                  <input type="text" className="hc-input" style={{ textTransform: "uppercase" }} value={editForm.code} onChange={(e) => setEditForm({ ...editForm, code: e.target.value.toUpperCase() })} required />
+                </div>
+                <div className="hc-form-group">
+                  <label className="hc-label">
+                    Tên chương trình ưu đãi <span className="u-text-error">*</span>
+                  </label>
+                  <input type="text" className="hc-input" value={editForm.voucherName} onChange={(e) => setEditForm({ ...editForm, voucherName: e.target.value })} required />
+                </div>
+              </div>
+
+              <div className="u-grid-2">
+                <div className="hc-form-group">
+                  <label className="hc-label">
+                    Kiểu giảm giá <span className="u-text-error">*</span>
+                  </label>
+                  <SelectMenu
+                    ariaLabel="Kiểu giảm giá"
+                    icon="bi-percent"
+                    value={editForm.discountType}
+                    onChange={(val) => setEditForm({ ...editForm, discountType: val })}
+                    options={[
+                      { value: "PERCENT", label: "Phần trăm (%)" },
+                      { value: "FIXED", label: "Số tiền cố định (VNĐ)" },
+                    ]}
+                  />
+                </div>
+                <div className="hc-form-group">
+                  <label className="hc-label">
+                    Giá trị giảm <span className="u-text-error">*</span>
+                    <span style={{ color: "var(--hc-text-muted)", fontWeight: 400, marginLeft: 4 }}>{isPercentEdit ? "(1 – 100%)" : "(VNĐ)"}</span>
+                  </label>
+                  <input type="number" className="hc-input" min="1" max={isPercentEdit ? 100 : undefined} value={editForm.discountValue} onChange={(e) => setEditForm({ ...editForm, discountValue: e.target.value })} required />
+                </div>
+              </div>
+
+              {isPercentEdit && (
+                <div className="hc-form-group">
+                  <label className="hc-label">
+                    Giảm tối đa (VNĐ)
+                    <span style={{ color: "var(--hc-text-muted)", fontWeight: 400, marginLeft: 4 }}>(tùy chọn)</span>
+                  </label>
+                  <input
+                    type="number"
+                    className="hc-input"
+                    min="0"
+                    step="10000"
+                    placeholder="Để trống = không giới hạn mức giảm tối đa"
+                    value={editForm.maxDiscountAmount}
+                    onChange={(e) => setEditForm({ ...editForm, maxDiscountAmount: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div className="u-grid-2">
+                <div className="hc-form-group">
+                  <label className="hc-label">Đơn tối thiểu (VNĐ)</label>
+                  <input type="number" className="hc-input" min="0" step="50000" value={editForm.minOrderAmount} onChange={(e) => setEditForm({ ...editForm, minOrderAmount: e.target.value })} />
+                </div>
+                <div className="hc-form-group">
+                  <label className="hc-label">Giới hạn số lượt dùng</label>
+                  <input type="number" className="hc-input" min={Math.max(1, v.usedCount || 0)} placeholder="Để trống = không giới hạn" value={editForm.usageLimit} onChange={(e) => setEditForm({ ...editForm, usageLimit: e.target.value })} />
+                </div>
+              </div>
+
+              <div className="u-grid-2">
+                <div className="hc-form-group">
+                  <label className="hc-label">Ngày bắt đầu</label>
+                  <DatePicker ariaLabel="Ngày bắt đầu" placeholder="Chọn ngày bắt đầu" value={editForm.startDate} onChange={(val) => setEditForm({ ...editForm, startDate: val })} />
+                </div>
+                <div className="hc-form-group">
+                  <label className="hc-label">Ngày kết thúc</label>
+                  <DatePicker ariaLabel="Ngày kết thúc" placeholder="Chọn ngày kết thúc" value={editForm.endDate} min={editForm.startDate} onChange={(val) => setEditForm({ ...editForm, endDate: val })} />
+                </div>
+              </div>
+            </form>
+          </Modal>
+        );
+      })()}
 
       {/* Create Voucher Modal */}
       <Modal
@@ -224,7 +444,7 @@ export default function AdminVouchersPage() {
         icon="bi-ticket-perforated"
         maxWidth="560px"
         footer={
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+          <div className="u-actions-end">
             <button
               type="button"
               className="hc-btn hc-btn-outline hc-btn-sm"
@@ -245,7 +465,7 @@ export default function AdminVouchersPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
             <div className="hc-form-group">
               <label className="hc-label">
-                Mã Code <span style={{ color: "var(--hc-error)" }}>*</span>
+                Mã Code <span className="u-text-error">*</span>
               </label>
               <input
                 type="text"
@@ -259,25 +479,31 @@ export default function AdminVouchersPage() {
             </div>
             <div className="hc-form-group">
               <label className="hc-label">
-                Tên chương trình ưu đãi <span style={{ color: "var(--hc-error)" }}>*</span>
+                Tên chương trình ưu đãi <span className="u-text-error">*</span>
               </label>
               <input type="text" className="hc-input" placeholder="VD: Chào Mừng Khách Mới..." value={form.voucherName} onChange={(e) => setForm({ ...form, voucherName: e.target.value })} required />
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">
-                Kiểu giảm giá <span style={{ color: "var(--hc-error)" }}>*</span>
+                Kiểu giảm giá <span className="u-text-error">*</span>
               </label>
-              <select className="hc-select" value={form.discountType} onChange={(e) => setForm({ ...form, discountType: e.target.value })}>
-                <option value="PERCENT">Phần trăm (%)</option>
-                <option value="FIXED">Số tiền cố định (VNĐ)</option>
-              </select>
+              <SelectMenu
+                ariaLabel="Kiểu giảm giá"
+                icon="bi-percent"
+                value={form.discountType}
+                onChange={(val) => setForm({ ...form, discountType: val })}
+                options={[
+                  { value: "PERCENT", label: "Phần trăm (%)" },
+                  { value: "FIXED", label: "Số tiền cố định (VNĐ)" },
+                ]}
+              />
             </div>
             <div className="hc-form-group">
               <label className="hc-label">
-                Giá trị giảm <span style={{ color: "var(--hc-error)" }}>*</span>
+                Giá trị giảm <span className="u-text-error">*</span>
                 <span style={{ color: "var(--hc-text-muted)", fontWeight: 400, marginLeft: 4 }}>{form.discountType === "PERCENT" || form.discountType === "PERCENTAGE" ? "(1 – 100%)" : "(VNĐ)"}</span>
               </label>
               <input
@@ -310,7 +536,7 @@ export default function AdminVouchersPage() {
             </div>
           )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">Đơn tối thiểu (VNĐ)</label>
               <input type="number" className="hc-input" min="0" step="50000" value={form.minOrderAmount} onChange={(e) => setForm({ ...form, minOrderAmount: e.target.value })} />
@@ -321,14 +547,14 @@ export default function AdminVouchersPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div className="u-grid-2">
             <div className="hc-form-group">
               <label className="hc-label">Ngày bắt đầu</label>
-              <input type="date" className="hc-input" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+              <DatePicker ariaLabel="Ngày bắt đầu" placeholder="Chọn ngày bắt đầu" value={form.startDate} onChange={(val) => setForm({ ...form, startDate: val })} />
             </div>
             <div className="hc-form-group">
               <label className="hc-label">Ngày kết thúc</label>
-              <input type="date" className="hc-input" value={form.endDate} min={form.startDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+              <DatePicker ariaLabel="Ngày kết thúc" placeholder="Chọn ngày kết thúc" value={form.endDate} min={form.startDate} onChange={(val) => setForm({ ...form, endDate: val })} />
             </div>
           </div>
         </form>

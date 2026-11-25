@@ -17,7 +17,6 @@ public interface LoyaltyService {
 
     // Admin CRUD for TierBenefit
     List<TierBenefitResponse> getAllTierBenefits(Integer tierId);
-    TierBenefitResponse getTierBenefitById(Integer benefitId);
     TierBenefitResponse createTierBenefit(TierBenefitRequest req);
     TierBenefitResponse updateTierBenefit(Integer benefitId, TierBenefitRequest req);
     void deleteTierBenefit(Integer benefitId);

@@ -41,15 +41,6 @@ public class PublicBookingController {
     }
 
     /**
-     * Tra cứu thông tin chi tiết đơn đặt phòng bằng mã booking
-     */
-    @GetMapping("/api/public/bookings/{bookingCode}")
-    public ResponseEntity<ApiResponse<BookingDetailResponse>> getBookingByCode(@PathVariable String bookingCode) {
-        BookingDetailResponse response = customerBookingService.getBookingByCode(bookingCode);
-        return ResponseEntity.ok(ApiResponse.ok(response));
-    }
-
-    /**
      * Kiểm tra trạng thái nộp cọc theo thời gian thực (Polling API mỗi 3 giây)
      */
     @GetMapping("/api/public/bookings/{bookingCode}/payment-status")

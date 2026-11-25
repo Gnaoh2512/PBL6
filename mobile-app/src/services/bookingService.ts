@@ -1,5 +1,14 @@
 import apiClient, { ApiResponse } from './apiClient';
-import { Booking, BookingStatus, GuestInfo, QRInfo } from '../models/Booking';
+import {
+  Booking,
+  BookingStatus,
+  GuestInfo,
+  QRInfo,
+  ServiceUsageItem,
+  BookingServiceUsed,
+  BookingServiceRequest,
+} from '../models/Booking';
+import { serviceService } from './serviceService';
 import { SelectedService } from '../models/Service';
 import { toApiDate } from '../utils/dateUtils';
 
@@ -113,13 +122,12 @@ export const bookingService = {
 
   getBookingByCode: async (bookingCode: string): Promise<Booking> => {
     try {
-      const response = await apiClient.get<ApiResponse<any>>(`/api/public/bookings/${bookingCode}`);
-      console.log('[bookingService] getBookingByCode raw response:', response.data);
+      const response = await apiClient.get<ApiResponse<any>>(`/api/public/history/lookup/${bookingCode}`);
+      console.log('[bookingService] getBookingByCode (lookup) raw response:', response.data);
       return mapApiToBooking(response.data?.data);
-    } catch {
-      const fallbackRes = await apiClient.get<ApiResponse<any>>(`/api/public/history/lookup/${bookingCode}`);
-      console.log('[bookingService] lookup fallback raw response:', fallbackRes.data);
-      return mapApiToBooking(fallbackRes.data?.data);
+    } catch (err) {
+      console.log('[bookingService] getBookingByCode error:', err);
+      return {} as Booking;
     }
   },
 
@@ -127,7 +135,7 @@ export const bookingService = {
 
   getMyBookings: async (): Promise<Booking[]> => {
     const response = await apiClient.get<ApiResponse<any[]>>(
-      '/api/customer/bookings/my-bookings'
+      '/api/customer/bookings/history'
     );
     console.log('[bookingService] getMyBookings raw response:', response.data);
     return (response.data?.data || []).map(mapApiToBooking);
@@ -164,6 +172,30 @@ export const bookingService = {
     );
     console.log('[bookingService] cancelBooking raw response:', response.data);
     return response.data;
+  },
+
+  getBookingServicesUsed: async (bookingCode: string): Promise<ServiceUsageItem[]> => {
+    try {
+      const response = await apiClient.get<ApiResponse<any>>(
+        `/api/customer/bookings/history/${bookingCode}`
+      );
+      console.log('[bookingService] getBookingServicesUsed raw response:', response.data);
+      const data = response.data?.data;
+      const list = data?.servicesUsed || data?.serviceUsages || data?.services || [];
+      return Array.isArray(list) ? list.map((s: any) => ({
+        serviceUsageId: s.serviceUsageId || s.id,
+        serviceId: s.serviceId,
+        serviceName: s.serviceName || s.service?.serviceName || 'Dịch vụ',
+        quantity: s.quantity || 1,
+        unitPrice: s.unitPrice,
+        totalPrice: s.totalPrice || s.totalAmount,
+        note: s.note,
+        status: s.status,
+      })) : [];
+    } catch (err) {
+      console.log('[bookingService] getBookingServicesUsed error:', err);
+      return [];
+    }
   },
 };
 
@@ -217,6 +249,51 @@ function mapApiToBooking(data: any): Booking {
     depositRequired: data.depositRequired,
     depositPaid: data.depositPaid,
     qrInfo: data.qrInfo,
+    paymentTransactions: data.paymentTransactions || [],
+    servicesUsed: Array.isArray(data.servicesUsed)
+      ? data.servicesUsed.map((s: any): BookingServiceUsed => {
+          const isLoyalty = Boolean(
+            s.loyaltyBenefit === true ||
+            s.isLoyaltyBenefit === true ||
+            (typeof s.benefitName === 'string' && s.benefitName.trim().length > 0)
+          );
+          return {
+            serviceUsageId: s.serviceUsageId ?? s.id,
+            serviceId: s.serviceId,
+            serviceName: s.serviceName || s.service?.serviceName || 'Dịch vụ',
+            quantity: s.quantity ?? 1,
+            unit: s.unit,
+            unitPrice: s.unitPrice,
+            totalAmount: s.totalAmount ?? s.totalPrice,
+            totalPrice: s.totalAmount ?? s.totalPrice,
+            orderTime: s.orderTime ?? s.createdAt,
+            note: s.note,
+            status: s.status,
+            loyaltyBenefit: isLoyalty,
+            isLoyaltyBenefit: isLoyalty,
+            benefitName: s.benefitName,
+          };
+        })
+      : [],
+    serviceRequests: Array.isArray(data.serviceRequests)
+      ? data.serviceRequests.map((r: any): BookingServiceRequest => ({
+          serviceRequestId: r.serviceRequestId ?? r.id,
+          serviceName: r.serviceName || 'Yêu cầu dịch vụ',
+          roomNumber: r.roomNumber,
+          quantity: r.quantity ?? 1,
+          feeAmount: r.feeAmount ?? r.amount,
+          status: (r.status || 'PENDING').toUpperCase(),
+          assignedToStaff: r.assignedToStaff,
+          note: r.note,
+          isLoyaltyBenefit:
+            r.isLoyaltyBenefit ??
+            r.loyaltyBenefit ??
+            (typeof r.note === 'string' && r.note.trim().startsWith('[LOYALTY BENEFIT]')),
+          loyaltyBenefit: r.loyaltyBenefit ?? r.isLoyaltyBenefit,
+          requestedAt: r.requestedAt ?? r.createdAt,
+          completedAt: r.completedAt,
+        }))
+      : [],
     createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
     updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
   };

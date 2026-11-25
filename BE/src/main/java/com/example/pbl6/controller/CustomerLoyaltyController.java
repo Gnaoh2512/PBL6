@@ -9,6 +9,7 @@ import com.example.pbl6.service.LoyaltyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -23,28 +24,28 @@ public class CustomerLoyaltyController {
     private final LoyaltyService loyaltyService;
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
+    @PreAuthorize(Roles.CUSTOMER_OR_ADMIN)
     public ResponseEntity<ApiResponse<LoyaltyProfileResponse>> getProfile(Authentication authentication) {
         LoyaltyProfileResponse profile = loyaltyService.getProfile(authentication.getName());
         return ResponseEntity.ok(ApiResponse.ok(profile));
     }
 
     @GetMapping("/transactions")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
+    @PreAuthorize(Roles.CUSTOMER_OR_ADMIN)
     public ResponseEntity<ApiResponse<List<LoyaltyTransactionResponse>>> getTransactions(Authentication authentication) {
         List<LoyaltyTransactionResponse> list = loyaltyService.getTransactions(authentication.getName());
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
     @GetMapping("/benefits")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
+    @PreAuthorize(Roles.CUSTOMER_OR_ADMIN)
     public ResponseEntity<ApiResponse<List<TierBenefitResponse>>> getBenefits(Authentication authentication) {
         List<TierBenefitResponse> list = loyaltyService.getAvailableBenefits(authentication.getName());
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
     @PostMapping("/redeem")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'ADMIN')")
+    @PreAuthorize(Roles.CUSTOMER_OR_ADMIN)
     public ResponseEntity<ApiResponse<TierBenefitResponse>> redeemBenefit(
             @Valid @RequestBody RedeemBenefitRequest request,
             Authentication authentication) {

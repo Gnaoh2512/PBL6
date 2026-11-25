@@ -15,7 +15,6 @@ import java.util.Optional;
 public interface CashierShiftRepository extends JpaRepository<CashierShift, Integer> {
     List<CashierShift> findByAccount_AccountId(Integer accountId);
     List<CashierShift> findByStatus(String status);
-    List<CashierShift> findByStatusOrderByStartTimeDesc(String status);
     Optional<CashierShift> findFirstByStatusOrderByStartTimeDesc(String status);
     boolean existsByWorkSchedule_ScheduleId(Integer scheduleId);
 

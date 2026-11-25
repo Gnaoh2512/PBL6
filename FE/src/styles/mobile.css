@@ -1,0 +1,1125 @@
+/* ============================================================
+   Mobile experience  (loaded LAST from main.jsx so it wins ties)
+   Breakpoints: <=768px tablet/phone, <=560px phone, <=380px small phone
+   1. Base & touch      2. Portal bottom tab bar   3. Page layout & grids
+   4. Forms & buttons   5. Tables                  6. Modals / toasts / popovers
+   7. Public site       8. Overflow guards, payment modal, pickers, public nav
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* ── 1. Base & touch ── */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+  img,
+  video {
+    max-width: 100%;
+  }
+  .hc-container {
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(16px, env(safe-area-inset-left));
+  }
+  .hc-page {
+    padding: 20px 0 32px;
+  }
+
+  /* ── 2. Portal: sidebar is replaced by the bottom tab bar (see PortalLayout.css) ── */
+  .portal-sidebar {
+    display: none !important;
+  }
+  .portal-main,
+  .portal-collapsed .portal-main {
+    width: 100% !important;
+    margin-left: 0 !important;
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+    transition: none;
+  }
+  .portal-header {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: 56px;
+    padding: 0 14px;
+  }
+  .portal-user button {
+    width: 40px;
+    height: 40px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .portal-main .ops-page {
+    padding: 18px 14px 28px;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ── 3. Page layout & grids ── */
+  .ops-page .hc-page-title,
+  .hc-title-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .ops-page .hc-page-title h1,
+  .ops-page .hc-page-title h2 {
+    font-size: 24px;
+  }
+  .hc-title-actions {
+    width: 100%;
+  }
+  .hc-title-actions > * {
+    flex: 1 1 auto;
+  }
+  .u-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .u-actions-end,
+  .u-modal-actions {
+    flex-wrap: wrap;
+    justify-content: stretch;
+  }
+  .u-actions-end > *,
+  .u-modal-actions > * {
+    flex: 1 1 auto;
+  }
+  .ops-page .hc-card-header {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+  .ops-page .hc-card-body {
+    padding: 16px;
+  }
+  .ops-page .hc-card-body.flush {
+    padding: 0;
+  }
+  .hc-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .hc-search,
+  .hc-select-sm {
+    width: 100%;
+  }
+  .hc-tab-group {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hc-tab-group::-webkit-scrollbar {
+    display: none;
+  }
+  .hc-tab-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .u-flex-200,
+  .u-flex-220,
+  .u-flex-240 {
+    flex: 1 1 100%;
+  }
+
+  /* ── 7. Public site footer ── */
+  .resort-footer {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 20px;
+    padding-right: 5vw;
+    padding-left: 5vw;
+  }
+  .resort-footer > :first-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  /* stack multi-column layouts */
+  .u-grid-2,
+  .bk-grid-2,
+  .bk-grid-1-2,
+  .booking-room-grid,
+  .resort-room-grid,
+  .resort-service-grid,
+  .ov-grid,
+  [style*="grid-template-columns"]:not([style*="auto-fit"]):not(.tl-grid) {
+    grid-template-columns: 1fr !important;
+  }
+  .u-grid-auto {
+    grid-template-columns: 1fr !important;
+  }
+  .hc-stats-grid,
+  .guest-stats-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px;
+  }
+
+  /* ── 4. Forms & buttons: compact, still comfortable to tap ── */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea,
+  .hc-input,
+  .hc-select {
+    font-size: 14px !important;
+  }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  .hc-input,
+  .hc-select {
+    min-height: 38px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .hc-select,
+  select {
+    padding-right: 32px;
+  }
+  .hc-btn,
+  .hc-btn-sm {
+    min-height: 42px;
+  }
+  .hc-btn-lg {
+    width: 100%;
+  }
+  /* toolbar search + filter rows */
+  .hc-card-header [style*="min-width: 320px"] {
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 100% !important;
+  }
+  .hc-card-header div:has(> select.hc-select) {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .hc-card-header select.hc-select {
+    width: 100% !important;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  i.bi-search[style*="position: absolute"] {
+    top: 50% !important;
+    transform: translateY(-50%);
+  }
+
+  /* ── 5. Tables: every row becomes a stacked card ──
+        label | value pairs (labels come from utils/tableLabels.js). Nothing
+        has a min-width and nothing scrolls sideways, so the cells can never
+        be squeezed into one-letter columns. ── */
+  .hc-table,
+  .hc-table tbody,
+  .hc-table tfoot,
+  .hc-table tr {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: visible;
+  }
+  /* header row stays available to screen readers but is not drawn */
+  .hc-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .hc-table tbody tr,
+  .hc-table tfoot tr {
+    padding: 12px 16px;
+    border-top: 1px solid var(--hc-border-light);
+  }
+  .hc-table tbody tr:first-child {
+    border-top: 0;
+  }
+  /* stacked: small label on top, the value (whatever it contains) below.
+     No grid/flex on the cell, so cells with several children (name + note,
+     badge, amount) keep their natural size instead of being stretched. */
+  .hc-table td {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 6px 0 !important;
+    border: 0 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    overflow-wrap: break-word;
+    word-break: normal;
+    background: transparent;
+  }
+  .hc-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    color: var(--hc-text-muted);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+  /* cells without a label (empty state, spanning cells) use the whole width */
+  .hc-table td:not([data-label])::before {
+    display: none;
+  }
+  .hc-table td:empty {
+    display: none;
+  }
+  /* badges / status chips keep their own width, never stretch */
+  .hc-table td .hc-badge,
+  .hc-table td .hc-status {
+    display: inline-flex;
+    max-width: 100%;
+    width: auto;
+  }
+  /* row action buttons: one wrapping row under the values */
+  .hc-table td.col-actions {
+    display: block;
+    padding-top: 12px !important;
+  }
+  .hc-table td.col-actions::before {
+    display: none;
+  }
+  .hc-table td.col-actions .row-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  /* wide-table helpers must not force a width any more */
+  .hc-table.requests-table {
+    min-width: 0 !important;
+  }
+
+  /* ── 6. Modals become bottom sheets ── */
+  .hc-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .hc-modal {
+    max-width: 100%;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    animation: hcSlideUp var(--hc-duration-normal) var(--hc-ease);
+  }
+  .hc-modal-header {
+    padding: 14px 16px;
+  }
+  .hc-modal--rich .hc-modal-header {
+    padding: 14px 14px 12px 16px;
+  }
+  .hc-modal-body {
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .hc-modal-footer {
+    flex-wrap: wrap;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    border-radius: 0;
+  }
+  .hc-modal-footer > .hc-btn {
+    flex: 1 1 calc(50% - 6px);
+  }
+  .hc-toast-container {
+    top: calc(12px + env(safe-area-inset-top));
+    right: 12px;
+    left: 12px;
+    max-width: none;
+  }
+  .fp-pop {
+    max-width: calc(100vw - 16px);
+  }
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ── 7. Public site ── */
+  .resort-footer {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 380px) {
+  .hc-stats-grid,
+  .guest-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .portal-main .ops-page {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+}
+
+/* ============================================================
+   8. Additional mobile fixes
+   ============================================================ */
+@media (max-width: 768px) {
+  /* never allow the page itself to scroll sideways */
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  #root {
+    overflow-x: clip;
+  }
+
+  /* public navbar: respect notch, keep the open menu scrollable */
+  .resort-nav,
+  .hc-navbar {
+    padding-top: env(safe-area-inset-top);
+  }
+  .resort-nav-links.open,
+  .hc-navbar-links.open {
+    max-height: calc(100dvh - 72px - env(safe-area-inset-top));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  .resort-nav-links.open a,
+  .hc-navbar-links.open .hc-nav-link,
+  .resort-menu-toggle,
+  .hc-nav-toggle {
+    min-height: 44px;
+  }
+  .resort-menu-toggle,
+  .hc-nav-toggle {
+    min-width: 44px;
+  }
+
+  /* long words / emails / ids must wrap instead of stretching cards */
+  .hc-card,
+  .ops-page,
+  .hc-modal-body {
+    overflow-wrap: anywhere;
+  }
+
+  /* scrollable wide content gets momentum scrolling */
+  .hc-table-wrap,
+  .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 560px) {
+  /* VietQR payment modal: QR scales with the sheet instead of a fixed 250px */
+  .vq-qr-card {
+    max-width: 100%;
+    padding: 14px;
+  }
+  .vq-qr-img,
+  .vq-qr-fallback {
+    width: min(250px, 100%);
+    height: auto;
+    aspect-ratio: 1 / 1;
+  }
+  .vq-info-row {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+  .vq-info-value-wrap {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .vq-copy-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .vq-success-actions {
+    flex-direction: column;
+  }
+  .vq-success-actions > * {
+    width: 100%;
+  }
+
+  /* date / time / select popovers: never wider than the screen, bigger tap targets */
+  .fp-pop,
+  .fp-calendar {
+    max-width: calc(100vw - 16px);
+  }
+  .fp-day {
+    max-width: none;
+    min-height: 40px;
+  }
+  .fp-option {
+    min-height: 44px;
+  }
+  .fp-nav {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* bottom sheets: keep the footer reachable above the home indicator */
+  .hc-modal-footer {
+    position: sticky;
+    bottom: 0;
+    background: var(--hc-surface, #fff);
+  }
+
+  /* cards that hold toolbars/actions wrap cleanly */
+  .hc-card-header > * {
+    min-width: 0;
+  }
+  .hc-badge,
+  .hc-status {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 380px) {
+  .hc-container {
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+  .ops-page .hc-page-title h1,
+  .ops-page .hc-page-title h2 {
+    font-size: 21px;
+  }
+  .hc-modal-footer > .hc-btn {
+    flex: 1 1 100%;
+  }
+}
+
+/* devices without hover: remove sticky hover lift on cards */
+@media (hover: none) {
+  .ops-page .hc-card:hover {
+    transform: none;
+  }
+}
+
+/* ============================================================
+   9. Public header + footer (mobile)
+   ============================================================ */
+/* desktop: these helper bits stay hidden */
+.resort-nav-links a > .resort-nav-ico,
+.resort-nav-links a > .resort-nav-chev,
+.resort-nav-backdrop,
+.resort-nav-mobile-actions i {
+  display: none;
+}
+
+@keyframes resortNavDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes resortNavFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 800px) {
+  /* ---- header: slim bar ---- */
+  header.hc-navbar.resort-nav {
+    height: calc(60px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) max(14px, env(safe-area-inset-right)) 0 max(14px, env(safe-area-inset-left));
+    background: rgba(255, 255, 255, 0.94);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(23, 71, 81, 0.08);
+    box-shadow: 0 1px 0 rgba(23, 71, 81, 0.04);
+  }
+  header.resort-nav .resort-brand {
+    height: 30px;
+    gap: 9px;
+  }
+  header.resort-nav .resort-brand-logo {
+    width: auto !important;
+    height: 100%;
+  }
+  header.resort-nav .resort-brand strong {
+    font-size: 14px;
+    letter-spacing: 0.14em;
+  }
+  header.resort-nav .resort-brand small {
+    margin-top: 4px;
+    font-size: 6.5px;
+    letter-spacing: 0.28em;
+  }
+  header.resort-nav .resort-nav-actions {
+    gap: 8px;
+  }
+  /* booking CTA lives in the bar */
+  header.hc-navbar.resort-nav .resort-nav-actions > .resort-nav-book {
+    display: inline-flex;
+    min-height: 34px;
+    padding: 0 15px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  header.resort-nav .resort-menu-toggle {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 12px;
+    background: rgba(41, 108, 122, 0.09);
+    font-size: 20px;
+    transition: background 0.18s ease;
+  }
+  header.resort-nav.menu-open .resort-menu-toggle,
+  header.resort-nav .resort-menu-toggle:active {
+    background: rgba(41, 108, 122, 0.18);
+  }
+
+  /* ---- menu: floating card ---- */
+  header.hc-navbar.resort-nav .resort-nav-links {
+    top: calc(100% + 8px);
+    right: 10px;
+    left: 10px;
+    gap: 2px;
+    max-height: calc(100vh - 92px);
+    max-height: calc(100dvh - 92px - env(safe-area-inset-top));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid rgba(23, 71, 81, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 22px 50px rgba(15, 38, 45, 0.22);
+  }
+  header.hc-navbar.resort-nav .resort-nav-links.open {
+    display: flex;
+    animation: resortNavDrop 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  header.hc-navbar.resort-nav .resort-nav-links > a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 50px;
+    padding: 6px 10px;
+    border-radius: 14px;
+    color: var(--hc-primary);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header.resort-nav .resort-nav-links > a::after {
+    display: none;
+  }
+  header.resort-nav .resort-nav-links > a:active {
+    background: rgba(41, 108, 122, 0.08);
+  }
+  header.resort-nav .resort-nav-links a > .resort-nav-ico {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(41, 108, 122, 0.09);
+    font-size: 16px;
+  }
+  header.resort-nav .resort-nav-links a > .resort-nav-chev {
+    display: inline-block;
+    margin-left: auto;
+    font-size: 12px;
+    opacity: 0.35;
+  }
+  header.resort-nav .resort-nav-mobile-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 2px 2px;
+    margin-top: 6px;
+    border-top: 1px solid rgba(23, 71, 81, 0.08);
+  }
+  header.resort-nav .resort-nav-mobile-actions.is-auth > * {
+    grid-column: 1 / -1;
+  }
+  header.resort-nav .resort-nav-mobile-actions .resort-login,
+  header.resort-nav .resort-nav-mobile-actions .resort-logout,
+  header.resort-nav .resort-nav-mobile-actions .resort-nav-book {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--hc-border, #dfe7e6);
+    border-radius: 12px;
+    background: transparent;
+    box-shadow: none;
+    color: var(--hc-primary) !important;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  header.resort-nav .resort-nav-mobile-actions .resort-nav-book:hover,
+  header.resort-nav .resort-nav-mobile-actions .resort-login:hover {
+    background: transparent;
+  }
+  header.resort-nav .resort-nav-mobile-actions .resort-logout {
+    color: #c0392b !important;
+    border-color: rgba(192, 57, 43, 0.35);
+  }
+  header.resort-nav .resort-nav-mobile-actions :is(.resort-login, .resort-logout, .resort-nav-book):active {
+    background: rgba(41, 108, 122, 0.06);
+  }
+  header.resort-nav .resort-nav-mobile-actions i {
+    display: inline-block;
+    font-size: 16px;
+  }
+  .resort-nav-backdrop {
+    position: fixed;
+    z-index: 999;
+    inset: 0;
+    display: block;
+    background: rgba(15, 38, 45, 0.42);
+    animation: resortNavFade 0.2s ease;
+  }
+  .resort-home section[id],
+  .resort-home div[id] {
+    scroll-margin-top: 76px;
+  }
+
+  /* ---- footer: compact ---- */
+  footer.resort-footer {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 20px;
+    padding: 40px max(24px, env(safe-area-inset-right)) calc(26px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  }
+  footer.resort-footer .resort-footer-brand {
+    grid-column: 1 / -1;
+  }
+  footer.resort-footer .resort-footer-logo {
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+  }
+  footer.resort-footer .resort-footer-logo-mark {
+    width: 38px;
+    height: 30px;
+  }
+  footer.resort-footer .resort-footer-wordmark strong {
+    font-size: 15px;
+  }
+  footer.resort-footer .resort-footer-brand p {
+    display: -webkit-box;
+    max-width: none;
+    margin-top: 18px;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  footer.resort-footer .resort-footer-column {
+    gap: 9px;
+  }
+  footer.resort-footer .resort-footer-column b {
+    margin-bottom: 2px;
+    font-size: 10.5px;
+  }
+  footer.resort-footer .resort-footer-column a {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  footer.resort-footer .resort-footer-column a:hover {
+    transform: none;
+  }
+  /* contact: plain text, full width */
+  footer.resort-footer .resort-footer-contact {
+    grid-column: 1 / -1;
+  }
+  footer.resort-footer .resort-footer-bottom {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 4px 12px;
+    padding-top: 14px;
+    margin-top: 0;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 340px) {
+  header.hc-navbar.resort-nav .resort-nav-actions > .resort-nav-book {
+    display: none;
+  }
+}
+
+/* ============================================================
+   10. Mobile fields: two per row, a lone last field spans the row
+   ============================================================ */
+@media (max-width: 560px) {
+  /* filter bars (search + selects + buttons) */
+  .m-fields.m-fields {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    justify-content: stretch;
+    gap: 10px !important;
+  }
+  .m-fields.m-fields > * {
+    flex: none !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+  .m-fields.m-fields > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  /* form grids */
+  .u-grid-2.u-grid-2,
+  .bk-grid-2.bk-grid-2,
+  .bk-grid-1-2.bk-grid-1-2,
+  .u-grid-auto.u-grid-auto:has(input, select, textarea, .fp-root),
+  [style*="grid-template-columns"][style*="1fr 1fr"]:has(input, select, textarea, .fp-root) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .u-grid-2 > *,
+  .bk-grid-2 > *,
+  .bk-grid-1-2 > *,
+  .u-grid-auto:has(input, select, textarea, .fp-root) > *,
+  [style*="grid-template-columns"][style*="1fr 1fr"]:has(input, select, textarea, .fp-root) > * {
+    min-width: 0;
+  }
+  .u-grid-2 > :last-child:nth-child(odd),
+  .bk-grid-2 > :last-child:nth-child(odd),
+  .bk-grid-1-2 > :last-child:nth-child(odd),
+  .u-grid-auto:has(input, select, textarea, .fp-root) > :last-child:nth-child(odd),
+  [style*="grid-template-columns"][style*="1fr 1fr"]:has(input, select, textarea, .fp-root) > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ============================================================
+   10. Mobile: full-width buttons, status box, placeholders
+   ============================================================ */
+
+/* placeholders never wrap or spill: long ones end in an ellipsis */
+input,
+select {
+  text-overflow: ellipsis;
+}
+input::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  /* page header: .u-bar forced align-items:center !important, which made the
+     buttons shrink to their content and sit in the middle of the column */
+  .u-bar,
+  .ops-page .hc-page-title,
+  .guest-page .hc-page-title,
+  .hc-page-title.hc-title-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left !important;
+  }
+
+  /* a lone button fills the row */
+  .hc-page-title > .hc-btn,
+  .u-bar > .hc-btn,
+  .hc-card-header > .hc-btn,
+  .hc-card-body > .hc-btn:only-child {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* button groups: every button takes the full width, or an equal share of the
+     row when there are several (they wrap onto the next line if they must) */
+  .hc-title-actions,
+  .guest-title-actions,
+  .admin-heading-buttons,
+  .hc-page-title > .u-row-10,
+  .u-bar > .u-row-10,
+  .hc-card-header .u-row-10,
+  .hc-card-header .m-fields,
+  .u-actions-end,
+  .u-modal-actions,
+  .guest-note-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    width: 100%;
+  }
+  .hc-title-actions > .hc-btn,
+  .guest-title-actions > .hc-btn,
+  .admin-heading-buttons > .hc-btn,
+  .hc-page-title > .u-row-10 > .hc-btn,
+  .u-bar > .u-row-10 > .hc-btn,
+  .hc-card-header .u-row-10 > .hc-btn,
+  .hc-card-header .m-fields > .hc-btn,
+  .u-actions-end > .hc-btn,
+  .u-modal-actions > .hc-btn,
+  .guest-note-actions > .hc-btn,
+  .hc-title-actions > a,
+  .guest-title-actions > a {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+  }
+  /* a single button in a group is the whole row */
+  .hc-title-actions > .hc-btn:only-child,
+  .guest-title-actions > .hc-btn:only-child,
+  .admin-heading-buttons > .hc-btn:only-child,
+  .u-row-10 > .hc-btn:only-child,
+  .guest-note-actions > .hc-btn:only-child {
+    flex-basis: 100%;
+  }
+  .guest-note-actions {
+    flex: 1 0 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  /* shift / alert box: icon + text share a row, the link sits under the text */
+  .ov-notice {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 6px 12px;
+  }
+  .ov-notice > i {
+    margin-top: 2px;
+  }
+  .ov-notice > .ov-link {
+    grid-column: 2;
+    justify-self: start;
+    margin-left: 0;
+  }
+}
+
+/* ============================================================
+   11. Mobile tables
+   ============================================================ */
+@media (max-width: 560px) {
+  /* .ops-page .hc-table (redesign.css) and .portal-table-wrap table forced
+     min-width: 720px; they out-rank the generic reset, so name them here */
+  .ops-page .hc-table,
+  .ops-page .portal-table-wrap table,
+  .ops-page .hc-table.requests-table {
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  /* ── All tables: one tidy card per row ──────────────────────────
+     [ primary value                    ]  <- tinted header (first cell)
+     [ LABEL                      value ]  <- label left, value right
+     [ LABEL                      value ]
+     [ [action] [action]                ]  <- full-width actions footer   */
+  .hc-table tbody {
+    padding: 12px 12px 0;
+  }
+  .hc-table tbody tr {
+    margin: 0 0 12px;
+    padding: 0;
+    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--hc-border-light);
+    border-radius: var(--hc-radius-md);
+    box-shadow: 0 1px 2px rgba(18, 56, 65, 0.05);
+  }
+  .hc-table tbody tr:first-child {
+    border-top: 1px solid var(--hc-border-light);
+  }
+
+  /* label | value rows */
+  .hc-table td {
+    position: relative;
+    min-height: 40px;
+    padding: 10px 14px 10px 44% !important;
+    border-top: 1px solid #eef3f4 !important;
+    text-align: right !important;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .hc-table td::before {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    width: calc(44% - 24px);
+    margin: 0;
+    text-align: left;
+  }
+  .hc-table td .guest-cell-sub {
+    text-align: right;
+  }
+
+  /* first cell = the card's title */
+  .hc-table td:first-child {
+    min-height: 0;
+    padding: 12px 14px !important;
+    border-top: 0 !important;
+    text-align: left !important;
+    background: #f3f8f9;
+  }
+  .hc-table td:first-child::before {
+    display: none;
+  }
+  .hc-table td:first-child .guest-cell-sub {
+    text-align: left;
+  }
+
+  /* action buttons: footer, buttons share the row equally */
+  .hc-table td.col-actions {
+    min-height: 0;
+    padding: 12px 14px !important;
+    text-align: left !important;
+  }
+  .hc-table td.col-actions .row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: stretch;
+  }
+  .hc-table td.col-actions .row-actions > .hc-btn,
+  .hc-table td.col-actions > .hc-btn {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    min-width: 0;
+  }
+  .hc-table td.col-actions > .hc-btn:only-child,
+  .hc-table td.col-actions .row-actions > .hc-btn:only-child {
+    flex-basis: 100%;
+  }
+
+  /* spanning cells (empty states) */
+  .hc-table td[colspan] {
+    padding: 24px 14px !important;
+    text-align: center !important;
+    background: transparent;
+  }
+
+  /* an actions footer with nothing in it is not drawn */
+  .hc-table td.col-actions:not(:has(button, a, .hc-btn)),
+  .hc-table td.col-actions:has(> .row-actions:empty) {
+    display: none;
+  }
+}
+
+/* ============================================================
+   12. Mobile calendars: keep every day wide enough to read; the calendar
+   scrolls sideways inside its own box instead of squeezing the cells.
+   ============================================================ */
+@media (max-width: 768px) {
+  .staff-calendar-scroll,
+  .admin-cal-scroll,
+  .tl-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+  /* staff month grid: 7 columns x ~130px */
+  .staff-calendar-grid {
+    min-width: 910px;
+  }
+  /* admin month view (FullCalendar) */
+  .admin-cal-scroll {
+    overflow-x: auto;
+  }
+  .admin-cal-scroll > * {
+    min-width: 910px;
+  }
+  /* admin week / day timelines: the staff column is narrower on a phone so the
+     time area gets more room; header cells are sticky inside the same scroll
+     box, so dates / hours always scroll together with the staff rows */
+  .tl-scroll {
+    --tl-name-w: 124px;
+  }
+  .tl-name {
+    padding: 0 10px;
+  }
+  .tl-name strong {
+    font-size: 12.5px;
+  }
+  .tl-corner {
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}
+
+/* admin schedule filters: search on its own row, the two selects share one */
+@media (max-width: 768px) {
+  .admin-schedule-filters {
+    flex: 1 1 100%;
+    gap: 10px;
+  }
+  .admin-filter-search {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .admin-schedule-filter-select {
+    flex: 1 1 calc(50% - 5px);
+    min-width: 0;
+  }
+  .admin-calendar-wrapper .admin-cal-nav-row {
+    width: 100%;
+  }
+  /* Tháng / Tuần / Ngày switcher fills the row, three equal segments */
+  .admin-calendar-wrapper .admin-cal-btn-group.is-views {
+    display: flex;
+    width: 100%;
+  }
+  .admin-calendar-wrapper .admin-cal-btn.is-view {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .admin-calendar-wrapper .admin-cal-btn.is-refresh {
+    margin-left: auto;
+  }
+}
+
+/* ---------- Admin activity log: "Người thực hiện" cell (text only) ---------- */
+.log-actor {
+  min-width: 0;
+}
+.log-actor-name {
+  display: block;
+  color: var(--hc-text-primary);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.log-actor-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 3px;
+}
+.log-actor-user {
+  color: var(--hc-text-muted);
+  font-size: 11.5px;
+}
+
+@media (orientation: portrait) {
+  .log-actor-meta {
+    justify-content: flex-end;
+  }
+}

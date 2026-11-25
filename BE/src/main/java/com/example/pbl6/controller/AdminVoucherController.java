@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import com.example.pbl6.security.Roles;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/vouchers")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
+@PreAuthorize(Roles.ADMIN_MANAGER)
 public class AdminVoucherController {
 
     private final VoucherService voucherService;
@@ -51,5 +52,17 @@ public class AdminVoucherController {
     ) {
         VoucherResponse updated = voucherService.toggleVoucher(voucherId);
         return ResponseEntity.ok(ApiResponse.ok("Cập nhật trạng thái voucher thành công", updated));
+    }
+
+    /**
+     * Cập nhật thông tin voucher
+     */
+    @PutMapping("/{voucherId}")
+    public ResponseEntity<ApiResponse<VoucherResponse>> updateVoucher(
+            @PathVariable Integer voucherId,
+            @Valid @RequestBody VoucherCreateRequest request
+    ) {
+        VoucherResponse updated = voucherService.updateVoucher(voucherId, request);
+        return ResponseEntity.ok(ApiResponse.ok("Cập nhật voucher thành công", updated));
     }
 }
