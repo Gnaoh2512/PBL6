@@ -167,3 +167,49 @@ Build demo index offline từ `ai-service`: `.\.venv\Scripts\python.exe -m app.i
 Lệnh in đường dẫn snapshot để đặt `AI_INDEX_PATH`; đặt rõ `AI_CORPUS_MODE=demo_synthetic`. Output trong `.local/assistant-index/` đã ignore. Production không chấp nhận snapshot demo hoặc bản nháp chưa duyệt.
 
 Adapter Gemini REST và FAQ orchestration đã gắn vào route. GEMINI_API_KEY cấu hình ngoài Git; GEMINI_MODEL mặc định gemini-3.1-flash-lite. Không dùng SDK Gemini. HTTPX là dependency runtime. Startup probe tối đa 5 giây xác nhận provider; lỗi probe giữ not ready, restart sau khi sửa cấu hình/quota. Source corpus thật chưa được duyệt; không tự bật demo khi thiếu nguồn. Kết quả Gemini thật và giới hạn hiện hành xem PROCESS.
+
+## Runbook vận hành D1–D4 (FAQ, Business Tools, Booking cá nhân & Kết hợp)
+
+### 1. Cờ bật/tắt (Feature Flags & Kill Switches)
+
+| Tầng | Biến môi trường / Property | Mặc định | Tác dụng |
+| --- | --- | --- | --- |
+| Spring (`BE`) | `AI_ASSISTANT_ENABLED` (`assistant.enabled`) | `false` | Công tắc tổng bật/tắt `/api/assistant/*` (tắt nhanh trả `503 AI_NOT_CONFIGURED`) |
+| Spring (`BE`) | `AI_BUSINESS_TOOLS_ENABLED` (`assistant.business-tools-enabled`) | `true` | Bật/tắt D2 business tools (`search_rooms`, `list_services`) |
+| Spring (`BE`) | `AI_BOOKING_TOOLS_ENABLED` (`assistant.booking-tools-enabled`) | `true` | Bật/tắt D3/D4 booking tools cá nhân (`list_my_bookings`, `get_my_booking`, kết hợp policy) |
+| Spring (`BE`) | `AI_CORPUS_MODE` (`assistant.corpus-mode`) | `production` | Chế độ corpus (`demo_synthetic` chỉ được Spring chấp nhận ở profile `local`) |
+| React (`FE`) | `VITE_ASSISTANT_ENABLED` | `false` | Bật/tắt hiển thị widget góc dưới bên phải (tự ẩn trên `/admin*`, `/staff*`) |
+
+### 2. Thứ tự khởi chạy local (Real MySQL + Hybrid Qdrant)
+
+1. **Hạ tầng Docker**: bật container MySQL (`:3306`, schema `hotel_management`) và Qdrant (`docker compose -f compose.qdrant.yaml up -d` tại `:6333`).
+2. **Kiểm tra preflight artifacts** (từ `ai-service/`):
+   ```powershell
+   .\.venv\Scripts\python.exe -B -m app.academic_demo_preflight --contract academic-demo.contract.json
+   ```
+3. **AI Service (`:8006`)**:
+   ```powershell
+   .\.venv\Scripts\python.exe -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8006
+   ```
+   Kiểm tra `GET http://127.0.0.1:8006/ready` trả `200 {"status": "ready"}`.
+4. **Spring Boot (`:9090`)**: đặt `SPRING_PROFILES_ACTIVE=local` (nếu dùng `demo_synthetic`), `AI_ASSISTANT_ENABLED=true`, `AI_SERVICE_AUTH_TOKEN` trùng với `ai-service/.env`, `AI_SERVICE_URL=http://127.0.0.1:8006`, và datasource MySQL.
+5. **Frontend (`:3000`)**: từ `FE/`, đặt `$env:VITE_ASSISTANT_ENABLED='true'; npm run dev`.
+
+### 3. Lệnh kiểm chứng chuẩn cho D1–D4
+
+- **AI Service (offline + Docker Qdrant + bộ đánh giá 80 ca D4)**:
+  ```powershell
+  $env:PBL6_QDRANT_DOCKER='1'
+  .\.venv\Scripts\ruff.exe check app tests/conftest.py tests/unit tests/integration tests/evaluation/run_d4_eval.py
+  .\.venv\Scripts\ruff.exe format --check app tests/conftest.py tests/unit tests/integration tests/evaluation/run_d4_eval.py
+  .\.venv\Scripts\pytest.exe -q -p no:cacheprovider tests/unit tests/integration
+  $env:PYTHONPATH='tests/unit'; .\.venv\Scripts\python.exe -B -m tests.evaluation.run_d4_eval --output .local/assistant-evaluation/d4-offline-eval.json
+  ```
+- **Backend (`BE/`)**: `.\mvnw.cmd test`
+- **Frontend (`FE/`)**: `npx oxlint src/components/assistant/AssistantWidget.jsx src/components/assistant/AssistantWidget.test.jsx` và `npm test`
+
+### 4. Giới hạn vận hành & xử lý sự cố
+
+- **Single-instance in-memory**: phiên chat (`AssistantSessions` ở Spring) và `ContinuationStore` (ở FastAPI) nằm trong bộ nhớ tiến trình; restart sẽ xóa phiên đang mở (trả `404 CONVERSATION_NOT_FOUND` hoặc `409 CONTINUATION_NOT_FOUND` an toàn). Chưa hỗ trợ scale nhiều instance dùng chung session.
+- **`/ready` dependency latch**: lỗi upstream Gemini (`503`/`429`) kích hoạt cooldown (`AI_DEPENDENCY_LATCH_COOLDOWN_S=5.0` ở local); lỗi `504 DEADLINE_EXCEEDED` hoặc lỗi nghiệp vụ `DATA_UNAVAILABLE` không giữ `/ready` ở trạng thái chết. Nếu lỗi kéo dài do hết quota Free Tier (`HTTP 429`), đổi khóa/gói trả phí hoặc tắt tạm bằng `AI_ASSISTANT_ENABLED=false`.
+- **Chính sách & miễn trừ trách nhiệm**: mọi câu hỏi kết hợp booking + policy chỉ ghép dữ liệu đã cấp quyền từ Spring với chính sách đã duyệt qua Phase 3 Verification Gate và luôn giữ lưu ý không tự tính hoàn tiền/phí cuối cùng. Corpus `production` thật phải được người phụ trách duyệt độc lập trước khi tắt `demo_synthetic`.

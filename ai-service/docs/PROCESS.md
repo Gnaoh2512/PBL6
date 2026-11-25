@@ -128,12 +128,13 @@ Trong batch D1.9, 5 timeout ở classify/generateContent, 1 ở answer/generateC
 - [x] Kiểm tra offline & live MySQL: A không đọc được booking B dù biết mã/trùng `accountId`/trùng email-SĐT; guest nhận `requires_login` + `open_login`, JWT hỏng bị 401; logout/đổi account xóa sạch hội thoại riêng và không lưu booking vào storage trình duyệt.
 - [ ] Ký nghiệm thu D3 và chạy kiểm thử cách ly tải lớn / nhiều tài khoản khách hàng song song trước production.
 
-## D4 — Câu hỏi kết hợp và nghiệm thu mở rộng: chưa triển khai
+## D4 — Câu hỏi kết hợp và nghiệm thu mở rộng: đã triển khai và kiểm chứng offline + smoke live MySQL
 
-- [ ] Ghép booking đã cấp quyền với policy đúng phiên bản/hiệu lực; không tự tính hoàn tiền.
-- [ ] Hiện thực tool broker/continuation với allowlist, call ID, số vòng, deadline và budget có giới hạn.
-- [ ] Mở rộng dataset theo [EVALUATION.md](EVALUATION.md); kế hoạch 60 câu sáu nhóm và ít nhất 20 ca bổ sung chưa phải dataset đã có.
-- [ ] Đánh giá retrieval/grounding/tool/quyền/hiệu năng/chi phí và hoàn thiện runbook theo implementation.
+- [x] Ghép booking đã cấp quyền (`get_my_booking` / `list_my_bookings`) với policy đã duyệt đúng phiên bản/hiệu lực qua Phase 3 Verification Gate (`booking_with_policy`, `CombinedPolicyContext`); giữ nguyên cảnh báo không tự tính hoàn tiền/phí cuối cùng, và từ chối fail-closed (`requires_login` cho guest, `no_results` thống nhất cho đơn lạ, `insufficient_evidence` khi thiếu nguồn chính sách).
+- [x] Tool broker & continuation có allowlist, call ID duy nhất, số vòng (`<= 2` batches / `<= 4` tool calls), deadline 20s, budget tích lũy (`min_tool_calls=2` cho câu kết hợp) và kiểm thử đơn vị/tích hợp trên cả Python lẫn Spring (`AssistantOrchestratorTest`, `test_d4_combined_booking_policy.py`).
+- [x] Mở rộng dataset đánh giá 80 ca synthetic theo [EVALUATION.md](EVALUATION.md) ([d4_suite.json](../tests/evaluation/d4_suite.json): 6 nhóm × 10 = 60 ca + 20 ca kết hợp/ngoài phạm vi/bảo mật-lỗi, tách `dev`/`held_out` theo `paraphraseGroup`) kèm runner [run_d4_eval.py](../tests/evaluation/run_d4_eval.py) và unit test [test_d4_evaluation_suite.py](../tests/unit/test_d4_evaluation_suite.py).
+- [x] Cập nhật runbook vận hành D1–D4 trong [README.md](../README.md) và chạy smoke live kết hợp trên MySQL thật + Qdrant + Gemini thật.
+- [ ] Duyệt corpus/catalog production thật, ký nghiệm thu chính thức D2–D4 và đánh giá batch độ ổn định/chi phí live dài hạn trước khi mở production.
 
 ## Ranh giới Local, Staging, Production và phát hành
 
@@ -1586,3 +1587,36 @@ Thực hiện trên nhánh mới `feat/ai-d3-personal-bookings` (tách từ `fea
     - `get_my_booking` kèm tài chính (`"Đơn BK-CUSTOMER1-DEMO tổng tiền và còn phải trả bao nhiêu?"`): **PASS** — HTTP 200 (`start 1.912 ms` + `resume 0,113 ms`), `status="answered"`, trả thẻ booking kèm `Tổng: 1.650.000 VND · Đã cọc: 0 VND · Còn lại: 1.650.000 VND`, không lộ PII/số phòng.
     - Mã lạ/không thuộc tài khoản (`"Kiểm tra giúp tôi đơn BK-KHONG-TON-TAI-999"`): **PASS** — HTTP 200 (`start 1.867 ms` + `resume 0,035 ms`), `status="no_results"`, `0` cards.
   - **Scenario 3 (Đăng xuất)**: **PASS** — Bấm `Đăng xuất` → toast `"Bạn đã đăng xuất."`, mở lại widget thấy `0` tin nhắn riêng (xóa sạch `BK-CUSTOMER1-DEMO`), kiểm tra tĩnh `AssistantWidget.jsx` xác nhận không dùng `localStorage`/`sessionStorage`.
+
+
+### 16. Triển khai D4 — Câu hỏi kết hợp Booking + Policy, bộ đánh giá 80 ca và Runbook vận hành — 2026-11-25
+
+Thực hiện trên nhánh mới `feat/ai-d4-combined-and-eval` (tách từ `main@16e6a68`, giữ nguyên 7 file ngoài phạm vi chưa commit; không cài thêm dependency/dịch vụ mới).
+
+- **Orchestration kết hợp Booking + Policy (`abcef05`)**:
+  - [schemas.py](../app/tools/schemas.py) & [tools.py (prompt)](../app/prompts/tools.py) (`d4-plan-1`): bổ sung `intent="booking_with_policy"`, trường `policyQuery` và hàm `validate_booking_with_policy_plan` chọn `get_my_booking` (khi có mã đơn hợp lệ) hoặc `list_my_bookings` (khi hỏi chung về *"đơn của tôi"*).
+  - [continuations.py](../app/orchestration/continuations.py): thêm `CombinedPolicyContext` bất biến gắn phía host vào `ContinuationEntry` (`original_message`, `policy_query`, `today`, `allowed_tools`), tiêu thụ nguyên tử một lần (replay trả `409 CONTINUATION_NOT_FOUND`).
+  - [tools.py (orchestration)](../app/orchestration/tools.py) & [faq.py](../app/orchestration/faq.py):
+    - Khách ẩn danh/không có quyền `CUSTOMER` bị chặn ngay tại `start` (`requires_login` + `open_login`, 0 lượt retrieval).
+    - Yêu cầu đủ budget tối thiểu `min_tool_calls=2` (1 booking tool + 1 `search_knowledge`).
+    - Tại `resume`, nếu booking trả lỗi (`NOT_FOUND`, `AUTH_REQUIRED`...) hoặc `BookingList` rỗng thì dừng ngay (`no_results`, 0 lượt retrieval/LLM — chống existence oracle).
+    - Khi booking hợp lệ từ Spring, chạy `search_knowledge` + Phase 3 `verified_faq_answer` trên `public_text(original_message)` theo ngày tin cậy `today` từ Spring; ghép tất định thông tin booking + chính sách đã duyệt + cảnh báo *"không tự tính khoản hoàn tiền hoặc phí phát sinh cuối cùng"*, kiểm tra giới hạn 4000 UTF-16 code units, và từ chối fail-closed sang `insufficient_evidence` nếu phần chính sách không qua gate.
+  - [test_d4_combined_booking_policy.py](../tests/integration/test_d4_combined_booking_policy.py) & [AssistantOrchestratorTest.java](../../BE/src/test/java/com/example/pbl6/service/assistant/AssistantOrchestratorTest.java): bổ sung kiểm thử tích hợp end-to-end trên cả Python lẫn Spring (Turn Ledger `booking` card + verified `citations`/`evidence`, chặn citation giả `502 AI_PROTOCOL_ERROR`, guest `requires_login`, đơn lạ `no_results`, policy ngoài corpus `insufficient_evidence`, replay `409`, vượt budget `503`).
+- **Bộ đánh giá D1–D4 80 ca và runner (`4a58fa4`)**:
+  - [d4_suite.json](../tests/evaluation/d4_suite.json): **80 ca synthetic** theo đúng cấu trúc [EVALUATION.md](EVALUATION.md) — 6 nhóm lõi × 10 = **60 ca** (`faq`, `rooms`, `pricing`, `services`, `personal_bookings`, `policies`) + **20 ca bổ sung** (`combined_booking_policy` 8, `unanswerable_and_out_of_scope` 6, `security_and_faults` 6), tách `dev` (47) / `held_out` (33) theo `paraphraseGroup` với `0` rò rỉ paraphrase.
+  - [run_d4_eval.py](../tests/evaluation/run_d4_eval.py) & [test_d4_evaluation_suite.py](../tests/unit/test_d4_evaluation_suite.py): chạy đủ 80 ca xuyên FastAPI `/internal/assistant/turn` + `Faq` + `VerificationGate` + `ContinuationStore` (harness offline synthetic provider, lưu báo cáo cục bộ ignored tại `.local/assistant-evaluation/d4-offline-eval-2026-11-25.json`):
+    - **Kết quả offline**: **`80/80 passed`** (`dev=47/47`, `held_out=33/33`; 9/9 nhóm đạt 100%; `p50=11,08 ms`, `p95=21,14 ms` — đo trên harness offline, không đại diện độ trễ mạng Gemini thật).
+- **Toàn bộ regression tự động sau D4 (2026-11-25)**:
+  - **AI Service (Python + Docker Qdrant)**: `ruff check` + `ruff format --check` (**111 file**) → **PASS**; `PBL6_QDRANT_DOCKER=1 pytest -q -p no:cacheprovider tests/unit tests/integration` → **`668 passed, 0 failed, 0 skipped, 1 warning`** (166,95s).
+  - **BE (Maven Surefire)**: `.\mvnw.cmd test` → **`35 passed, 0 failed, 0 skipped` (`BUILD SUCCESS`)**.
+  - **FE (Vitest + oxlint)**: `npx oxlint` (**0 warnings, 0 errors**); `npm test` → **`12 passed, 0 failed`**.
+- **Bằng chứng smoke E2E live D4 trên MySQL thật (`hotel_management`, Spring `:9090` → FastAPI `:8006` + Qdrant Docker `:6333` + Gemini `gemini-2.5-flash` override phiên do `3.6-flash` hết RPD trong ngày, 2026-11-25)**:
+  - **D4-LIVE-1 (Guest hỏi kết hợp hủy đơn `BK-CUSTOMER1-DEMO` + hoàn cọc)**: **PASS** — HTTP 200 (`2.970,8 ms`), `status="requires_login"`, `actions=["open_login"]`, `cards=[]`, `citations=[]`.
+  - **D4-LIVE-2C (`customer1` hỏi kết hợp `list_my_bookings` + thú cưng: *"Đơn đặt phòng của tôi có được mang thú cưng không?"*)**: **PASS** — HTTP 200 (`6.282,2 ms`), `status="answered"`, trả **1 thẻ booking MySQL** (`BK-CUSTOMER1-DEMO`) + **1 citation đã duyệt** (`POL-07-U01 · v0.1.0`) + cảnh báo không tự tính hoàn tiền/phí.
+  - **D4-LIVE-2D (`customer1` hỏi kết hợp `get_my_booking` + hủy phòng: *"Đơn BK-CUSTOMER1-DEMO của tôi áp dụng chính sách hủy đặt phòng như thế nào?"*)**: **PASS** — HTTP 200 (`8.224,1 ms`), `status="answered"`, trả **1 thẻ booking MySQL** (`BK-CUSTOMER1-DEMO`, tổng `1.650.000 VND`, còn lại `1.650.000 VND`) + **1 citation đã duyệt** (`POL-04-U01 · v0.1.1`, đủ bậc hoàn cọc) + cảnh báo không tự tính hoàn tiền; 0 lộ mã nội bộ (`room_charge_estimate`, `CHECKED_IN`).
+  - **D4-LIVE-3 (`customer1` hỏi kết hợp đơn lạ `BK-FOREIGN-999`)**: **PASS** — HTTP 200 (`2.386,6 ms`), `status="no_results"`, `cards=[]`, `citations=[]`, `resume` chạy `0,14 ms` (không gọi retrieval/LLM cho đơn ngoài sở hữu).
+  - **D4-LIVE-4 (`customer1` hỏi kết hợp chính sách ngoài corpus — vé máy bay khứ hồi)**: **PASS** — HTTP 200 (`4.171,3 ms`), `status="insufficient_evidence"`, trả thẻ booking đã xác thực (`BK-CUSTOMER1-DEMO`), `citations=[]`, từ chối fail-closed rõ ràng phần chính sách chưa có nguồn.
+  - **Giới hạn & lỗi quan sát được trong batch live**:
+    - `D4-LIVE-2` (diễn đạt *"nếu hủy phòng áp dụng chính sách hoàn cọc thế nào?"*): retrieval/preflight từ chối fail-closed `insufficient_evidence` (do tập top-3 hoặc điều kiện phủ của rule chưa đủ trên diễn đạt này — hành vi an toàn fail-closed, không bịa chính sách).
+    - `D4-LIVE-2B` (*"trả phòng muộn lúc 15h"* trên `gemini-2.5-flash` bật thinking mặc định): `answer/generateContent` dùng hết `12,77s` và bị cắt JSON → `502 AI_PROTOCOL_ERROR` (`error_category="response_schema"`), không phát nội dung chưa kiểm chứng và không làm bẩn `/ready`. Ghi nhận khuyến nghị dùng model có cấu hình `GEMINI_THINKING_LEVEL=MINIMAL` (hoặc paid tier) khi chạy ổn định dài hạn.
+- **Cập nhật Runbook**: bổ sung mục vận hành D1–D4 (cờ bật/tắt, thứ tự khởi chạy, lệnh kiểm chứng và xử lý sự cố) trong [README.md](../README.md).
