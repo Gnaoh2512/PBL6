@@ -19,14 +19,32 @@ const ACTION_ROUTES = {
   open_login: '/login',
 };
 
-const SUGGESTION_PROMPTS = {
-  FAQ: 'Wi-Fi ở đâu?',
-  'Chính sách': 'Chính sách đặt cọc và hủy phòng thế nào?',
-  'Phòng': 'Tìm phòng trống cho 2 khách',
-  'Giá phòng': 'Kiểm tra giá phòng cho 2 khách',
-  'Dịch vụ': 'Khách sạn hiện có những dịch vụ nào và giá bao nhiêu?',
-  'Booking của tôi': 'Xem danh sách đơn đặt phòng của tôi',
-};
+const QUICK_PILLS = [
+  {
+    id: 'rooms',
+    label: 'Giá phòng hiện tại?',
+    prompt: 'Tìm phòng trống và giá hiện tại cho 2 khách',
+    icon: 'bed',
+  },
+  {
+    id: 'services',
+    label: 'Các tiện ích khách sạn?',
+    prompt: 'Khách sạn hiện có những dịch vụ nào và giá bao nhiêu?',
+    icon: 'star',
+  },
+  {
+    id: 'policy',
+    label: 'Chính sách đặt phòng?',
+    prompt: 'Chính sách đặt cọc và hủy phòng thế nào?',
+    icon: 'doc',
+  },
+  {
+    id: 'bookings',
+    label: 'Đơn đặt phòng của tôi',
+    prompt: 'Xem danh sách đơn đặt phòng của tôi',
+    icon: 'booking',
+  },
+];
 
 const BOOKING_STATUS_LABELS = {
   PENDING_DEPOSIT: 'Chờ cọc',
@@ -66,6 +84,98 @@ function buildRoomBookingHref(room) {
   if (typeof room?.checkOutDate === 'string') params.set('checkOut', room.checkOutDate);
   const query = params.toString();
   return query ? `/booking?${query}` : '/booking';
+}
+
+function LotusLogo() {
+  return (
+    <svg className="assistant-logo-svg" viewBox="0 0 36 26" width="28" height="20" fill="none" aria-hidden="true">
+      <path d="M18 3C15.5 7.5 14.5 13 18 19.5C21.5 13 20.5 7.5 18 3Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M18 19.5C13.5 16.5 10.5 12 10 6.5C14.5 8.5 17 13.2 18 19.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M18 19.5C22.5 16.5 25.5 12 26 6.5C21.5 8.5 19 13.2 18 19.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M18 19.5C12.2 19.5 7.5 16.5 4 12C9 12 13.8 14.8 18 19.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M18 19.5C23.8 19.5 28.5 16.5 32 12C27 12 22.2 14.8 18 19.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M7 22.5C11.2 21.5 14.5 23.2 18 22.5C21.5 21.8 24.8 23.2 29 22.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ConciergeAvatar({ compact = false }) {
+  return (
+    <span className={compact ? 'assistant-avatar assistant-avatar-sm' : 'assistant-avatar'} aria-hidden="true">
+      <svg viewBox="0 0 48 48" width={compact ? 22 : 44} height={compact ? 22 : 44} fill="none">
+        <circle cx="24" cy="24" r="22" fill="#e8f3f8" />
+        <line x1="24" y1="8" x2="24" y2="13" stroke="#3c7d8e" strokeWidth="2" strokeLinecap="round" />
+        <circle cx="24" cy="7" r="2.2" fill="#58b4cc" />
+        <rect x="11" y="13" width="26" height="19" rx="9.5" fill="#ffffff" stroke="#b9d4dd" strokeWidth="1.6" />
+        <rect x="14.5" y="17" width="19" height="11" rx="5.5" fill="#173a47" />
+        <circle cx="20" cy="22.5" r="2.2" fill="#7ce3f8" />
+        <circle cx="28" cy="22.5" r="2.2" fill="#7ce3f8" />
+        <path d="M21 25.6C22.4 26.8 25.6 26.8 27 25.6" stroke="#7ce3f8" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M16 37.5C16 34.4 19.4 33 24 33C28.6 33 32 34.4 32 37.5" fill="#ffffff" stroke="#b9d4dd" strokeWidth="1.6" strokeLinecap="round" />
+        <circle cx="9.5" cy="22.5" r="2" fill="#78b7c7" />
+        <circle cx="38.5" cy="22.5" r="2" fill="#78b7c7" />
+      </svg>
+    </span>
+  );
+}
+
+function PillIcon({ name }) {
+  if (name === 'bed') {
+    return (
+      <svg className="assistant-pill-icon icon-bed" viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true">
+        <path d="M3 14.5V6.5M3 11.5H17V14.5M17 11.5V9.5C17 8.4 16.1 7.5 15 7.5H9.5V11.5M7 9.5C7 8.7 6.3 8 5.5 8C4.7 8 4 8.7 4 9.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (name === 'star') {
+    return (
+      <svg className="assistant-pill-icon icon-star" viewBox="0 0 20 20" width="17" height="17" fill="currentColor" aria-hidden="true">
+        <path d="M10 2.5L12.3 7.2L17.5 7.9L13.7 11.6L14.6 16.8L10 14.3L5.4 16.8L6.3 11.6L2.5 7.9L7.7 7.2L10 2.5Z" />
+      </svg>
+    );
+  }
+  if (name === 'doc') {
+    return (
+      <svg className="assistant-pill-icon icon-doc" viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true">
+        <path d="M6 2.8H11.5L15 6.3V16.2C15 16.8 14.5 17.2 14 17.2H6C5.4 17.2 5 16.8 5 16.2V3.8C5 3.2 5.4 2.8 6 2.8Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+        <path d="M7.5 10H12.5M7.5 13H11.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="assistant-pill-icon icon-booking" viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="13" height="12" rx="2.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 2.8V5.5M13 2.8V5.5M3.5 8.5H16.5M7.5 12H10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LauncherBubbleIcon() {
+  return (
+    <svg viewBox="0 0 28 28" width="26" height="26" fill="none" aria-hidden="true">
+      <path d="M14 4C8.48 4 4 7.96 4 12.85C4 15.65 5.48 18.14 7.8 19.76L6.7 23.6L10.95 21.38C11.92 21.6 12.94 21.7 14 21.7C19.52 21.7 24 17.74 24 12.85C24 7.96 19.52 4 14 4Z" fill="currentColor" />
+      <circle cx="10.2" cy="12.9" r="1.45" fill="#1b5e6b" />
+      <circle cx="14" cy="12.9" r="1.45" fill="#1b5e6b" />
+      <circle cx="17.8" cy="12.9" r="1.45" fill="#1b5e6b" />
+    </svg>
+  );
+}
+
+function SendPlaneIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="17" height="17" fill="none" aria-hidden="true">
+      <path d="M17.5 3.2L9.2 11.5M17.5 3.2L12.1 17.2L9.2 11.5L3.2 8.7L17.5 3.2Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ShieldCheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+      <path d="M8 1.6L13.2 3.7V7.7C13.2 10.9 11 13.4 8 14.4C5 13.4 2.8 10.9 2.8 7.7V3.7L8 1.6Z" fill="currentColor" fillOpacity="0.18" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      <path d="M5.7 8.1L7.3 9.7L10.4 6.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 function AssistantCard({ card }) {
@@ -255,50 +365,185 @@ export function AssistantChat({ routeKey = '' }) {
       if (active.current) setBusy(false);
     }
   }
-  function suggestion(label) {
-    if (SUGGESTION_PROMPTS[label]) {
-      setError('');
-      setInput(SUGGESTION_PROMPTS[label]);
-      composer.current?.focus();
-    } else {
-      setError('Chức năng tra cứu booking cá nhân chưa được hỗ trợ ở phiên bản hiện tại. Bạn có thể dùng màn hình nghiệp vụ hiện có.');
-    }
+
+  function pickSuggestion(prompt) {
+    setError('');
+    setInput(prompt);
+    composer.current?.focus();
   }
-  return <aside className="assistant-widget" ref={widget} aria-label="Trợ lý khách sạn">
-    {open && <section id="assistant-panel" className="assistant-panel" role="region" aria-label="Hội thoại trợ lý"
-      onKeyDown={event => { if (event.key === 'Escape') close(); }}>
-      <header><div><strong>Trợ lý khách sạn</strong><small>Hỗ trợ FAQ, phòng, dịch vụ &amp; booking</small></div>
-        <button type="button" onClick={close} aria-label="Thu gọn trợ lý">×</button></header>
-      {mode === 'demo_synthetic' && <p className="assistant-demo" role="note">Dữ liệu giả lập — chỉ dùng demo</p>}
-      {!mode && <p className="assistant-note">Hỗ trợ FAQ có nguồn, phòng trống, dịch vụ và đơn đặt phòng cá nhân (khi đã đăng nhập).</p>}
-      <div className="assistant-suggestions">{['FAQ', 'Phòng', 'Giá phòng', 'Dịch vụ', 'Booking của tôi', 'Chính sách'].map(label =>
-        <button key={label} type="button" disabled={busy} onClick={() => suggestion(label)}>{label}</button>)}</div>
-      <div className="assistant-messages" ref={list} role="log" aria-label="Tin nhắn" aria-live="polite"
-        onScroll={event => { const el = event.currentTarget; stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40; }}>
-        {messages.length === 0 && <p>Xin chào! Tôi hỗ trợ tra cứu FAQ, tìm phòng trống và danh mục dịch vụ khách sạn.</p>}
-        {messages.map((item, i) => <article key={i} className={`assistant-message ${item.role}`}>
-          <strong>{item.role === 'user' ? 'Bạn' : 'Trợ lý'}</strong><p>{item.text}</p>
-          {item.cards?.length > 0 && <div className="assistant-cards" aria-label="Kết quả nghiệp vụ">
-            {item.cards.map((card, idx) => <AssistantCard key={`${card.type}-${idx}`} card={card} />)}
-          </div>}
-          {item.actions?.length > 0 && <div className="assistant-actions" aria-label="Hành động gợi ý">
-            {item.actions.map((action, idx) => (
-              <SafeNavLink key={`${action.type}-${idx}`} to={ACTION_ROUTES[action.type]} className="assistant-action-link">
-                {action.label}
-              </SafeNavLink>
-            ))}
-          </div>}
-          {item.citations?.length > 0 && <ul aria-label="Nguồn">{item.citations.map(citation =>
-            <li key={citation.citationId}>{citation.title} · {citation.sectionId} · v{citation.version}</li>)}</ul>}
-        </article>)}
-        {busy && <p role="status">Đang tra cứu… <button type="button" onClick={() => request.current?.abort()}>Hủy</button></p>}
+
+  return (
+    <aside className="assistant-widget" ref={widget} aria-label="Trợ lý khách sạn">
+      {open && (
+        <section
+          id="assistant-panel"
+          className="assistant-panel"
+          role="region"
+          aria-label="Hội thoại trợ lý"
+          onKeyDown={event => { if (event.key === 'Escape') close(); }}
+        >
+          <header className="assistant-header">
+            <div className="assistant-brand">
+              <LotusLogo />
+              <span className="assistant-brand-name">AZURE BAY</span>
+            </div>
+            <div className="assistant-header-controls">
+              <button type="button" onClick={close} aria-label="Thu gọn trợ lý" title="Thu gọn">
+                <span aria-hidden="true">−</span>
+              </button>
+              <button type="button" onClick={close} aria-label="Đóng trợ lý" title="Đóng">
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+          </header>
+
+          {mode === 'demo_synthetic' && (
+            <p className="assistant-demo" role="note">Dữ liệu giả lập — chỉ dùng demo</p>
+          )}
+
+          <div
+            className="assistant-messages"
+            ref={list}
+            role="log"
+            aria-label="Tin nhắn"
+            aria-live="polite"
+            onScroll={event => {
+              const el = event.currentTarget;
+              stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+            }}
+          >
+            {messages.length === 0 ? (
+              <div className="assistant-welcome">
+                <div className="assistant-welcome-hero">
+                  <ConciergeAvatar />
+                  <div className="assistant-welcome-copy">
+                    <strong>Xin chào! 👋</strong>
+                    <p>Tôi là AI Concierge của Azure Bay. Bạn cần hỗ trợ gì hôm nay?</p>
+                  </div>
+                </div>
+                <div className="assistant-pill-list">
+                  {QUICK_PILLS.map(item => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="assistant-pill-btn"
+                      disabled={busy}
+                      onClick={() => pickSuggestion(item.prompt)}
+                    >
+                      <PillIcon name={item.icon} />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                {messages.map((item, i) => (
+                  <article key={i} className={`assistant-message ${item.role}`}>
+                    {item.role === 'assistant' && (
+                      <div className="assistant-msg-sender">
+                        <ConciergeAvatar compact />
+                        <strong>AI Concierge</strong>
+                      </div>
+                    )}
+                    <p className="assistant-msg-text">{item.text}</p>
+                    {item.cards?.length > 0 && (
+                      <div className="assistant-cards" aria-label="Kết quả nghiệp vụ">
+                        {item.cards.map((card, idx) => <AssistantCard key={`${card.type}-${idx}`} card={card} />)}
+                      </div>
+                    )}
+                    {item.actions?.length > 0 && (
+                      <div className="assistant-actions" aria-label="Hành động gợi ý">
+                        {item.actions.map((action, idx) => (
+                          <SafeNavLink
+                            key={`${action.type}-${idx}`}
+                            to={ACTION_ROUTES[action.type]}
+                            className="assistant-action-link"
+                          >
+                            {action.label}
+                          </SafeNavLink>
+                        ))}
+                      </div>
+                    )}
+                    {item.citations?.length > 0 && (
+                      <ul className="assistant-citations" aria-label="Nguồn">
+                        {item.citations.map(citation => (
+                          <li key={citation.citationId}>
+                            {citation.title} · {citation.sectionId} · v{citation.version}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                ))}
+              </>
+            )}
+            {busy && (
+              <p className="assistant-loading" role="status">
+                <span className="assistant-dots" aria-hidden="true"><i /><i /><i /></span>
+                Đang tra cứu…
+                <button type="button" onClick={() => request.current?.abort()}>Hủy</button>
+              </p>
+            )}
+          </div>
+
+          {error && <p className="assistant-error" role="alert">{error}</p>}
+
+          <div className="assistant-composer-wrap">
+            <form className="assistant-composer" onSubmit={send}>
+              <label className="visually-hidden" htmlFor="assistant-input">Câu hỏi</label>
+              <input
+                id="assistant-input"
+                ref={composer}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                maxLength={2000}
+                placeholder="Nhập câu hỏi của bạn..."
+                disabled={busy}
+              />
+              <button
+                type="submit"
+                className="assistant-send-btn"
+                aria-label="Gửi"
+                disabled={busy || !input.trim()}
+              >
+                <SendPlaneIcon />
+              </button>
+            </form>
+            <p className="assistant-trust-note">
+              <ShieldCheckIcon />
+              <span>
+                {mode === 'demo_synthetic'
+                  ? 'Thông tin từ nguồn demo đã cấu hình · Chỉ dùng cho demo'
+                  : 'Thông tin được trích xuất từ nguồn chính thức của khách sạn'}
+              </span>
+            </p>
+          </div>
+        </section>
+      )}
+
+      <div className="assistant-launcher-wrap">
+        {!open && (
+          <div className="assistant-callout" aria-hidden="true">
+            <span>Hỏi đáp về khách sạn</span>
+            <svg className="assistant-callout-arrow" viewBox="0 0 32 22" width="28" height="19" fill="none">
+              <path d="M5 3C7 12 15 17 26 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              <path d="M21.5 13.5L26.5 17L21.5 20.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
+        <button
+          type="button"
+          className="assistant-launcher"
+          ref={launcher}
+          aria-label="Trợ lý"
+          aria-controls="assistant-panel"
+          aria-expanded={open}
+          onClick={() => (open ? close() : setOpen(true))}
+        >
+          <LauncherBubbleIcon />
+        </button>
       </div>
-      {error && <p className="assistant-error" role="alert">{error}</p>}
-      <form onSubmit={send}><label className="visually-hidden" htmlFor="assistant-input">Câu hỏi</label>
-        <input id="assistant-input" ref={composer} value={input} onChange={e => setInput(e.target.value)} maxLength={2000} placeholder="Nhập câu hỏi…" disabled={busy} />
-        <button type="submit" disabled={busy || !input.trim()}>Gửi</button></form>
-    </section>}
-    <button type="button" className="assistant-launcher" ref={launcher} aria-controls="assistant-panel" aria-expanded={open}
-      onClick={() => open ? close() : setOpen(true)}>Trợ lý</button>
-  </aside>;
+    </aside>
+  );
 }

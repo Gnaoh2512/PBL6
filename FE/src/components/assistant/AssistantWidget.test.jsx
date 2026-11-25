@@ -105,7 +105,7 @@ describe('FAQ widget', () => {
     const user = userEvent.setup();
     render(<MemoryRouter><AssistantChat /></MemoryRouter>);
     await open(user);
-    await user.click(screen.getByRole('button', { name: 'Booking của tôi', exact: true }));
+    await user.click(screen.getByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true }));
     expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Xem danh sách đơn đặt phòng của tôi');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByRole('link', { name: 'Đăng nhập tài khoản' })).toHaveAttribute('href', '/login');
@@ -188,8 +188,8 @@ describe('FAQ widget', () => {
     const user = userEvent.setup();
     render(<MemoryRouter><AssistantChat /></MemoryRouter>);
     await open(user);
-    await user.click(screen.getByRole('button', { name: 'Phòng', exact: true }));
-    expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Tìm phòng trống cho 2 khách');
+    await user.click(screen.getByRole('button', { name: 'Giá phòng hiện tại?', exact: true }));
+    expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Tìm phòng trống và giá hiện tại cho 2 khách');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText('Deluxe Sea View')).toBeInTheDocument();
     expect(screen.getByText(/1\.500\.000 VND\/đêm/)).toBeInTheDocument();
@@ -247,7 +247,7 @@ describe('FAQ widget', () => {
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText(/ngày nhận phòng và ngày trả phòng/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Dịch vụ', exact: true }));
+    await user.type(screen.getByLabelText('Câu hỏi'), 'Dịch vụ');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText('Massage thư giãn')).toBeInTheDocument();
     expect(screen.getByText(/450\.000 VND/)).toBeInTheDocument();
