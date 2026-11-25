@@ -13,7 +13,7 @@ from app.schemas.faq import Intent
 from app.schemas.turn import ResumeTurn
 from app.tools.schemas import TurnPlan
 
-_D2_BUSINESS_TOOLS = frozenset({"search_rooms", "list_services"})
+_BUSINESS_TOOLS = frozenset({"search_rooms", "list_services", "list_my_bookings", "get_my_booking"})
 _PHONE_RE = re.compile(
     r"(?<!\w)(?!\d{4}-\d{2}-\d{2}(?!\w))(?!\d{2}-\d{2}-\d{4}(?!\w))\+?\d[\d ()-]{8,}\d(?!\w)"
 )
@@ -74,7 +74,7 @@ class Faq:
         bind_budget(budget)
         evidence, selected = [], []
         status, answer = "capability_unavailable", "Chức năng này chưa được hỗ trợ trong D1."
-        has_d2_tools = any(tool in _D2_BUSINESS_TOOLS for tool in payload.allowedTools)
+        has_d2_tools = any(tool in _BUSINESS_TOOLS for tool in payload.allowedTools)
         redacted_history = [
             {"role": m.role, "content": public_text(m.content)} for m in payload.history
         ]

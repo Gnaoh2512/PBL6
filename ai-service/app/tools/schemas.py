@@ -1,4 +1,4 @@
-"""Strict D2 turn-planning schemas and host-side business tool argument validators."""
+"""Strict D2/D3 turn-planning schemas and host-side business tool argument validators."""
 
 import re
 from datetime import date
@@ -11,14 +11,34 @@ from app.schemas.turn import StrictModel
 
 _ISO_DATE_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 _MONEY_RE = re.compile(r"^(0|[1-9][0-9]*)(\.[0-9]{1,2})?$")
+_BOOKING_CODE_RE = re.compile(r"^[A-Za-z0-9-]{1,50}$")
 _DEFAULT_LIMIT = 5
 _MAX_LIMIT = 10
 
+BookingStatusLiteral = Literal[
+    "PENDING_DEPOSIT",
+    "CONFIRMED",
+    "CHECKED_IN",
+    "CHECKED_OUT",
+    "CANCELED",
+    "EXPIRED",
+]
+_VALID_BOOKING_STATUSES = frozenset(
+    {"PENDING_DEPOSIT", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELED", "EXPIRED"}
+)
+
 
 class TurnPlan(StrictModel):
-    """Flat structured plan returned by the LLM when D2 business tools are allowed."""
+    """Flat structured plan returned by the LLM when business/booking tools are active."""
 
-    intent: Literal["faq", "search_rooms", "list_services", "unavailable"]
+    intent: Literal[
+        "faq",
+        "search_rooms",
+        "list_services",
+        "list_my_bookings",
+        "get_my_booking",
+        "unavailable",
+    ]
     query: str = Field(min_length=1, max_length=2000)
     checkInDate: str | None = None
     checkOutDate: str | None = None
@@ -28,6 +48,9 @@ class TurnPlan(StrictModel):
     maxPrice: str | None = None
     sortBy: Literal["PRICE_ASC", "PRICE_DESC"] | None = None
     categoryId: int | None = None
+    bookingCode: str | None = None
+    bookingStatus: BookingStatusLiteral | None = None
+    includeFinancials: bool | None = None
     limit: int | None = None
 
 
@@ -182,3 +205,41 @@ def validate_service_list_plan(plan: TurnPlan) -> dict:
     else:
         arguments["limit"] = _DEFAULT_LIMIT
     return arguments
+
+
+def validate_list_bookings_plan(plan: TurnPlan) -> dict:
+    """Build strictly validated arguments for list_my_bookings (never includes identity)."""
+    arguments: dict = {}
+    if plan.bookingStatus in _VALID_BOOKING_STATUSES:
+        arguments["status"] = plan.bookingStatus
+    if (
+        plan.limit is not None
+        and not isinstance(plan.limit, bool)
+        and 1 <= plan.limit <= _MAX_LIMIT
+    ):
+        arguments["limit"] = int(plan.limit)
+    else:
+        arguments["limit"] = _DEFAULT_LIMIT
+    return arguments
+
+
+def validate_get_booking_plan(plan: TurnPlan) -> tuple[dict | None, list[str], str | None]:
+    """Validate bookingCode strictly without mutating invalid characters."""
+    if not plan.bookingCode or not plan.bookingCode.strip():
+        return (
+            None,
+            ["bookingCode"],
+            "Bạn vui lòng cung cấp mã đơn đặt phòng (ví dụ: BK-...) để kiểm tra chi tiết nhé.",
+        )
+    code = plan.bookingCode.strip()
+    if not _BOOKING_CODE_RE.fullmatch(code):
+        return (
+            None,
+            ["bookingCode"],
+            "Mã đơn đặt phòng chưa đúng định dạng (chỉ gồm chữ cái, số và dấu gạch ngang). "
+            "Bạn vui lòng kiểm tra lại mã đơn nhé.",
+        )
+    arguments: dict = {"bookingCode": code}
+    if plan.includeFinancials is True:
+        arguments["includeFinancials"] = True
+    return arguments, [], None
