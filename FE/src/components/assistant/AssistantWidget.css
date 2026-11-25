@@ -18,6 +18,7 @@
 .assistant-card { background: #ffffff; border: 1px solid #cdd8dc; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
 .assistant-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 2px; }
 .assistant-card-head span { font-size: 11px; color: #47606b; }
+.assistant-status-badge { background: #e1eff1; color: #174b55; border-radius: 999px; padding: 1px 7px; font-weight: 600; }
 .assistant-card-meta { font-size: 11px; color: #3d525c; margin: 2px 0; }
 .assistant-card-price { font-size: 12px; color: #174b55; margin: 3px 0; }
 .assistant-card-disclaimer { font-size: 11px; color: #6e5516; background: #fff9e6; border-radius: 4px; padding: 2px 6px; margin: 4px 0; }

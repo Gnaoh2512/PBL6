@@ -8,6 +8,7 @@ const ALLOWED_STATUSES = [
   'answered',
   'needs_clarification',
   'no_results',
+  'requires_login',
   'insufficient_evidence',
   'capability_unavailable',
 ];
@@ -24,6 +25,16 @@ const SUGGESTION_PROMPTS = {
   'Phòng': 'Tìm phòng trống cho 2 khách',
   'Giá phòng': 'Kiểm tra giá phòng cho 2 khách',
   'Dịch vụ': 'Khách sạn hiện có những dịch vụ nào và giá bao nhiêu?',
+  'Booking của tôi': 'Xem danh sách đơn đặt phòng của tôi',
+};
+
+const BOOKING_STATUS_LABELS = {
+  PENDING_DEPOSIT: 'Chờ cọc',
+  CONFIRMED: 'Đã xác nhận',
+  CHECKED_IN: 'Đang lưu trú',
+  CHECKED_OUT: 'Đã trả phòng',
+  CANCELED: 'Đã hủy',
+  EXPIRED: 'Đã hết hạn',
 };
 
 function formatVnd(raw) {
@@ -99,6 +110,36 @@ function AssistantCard({ card }) {
         <p className="assistant-card-price">
           <strong>{formatVnd(svc.unitPrice)}</strong> / {svc.unit}
         </p>
+        {card.retrievedAt && (
+          <div className="assistant-card-footer">
+            <small>Cập nhật: {formatRetrievedAt(card.retrievedAt)}</small>
+          </div>
+        )}
+      </div>
+    );
+  }
+  if (card.type === 'booking') {
+    const bk = card.data;
+    const statusLabel = BOOKING_STATUS_LABELS[bk.bookingStatus] || bk.bookingStatus;
+    const hasFinancials = bk.depositRequired != null || bk.depositPaid != null
+      || bk.totalAmount != null || bk.remainingBalance != null;
+    return (
+      <div className="assistant-card assistant-card-booking">
+        <div className="assistant-card-head">
+          <strong>{bk.bookingCode}</strong>
+          <span className="assistant-status-badge">{statusLabel}</span>
+        </div>
+        {bk.roomTypeName && <p className="assistant-card-meta">{bk.roomTypeName}</p>}
+        <p className="assistant-card-meta">
+          {bk.checkInDate} → {bk.checkOutDate} · {bk.nights} đêm · {bk.guestCount} khách
+        </p>
+        {hasFinancials && (
+          <p className="assistant-card-price">
+            {bk.totalAmount != null && <>Tổng: <strong>{formatVnd(bk.totalAmount)}</strong> · </>}
+            {bk.depositPaid != null && <>Đã cọc: {formatVnd(bk.depositPaid)} · </>}
+            {bk.remainingBalance != null && <>Còn lại: <strong>{formatVnd(bk.remainingBalance)}</strong></>}
+          </p>
+        )}
         {card.retrievedAt && (
           <div className="assistant-card-footer">
             <small>Cập nhật: {formatRetrievedAt(card.retrievedAt)}</small>
@@ -226,10 +267,10 @@ export function AssistantChat({ routeKey = '' }) {
   return <aside className="assistant-widget" ref={widget} aria-label="Trợ lý khách sạn">
     {open && <section id="assistant-panel" className="assistant-panel" role="region" aria-label="Hội thoại trợ lý"
       onKeyDown={event => { if (event.key === 'Escape') close(); }}>
-      <header><div><strong>Trợ lý khách sạn</strong><small>Hỗ trợ FAQ, tìm phòng &amp; dịch vụ</small></div>
+      <header><div><strong>Trợ lý khách sạn</strong><small>Hỗ trợ FAQ, phòng, dịch vụ &amp; booking</small></div>
         <button type="button" onClick={close} aria-label="Thu gọn trợ lý">×</button></header>
       {mode === 'demo_synthetic' && <p className="assistant-demo" role="note">Dữ liệu giả lập — chỉ dùng demo</p>}
-      {!mode && <p className="assistant-note">Hỗ trợ FAQ có nguồn, tra cứu phòng trống và dịch vụ; nguồn và chế độ được xác nhận trong phản hồi.</p>}
+      {!mode && <p className="assistant-note">Hỗ trợ FAQ có nguồn, phòng trống, dịch vụ và đơn đặt phòng cá nhân (khi đã đăng nhập).</p>}
       <div className="assistant-suggestions">{['FAQ', 'Phòng', 'Giá phòng', 'Dịch vụ', 'Booking của tôi', 'Chính sách'].map(label =>
         <button key={label} type="button" disabled={busy} onClick={() => suggestion(label)}>{label}</button>)}</div>
       <div className="assistant-messages" ref={list} role="log" aria-label="Tin nhắn" aria-live="polite"
