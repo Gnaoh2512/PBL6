@@ -2,7 +2,9 @@
 
 Trợ lý hỗ trợ FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách khách sạn. Widget đặt ở **góc dưới bên phải**.
 
-**Trạng thái:** có Gemini REST adapter, ingestion/index FTS5, FAQ orchestration, Spring facade và widget opt-in. Đã có FAQ end-to-end với Gemini thật và 3 E2E pass; batch live mới nhất D1.9 hoàn tất đúng trạng thái 18/24 ca, còn 6 deadline. D1 chưa đóng nghiệm thu độ ổn định/grounding; production chưa có corpus duyệt. Checklist và bằng chứng nằm trong [PROCESS.md](docs/PROCESS.md). Không có business tools hoặc runtime fallback sang fake.
+**Trạng thái:** Phase 3 có hybrid retrieval mặc định, context assembly, typed proposal (`FactSelectionProposal` gọn `d1-fact-selection-1` bật qua `proposal_mode="fact_selection"` trong profile Academic Demo; giữ tương thích `CandidateDraft` v2) và gate
+D1.20 bắt buộc trong factory/FAQ (gồm máy tính giả định quyết định phía host cho `D-A14`); không có free-form supported=true bypass. Milestone D1 được user chấp nhận `ACCEPTED_WITH_LIMITATIONS` (23/11) cho Academic Demo; đợt 24–25/11 đã hoàn thiện allowlist `AI_DEMO_SOURCE_PACK=academic_policies` (10 policy/38 units), paired snapshot Qdrant (`fd7d1e18...`), phát hành & pin catalog bất biến `academic-policies-2026-11-25-v3` (42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates, bổ sung điều kiện hạn 15 phút cho `D-A13`, `LOCAL_ARTIFACTS_VALID`), bổ sung FTS5 bigrams cho BM25, hoàn thiện kiểm tra câu ghép/tham số cho `QuestionBinding` (`19/19` `dev-A` bound + BM25 gate ready, `0/10` `dev-U`, `0/4` `dev-O`, `12/12` adversarial, `held_out_touched: false`), nâng `CLASSIFY` lên `d1-faq-3`, hỗ trợ `GEMINI_THINKING_LEVEL` (`gemini-3.6-flash + MINIMAL`) và đạt `644 passed, 0 failed, 0 skipped` (offline + Docker). Chưa có approved production corpus/catalog hoặc đóng quality gates live reliability/semantic. Runtime/runbook ở
+[GROUNDING](docs/GROUNDING.md), bằng chứng ở [PROCESS](docs/PROCESS.md).
 
 ## Cách chia trách nhiệm
 
@@ -40,14 +42,14 @@ Copy-Item settings.example.env .env
 
 File mẫu không chứa credential thật. Điền AI_SERVICE_AUTH_TOKEN bằng token riêng của service trong `.env` hoặc biến môi trường; giá trị môi trường có ưu tiên cao hơn `.env`. Không dùng JWT khách làm token nội bộ. Token cấu hình phải dài 1–512 ký tự ASCII in được, không có khoảng trắng; nên tạo chuỗi ngẫu nhiên đủ mạnh, không dùng giá trị mẫu. AI_CORPUS_MODE là production hoặc demo_synthetic. Không có biến bật giả trạng thái LLM/index.
 
-Không cài hay kết nối MySQL, SDK LLM hoặc vector database. Chỉ bind loopback cho chạy local; khi dùng qua mạng cần TLS và giới hạn mạng theo API.md. Chưa mở Swagger/OpenAPI hoặc route browser.
+Python không kết nối MySQL hoặc dùng SDK LLM. Qdrant phục vụ paired indexing/chat hybrid mặc định; explicit `AI_RETRIEVAL_MODE=bm25` không cần Qdrant nhưng vẫn cần gate. Cả hai mode yêu cầu pinned catalog/source receipts trong `AI_GROUNDING`; thiếu artifacts giữ not-ready trước Gemini probe. Xem [indexing runbook](docs/INGESTION.md) và [Hybrid Retrieval/runbook](docs/HYBRID.md). Chỉ bind loopback khi chạy local; qua mạng cần TLS/giới hạn mạng theo API.md. Chưa mở Swagger/OpenAPI hoặc route browser.
 
 ## Hành vi hiện có
 
 | Request | Kết quả |
 | --- | --- |
 | GET /health | 200, status=alive |
-| GET /ready | 503 khi thiếu dependency; 200 sau startup probe thật và index đúng mode hợp lệ |
+| GET /ready | 503 khi thiếu dependency; 200 sau valid index/catalog/source receipts và startup probe thật |
 | POST /internal/assistant/turn thiếu cấu hình token | 503 AI_NOT_CONFIGURED |
 | Cùng route, có cấu hình nhưng thiếu/sai credential hoặc gửi USER_JWT | 401 UNAUTHORIZED |
 | Start hợp lệ với đúng token | 503 khi chưa sẵn sàng; khi ready chạy FAQ và trả final có nguồn hoặc trạng thái từ chối |
