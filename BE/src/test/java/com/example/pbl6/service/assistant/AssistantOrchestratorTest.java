@@ -1,9 +1,11 @@
 package com.example.pbl6.service.assistant;
 
+import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
 import com.example.pbl6.dto.room.AvailableRoomResponse;
 import com.example.pbl6.dto.room.RoomTypeResponse;
 import com.example.pbl6.dto.service.ServiceResponse;
 import com.example.pbl6.service.CustomerBillingService;
+import com.example.pbl6.service.CustomerHistoryService;
 import com.example.pbl6.service.RoomCatalogService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,6 +39,7 @@ class AssistantOrchestratorTest {
     private AssistantOrchestrator orchestrator;
     private RoomCatalogService roomCatalogService;
     private CustomerBillingService customerBillingService;
+    private CustomerHistoryService customerHistoryService;
     private final ObjectMapper mapper = new ObjectMapper();
     private final AtomicReference<String> scenario = new AtomicReference<>("search_rooms");
     private final List<JsonNode> receivedRequests = new CopyOnWriteArrayList<>();
@@ -45,6 +48,23 @@ class AssistantOrchestratorTest {
     void setup() throws Exception {
         roomCatalogService = mock(RoomCatalogService.class);
         customerBillingService = mock(CustomerBillingService.class);
+        customerHistoryService = mock(CustomerHistoryService.class);
+
+        when(customerHistoryService.getMemberBookingDetail("customer1", "BK-CUSTOMER1-DEMO"))
+                .thenReturn(CustomerBookingHistoryDetailResponse.builder()
+                        .bookingCode("BK-CUSTOMER1-DEMO")
+                        .bookingStatus("CHECKED_IN")
+                        .roomTypeName("Phòng Standard")
+                        .roomNumber("P204")
+                        .checkInDate(LocalDate.of(2026, 11, 24))
+                        .checkOutDate(LocalDate.of(2026, 11, 27))
+                        .nights(3)
+                        .guestCount(2)
+                        .depositRequired(new BigDecimal("450000"))
+                        .depositPaid(new BigDecimal("450000"))
+                        .totalAmount(new BigDecimal("1650000"))
+                        .remainingBalance(new BigDecimal("1200000"))
+                        .build());
 
         when(roomCatalogService.findAvailableRooms(any())).thenReturn(List.of(
                 AvailableRoomResponse.builder()
@@ -154,6 +174,20 @@ class AssistantOrchestratorTest {
                         ));
                         body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 20, "outputTokensUsed", 15));
                     }
+                    case "combined_booking_policy", "combined_forged_citation" -> {
+                        body.put("kind", "tool_calls");
+                        body.put("continuationId", contId);
+                        body.put("toolCalls", List.of(Map.of(
+                                "callId", callId,
+                                "name", "get_my_booking",
+                                "arguments", Map.of(
+                                        "bookingCode", "BK-CUSTOMER1-DEMO",
+                                        "includeFinancials", true
+                                )
+                        )));
+                        body.put("evidence", List.of());
+                        body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 30, "outputTokensUsed", 20));
+                    }
                     case "two_batch_error_final" -> {
                         body.put("kind", "tool_calls");
                         body.put("continuationId", contId);
@@ -223,6 +257,41 @@ class AssistantOrchestratorTest {
                             "corpusMode", "demo_synthetic"
                     ));
                     body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 0, "outputTokensUsed", 0));
+                } else if ("combined_booking_policy".equals(mode) || "combined_forged_citation".equals(mode)) {
+                    Map<String, Object> ev = new LinkedHashMap<>();
+                    ev.put("citationId", "pol-04-chunk-1");
+                    ev.put("documentId", "pbl6-publication-pol-04");
+                    ev.put("version", "0.1.1");
+                    ev.put("chunkId", "pol-04-chunk-1");
+                    ev.put("sectionId", "POL-04-U01");
+                    ev.put("title", "Chính sách hủy đặt phòng");
+                    ev.put("sourceRef", "synthetic:pbl6-academic-demo/hotel-policies-v0.1.1");
+                    ev.put("excerpt", "Hủy trước 72 giờ được hoàn 100% cọc.");
+                    ev.put("corpusMode", "demo_synthetic");
+
+                    Map<String, Object> cit = new LinkedHashMap<>();
+                    cit.put("citationId", "combined_forged_citation".equals(mode) ? "forged-cit-id" : "pol-04-chunk-1");
+                    cit.put("documentId", "pbl6-publication-pol-04");
+                    cit.put("version", "0.1.1");
+                    cit.put("chunkId", "pol-04-chunk-1");
+                    cit.put("sectionId", "POL-04-U01");
+                    cit.put("title", "Chính sách hủy đặt phòng");
+                    cit.put("sourceRef", "synthetic:pbl6-academic-demo/hotel-policies-v0.1.1");
+
+                    body.put("kind", "final");
+                    body.put("continuationId", null);
+                    body.put("toolCalls", List.of());
+                    body.put("evidence", List.of(ev));
+                    body.put("final", Map.of(
+                            "status", "answered",
+                            "answer", "Thông tin đơn BK-CUSTOMER1-DEMO kèm chính sách hủy phòng từ nguồn đã duyệt.",
+                            "missingFields", List.of(),
+                            "citations", List.of(cit),
+                            "cards", List.of(),
+                            "actions", List.of(),
+                            "corpusMode", "demo_synthetic"
+                    ));
+                    body.put("usage", Map.of("toolCallsUsed", 1, "brokerBatchesUsed", 0, "inputTokensUsed", 120, "outputTokensUsed", 40));
                 } else {
                     List<Map<String, Object>> cards = "forged_cards".equals(mode)
                             ? List.of(Map.of("type", "room", "data", Map.of("pricePerNight", "1"), "retrievedAt", "2026-11-25T10:00:00+07:00"))
@@ -265,7 +334,7 @@ class AssistantOrchestratorTest {
                 "http://localhost:3000", env
         );
         var client = new AssistantClient(config);
-        var broker = new AssistantToolBroker(roomCatalogService, customerBillingService, FIXED_CLOCK);
+        var broker = new AssistantToolBroker(roomCatalogService, customerBillingService, customerHistoryService, FIXED_CLOCK);
         orchestrator = new AssistantOrchestrator(config, client, broker);
     }
 
@@ -397,5 +466,43 @@ class AssistantOrchestratorTest {
         assertEquals("open_room_search", actions.get(0).get("type"));
         assertEquals(3, receivedRequests.size());
         assertEquals(0, receivedRequests.get(2).path("budget").path("remainingBrokerBatches").asInt());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void executesCombinedBookingAndPolicyTurnWithLedgerCardAndVerifiedCitations() {
+        scenario.set("combined_booking_policy");
+        var result = orchestrator.executeTurn(
+                "req-d4-comb", UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "Đơn BK-CUSTOMER1-DEMO hủy phòng hoàn cọc thế nào?", List.of(),
+                "customer1", true, System.nanoTime()
+        );
+        assertEquals("answered", result.get("status"));
+        var cards = (List<Map<String, Object>>) result.get("cards");
+        assertEquals(1, cards.size());
+        assertEquals("booking", cards.get(0).get("type"));
+        var cardData = (Map<String, Object>) cards.get(0).get("data");
+        assertEquals("BK-CUSTOMER1-DEMO", cardData.get("bookingCode"));
+        assertEquals("1200000", cardData.get("remainingBalance"));
+        assertFalse(cardData.containsKey("roomNumber"));
+
+        var citations = (List<Map<String, Object>>) result.get("citations");
+        assertEquals(1, citations.size());
+        assertEquals("POL-04-U01", citations.get(0).get("sectionId"));
+        assertEquals(2, receivedRequests.size());
+        assertEquals(3, receivedRequests.get(1).path("budget").path("remainingToolCalls").asInt());
+        verify(customerHistoryService).getMemberBookingDetail("customer1", "BK-CUSTOMER1-DEMO");
+    }
+
+    @Test
+    void rejectsForgedPolicyCitationEvenWhenBookingLedgerSucceeded() {
+        scenario.set("combined_forged_citation");
+        AssistantFault fault = assertThrows(AssistantFault.class, () -> orchestrator.executeTurn(
+                "req-d4-forged", UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "Đơn BK-CUSTOMER1-DEMO hủy phòng?", List.of(),
+                "customer1", true, System.nanoTime()
+        ));
+        assertEquals(502, fault.status);
+        assertEquals("AI_PROTOCOL_ERROR", fault.code);
     }
 }

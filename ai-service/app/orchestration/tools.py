@@ -1,10 +1,10 @@
-"""Deterministic D2/D3 business & booking tool planning and grounded resume rendering."""
+"""Deterministic D2/D3/D4 business, booking, and combined policy planning & rendering."""
 
 from decimal import Decimal
 from uuid import uuid4
 
 from app.diagnostics import Category
-from app.orchestration.continuations import ContinuationStore, PendingCall
+from app.orchestration.continuations import CombinedPolicyContext, ContinuationStore, PendingCall
 from app.providers.contracts import DependencyError, TurnBudget
 from app.schemas.turn import (
     BookingDetail,
@@ -17,6 +17,7 @@ from app.schemas.turn import (
 )
 from app.tools.schemas import (
     TurnPlan,
+    validate_booking_with_policy_plan,
     validate_get_booking_plan,
     validate_list_bookings_plan,
     validate_room_search_plan,
@@ -24,6 +25,11 @@ from app.tools.schemas import (
 )
 
 _MAX_ANSWER_LEN = 4000
+_COMBINED_DISCLAIMER = (
+    "Lưu ý: Trợ lý không tự tính khoản hoàn tiền hoặc phí phát sinh cuối cùng cho đơn đặt phòng "
+    "cụ thể; mức áp dụng thực tế cần nhân viên xác minh theo chứng từ và trạng thái giao dịch "
+    "tại thời điểm xử lý."
+)
 _ACTION_OPEN_ROOM_SEARCH = {
     "type": "open_room_search",
     "label": "Mở trang tìm & đặt phòng",
@@ -109,8 +115,13 @@ def _emit_single_tool_call(
     budget: TurnBudget,
     continuations: ContinuationStore,
     usage: dict,
+    min_tool_calls: int = 1,
+    policy_context: CombinedPolicyContext | None = None,
 ) -> dict:
-    if payload.budget.remainingToolCalls < 1 or payload.budget.remainingBrokerBatches < 1:
+    if (
+        payload.budget.remainingToolCalls < min_tool_calls
+        or payload.budget.remainingBrokerBatches < 1
+    ):
         raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
     call_id = uuid4()
     continuation_id = continuations.create(
@@ -118,6 +129,7 @@ def _emit_single_tool_call(
         turn_id=payload.turnId,
         pending_calls=[PendingCall(call_id=call_id, name=tool_name)],
         remaining_ms=max(1, int(budget.seconds() * 1000)),
+        policy_context=policy_context,
     )
     return {
         "requestId": payload.requestId,
@@ -265,6 +277,61 @@ def plan_business_turn(
             budget=budget,
             continuations=continuations,
             usage=usage,
+        )
+
+    if plan.intent == "booking_with_policy":
+        tool_name, arguments, missing, clarification = validate_booking_with_policy_plan(plan)
+        assert tool_name is not None
+        if tool_name not in payload.allowedTools:
+            return _final_response(
+                request_id=payload.requestId,
+                conversation_id=str(payload.conversationId),
+                turn_id=str(payload.turnId),
+                status="requires_login",
+                answer=(
+                    "Để đối chiếu chính sách với đơn đặt phòng cá nhân của bạn, vui lòng "
+                    "đăng nhập tài khoản khách hàng trước nhé."
+                ),
+                mode=mode,
+                actions=[_ACTION_OPEN_LOGIN],
+                usage=usage,
+            )
+        if "search_knowledge" not in payload.allowedTools:
+            return _final_response(
+                request_id=payload.requestId,
+                conversation_id=str(payload.conversationId),
+                turn_id=str(payload.turnId),
+                status="capability_unavailable",
+                answer="Chức năng đối chiếu chính sách hiện chưa được bật cho phiên này.",
+                mode=mode,
+                usage=usage,
+            )
+        if arguments is None:
+            return _final_response(
+                request_id=payload.requestId,
+                conversation_id=str(payload.conversationId),
+                turn_id=str(payload.turnId),
+                status="needs_clarification",
+                answer=clarification or "Bạn vui lòng cung cấp mã đơn đặt phòng hợp lệ.",
+                mode=mode,
+                missing_fields=missing,
+                usage=usage,
+            )
+        policy_query = (plan.policyQuery or plan.query).strip() or plan.query.strip()
+        return _emit_single_tool_call(
+            tool_name=tool_name,
+            arguments=arguments,
+            payload=payload,
+            budget=budget,
+            continuations=continuations,
+            usage=usage,
+            min_tool_calls=2,
+            policy_context=CombinedPolicyContext(
+                original_message=payload.message,
+                policy_query=policy_query,
+                today=payload.context.today,
+                allowed_tools=tuple(payload.allowedTools),
+            ),
         )
 
     return _final_response(
@@ -466,4 +533,84 @@ def render_resume(payload: ResumeTurn, mode: str) -> dict:
         answer="\n\n".join(sections),
         mode=mode,
         actions=actions,
+    )
+
+
+def compose_combined_booking_policy(
+    booking_result: ToolResult,
+    policy_result: dict,
+    payload: ResumeTurn,
+    mode: str,
+) -> dict:
+    """Deterministically combine authorized booking facts with gate-verified hotel policy.
+
+    Never computes refund or penalty totals on the booking; fails closed to
+    `insufficient_evidence` if the policy portion could not be verified or would exceed
+    the public answer length cap without clipping qualifiers.
+    """
+    if booking_result.name == "get_my_booking" and isinstance(booking_result.data, BookingDetail):
+        _, booking_text, _ = _render_booking_detail(booking_result.data)
+    elif booking_result.name == "list_my_bookings" and isinstance(booking_result.data, BookingList):
+        _, booking_text, _ = _render_booking_list(booking_result.data)
+    else:
+        raise DependencyError("AI_PROTOCOL_ERROR")
+
+    policy_final = policy_result.get("final") or {}
+    policy_status = policy_final.get("status")
+    policy_answer = str(policy_final.get("answer") or "").strip()
+    policy_citations = list(policy_final.get("citations") or [])
+    policy_evidence = list(policy_result.get("evidence") or [])
+    usage = dict(
+        policy_result.get("usage")
+        or {
+            "toolCallsUsed": 1,
+            "brokerBatchesUsed": 0,
+            "inputTokensUsed": 0,
+            "outputTokensUsed": 0,
+        }
+    )
+
+    if policy_status == "answered" and policy_answer and policy_citations:
+        combined = (
+            f"{booking_text}\n\n"
+            f"Chính sách áp dụng từ nguồn đã duyệt:\n{policy_answer}\n\n"
+            f"{_COMBINED_DISCLAIMER}"
+        )
+        if (
+            len(combined) <= _MAX_ANSWER_LEN
+            and len(combined.encode("utf-16-le")) // 2 <= _MAX_ANSWER_LEN
+        ):
+            return {
+                "requestId": payload.requestId,
+                "conversationId": str(payload.conversationId),
+                "turnId": str(payload.turnId),
+                "kind": "final",
+                "continuationId": None,
+                "toolCalls": [],
+                "final": {
+                    "status": "answered",
+                    "answer": combined,
+                    "missingFields": [],
+                    "citations": policy_citations,
+                    "cards": [],
+                    "actions": [],
+                    "corpusMode": mode,
+                },
+                "evidence": policy_evidence,
+                "usage": usage,
+            }
+
+    abstain_answer = (
+        f"{booking_text}\n\n"
+        "Chưa có đủ nguồn chính sách đã duyệt để trả lời phần quy định áp dụng cho đơn này. "
+        "Vui lòng liên hệ nhân viên khách sạn để được xác minh trực tiếp."
+    )
+    return _final_response(
+        request_id=payload.requestId,
+        conversation_id=str(payload.conversationId),
+        turn_id=str(payload.turnId),
+        status="insufficient_evidence",
+        answer=abstain_answer,
+        mode=mode,
+        usage=usage,
     )

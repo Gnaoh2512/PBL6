@@ -37,9 +37,11 @@ class TurnPlan(StrictModel):
         "list_services",
         "list_my_bookings",
         "get_my_booking",
+        "booking_with_policy",
         "unavailable",
     ]
     query: str = Field(min_length=1, max_length=2000)
+    policyQuery: str | None = None
     checkInDate: str | None = None
     checkOutDate: str | None = None
     guestCount: int | None = None
@@ -243,3 +245,16 @@ def validate_get_booking_plan(plan: TurnPlan) -> tuple[dict | None, list[str], s
     if plan.includeFinancials is True:
         arguments["includeFinancials"] = True
     return arguments, [], None
+
+
+def validate_booking_with_policy_plan(
+    plan: TurnPlan,
+) -> tuple[str | None, dict | None, list[str], str | None]:
+    """Resolve the booking tool + validated arguments for a D4 combined booking+policy turn.
+
+    Returns (tool_name, arguments, missing_fields, clarification_message).
+    """
+    if plan.bookingCode and plan.bookingCode.strip():
+        arguments, missing, clarification = validate_get_booking_plan(plan)
+        return "get_my_booking", arguments, missing, clarification
+    return "list_my_bookings", validate_list_bookings_plan(plan), [], None

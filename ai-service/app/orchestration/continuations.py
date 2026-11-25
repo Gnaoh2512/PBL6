@@ -1,7 +1,8 @@
-"""In-memory single-use continuation store for D2 broker tool_calls/resume cycles."""
+"""In-memory single-use continuation store for D2/D3/D4 broker tool_calls/resume cycles."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import date
 from time import monotonic
 from uuid import UUID, uuid4
 
@@ -22,12 +23,23 @@ class PendingCall:
 
 
 @dataclass(frozen=True)
+class CombinedPolicyContext:
+    """Host-pinned policy context for D4 combined booking + policy resume turns."""
+
+    original_message: str
+    policy_query: str
+    today: date
+    allowed_tools: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ContinuationEntry:
     continuation_id: UUID
     conversation_id: UUID
     turn_id: UUID
     pending_calls: tuple[PendingCall, ...]
     expires_at: float
+    policy_context: CombinedPolicyContext | None = None
 
 
 class ContinuationStore:
@@ -57,6 +69,7 @@ class ContinuationStore:
         turn_id: UUID,
         pending_calls: list[PendingCall],
         remaining_ms: int,
+        policy_context: CombinedPolicyContext | None = None,
     ) -> UUID:
         if not pending_calls or remaining_ms <= 0:
             raise DependencyError("DEADLINE_EXCEEDED")
@@ -72,6 +85,7 @@ class ContinuationStore:
             turn_id=turn_id,
             pending_calls=tuple(pending_calls),
             expires_at=now + ttl,
+            policy_context=policy_context,
         )
         return continuation_id
 
