@@ -5,7 +5,7 @@
 .assistant-panel header { display: flex; align-items: center; justify-content: space-between; padding: 14px; background: #174b55; color: white; }
 .assistant-panel header small { display: block; font-size: 12px; }
 .assistant-panel header button { color: white; background: transparent; border: 0; font-size: 24px; }
-.assistant-panel button:focus-visible, .assistant-panel input:focus-visible, .assistant-launcher:focus-visible { outline: 3px solid #df9c36; outline-offset: 2px; }
+.assistant-panel button:focus-visible, .assistant-panel input:focus-visible, .assistant-panel a:focus-visible, .assistant-launcher:focus-visible { outline: 3px solid #df9c36; outline-offset: 2px; }
 .assistant-demo, .assistant-note { font-size: 12px; padding: 8px 12px; margin: 0; background: #fff4d7; }
 .assistant-suggestions { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 8px 12px; }
 .assistant-suggestions button { border: 1px solid #cdd8dc; background: #f4f8f8; border-radius: 8px; padding: 5px; }
@@ -14,6 +14,18 @@
 .assistant-message.user { background: #eef0f7; margin-left: 20px; }
 .assistant-message p { white-space: pre-wrap; margin: 4px 0; }
 .assistant-message ul { font-size: 11px; padding-left: 18px; margin: 6px 0 0; }
+.assistant-cards { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.assistant-card { background: #ffffff; border: 1px solid #cdd8dc; border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+.assistant-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; margin-bottom: 2px; }
+.assistant-card-head span { font-size: 11px; color: #47606b; }
+.assistant-card-meta { font-size: 11px; color: #3d525c; margin: 2px 0; }
+.assistant-card-price { font-size: 12px; color: #174b55; margin: 3px 0; }
+.assistant-card-disclaimer { font-size: 11px; color: #6e5516; background: #fff9e6; border-radius: 4px; padding: 2px 6px; margin: 4px 0; }
+.assistant-card-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
+.assistant-card-footer small { font-size: 10px; color: #5b717c; }
+.assistant-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.assistant-action-link { display: inline-block; font-size: 12px; font-weight: 600; color: #174b55; background: #e1eff1; border: 1px solid #b3cfd4; border-radius: 6px; padding: 4px 8px; text-decoration: none; }
+.assistant-action-link:hover { background: #d1e6e9; }
 .assistant-error { font-size: 12px; color: #7d1a1a; background: #fff0f0; margin: 0; padding: 8px 12px; }
 .assistant-panel form { display: flex; gap: 7px; padding: 10px; border-top: 1px solid #cdd8dc; }
 .assistant-panel input { min-width: 0; width: 100%; padding: 8px; border: 1px solid #b3c6ce; border-radius: 7px; }

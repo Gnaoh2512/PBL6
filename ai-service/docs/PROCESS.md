@@ -111,13 +111,14 @@ Trong batch D1.9, 5 timeout ở classify/generateContent, 1 ở answer/generateC
 - Validate index đầu turn ở trước budget; I/O SQLite/checksum còn đồng bộ. Chưa có bằng chứng đây là nguyên nhân timeout Gemini.
 - Chưa kiểm tra bàn phím mềm trên thiết bị mobile thật, tổng chi phí hoặc benchmark production.
 
-## D2 — Phòng, giá và dịch vụ: chưa triển khai
+## D2 — Phòng, giá và dịch vụ: đã triển khai bản đầu (chờ kiểm chứng live & nghiệm thu)
 
-- [ ] Nối `search_rooms`/`list_services` với service thật của Spring; hỏi đủ ngày/số khách/bộ lọc trước query.
-- [ ] Trả giá/currency/đơn vị từ backend, kiểm tra khả năng báo giá trước khi thêm `get_room_quote`.
-- [ ] Hiển thị thẻ từ DTO cấu trúc và link nghiệp vụ hợp lệ.
-- [ ] Kiểm tra ngày sai, hết phòng, giá đổi, dịch vụ dừng, tool ngoài allowlist và backend timeout.
-- [ ] Nếu cần, đánh giá ranker ưu tiên mềm sau lọc điều kiện cứng; đây là tùy chọn, không là điều kiện để FAQ chạy.
+- [x] Nối `search_rooms` (`RoomCatalogService.findAvailableRooms`) và `list_services` (`CustomerBillingService.getActiveServices`) in-process qua `AssistantToolBroker` tại Spring; đồng bộ key cọc `hotel.bank.deposit-percentage` trong `RoomCatalogServiceImpl`; hỏi lại (`needs_clarification` + `missingFields`) khi thiếu ngày nhận/trả hoặc số khách.
+- [x] Trả giá/currency (`VND`)/đơn vị/`priceScope="room_charge_estimate"` từ backend, chặn ép giá `null` thành `0` (`DATA_UNAVAILABLE`); Python dùng `ContinuationStore` single-use (TTL ≤ 120s, replay `409`) và deterministic renderer ở `phase=resume` (0 lượt LLM thêm).
+- [x] Spring `AssistantOrchestrator` + `AssistantClient` giữ Turn Ledger để lắp ráp `cards` (`room`/`service`, có `retrievedAt`, loại bỏ `roomNumber`/`floor`/`note`/`status`) và lọc `actions` theo allowlist (`open_room_search` → `/booking`, `open_services` → `/guest/services` chỉ cho `CUSTOMER`); [AssistantWidget.jsx](../../FE/src/components/assistant/AssistantWidget.jsx) hiển thị thẻ phòng/dịch vụ và link an toàn.
+- [x] Kiểm thử offline/mock cho ngày sai, hết phòng (`no_results`), giá nguồn `null` (`DATA_UNAVAILABLE`), dịch vụ ngừng hoạt động, tool ngoài allowlist/giả mạo card/action (`502 AI_PROTOCOL_ERROR`), vượt budget (`503 BUDGET_EXCEEDED`), replay continuation (`409`) và lỗi backend (`DEPENDENCY_UNAVAILABLE`). *(Chưa chạy E2E live qua Gemini + MySQL thật.)*
+- [ ] Đánh giá E2E live (Gemini thật + Spring + MySQL + trình duyệt) và ký nghiệm thu D2 theo tiêu chí đầu ra.
+- [ ] Nếu cần, đánh giá ranker ưu tiên mềm sau lọc điều kiện cứng; đây là tùy chọn, không là điều kiện để FAQ/D2 chạy.
 
 ## D3 — Booking cá nhân: chưa triển khai
 
@@ -1521,3 +1522,26 @@ Thực hiện theo xác nhận của người dùng (giữ nguyên nhánh `chore
   - **`gemini-3.6-flash` + `MINIMAL`**: **`0/36` HTTP 503**, **`0` deadline**, tốc độ tốt (`1,18s` minimal / `3,45s` full turn kể cả `S04` `POL-04-U01`), **nhưng bị chặn chặt bởi `HTTP 429` RPM/RPD trên free-tier** nếu gọi nhiều lượt gần nhau.
   - **`gemini-3.5-flash-lite`**: hạn mức free-tier rộng hơn rõ rệt (chỉ 1× `429` trong toàn bộ các batch trước) và đạt `3,28–4,38s` khi dùng `FactSelectionProposal`, **nhưng có tỷ lệ `HTTP 503` upstream ngắt quãng**.
 - **Trạng thái D1 giữ nguyên**: `ACCEPTED_WITH_LIMITATIONS` (chờ người dùng quyết định giữ `3.6-flash + MINIMAL` cho gói paid/giãn cách dài hay quay về `3.5-flash-lite` cho free-tier, trước khi rà soát commit hoặc sang D2).
+
+
+### 14. Triển khai D2 — Read-only Business Tools (`search_rooms`, `list_services`) qua Spring Broker — 2026-11-25
+
+Thực hiện trên nhánh mới `feat/ai-d2-business-tools` (tách từ `feat/ai-d1-academic-demo@90a17e2`, giữ nguyên 7 file ngoài phạm vi chưa commit; không cài thêm dependency/dịch vụ mới).
+
+- **Quyết định thiết kế đã được người dùng phê duyệt**:
+  - Phạm vi tool D2 giữ đúng 2 công cụ công khai chỉ đọc theo [API.md](API.md): `search_rooms` và `list_services`; câu hỏi tìm phòng/giá thiếu ngày nhận/trả hoặc số khách trả `needs_clarification` kèm `missingFields` (chưa mở `list_room_types`, giữ khóa D3 booking cá nhân).
+  - Phase `resume` phía Python sử dụng **deterministic renderer** từ kết quả tool của Spring (0% nguy cơ model bịa giá/số đêm và tiết kiệm 1 lượt gọi Gemini/turn).
+  - Đồng bộ cấu hình tỷ lệ cọc trong [RoomCatalogServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/RoomCatalogServiceImpl.java) sang `@Value("${hotel.bank.deposit-percentage:${hotel.deposit-percentage:30}}")` để khớp [BankConfig.java](../../BE/src/main/java/com/example/pbl6/config/BankConfig.java).
+  - Action `open_services` chỉ được Spring phát cho principal có quyền `CUSTOMER` (FE map tới `/guest/services`), tránh dẫn khách ẩn danh vào `/services` vốn khóa cho `STAFF_ROLES` trong [App.jsx](../../FE/src/App.jsx).
+- **Thành phần triển khai theo 4 lát cắt**:
+  - **D2.1 (BE Broker)**: [AssistantToolBroker.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantToolBroker.java) & [AssistantToolBrokerTest.java](../../BE/src/test/java/com/example/pbl6/service/assistant/AssistantToolBrokerTest.java) — gọi trực tiếp `RoomCatalogService` / `CustomerBillingService` in-process, validate chặt schema/ngày/giá, chặn ép `null` → `0` (`DATA_UNAVAILABLE`), loại `roomNumber`/`floor`/`note`/`status`, sort xác định + `limit`/`hasMore` + `retrievedAt`.
+  - **D2.2 (Python Runtime)**: [schemas.py](../app/tools/schemas.py), [tools.py](../app/prompts/tools.py), [continuations.py](../app/orchestration/continuations.py), [tools.py](../app/orchestration/tools.py), [faq.py](../app/orchestration/faq.py), [main.py](../app/main.py) & tests [test_d2_business_tools.py](../tests/unit/test_d2_business_tools.py), [test_d2_tools_runtime.py](../tests/integration/test_d2_tools_runtime.py) — giữ nguyên đường D1 `Intent` + Verification Gate khi chỉ có `search_knowledge`; thêm `TurnPlan`, `ContinuationStore` atomic single-use (`409 CONTINUATION_NOT_FOUND` khi replay/sai lệch/hết TTL), deterministic `render_resume` không làm bẩn `/ready` khi lỗi `DATA_UNAVAILABLE`/`DEPENDENCY_UNAVAILABLE` phía nghiệp vụ.
+  - **D2.3 (BE Orchestrator & Client)**: [AssistantConfig.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantConfig.java), [AssistantClient.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantClient.java), [AssistantOrchestrator.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantOrchestrator.java), [AssistantController.java](../../BE/src/main/java/com/example/pbl6/controller/assistant/AssistantController.java), [application.properties](../../BE/src/main/resources/application.properties) & [AssistantOrchestratorTest.java](../../BE/src/test/java/com/example/pbl6/service/assistant/AssistantOrchestratorTest.java) — vòng lặp tối đa 2 broker batches / 4 tool calls / deadline 20s, trừ dần budget, lắp ráp `cards` độc quyền từ Turn Ledger, chặn model nhồi `cards`/action/tool lạ (`502 AI_PROTOCOL_ERROR`).
+  - **D2.4 (FE Widget)**: [AssistantWidget.jsx](../../FE/src/components/assistant/AssistantWidget.jsx), [AssistantWidget.css](../../FE/src/components/assistant/AssistantWidget.css) & [AssistantWidget.test.jsx](../../FE/src/components/assistant/AssistantWidget.test.jsx) — render thẻ phòng/dịch vụ kèm disclaimer *"Giá phòng dự kiến · Chưa gồm VAT & dịch vụ"*, `retrievedAt`, link `/booking?roomId=...&checkIn=...&checkOut=...`, action allowlist, trạng thái `needs_clarification`/`no_results`, gợi ý nhanh cho `Phòng`/`Giá phòng`/`Dịch vụ`.
+- **Bằng chứng kiểm chứng tự động (offline/mock, 2026-11-25)**:
+  - **BE (Maven Surefire)**: `.\mvnw.cmd test "-Dtest=Assistant*Test"` → **`21 passed, 0 failed, 0 skipped`** (`AssistantControllerTest` 3, `AssistantClientTest` 2, `AssistantOrchestratorTest` 5, `AssistantSessionsTest` 3, `AssistantToolBrokerTest` 8).
+  - **AI Service (Python)**: `ruff check app tests/unit tests/integration` + `ruff format --check app tests/unit tests/integration` (106 file) → **PASS**; `pytest -q -p no:cacheprovider tests/unit tests/integration` → **`648 passed, 0 failed, 7 skipped`** (7 test Qdrant Docker opt-in chưa bật cờ).
+  - **FE (Vitest + Vite)**: `npm test` → **`10 passed, 0 failed`** (`AssistantWidget.test.jsx` 8, `api.test.js` 2); `npm run build` → **PASS**.
+- **Giới hạn hiện tại của D2**:
+  - Chưa chạy kiểm chứng E2E live kết nối đồng thời **React + Spring + MySQL thật + FastAPI + Gemini thật** (do đó cổng nghiệm thu live D2 vẫn mở).
+  - Tool booking cá nhân (`list_my_bookings`, `get_my_booking`) vẫn đóng hoàn toàn, chờ audit ownership D3.
