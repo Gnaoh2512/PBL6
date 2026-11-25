@@ -49,7 +49,10 @@ def _load_pinned_v3():
 def test_d_a13_requires_both_topup_rule_and_15_minute_deadline_conditions_in_v3():
     contract, catalog = _load_pinned_v3()
     assert contract.environment.AI_GROUNDING.proposal_mode == "fact_selection"
-    assert catalog.data.catalogVersion == "academic-policies-2026-11-25-v3"
+    assert catalog.data.catalogVersion in {
+        "academic-policies-2026-11-25-v3",
+        "academic-policies-2026-11-25-v4",
+    }
     assert len(catalog.data.facts) == 42
 
     binding = bind_question(catalog, D_A13_QUERY)

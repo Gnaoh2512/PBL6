@@ -78,7 +78,7 @@ export default function Footer({ variant }) {
             <h4>LIÊN HỆ &amp; ĐỊA CHỈ</h4>
             <span>54 Nguyễn Lương Bằng, Liên Chiểu, Đà Nẵng</span>
             <a href="tel:02363842145">Hotline: 0236 3842 145</a>
-            <a href="mailto:contact@hotelcalifornia.vn">contact@hotelcalifornia.vn</a>
+            <a href="mailto:hello@azurebay.vn">hello@azurebay.vn</a>
           </div>
 
           <div className="hc-footer-column">

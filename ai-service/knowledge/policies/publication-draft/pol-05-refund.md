@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-05"
-title: "Hoàn tiền — Academic Demo"
+title: "Chính sách hoàn tiền — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

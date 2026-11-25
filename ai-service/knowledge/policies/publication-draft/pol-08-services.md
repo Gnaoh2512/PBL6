@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-08"
-title: "Sử dụng dịch vụ — Academic Demo"
+title: "Chính sách sử dụng dịch vụ — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

@@ -15,7 +15,7 @@ source_ref: "synthetic:d1-faq"
 
 ## FAQ-WIFI Wi-Fi trong khách sạn giả lập
 
-Trong demo này, khu vực sảnh có Wi-Fi. Mã truy cập được cung cấp tại quầy lễ tân. Đây là thông tin giả lập, không phải tiện ích đã được xác nhận của SmartHotel.
+Trong demo này, khu vực sảnh có Wi-Fi. Mã truy cập được cung cấp tại quầy lễ tân. Đây là thông tin giả lập, không phải tiện ích đã được xác nhận của Azure Bay.
 
 ## FAQ-LUGGAGE Gửi hành lý trong khách sạn giả lập
 

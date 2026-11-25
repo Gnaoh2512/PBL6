@@ -1,5 +1,5 @@
 /**
- * Hotel California — API Client Service
+ * Azure Bay — API Client Service
  */
 
 const API_BASE = ""; // Vite proxy handles /api -> localhost:9090

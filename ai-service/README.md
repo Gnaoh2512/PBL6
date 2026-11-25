@@ -1,4 +1,4 @@
-# AI Hotel — trợ lý khách sạn
+# Azure Bay — Trợ lý khách sạn (AI Service)
 
 Trợ lý hỗ trợ FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách khách sạn. Widget đặt ở **góc dưới bên phải**.
 

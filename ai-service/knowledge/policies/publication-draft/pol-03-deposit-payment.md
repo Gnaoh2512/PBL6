@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-03"
-title: "Đặt cọc và thanh toán — Academic Demo"
+title: "Chính sách đặt cọc và thanh toán — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

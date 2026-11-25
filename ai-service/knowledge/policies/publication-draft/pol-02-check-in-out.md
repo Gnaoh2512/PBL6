@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-02"
-title: "Nhận và trả phòng — Academic Demo"
+title: "Chính sách nhận và trả phòng — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

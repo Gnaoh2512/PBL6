@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-07"
-title: "Thú cưng — Academic Demo"
+title: "Chính sách thú cưng — Azure Bay"
 category: "policy"
 version: "0.1.0"
 status: "approved"
