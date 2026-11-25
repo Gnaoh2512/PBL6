@@ -28,25 +28,6 @@ def generation_frames():
     return count + frames(json.dumps(answer).encode())
 
 
-@pytest.fixture
-def timing_records():
-    emitter = get_emitter()
-    assert emitter.drain()
-    records = []
-
-    class Collector(logging.Handler):
-        def emit(self, record):
-            records.append(json.loads(record.getMessage()))
-
-    handler = Collector()
-    LOGGER.addHandler(handler)
-    try:
-        yield records
-    finally:
-        assert emitter.drain()
-        LOGGER.removeHandler(handler)
-
-
 def test_provider_wires_trace_per_attempt_without_changing_budgets_or_client(timing_records):
     async def run():
         backend = ScriptedBackend(generation_frames() + generation_frames())

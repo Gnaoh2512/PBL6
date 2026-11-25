@@ -1,0 +1,59 @@
+{
+  "searchType": "read_only_exact_sha256_git_history_and_workspace_archives",
+  "git": [
+    {
+      "path": "ai-service/docs/PROCESS.md",
+      "expected": "f697a227404e375c2ccf4586d30bd9daf37431132c3cdf5e8d3ef4d0013db419",
+      "gitCandidatesChecked": [
+        {
+          "commit": "4929078ec4e68f9c6119d492a6b87fe134d0f921",
+          "sha256": "724a90895db5e2e032c6343f8ad897f3efea273a8f6943e01a06dd9d6c0c684c"
+        },
+        {
+          "commit": "c0312670032147c9f41ed0dc6d3ebfaa3e8270ef",
+          "sha256": "750e689d14a3c641ef39b67eeb5c1c504b4d67bb1247427635ec22f97ba10c04"
+        }
+      ],
+      "exactMatchFound": false
+    },
+    {
+      "path": "ai-service/app/ingestion/snapshot.py",
+      "expected": "f466ed882cb98eb068d88ffcd31fc5f12e6ec9bf1a5d037032b8113f6cd22d1c",
+      "gitCandidatesChecked": [
+        {
+          "commit": "318a1ddf339120da38074cd95265d6c527aa2cb2",
+          "sha256": "f466ed882cb98eb068d88ffcd31fc5f12e6ec9bf1a5d037032b8113f6cd22d1c"
+        },
+        {
+          "commit": "622324a6ec90e0d62705120e2e166b3a2e72b645",
+          "sha256": "8dd12ec5aad1cc0636082be4e4a844e2443a9b32620b1e2731a31eaf36684e71"
+        }
+      ],
+      "exactMatchFound": true
+    },
+    {
+      "path": "ai-service/app/ingestion/documents.py",
+      "expected": "dcd8a843d0a58bf559d3666a78e0bcd4f3c52dc67ed5183be2b83b94f1719490",
+      "gitCandidatesChecked": [],
+      "exactMatchFound": false
+    }
+  ],
+  "archives": [
+    {
+      "path": "ai-service/.local/assistant-evaluation.zip",
+      "entries": 19,
+      "sourceCandidateEntries": []
+    }
+  ],
+  "recovered": {
+    "ai-service/app/ingestion/snapshot.py": {
+      "path": "historical-reference-files/ai-service/app/ingestion/snapshot.py",
+      "sha256": "f466ed882cb98eb068d88ffcd31fc5f12e6ec9bf1a5d037032b8113f6cd22d1c",
+      "gitCommit": "318a1ddf339120da38074cd95265d6c527aa2cb2"
+    }
+  },
+  "missing": [
+    "ai-service/docs/PROCESS.md",
+    "ai-service/app/ingestion/documents.py"
+  ]
+}

@@ -4,10 +4,12 @@ import re
 import shutil
 import sqlite3
 from datetime import date
+from unittest.mock import ANY, create_autospec
 
 import httpx
 import pytest
 from fastapi.testclient import TestClient
+from grounding_support import gate_for, proposal, write_artifacts
 
 from app.diagnostics import Category
 from app.ingestion.snapshot import ROOT, build
@@ -29,7 +31,9 @@ def index(tmp_path):
     source.parent.mkdir(parents=True)
     shutil.copyfile(ROOT / "tests/fixtures/d1/faq.md", source)
     path = build("demo_synthetic", TODAY, tmp_path)
-    return KnowledgeIndex(path, "demo_synthetic", TODAY, tmp_path)
+    result = KnowledgeIndex(path, "demo_synthetic", TODAY, tmp_path)
+    result.test_gate = gate_for(result, aliases=["[credential] [contact] [contact]\nFORGED"])
+    return result
 
 
 def payload():
@@ -54,11 +58,7 @@ def provider(index, hook=None):
             return httpx.Response(200, json={"totalTokens": 10})
         content = json.loads(request.content)
         schema = content["generationConfig"]["responseJsonSchema"]["title"]
-        answer = (
-            {"intent": "faq", "query": "wifi"}
-            if schema == "Intent"
-            else {"supported": True, "answer": SECRET, "citationIds": [cid]}
-        )
+        answer = {"intent": "faq", "query": "wifi"} if schema == "Intent" else proposal(cid)
         return httpx.Response(
             200,
             json={
@@ -145,9 +145,9 @@ def test_successful_turn_correlates_phases_without_request_ids_or_sensitive_text
 
     async def run():
         try:
-            answer = await Faq(client, index, "demo_synthetic").run(
-                TurnRequest.validate_python(payload())
-            )
+            answer = await Faq(
+                client, index, "demo_synthetic", verification_gate=index.test_gate
+            ).run(TurnRequest.validate_python(payload()))
             assert answer["final"]["status"] == "answered"
             assert answer["usage"]["inputTokensUsed"] == 20
         finally:
@@ -204,7 +204,9 @@ def test_outer_deadline_cancels_active_http_and_preserves_source(
         diagnostic_records.clear()
         try:
             task = asyncio.create_task(
-                Faq(client, index, "demo_synthetic").run(TurnRequest.validate_python(payload()))
+                Faq(client, index, "demo_synthetic", verification_gate=index.test_gate).run(
+                    TurnRequest.validate_python(payload())
+                )
             )
             await asyncio.wait_for(gate.wait(), 1)
             timeouts[0].reschedule(asyncio.get_running_loop().time())
@@ -255,7 +257,7 @@ def test_turn_shares_budget_across_classify_retrieval_answer(
     async def run():
         try:
             with pytest.raises(DependencyError, match="DEADLINE_EXCEEDED"):
-                await Faq(client, index, "demo_synthetic").run(
+                await Faq(client, index, "demo_synthetic", verification_gate=index.test_gate).run(
                     TurnRequest.validate_python(payload())
                 )
         finally:
@@ -290,7 +292,11 @@ def test_public_mapping_and_readiness_policy_unchanged(index, failure):
     settings = Settings(
         _env_file=None, service_token="synthetic-token", corpus_mode="demo_synthetic"
     )
-    with TestClient(create_app(settings, faq=Faq(fake, index, "demo_synthetic"))) as client:
+    with TestClient(
+        create_app(
+            settings, faq=Faq(fake, index, "demo_synthetic", verification_gate=gate_for(index))
+        )
+    ) as client:
         data = payload()
         headers = {"Authorization": "Bearer synthetic-token", "X-Request-ID": data["requestId"]}
         response = client.post("/internal/assistant/turn", json=data, headers=headers)
@@ -311,8 +317,10 @@ def test_probe_client_closed_on_shutdown_failure_or_startup_cancel(
 ):
     class Fake:
         closed = 0
+        calls = 0
 
         async def generate(self, *args):
+            self.calls += 1
             if failure == "cancel":
                 raise asyncio.CancelledError()
             if failure == "failure":
@@ -325,19 +333,24 @@ def test_probe_client_closed_on_shutdown_failure_or_startup_cancel(
             self.closed += 1
 
     fake = Fake()
+    index_factory = create_autospec(KnowledgeIndex, return_value=index)
     monkeypatch.setattr("app.main.Gemini", lambda *args: fake)
-    monkeypatch.setattr("app.main.KnowledgeIndex", lambda *args: index)
+    monkeypatch.setattr("app.main.KnowledgeIndex", index_factory)
     settings = Settings(
         _env_file=None,
         service_token="synthetic-token",
         gemini_key="synthetic-key",
         index_path=index.path,
+        retrieval_mode="bm25",
+        grounding=write_artifacts(index)[1],
         corpus_mode="demo_synthetic",
     )
     app = create_app(settings)
+    entered_lifespan = []
 
     async def run():
         async with app.router.lifespan_context(app):
+            entered_lifespan.append(True)
             assert fake.closed == 0
 
     if failure == "cancel":
@@ -345,5 +358,13 @@ def test_probe_client_closed_on_shutdown_failure_or_startup_cancel(
             asyncio.run(run())
     else:
         asyncio.run(run())
+    index_factory.assert_called_once_with(
+        settings.index_path,
+        settings.corpus_mode,
+        ANY,
+        source_pack=settings.demo_source_pack,
+    )
+    assert fake.calls == 1
+    assert entered_lifespan == ([] if failure == "cancel" else [True])
     assert fake.closed == 1
     assert any(json.loads(r.getMessage())["operation"] == "probe" for r in diagnostic_records)

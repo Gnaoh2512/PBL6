@@ -1,0 +1,1051 @@
+{
+  "schemaVersion": "human-review-register-v1",
+  "status": "PREPARED_NOT_REVIEWED",
+  "note": "Immutable 100-record inventory, not a decision log; real human events belong to review-events.jsonl.",
+  "records": [
+    {
+      "recordId": "D-A01",
+      "recordSha256": "005694e571f5696d474ae2406f61f270416f0539dc115190eea2fbeba09d76cc",
+      "card": "records.md#d-a01",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A02",
+      "recordSha256": "a875948092823fd3b375f74c70a65e33c8079886c1bb921f1a6f1a54c8b6f2bf",
+      "card": "records.md#d-a02",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A03",
+      "recordSha256": "c65f7f33e8be89682d6b96f2d966f2992591a2867a2a049c131404fe5b1d9236",
+      "card": "records.md#d-a03",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A04",
+      "recordSha256": "043ea40fa6bfecb1f55f7605ed5107c06aa72624486a0440ae5ea255b9f3e121",
+      "card": "records.md#d-a04",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A05",
+      "recordSha256": "d0502577fe9e0aea9c81ad7edf531b3a8c7e09f51981ea656df86431384b087f",
+      "card": "records.md#d-a05",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A06",
+      "recordSha256": "7f413e64be32bc347ec47e30fb7177323c0859f123b7cd9399859022ea3df6f7",
+      "card": "records.md#d-a06",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A07",
+      "recordSha256": "063c11d8aa8208d4d77364147fb0bc305d5d728edd71c383fc305b4ad61b031f",
+      "card": "records.md#d-a07",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A08",
+      "recordSha256": "c42368c742568a12ae25a0ee79522aa6bcad268891f40564ac4ddb04f8688ebf",
+      "card": "records.md#d-a08",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A09",
+      "recordSha256": "37d0f5116d8df2ec839da9160e0a00f84e8881d43df109a7ba36fde9cb0f8769",
+      "card": "records.md#d-a09",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A10",
+      "recordSha256": "e23335ebfa2b9531efa342b827cd90a06e2b734c41d39193a96e4e3dbb8aaed7",
+      "card": "records.md#d-a10",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A11",
+      "recordSha256": "e9e96534380e167746a25ad790a7a084f1a5dedc5c9867dd72d234d3e6744909",
+      "card": "records.md#d-a11",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A12",
+      "recordSha256": "aa67feeb7e6dfe45e185cc03d660c1cc4f9ccadefea5e66fa76ff64b50b3bf52",
+      "card": "records.md#d-a12",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A13",
+      "recordSha256": "1bc5ab8475094e55ce4ee9a0807f6ef08d69d0569a6673479f450892f54706bd",
+      "card": "records.md#d-a13",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A14",
+      "recordSha256": "374441839ccf1bbe0ab0d886afa2f020829e4a4bc58d0504ae32507847f01cbd",
+      "card": "records.md#d-a14",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A15",
+      "recordSha256": "5a554756581ce242b8db36046dc1d253e7d02e7d1766a01786fd905ea5d7f7c1",
+      "card": "records.md#d-a15",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A16",
+      "recordSha256": "00df671f8723b1879cb279cbbbbab985aa10c3b5d6c06f6d41d1d838821a10fc",
+      "card": "records.md#d-a16",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A17",
+      "recordSha256": "2a788d8d779def038f3cca6df78826eb20fd8f4b948b2ddb1a9fcba1c33a7b94",
+      "card": "records.md#d-a17",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A18",
+      "recordSha256": "1659fea30e0116bd8781a75654e6013d892d9d2c03170a46d3c0ccbbefe0a28c",
+      "card": "records.md#d-a18",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A19",
+      "recordSha256": "6601d31ddeec9883271b291d3928b6d5d93fbeac40ace29576a67fcf199c00d0",
+      "card": "records.md#d-a19",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A20",
+      "recordSha256": "72fea62fcc93f37b8ea88dcb59417ddc4760ca4d7a08ee3684b44b02caf6880f",
+      "card": "records.md#d-a20",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A21",
+      "recordSha256": "c37550686f1327a1fe9a174d78167841eaa67973095caba9306912f50202a0fe",
+      "card": "records.md#d-a21",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A22",
+      "recordSha256": "d3d5c79f4e5f13a478b8f9eae23909d19851d3e012017b4444da0de58a2ab4cc",
+      "card": "records.md#d-a22",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A23",
+      "recordSha256": "44eb9e1b8d6399244aca14b65a8c8d7636d38e6ef0ecfdbaa04000f31479a81e",
+      "card": "records.md#d-a23",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-A24",
+      "recordSha256": "27c726e7a152c01cd6c821c9836960509d5acdf3877be7b0ee3ccb4064cf8ab7",
+      "card": "records.md#d-a24",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-O01",
+      "recordSha256": "b5caf524d14e582936012e707045dea3562f5d45c9257a672af696485cdc1436",
+      "card": "records.md#d-o01",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-O02",
+      "recordSha256": "b1cb9070d28aa05829a327af3c90c4c6daacf81a81eb7aa9feee67366109f0a9",
+      "card": "records.md#d-o02",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-O03",
+      "recordSha256": "b557507db287d0bb6b43ce7ff90e2b3868a46fcae8478b47a4c34d1104c15517",
+      "card": "records.md#d-o03",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-O04",
+      "recordSha256": "c8ee54b9fc86165270a67047c18598b304ff0b5874f29a2dcacae820f7f5e867",
+      "card": "records.md#d-o04",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U01",
+      "recordSha256": "7b30821b56c451ea83f922d7bde4f12ae4c78ff8c5cdd74c2f46dbec477ac7e3",
+      "card": "records.md#d-u01",
+      "focus": [
+        "CTX1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U02",
+      "recordSha256": "94f5474902e5fd8e6a66d33a31978966484c74158b53d5a9ec9c4804b5582a13",
+      "card": "records.md#d-u02",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U03",
+      "recordSha256": "eccc7361e1fc7ca1892713779523219a3486fded2e0108c7817a37c6e1529a0e",
+      "card": "records.md#d-u03",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U04",
+      "recordSha256": "4f56f1cec82d60f2b6f6aafc9028717ab64a6996ef8dfde17c9f7005ab4e35e2",
+      "card": "records.md#d-u04",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U05",
+      "recordSha256": "2bbc477f340424526a5ab326df48160596d1983d5d4c41776e839f2905469850",
+      "card": "records.md#d-u05",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U06",
+      "recordSha256": "70b7c76d273312e702828e7529e0dd5648d11125ce1da11f6d94c128c0606115",
+      "card": "records.md#d-u06",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U07",
+      "recordSha256": "c66aee4740c2998011b28ceb4b4f6488620d545028e94bce759f725a9fd851e2",
+      "card": "records.md#d-u07",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U08",
+      "recordSha256": "a6757c75a8acf4722da93d913d959798dc10dda79a185b790e3e2b2321656c7b",
+      "card": "records.md#d-u08",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U09",
+      "recordSha256": "e94cace33edfd19c2691de073aff15a3e010f35e4652f07bbc7dc21c3c73ae8c",
+      "card": "records.md#d-u09",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U10",
+      "recordSha256": "88de896cfecfc3ea6752502d09f23acb6d11567b398bd79671777a1300149997",
+      "card": "records.md#d-u10",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U11",
+      "recordSha256": "a1a513c9b5622629db2a6778a8ac2f2609363e434676d048914ae821e2416d7c",
+      "card": "records.md#d-u11",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "D-U12",
+      "recordSha256": "81e2a1b98f0e0c204e0a96ac7efacbce546d051193220bf70ee3728b5aa86666",
+      "card": "records.md#d-u12",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A01",
+      "recordSha256": "4ceb127a592f73dfbd441eadb744847929b02ef11e257f2fce2092367a9c85e0",
+      "card": "records.md#h-a01",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A02",
+      "recordSha256": "69c22abd4056976a41cc9ff64c816e8b4b387099d7bab93fe61a9cdda94e70d3",
+      "card": "records.md#h-a02",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A03",
+      "recordSha256": "44d4e5083f40cab7be964ee0f445b30797295b54cee8f6d69a4781db101124bd",
+      "card": "records.md#h-a03",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A04",
+      "recordSha256": "b48ed767f14504f49dfed2315b93854fb1225e81284941e0bed882c6fa78caab",
+      "card": "records.md#h-a04",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A05",
+      "recordSha256": "58261f628ff734779b4571728cc770dc86833688602cdbba555dc6c249f1eae0",
+      "card": "records.md#h-a05",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A06",
+      "recordSha256": "59f83150bf6a287e71f5f8b98e6f0eacb1bccd273b185a29ba50d954b6fb8284",
+      "card": "records.md#h-a06",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A07",
+      "recordSha256": "a0ad1ba87610344be353ba54d84fbeac01efccc5ccc2165d39c0477d4228cc39",
+      "card": "records.md#h-a07",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A08",
+      "recordSha256": "3d1a642e10832541b8792ac14750f4df720b7ef0506d68c74b34efcdab93e1cc",
+      "card": "records.md#h-a08",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A09",
+      "recordSha256": "ab41da546e38dc9e1b8254bb2ef11b05287ee955c4447f4b722c462067e6dc1b",
+      "card": "records.md#h-a09",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A10",
+      "recordSha256": "a881f62e17de2a4af32afef0c9b608b2ef82433a8e96a6793bfb5bdb2fccf6fe",
+      "card": "records.md#h-a10",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A11",
+      "recordSha256": "901992f40f01d933a70fb57455bc418caeb7c0eab3c37d625281cfc3697ffa44",
+      "card": "records.md#h-a11",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A12",
+      "recordSha256": "a53200d877ff0734cadf48eeaf11d8ccbb2bc2070520430cf38602009e3a51c9",
+      "card": "records.md#h-a12",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A13",
+      "recordSha256": "993cb962ed1d9db935a8c4e80de1dcfa2fc201660eb0a2a5e32f573b8b36f13f",
+      "card": "records.md#h-a13",
+      "focus": [
+        "F3"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A14",
+      "recordSha256": "14be8112dfd3df04d3953ab0ff61b387259c798f8d6cf2ee1c9d6eefc7ad9c96",
+      "card": "records.md#h-a14",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A15",
+      "recordSha256": "ef9314b7e8baa234daeeb5ce90bcdfcd38b0e444a41dbaddb0aa083f08e90a75",
+      "card": "records.md#h-a15",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A16",
+      "recordSha256": "eca3e7ec26728678587344037adaae5c100a47118b1ee204200c8b3ea5c5c95f",
+      "card": "records.md#h-a16",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A17",
+      "recordSha256": "33a50922e3e49e3a45deaec5e3392f223403467be78581418079585985bdf796",
+      "card": "records.md#h-a17",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A18",
+      "recordSha256": "15a6db08f9dddde12a46774a58ef4f717cf84a2a19c73fc46443d42990b6f9ac",
+      "card": "records.md#h-a18",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A19",
+      "recordSha256": "58f197a4bcbd76d057e51e296de841b2baedfd735d6b9923c44d154b94513052",
+      "card": "records.md#h-a19",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A20",
+      "recordSha256": "86c0e972fea8c60cf45e1588cde333b23364ecf69fb0cb67081517162f5107c1",
+      "card": "records.md#h-a20",
+      "focus": [
+        "F2"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A21",
+      "recordSha256": "d0cebe9264efbe638f067da39253a2b6c46030d558815627f3f17ae718d0143b",
+      "card": "records.md#h-a21",
+      "focus": [
+        "F2"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A22",
+      "recordSha256": "80c4570b520f3260fd79455e85ac622c29fa41d283fe85182f4c8ac248dc4113",
+      "card": "records.md#h-a22",
+      "focus": [
+        "F2",
+        "F4",
+        "CTX2",
+        "CTX3"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A23",
+      "recordSha256": "4e01ca739ec02714bc7514f489ab040434821a151c7cf130554dacbc5a4eed88",
+      "card": "records.md#h-a23",
+      "focus": [
+        "F2"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-A24",
+      "recordSha256": "e943e5ce392ed9b8cf435b3f460e2d9aeb54a4f3d180386143145055305069ea",
+      "card": "records.md#h-a24",
+      "focus": [
+        "CTX2",
+        "CTX3"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-O01",
+      "recordSha256": "c83e16f03bf39d353d16cecd44069f3f1cda48aa845948ded3114b45dfbe7154",
+      "card": "records.md#h-o01",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-O02",
+      "recordSha256": "c410491b50f1d1a3189b0720611eddc160c02b9407638c185ec2694c7797f8c6",
+      "card": "records.md#h-o02",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-O03",
+      "recordSha256": "4cb3dc237e1e95b78445a0a79a11b0b8a70732e0ff200facb6b09b0175c931dd",
+      "card": "records.md#h-o03",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-O04",
+      "recordSha256": "97e9efc06734bfd7c7ebe5f6d683465276c87d52ad0e65ac56581c66e7bfa0e8",
+      "card": "records.md#h-o04",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U01",
+      "recordSha256": "afeff06638d8ae88b530d556a8caef19012e7efc95004554519fabba76debde6",
+      "card": "records.md#h-u01",
+      "focus": [
+        "CTX1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U02",
+      "recordSha256": "8d9d256dbce943973a6f566a64e0234918bdf4ba8d3681ec6c30be02f86cde6c",
+      "card": "records.md#h-u02",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U03",
+      "recordSha256": "af40ab4d248ea0364dbc73b95c040b8efaa0398454e5e215b26919fcb5849ed0",
+      "card": "records.md#h-u03",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U04",
+      "recordSha256": "4baef3faf4bfb7c1234bb7304eebe8ab82a28206bd915a2747e0adf9629297f1",
+      "card": "records.md#h-u04",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U05",
+      "recordSha256": "bc56fc983b452abf81d4690934f3b3a2efcf7449454eb838d99247e0a94179ac",
+      "card": "records.md#h-u05",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U06",
+      "recordSha256": "71d5c2f673d25fe4eb02649802b7e323da6a9057e83acac44f5f095689c77cba",
+      "card": "records.md#h-u06",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U07",
+      "recordSha256": "9de2ded90a0b03ad07931b8e63721d984a9bf613b002d9e44726e4ceb66b61d8",
+      "card": "records.md#h-u07",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U08",
+      "recordSha256": "6653152225190fb9c2fc4957ec2aa3b8bb9a82618b8959c6c8d95bbb46c35b62",
+      "card": "records.md#h-u08",
+      "focus": [
+        "F2"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U09",
+      "recordSha256": "559471169bd079b4604b2e954de3cd1fca4877a463f19dadccc22d49a598ad14",
+      "card": "records.md#h-u09",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U10",
+      "recordSha256": "fe85735cb50f199fbe7280ee10eb914d715158bd42c058d916807c38d160d91b",
+      "card": "records.md#h-u10",
+      "focus": [
+        "CTX1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U11",
+      "recordSha256": "47c7a1a6aa4f287ed7c94359fec906b626c7ec86353ed0cf744a5e454ef57806",
+      "card": "records.md#h-u11",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "H-U12",
+      "recordSha256": "5a89a0d3b6d33417fe4b198bfad9980ab32cc9998f3ea7dee8670a6fd39520f5",
+      "card": "records.md#h-u12",
+      "focus": [
+        "F1"
+      ],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C01-P",
+      "recordSha256": "bd772563a7933f25ffff03c5ba1aa247eff25812bb2907dbe9688176695fc3ce",
+      "card": "records.md#c01-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C01-N",
+      "recordSha256": "81af63e9597a5468baf12a92814eea0a1371e6e3513e12b23fc81b8f6261999a",
+      "card": "records.md#c01-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C02-P",
+      "recordSha256": "77fde1ca806c745f36ae7843fe23926bb021f922c74cf9a24fd8610feb1f4db3",
+      "card": "records.md#c02-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C02-N",
+      "recordSha256": "a747d184a3ddfd0e810223158d78064dbe529caaf37c778aaaf952987813ca93",
+      "card": "records.md#c02-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C03-P",
+      "recordSha256": "9e5ff9804d0aa186b5df415cb2843fc62181c2f8b704ffa3b0a20c419bcad75f",
+      "card": "records.md#c03-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C03-N",
+      "recordSha256": "5aa312ba8e03724e6c3fc65121d20b2a457e4dc44f0f0e47df77e1085ec26a33",
+      "card": "records.md#c03-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C04-P",
+      "recordSha256": "99cb76e075991523fcd2695da2d7e9e084b3d42346cc47ae1b6b7a4ce1224b19",
+      "card": "records.md#c04-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C04-N",
+      "recordSha256": "b66c8562ecd47b1afa4e8adeec85ed0802f107270c8fd19e9cc163396bc04bfe",
+      "card": "records.md#c04-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C05-P",
+      "recordSha256": "f044b014f14199f73aab1f069d5c75e32f4de5d108f2e4f67446f258f470ce7c",
+      "card": "records.md#c05-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C05-N",
+      "recordSha256": "0d87a8901509a90279bc34484456638f19bfbb7e18b79a9c771cfea08e74604a",
+      "card": "records.md#c05-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C06-P",
+      "recordSha256": "3f402f9641258c1571e197aee10dea637ab79f00feb7db9594ecded05480f404",
+      "card": "records.md#c06-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C06-N",
+      "recordSha256": "7caab455e482fbbe3a345e364d29d5a60d2f9dd49e679b3f2d29d16a835ebd41",
+      "card": "records.md#c06-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C07-P",
+      "recordSha256": "39e4d0e1d38bdc977f7f4b3f1409dcf032795fa600ba06c174e16046798f16a2",
+      "card": "records.md#c07-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C07-N",
+      "recordSha256": "2e291e934fccb7b1b888fddbd025a95fb2a68b0d0cbb28706ad411c1c31eadd5",
+      "card": "records.md#c07-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C08-P",
+      "recordSha256": "f430756aefec66206ffdf11994965d65e63236f1c2c0eaa10351c29746678567",
+      "card": "records.md#c08-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C08-N",
+      "recordSha256": "c568432ed55489c163bc279b8ad30d5f72aa3c58521f4509dba6259871ad556a",
+      "card": "records.md#c08-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C09-P",
+      "recordSha256": "a66bd9af5dc38d1c75929c1e8946359a1d4ec784cd3a911bc092d848a81d216e",
+      "card": "records.md#c09-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C09-N",
+      "recordSha256": "fc1d6d653d2dd701be4cbad25f0042e6b6c918302accf7d6b1e04e3dcc168635",
+      "card": "records.md#c09-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C10-P",
+      "recordSha256": "46a9a3de7bf79a1ef95f9c1fff75bd2d9e0e1bad523f38fc1c61cfb17779cde2",
+      "card": "records.md#c10-p",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    },
+    {
+      "recordId": "C10-N",
+      "recordSha256": "37449f351dda6738974c51f97e00faf6348971aafc7b48bc794fd5d7806b436f",
+      "card": "records.md#c10-n",
+      "focus": [],
+      "reviewer": null,
+      "verdict": "NOT_REVIEWED",
+      "rationale": null,
+      "timestamp": null
+    }
+  ]
+}

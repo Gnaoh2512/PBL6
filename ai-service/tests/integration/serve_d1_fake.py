@@ -8,14 +8,17 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "unit"))
 
 import uvicorn  # noqa: E402
+from grounding_support import gate_for, proposal  # noqa: E402
 
 from app.ingestion.snapshot import build, normalize  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.orchestration.faq import Faq  # noqa: E402
 from app.retrieval.index import KnowledgeIndex  # noqa: E402
-from app.schemas.faq import GroundedAnswer, Intent  # noqa: E402
+from app.schemas.faq import Intent  # noqa: E402
+from app.schemas.verification import CandidateDraft  # noqa: E402
 from app.settings import Settings  # noqa: E402
 
 
@@ -32,9 +35,9 @@ class LabeledE2EFake:
             )
             return Intent(intent="unavailable" if unavailable else "faq", query=data["message"])
         first = data["evidence"][0]
-        return GroundedAnswer(
-            supported=True, answer=first["excerpt"], citationIds=[first["citationId"]]
-        )
+        import json
+
+        return CandidateDraft.model_validate_json(json.dumps(proposal(first["citationId"])))
 
 
 def application():
@@ -46,7 +49,10 @@ def application():
         gemini_key=None,
         corpus_mode="demo_synthetic",
     )
-    return create_app(settings, faq=Faq(LabeledE2EFake(), index, "demo_synthetic"))
+    return create_app(
+        settings,
+        faq=Faq(LabeledE2EFake(), index, "demo_synthetic", verification_gate=gate_for(index)),
+    )
 
 
 if __name__ == "__main__":

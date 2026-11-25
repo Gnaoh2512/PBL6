@@ -1,0 +1,15 @@
+{
+  "revision": "0.1.3-provenance",
+  "publicationDate": "2026-11-24",
+  "usage": "known_regression",
+  "approved": false,
+  "blind": false,
+  "frozen": false,
+  "files": {
+    "manifest.json": "b031233e0b1713ebd03a8fd4c05826f2589df3cb0b1bd38957e52436a1dd8ae7",
+    "human-review/packet-manifest.json": "0a3fec6a48cd01e95c0df5d72060f9b9b0de9b378ca99a08926f2a6965967ad2",
+    "validation-0.1.3.json": "09565db031198f9526d287a2eaac04fc11dc7fdbcbd5d20d42bded4442f5744d",
+    "packet-validation-0.1.3.json": "519f95eae1828fe21de6772e525dc17dffd698ddf27b5aca6a1901b2c7de038a",
+    "history-validation-0.1.3.json": "4042d4f2d75ee76e2369354aa1b9f42add9cd8dc727f962d44e3bfead37b4573"
+  }
+}
