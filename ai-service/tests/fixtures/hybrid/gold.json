@@ -1,0 +1,24 @@
+{
+  "version": "synthetic-hybrid-gold-1",
+  "scope": "Manually specified synthetic relevance labels, fixed before benchmark; not production gold or Gemini quality evidence.",
+  "cases": [
+    {"id": "wifi-location", "query": "Wi-Fi ở đâu", "gold_sections": ["WIFI"]},
+    {"id": "internet-code", "query": "nhận mã internet", "gold_sections": ["WIFI"]},
+    {"id": "wifi-typo", "query": "wifii", "gold_sections": ["WIFI"]},
+    {"id": "luggage-day", "query": "gửi hành lý trong ngày", "gold_sections": ["LUGGAGE"]},
+    {"id": "dangerous-luggage", "query": "có nhận vali chứa hóa chất nguy hiểm", "gold_sections": ["LUGGAGE"]},
+    {"id": "breakfast-hours", "query": "buffet ăn sáng mấy giờ", "gold_sections": ["BREAKFAST"]},
+    {"id": "breakfast-included", "query": "bữa sáng bao gồm trong tiền phòng", "gold_sections": ["BREAKFAST"]},
+    {"id": "parking-register", "query": "đăng ký biển số ô tô", "gold_sections": ["PARKING"]},
+    {"id": "truck-parking", "query": "giữ xe tải", "gold_sections": ["PARKING"]},
+    {"id": "airport-advance", "query": "đặt xe sân bay trước bao lâu", "gold_sections": ["SHUTTLE"]},
+    {"id": "pool-child", "query": "trẻ em sử dụng hồ bơi", "gold_sections": ["POOL"]},
+    {"id": "pool-time", "query": "hồ bơi mở cửa", "gold_sections": ["POOL"]},
+    {"id": "dry-cleaning", "query": "nhận giặt khô không", "gold_sections": ["LAUNDRY"]},
+    {"id": "laundry-unit", "query": "giặt là tính theo kilogram", "gold_sections": ["LAUNDRY"]},
+    {"id": "contact-phone", "query": "số điện thoại hỗ trợ", "gold_sections": ["CONTACT"]},
+    {"id": "two-topics", "query": "mã internet và giờ buffet", "gold_sections": ["WIFI", "BREAKFAST"]},
+    {"id": "unanswerable-pets", "query": "có nhận thú cưng", "gold_sections": []},
+    {"id": "unanswerable-refund", "query": "điều kiện hoàn tiền booking", "gold_sections": []}
+  ]
+}

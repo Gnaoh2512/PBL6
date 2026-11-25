@@ -1,0 +1,34 @@
+{
+  "kind": "historical-copy-not-benchmark-freeze",
+  "capturedOn": "2026-11-23",
+  "files": {
+    "gold.json": "d151bc03474703f502f7464812a4e5d973bf2db794190753c482410cf7365b9b",
+    "manifest.json": "b55739c59e74fd0e4ee25d61123fecb7f6f9264498ef70ae6090a33c95ec3fa2",
+    "README.md": "55377bf05ed84cc617cf6f8e4e3336bd013354663b44274b083fbe73adbae84f",
+    "review-controls.json": "e2f6ae16602a6e1dcea9cf56f6aaea245d516513ca4b700d09e660ff76b6b02e",
+    "validate.py": "538c8f044417dc9ed65dcd045854e362cfae3bbd4baf297ae2c2a465e7353a5e",
+    "validation.json": "9b2c0c3ea343982ef76c310d9cd83e5369266a1ca97a3e86f6a7f670844fc529"
+  },
+  "preexistingHistoryFiles": {
+    "history/2026-11-23-before-review-update/gold.json": "ac6a4bec1b95bc32c9da46ab23906d7d4ac2267f6574266967290fb101e0922d",
+    "history/2026-11-23-before-review-update/manifest.json": "fdfc6202505ff2e2a43d6f97796a20399ba5bebb5e473fdc418b0d3abb4cbf29",
+    "history/2026-11-23-before-review-update/README.md": "275af0d4a08800d5c28a80dafa5a4de61459cc82541449998b5e7bcd65a22fa5",
+    "history/2026-11-23-before-review-update/receipt.json": "18a90e6825507f8cc693349160dbac2cfd90a2bc6a9d25d26c2f777e6e1205a9",
+    "history/2026-11-23-before-review-update/review-controls.json": "31f34ad68b198e85b292db34798121e8097d434ad64257cd3005bc19e6f22f1f",
+    "history/2026-11-23-before-review-update/validate.py": "219f1c19d05f558978a91676af203d8d82301fb888615396044a3c5cf4a16c78",
+    "history/2026-11-23-before-review-update/validation.json": "d23a14f0a6f486c13bab775bd9f32e66a433d796b1ca0bf56ea140ca0b8ec7d4"
+  },
+  "gitState": {
+    "branch": "chore/sync-origin-main-d120",
+    "head": "c0312670032147c9f41ed0dc6d3ebfaa3e8270ef",
+    "merge_head": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+    "staged": 261,
+    "unmerged": 0,
+    "deleted": 59,
+    "index_sha256": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+    "cached_sha256": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+    "protected_paths": 683,
+    "protected_sha256": "b8a85414d10eb310b6ebd3ada49be7ad7721b577ae5a28bef1e1914eb83b0819"
+  },
+  "note": "Point-in-time copy before F1-F4 edits. Dataset remains pending_review, not approved/frozen. Archived validator is provenance only, not runnable from this archive directory."
+}

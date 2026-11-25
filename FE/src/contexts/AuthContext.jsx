@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { apiCall, getAuthUser, getAuthToken, setAuthSession, clearAuthSession, hasRole as checkRole } from '../services/api';
+import { apiCall, getAuthUser, getAuthToken, setAuthSession, clearAuthSession, resetAssistantSession, hasRole as checkRole } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -35,6 +35,7 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   const login = useCallback((newToken, newUser) => {
+    resetAssistantSession().catch(() => {});
     setAuthSession(newToken, newUser);
     setUser(newUser);
     setToken(newToken);
@@ -42,6 +43,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    resetAssistantSession().catch(() => {});
     clearAuthSession();
     setUser(null);
     setToken('');

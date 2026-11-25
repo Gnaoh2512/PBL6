@@ -1,0 +1,33 @@
+{
+  "dataset": "synthetic-grounded-generation-1",
+  "scope": "D1.19 closed facts, fake retrieval and generation; independent literal gold; not production policies",
+  "cases": [
+    {"id":"supported-l","group":"sufficient","rule":"L","variant":"ok","decision":"answered","gold":"Trong demo, không nhận hành lý chứa vật dễ cháy.","claims":1},
+    {"id":"supported-w","group":"sufficient","rule":"W","variant":"ok","decision":"answered","gold":"Trong demo, Wi-Fi có tại sảnh.","claims":1},
+    {"id":"supported-t","group":"sufficient","rule":"T","variant":"ok","decision":"answered","gold":"Trong demo, hành lý được giữ tối đa 60 phút trong cùng ngày địa phương.","claims":1},
+    {"id":"supported-lt","group":"sufficient","rule":"LT","variant":"ok","decision":"answered","gold":"Trong demo, không nhận hành lý chứa vật dễ cháy. Trong demo, hành lý được giữ tối đa 60 phút trong cùng ngày địa phương.","claims":2},
+    {"id":"empty-model-ready","group":"empty","rule":"L","variant":"empty","decision":"insufficient_evidence","dispatch":0},
+    {"id":"outside-vocabulary","group":"empty","rule":"L","variant":"unknown_question","decision":"insufficient_evidence","dispatch":0},
+    {"id":"unreviewed-prose","group":"empty","rule":"L","variant":"unreviewed","decision":"insufficient_evidence","dispatch":0},
+    {"id":"model-abstains","group":"empty","rule":"L","variant":"model_abstains","decision":"insufficient_evidence","dispatch":1},
+    {"id":"missing-second-claim","group":"partial","rule":"LT","variant":"partial_claim","decision":"insufficient_evidence"},
+    {"id":"one-wrong-binding","group":"partial","rule":"LT","variant":"partial_binding","decision":"insufficient_evidence"},
+    {"id":"missing-required-passage","group":"partial","rule":"LT","variant":"partial_evidence","decision":"insufficient_evidence","dispatch":0},
+    {"id":"missing-qualifier","group":"partial","rule":"L","variant":"qualifier","decision":"insufficient_evidence"},
+    {"id":"contradicted-value","group":"conflict","rule":"L","variant":"contradicted","decision":"insufficient_evidence"},
+    {"id":"two-source-conflict","group":"conflict","rule":"L","variant":"source_conflict","decision":"insufficient_evidence","dispatch":0},
+    {"id":"wrong-unit","group":"conflict","rule":"T","variant":"unit","decision":"insufficient_evidence"},
+    {"id":"wrong-time-scope","group":"conflict","rule":"T","variant":"time","decision":"insufficient_evidence"},
+    {"id":"legacy-supported","group":"hallucination","rule":"L","variant":"legacy","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"extra-prose","group":"hallucination","rule":"L","variant":"extra","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"extra-free-claim","group":"hallucination","rule":"L","variant":"free_claim","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"forged-support-vote","group":"hallucination","rule":"L","variant":"support_vote","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"unknown-citation","group":"bad_citations","rule":"L","variant":"citation","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"wrong-source-pair","group":"bad_citations","rule":"L","variant":"pair","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"valid-pair-wrong-content","group":"bad_citations","rule":"L","variant":"wrong_binding","decision":"insufficient_evidence"},
+    {"id":"missing-citation","group":"bad_citations","rule":"L","variant":"missing","decision":"AI_PROTOCOL_ERROR"},
+    {"id":"catalog-drift","group":"dependency","rule":"L","variant":"catalog_drift","decision":"DEPENDENCY_UNAVAILABLE"},
+    {"id":"revoked-source","group":"dependency","rule":"L","variant":"source_revoked","decision":"DEPENDENCY_UNAVAILABLE","dispatch":0},
+    {"id":"g20-review-mistake","group":"review_counterexample","rule":"L","variant":"wrong_review","decision":"answered","gold":"Trong demo, không nhận hành lý chứa vật dễ cháy.","claims":1,"semantic_expected":false}
+  ]
+}

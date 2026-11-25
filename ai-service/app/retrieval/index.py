@@ -1,0 +1,104 @@
+"""Immutable local FTS5 search. Approval and source checks are repeated before each query."""
+
+import json
+import re
+import sqlite3
+from contextlib import closing
+from datetime import date
+from pathlib import Path
+
+from app.diagnostics import Category, Operation, Phase, step
+from app.ingestion.snapshot import ALGORITHM, ROOT, digest, document, normalize, sources_for
+from app.providers.contracts import DependencyError, Evidence
+
+
+class KnowledgeIndex:
+    def __init__(
+        self,
+        path: Path,
+        mode: str,
+        today: date,
+        root: Path = ROOT,
+        *,
+        source_pack: str = "d1_fixture",
+    ):
+        self.path, self.mode, self.root = path.resolve(), mode, root.resolve()
+        self.source_pack = source_pack
+        self.snapshot_id = self.path.name
+        self.validate(today)
+
+    def validate(self, today: date):
+        with step(Phase.INDEX, operation=Operation.INDEX_VALIDATE):
+            self._validate(today)
+
+    def _validate(self, today):
+        try:
+            allowed = sources_for(self.mode, self.source_pack)
+            expected = (self.root / ".local/assistant-index" / self.mode).resolve()
+            if self.path.parent != expected or not re.fullmatch(r"[a-f0-9]{64}", self.snapshot_id):
+                raise ValueError()
+            manifest = json.loads((self.path / "manifest.json").read_text(encoding="utf8"))
+            identity = {
+                key: value
+                for key, value in manifest.items()
+                if key not in {"snapshotId", "databaseChecksum"}
+            }
+            if (
+                digest(json.dumps(identity, sort_keys=True).encode()) != self.snapshot_id
+                or identity.get("format") != 1
+                or identity.get("algorithm") != ALGORITHM
+            ):
+                raise ValueError()
+            if manifest["corpusMode"] != self.mode or manifest["snapshotId"] != self.snapshot_id:
+                raise ValueError()
+            if set(manifest["sources"]) != set(allowed):
+                raise ValueError()
+            for name, sha in manifest["sources"].items():
+                if (
+                    document(self.root, name, self.mode, today, source_pack=self.source_pack)[2]
+                    != sha
+                ):
+                    raise ValueError()
+            if digest((self.path / "index.sqlite").read_bytes()) != manifest["databaseChecksum"]:
+                raise ValueError()
+        except OSError:
+            raise DependencyError(diagnostic_category=Category.INDEX_IO) from None
+        except (KeyError, TypeError, ValueError):
+            raise DependencyError(diagnostic_category=Category.INDEX_VALIDATION) from None
+
+    def search(
+        self, query: str, today: date, top_k: int = 3, category: str | None = None
+    ) -> list[Evidence]:
+        with step(Phase.INDEX, operation=Operation.RETRIEVAL):
+            return self._search(query, today, top_k, category)
+
+    def _search(self, query, today, top_k, category):
+        self.validate(today)
+        tokens = list(dict.fromkeys(re.findall(r"[a-z0-9]+", normalize(query))))[:64]
+        # Vietnamese glue words should not make every FAQ appear relevant.
+        stop = {"co", "khong", "la", "gi", "toi", "cho", "hoi", "cua", "va", "the", "nao", "o"}
+        tokens = [token for token in tokens if token not in stop]
+        if not tokens:
+            return []
+        expression = " OR ".join(f'"{token}"' for token in tokens)
+        try:
+            with closing(
+                sqlite3.connect((self.path / "index.sqlite").as_uri() + "?mode=ro", uri=True)
+            ) as db:
+                rows = db.execute(
+                    "SELECT metadata FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks), rowid",
+                    (expression,),
+                ).fetchall()
+            evidence = []
+            for (text,) in rows:
+                data = json.loads(text)
+                group = data.pop("category")
+                if category is None or group == category:
+                    evidence.append(Evidence.model_validate(data))
+                if len(evidence) >= min(3, max(1, top_k)):
+                    break
+            return evidence
+        except sqlite3.Error:
+            raise DependencyError(diagnostic_category=Category.INDEX_QUERY) from None
+        except (ValueError, KeyError, TypeError):
+            raise DependencyError(diagnostic_category=Category.INDEX_VALIDATION) from None

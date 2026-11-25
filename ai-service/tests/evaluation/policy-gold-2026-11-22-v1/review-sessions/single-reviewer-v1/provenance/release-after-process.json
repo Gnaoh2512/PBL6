@@ -1,0 +1,21 @@
+{
+  "result": "RELEASE_INTEGRITY_FAIL",
+  "revision": "0.1.3-provenance",
+  "failures": [
+    "validator failed: validate.py",
+    "validator failed: human-review/validate.py"
+  ],
+  "recordHashesUnchanged": 100,
+  "reviewState": {
+    "NOT_REVIEWED": 100
+  },
+  "historicalIntegrity": "HISTORY_INTEGRITY_PASS",
+  "historicalBaselineReplay": "UNAVAILABLE_MISSING_HISTORICAL_INPUTS",
+  "missingHistoricalInputs": [
+    "ai-service/docs/PROCESS.md",
+    "ai-service/app/ingestion/documents.py"
+  ],
+  "approved": false,
+  "blind": false,
+  "frozen": false
+}

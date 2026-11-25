@@ -1,0 +1,43 @@
+{
+  "result": "SESSION_INTEGRITY_PASS",
+  "sessionId": "single-reviewer-v1",
+  "reviewerId": "hieu",
+  "reviewerCount": 1,
+  "decision": "SINGLE_REVIEWER_ACCEPTED",
+  "events": 1,
+  "goldCases": 80,
+  "controls": 20,
+  "records": 100,
+  "reviewedAt": null,
+  "recordedAt": "2026-11-24T13:59:15+07:00",
+  "protectedFilesChecked": 73,
+  "goldFlags": {
+    "approved": false,
+    "scorable": false,
+    "blind": false,
+    "frozen": false
+  },
+  "gates": {
+    "independentReview": "NOT_PERFORMED",
+    "pairedReview": "NOT_MET",
+    "adjudication": "NOT_PERFORMED",
+    "perRecordRubric": "NOT_PROVIDED",
+    "findingsFocusReview": "NOT_DOCUMENTED",
+    "goldReleaseApproval": "NOT_GRANTED",
+    "blindEvaluation": "NOT_MET",
+    "runtimeBinding": "NOT_COMPLETED",
+    "liveReliability": "NOT_VERIFIED"
+  },
+  "processProvenance": {
+    "path": "ai-service/docs/PROCESS.md",
+    "beforeSnapshot": "provenance/PROCESS.before.md",
+    "beforeSha256": "cc6dd0cee2279580335caab371f3f8b54b9c7104ae9719dcbfdfc497ea547e09",
+    "afterSha256": "d76a9d1640583fdcb680792042c781f96e7caef53afba154c424de9b93755c6c",
+    "change": "APPEND_ONLY"
+  },
+  "priorReleaseAtCapture": "RELEASE_INTEGRITY_PASS",
+  "priorReleaseOnCurrentCheckout": "EXPECTED_PROCESS_REFERENCE_DRIFT",
+  "historicalBaselineReplay": "UNAVAILABLE_MISSING_HISTORICAL_INPUTS",
+  "semanticValidation": "NOT_PERFORMED_BY_THIS_VALIDATOR",
+  "failures": []
+}

@@ -1,0 +1,18 @@
+{
+  "result": "PACKET_STRUCTURAL_PASS",
+  "records": 100,
+  "sourceUnits": 38,
+  "publicationFiles": 10,
+  "findingsRecords": 16,
+  "sharedContextAnchors": 3,
+  "humanApproval": "NOT_GRANTED",
+  "GoldStatus": "pending_review",
+  "knownRegression": true,
+  "reviewLog": {
+    "events": 0,
+    "headHash": null,
+    "workflowCounts": {
+      "NOT_REVIEWED": 100
+    }
+  }
+}

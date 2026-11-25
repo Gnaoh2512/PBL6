@@ -1,0 +1,382 @@
+{
+  "schemaVersion": "human-review-packet-v1",
+  "datasetId": "policy-gold-2026-11-22-v1",
+  "datasetRevision": "0.1.2-draft",
+  "preparedOn": "2026-11-23",
+  "status": "PREPARED_NOT_REVIEWED",
+  "approved": false,
+  "GoldApproval": "pending_review",
+  "usage": "known_regression",
+  "blind": false,
+  "frozen": false,
+  "reviewerAssignments": {
+    "R1": null,
+    "R2": null,
+    "resolver": null,
+    "custodian": null
+  },
+  "sourceAudit": {
+    "title": "GOLD_SEMANTIC_AUDIT_NEEDS_REVISION",
+    "location": "Full audit report in the preceding conversation; not a fabricated repository file.",
+    "counts": {
+      "PASS": 93,
+      "NEEDS_REVISION": 7,
+      "INVALID": 0
+    },
+    "needsRevisionIds": [
+      "H-A11",
+      "H-A13",
+      "H-A21",
+      "H-A22",
+      "H-A23",
+      "H-U06",
+      "H-U08"
+    ]
+  },
+  "recordHashes": {
+    "D-A01": "005694e571f5696d474ae2406f61f270416f0539dc115190eea2fbeba09d76cc",
+    "D-A02": "a875948092823fd3b375f74c70a65e33c8079886c1bb921f1a6f1a54c8b6f2bf",
+    "D-A03": "c65f7f33e8be89682d6b96f2d966f2992591a2867a2a049c131404fe5b1d9236",
+    "D-A04": "043ea40fa6bfecb1f55f7605ed5107c06aa72624486a0440ae5ea255b9f3e121",
+    "D-A05": "d0502577fe9e0aea9c81ad7edf531b3a8c7e09f51981ea656df86431384b087f",
+    "D-A06": "7f413e64be32bc347ec47e30fb7177323c0859f123b7cd9399859022ea3df6f7",
+    "D-A07": "063c11d8aa8208d4d77364147fb0bc305d5d728edd71c383fc305b4ad61b031f",
+    "D-A08": "c42368c742568a12ae25a0ee79522aa6bcad268891f40564ac4ddb04f8688ebf",
+    "D-A09": "37d0f5116d8df2ec839da9160e0a00f84e8881d43df109a7ba36fde9cb0f8769",
+    "D-A10": "e23335ebfa2b9531efa342b827cd90a06e2b734c41d39193a96e4e3dbb8aaed7",
+    "D-A11": "e9e96534380e167746a25ad790a7a084f1a5dedc5c9867dd72d234d3e6744909",
+    "D-A12": "aa67feeb7e6dfe45e185cc03d660c1cc4f9ccadefea5e66fa76ff64b50b3bf52",
+    "D-A13": "1bc5ab8475094e55ce4ee9a0807f6ef08d69d0569a6673479f450892f54706bd",
+    "D-A14": "374441839ccf1bbe0ab0d886afa2f020829e4a4bc58d0504ae32507847f01cbd",
+    "D-A15": "5a554756581ce242b8db36046dc1d253e7d02e7d1766a01786fd905ea5d7f7c1",
+    "D-A16": "00df671f8723b1879cb279cbbbbab985aa10c3b5d6c06f6d41d1d838821a10fc",
+    "D-A17": "2a788d8d779def038f3cca6df78826eb20fd8f4b948b2ddb1a9fcba1c33a7b94",
+    "D-A18": "1659fea30e0116bd8781a75654e6013d892d9d2c03170a46d3c0ccbbefe0a28c",
+    "D-A19": "6601d31ddeec9883271b291d3928b6d5d93fbeac40ace29576a67fcf199c00d0",
+    "D-A20": "72fea62fcc93f37b8ea88dcb59417ddc4760ca4d7a08ee3684b44b02caf6880f",
+    "D-A21": "c37550686f1327a1fe9a174d78167841eaa67973095caba9306912f50202a0fe",
+    "D-A22": "d3d5c79f4e5f13a478b8f9eae23909d19851d3e012017b4444da0de58a2ab4cc",
+    "D-A23": "44eb9e1b8d6399244aca14b65a8c8d7636d38e6ef0ecfdbaa04000f31479a81e",
+    "D-A24": "27c726e7a152c01cd6c821c9836960509d5acdf3877be7b0ee3ccb4064cf8ab7",
+    "D-O01": "b5caf524d14e582936012e707045dea3562f5d45c9257a672af696485cdc1436",
+    "D-O02": "b1cb9070d28aa05829a327af3c90c4c6daacf81a81eb7aa9feee67366109f0a9",
+    "D-O03": "b557507db287d0bb6b43ce7ff90e2b3868a46fcae8478b47a4c34d1104c15517",
+    "D-O04": "c8ee54b9fc86165270a67047c18598b304ff0b5874f29a2dcacae820f7f5e867",
+    "D-U01": "7b30821b56c451ea83f922d7bde4f12ae4c78ff8c5cdd74c2f46dbec477ac7e3",
+    "D-U02": "94f5474902e5fd8e6a66d33a31978966484c74158b53d5a9ec9c4804b5582a13",
+    "D-U03": "eccc7361e1fc7ca1892713779523219a3486fded2e0108c7817a37c6e1529a0e",
+    "D-U04": "4f56f1cec82d60f2b6f6aafc9028717ab64a6996ef8dfde17c9f7005ab4e35e2",
+    "D-U05": "2bbc477f340424526a5ab326df48160596d1983d5d4c41776e839f2905469850",
+    "D-U06": "70b7c76d273312e702828e7529e0dd5648d11125ce1da11f6d94c128c0606115",
+    "D-U07": "c66aee4740c2998011b28ceb4b4f6488620d545028e94bce759f725a9fd851e2",
+    "D-U08": "a6757c75a8acf4722da93d913d959798dc10dda79a185b790e3e2b2321656c7b",
+    "D-U09": "e94cace33edfd19c2691de073aff15a3e010f35e4652f07bbc7dc21c3c73ae8c",
+    "D-U10": "88de896cfecfc3ea6752502d09f23acb6d11567b398bd79671777a1300149997",
+    "D-U11": "a1a513c9b5622629db2a6778a8ac2f2609363e434676d048914ae821e2416d7c",
+    "D-U12": "81e2a1b98f0e0c204e0a96ac7efacbce546d051193220bf70ee3728b5aa86666",
+    "H-A01": "4ceb127a592f73dfbd441eadb744847929b02ef11e257f2fce2092367a9c85e0",
+    "H-A02": "69c22abd4056976a41cc9ff64c816e8b4b387099d7bab93fe61a9cdda94e70d3",
+    "H-A03": "44d4e5083f40cab7be964ee0f445b30797295b54cee8f6d69a4781db101124bd",
+    "H-A04": "b48ed767f14504f49dfed2315b93854fb1225e81284941e0bed882c6fa78caab",
+    "H-A05": "58261f628ff734779b4571728cc770dc86833688602cdbba555dc6c249f1eae0",
+    "H-A06": "59f83150bf6a287e71f5f8b98e6f0eacb1bccd273b185a29ba50d954b6fb8284",
+    "H-A07": "a0ad1ba87610344be353ba54d84fbeac01efccc5ccc2165d39c0477d4228cc39",
+    "H-A08": "3d1a642e10832541b8792ac14750f4df720b7ef0506d68c74b34efcdab93e1cc",
+    "H-A09": "ab41da546e38dc9e1b8254bb2ef11b05287ee955c4447f4b722c462067e6dc1b",
+    "H-A10": "a881f62e17de2a4af32afef0c9b608b2ef82433a8e96a6793bfb5bdb2fccf6fe",
+    "H-A11": "901992f40f01d933a70fb57455bc418caeb7c0eab3c37d625281cfc3697ffa44",
+    "H-A12": "a53200d877ff0734cadf48eeaf11d8ccbb2bc2070520430cf38602009e3a51c9",
+    "H-A13": "993cb962ed1d9db935a8c4e80de1dcfa2fc201660eb0a2a5e32f573b8b36f13f",
+    "H-A14": "14be8112dfd3df04d3953ab0ff61b387259c798f8d6cf2ee1c9d6eefc7ad9c96",
+    "H-A15": "ef9314b7e8baa234daeeb5ce90bcdfcd38b0e444a41dbaddb0aa083f08e90a75",
+    "H-A16": "eca3e7ec26728678587344037adaae5c100a47118b1ee204200c8b3ea5c5c95f",
+    "H-A17": "33a50922e3e49e3a45deaec5e3392f223403467be78581418079585985bdf796",
+    "H-A18": "15a6db08f9dddde12a46774a58ef4f717cf84a2a19c73fc46443d42990b6f9ac",
+    "H-A19": "58f197a4bcbd76d057e51e296de841b2baedfd735d6b9923c44d154b94513052",
+    "H-A20": "86c0e972fea8c60cf45e1588cde333b23364ecf69fb0cb67081517162f5107c1",
+    "H-A21": "d0cebe9264efbe638f067da39253a2b6c46030d558815627f3f17ae718d0143b",
+    "H-A22": "80c4570b520f3260fd79455e85ac622c29fa41d283fe85182f4c8ac248dc4113",
+    "H-A23": "4e01ca739ec02714bc7514f489ab040434821a151c7cf130554dacbc5a4eed88",
+    "H-A24": "e943e5ce392ed9b8cf435b3f460e2d9aeb54a4f3d180386143145055305069ea",
+    "H-O01": "c83e16f03bf39d353d16cecd44069f3f1cda48aa845948ded3114b45dfbe7154",
+    "H-O02": "c410491b50f1d1a3189b0720611eddc160c02b9407638c185ec2694c7797f8c6",
+    "H-O03": "4cb3dc237e1e95b78445a0a79a11b0b8a70732e0ff200facb6b09b0175c931dd",
+    "H-O04": "97e9efc06734bfd7c7ebe5f6d683465276c87d52ad0e65ac56581c66e7bfa0e8",
+    "H-U01": "afeff06638d8ae88b530d556a8caef19012e7efc95004554519fabba76debde6",
+    "H-U02": "8d9d256dbce943973a6f566a64e0234918bdf4ba8d3681ec6c30be02f86cde6c",
+    "H-U03": "af40ab4d248ea0364dbc73b95c040b8efaa0398454e5e215b26919fcb5849ed0",
+    "H-U04": "4baef3faf4bfb7c1234bb7304eebe8ab82a28206bd915a2747e0adf9629297f1",
+    "H-U05": "bc56fc983b452abf81d4690934f3b3a2efcf7449454eb838d99247e0a94179ac",
+    "H-U06": "71d5c2f673d25fe4eb02649802b7e323da6a9057e83acac44f5f095689c77cba",
+    "H-U07": "9de2ded90a0b03ad07931b8e63721d984a9bf613b002d9e44726e4ceb66b61d8",
+    "H-U08": "6653152225190fb9c2fc4957ec2aa3b8bb9a82618b8959c6c8d95bbb46c35b62",
+    "H-U09": "559471169bd079b4604b2e954de3cd1fca4877a463f19dadccc22d49a598ad14",
+    "H-U10": "fe85735cb50f199fbe7280ee10eb914d715158bd42c058d916807c38d160d91b",
+    "H-U11": "47c7a1a6aa4f287ed7c94359fec906b626c7ec86353ed0cf744a5e454ef57806",
+    "H-U12": "5a89a0d3b6d33417fe4b198bfad9980ab32cc9998f3ea7dee8670a6fd39520f5",
+    "C01-P": "bd772563a7933f25ffff03c5ba1aa247eff25812bb2907dbe9688176695fc3ce",
+    "C01-N": "81af63e9597a5468baf12a92814eea0a1371e6e3513e12b23fc81b8f6261999a",
+    "C02-P": "77fde1ca806c745f36ae7843fe23926bb021f922c74cf9a24fd8610feb1f4db3",
+    "C02-N": "a747d184a3ddfd0e810223158d78064dbe529caaf37c778aaaf952987813ca93",
+    "C03-P": "9e5ff9804d0aa186b5df415cb2843fc62181c2f8b704ffa3b0a20c419bcad75f",
+    "C03-N": "5aa312ba8e03724e6c3fc65121d20b2a457e4dc44f0f0e47df77e1085ec26a33",
+    "C04-P": "99cb76e075991523fcd2695da2d7e9e084b3d42346cc47ae1b6b7a4ce1224b19",
+    "C04-N": "b66c8562ecd47b1afa4e8adeec85ed0802f107270c8fd19e9cc163396bc04bfe",
+    "C05-P": "f044b014f14199f73aab1f069d5c75e32f4de5d108f2e4f67446f258f470ce7c",
+    "C05-N": "0d87a8901509a90279bc34484456638f19bfbb7e18b79a9c771cfea08e74604a",
+    "C06-P": "3f402f9641258c1571e197aee10dea637ab79f00feb7db9594ecded05480f404",
+    "C06-N": "7caab455e482fbbe3a345e364d29d5a60d2f9dd49e679b3f2d29d16a835ebd41",
+    "C07-P": "39e4d0e1d38bdc977f7f4b3f1409dcf032795fa600ba06c174e16046798f16a2",
+    "C07-N": "2e291e934fccb7b1b888fddbd025a95fb2a68b0d0cbb28706ad411c1c31eadd5",
+    "C08-P": "f430756aefec66206ffdf11994965d65e63236f1c2c0eaa10351c29746678567",
+    "C08-N": "c568432ed55489c163bc279b8ad30d5f72aa3c58521f4509dba6259871ad556a",
+    "C09-P": "a66bd9af5dc38d1c75929c1e8946359a1d4ec784cd3a911bc092d848a81d216e",
+    "C09-N": "fc1d6d653d2dd701be4cbad25f0042e6b6c918302accf7d6b1e04e3dcc168635",
+    "C10-P": "46a9a3de7bf79a1ef95f9c1fff75bd2d9e0e1bad523f38fc1c61cfb17779cde2",
+    "C10-N": "37449f351dda6738974c51f97e00faf6348971aafc7b48bc794fd5d7806b436f"
+  },
+  "focusByRecord": {
+    "D-A01": [],
+    "D-A02": [],
+    "D-A03": [],
+    "D-A04": [],
+    "D-A05": [],
+    "D-A06": [],
+    "D-A07": [],
+    "D-A08": [],
+    "D-A09": [],
+    "D-A10": [],
+    "D-A11": [],
+    "D-A12": [],
+    "D-A13": [],
+    "D-A14": [],
+    "D-A15": [],
+    "D-A16": [],
+    "D-A17": [],
+    "D-A18": [],
+    "D-A19": [],
+    "D-A20": [],
+    "D-A21": [],
+    "D-A22": [],
+    "D-A23": [],
+    "D-A24": [],
+    "D-O01": [],
+    "D-O02": [],
+    "D-O03": [],
+    "D-O04": [],
+    "D-U01": [
+      "CTX1"
+    ],
+    "D-U02": [],
+    "D-U03": [],
+    "D-U04": [],
+    "D-U05": [],
+    "D-U06": [],
+    "D-U07": [],
+    "D-U08": [],
+    "D-U09": [],
+    "D-U10": [],
+    "D-U11": [],
+    "D-U12": [],
+    "H-A01": [],
+    "H-A02": [],
+    "H-A03": [],
+    "H-A04": [],
+    "H-A05": [],
+    "H-A06": [],
+    "H-A07": [],
+    "H-A08": [],
+    "H-A09": [
+      "F1"
+    ],
+    "H-A10": [
+      "F1"
+    ],
+    "H-A11": [
+      "F1"
+    ],
+    "H-A12": [],
+    "H-A13": [
+      "F3"
+    ],
+    "H-A14": [
+      "F1"
+    ],
+    "H-A15": [
+      "F1"
+    ],
+    "H-A16": [
+      "F1"
+    ],
+    "H-A17": [],
+    "H-A18": [],
+    "H-A19": [],
+    "H-A20": [
+      "F2"
+    ],
+    "H-A21": [
+      "F2"
+    ],
+    "H-A22": [
+      "F2",
+      "F4",
+      "CTX2",
+      "CTX3"
+    ],
+    "H-A23": [
+      "F2"
+    ],
+    "H-A24": [
+      "CTX2",
+      "CTX3"
+    ],
+    "H-O01": [],
+    "H-O02": [],
+    "H-O03": [],
+    "H-O04": [],
+    "H-U01": [
+      "CTX1"
+    ],
+    "H-U02": [],
+    "H-U03": [
+      "F1"
+    ],
+    "H-U04": [],
+    "H-U05": [],
+    "H-U06": [
+      "F1"
+    ],
+    "H-U07": [],
+    "H-U08": [
+      "F2"
+    ],
+    "H-U09": [],
+    "H-U10": [
+      "CTX1"
+    ],
+    "H-U11": [
+      "F1"
+    ],
+    "H-U12": [
+      "F1"
+    ],
+    "C01-P": [],
+    "C01-N": [],
+    "C02-P": [],
+    "C02-N": [],
+    "C03-P": [],
+    "C03-N": [],
+    "C04-P": [],
+    "C04-N": [],
+    "C05-P": [],
+    "C05-N": [],
+    "C06-P": [],
+    "C06-N": [],
+    "C07-P": [],
+    "C07-N": [],
+    "C08-P": [],
+    "C08-N": [],
+    "C09-P": [],
+    "C09-N": [],
+    "C10-P": [],
+    "C10-N": []
+  },
+  "sharedContextAnchors": [
+    {
+      "anchor": "POL-08-U01-R4",
+      "dev": [
+        "D-U01"
+      ],
+      "held_out": [
+        "H-U01",
+        "H-U10"
+      ],
+      "classification": "shared_qualifier_or_context_not_same_primary_question",
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "anchor": "POL-09-U03-R4",
+      "dev": [
+        "H-A24"
+      ],
+      "held_out": [
+        "H-A22"
+      ],
+      "classification": "shared_qualifier_or_context_not_same_primary_question",
+      "status": "REVIEW_REQUIRED"
+    },
+    {
+      "anchor": "POL-09-U03-R5",
+      "dev": [
+        "H-A24"
+      ],
+      "held_out": [
+        "H-A22"
+      ],
+      "classification": "shared_qualifier_or_context_not_same_primary_question",
+      "status": "REVIEW_REQUIRED"
+    }
+  ],
+  "baselineFiles": {
+    "ai-service/app/ingestion/documents.py": "dcd8a843d0a58bf559d3666a78e0bcd4f3c52dc67ed5183be2b83b94f1719490",
+    "ai-service/app/ingestion/snapshot.py": "f466ed882cb98eb068d88ffcd31fc5f12e6ec9bf1a5d037032b8113f6cd22d1c",
+    "ai-service/docs/EVALUATION.md": "1df6d1d8d8ebd497edeb9c512619784de51833e08e35fdaa10851efcb89006b6",
+    "ai-service/docs/PROCESS.md": "f697a227404e375c2ccf4586d30bd9daf37431132c3cdf5e8d3ef4d0013db419",
+    "ai-service/docs/architecture.md": "5be7160e21452bb6252bc978b4598287ebdc9de4324ffb3b675c0fe1a41d6832",
+    "ai-service/knowledge/policies/academic-demo-hotel-policies.md": "c021198c10c563d0f71c1f398e9a9f6056294d8d84acea615a8fdbb856698da3",
+    "ai-service/knowledge/policies/publication-draft-review.md": "24f2b04284541f75fdf4e9aa45e493938c3e8e521b0df752f025a4d82fa6b0b7",
+    "ai-service/knowledge/policies/publication-draft/pol-01-booking.md": "7fd37be9ff11d0060a8f0551a32943486219bb402ee2252662b03ee4ea6a197b",
+    "ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md": "7ba4d2d5ebbc3ebe74ff2c8ef9b2706eed1898802e862e5bd0f6d440c25b1b34",
+    "ai-service/knowledge/policies/publication-draft/pol-03-deposit-payment.md": "a3386834dfcfeebd4d674e3cc4cba1d6a3dcbd7180f3825b825142144b01dc12",
+    "ai-service/knowledge/policies/publication-draft/pol-04-cancellation.md": "183a492950e7bafa90109baf458f55aca8280d3e677ed7fdbddf93d56dedae11",
+    "ai-service/knowledge/policies/publication-draft/pol-05-refund.md": "b22ab20a4f16cdf841119b6baa1cc8e2cf7a29abe511e32505af2e389f5eda74",
+    "ai-service/knowledge/policies/publication-draft/pol-06-children-guests.md": "7a0145a79bb54beecd851aff6283169564f61c7333c3bfcf176de0b4b57a3c11",
+    "ai-service/knowledge/policies/publication-draft/pol-07-pets.md": "dd16adb3717d521a181f892d9e0a35f34207a09b92541061adf2d37e4685fff5",
+    "ai-service/knowledge/policies/publication-draft/pol-08-services.md": "baf6435ffec3a4f00012ca1f6a1db78df68f6d47a68c60cb31493732630dc7fb",
+    "ai-service/knowledge/policies/publication-draft/pol-09-complaints.md": "421b90e08fb5ce46ff4e7d718072e0a0f4f8d508c0b3dd3e1c51eb9356ebf4bb",
+    "ai-service/knowledge/policies/publication-draft/pol-10-privacy.md": "5814f411b6e700d5a570e3f75e4a504bce9baf4ebc5a071a0e2662dd93ad94ae",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/README.md": "5ca2f6044716ee9ca48e667d7a29d598ae8740279580d53ce3042599889cbad1",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/gold.json": "f655130e18e24f98e01aebf49d4cae90d9498c663a189c9e4ee0f397b3a5c9f4",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/README.md": "55377bf05ed84cc617cf6f8e4e3336bd013354663b44274b083fbe73adbae84f",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/gold.json": "d151bc03474703f502f7464812a4e5d973bf2db794190753c482410cf7365b9b",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/manifest.json": "b55739c59e74fd0e4ee25d61123fecb7f6f9264498ef70ae6090a33c95ec3fa2",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/receipt.json": "efde9e04e2a00b5fdc9a58474c5edc64779c7775dca6bcfbde96bdfd83c232d3",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/review-controls.json": "e2f6ae16602a6e1dcea9cf56f6aaea245d516513ca4b700d09e660ff76b6b02e",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/validate.py": "538c8f044417dc9ed65dcd045854e362cfae3bbd4baf297ae2c2a465e7353a5e",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution/validation.json": "9b2c0c3ea343982ef76c310d9cd83e5369266a1ca97a3e86f6a7f670844fc529",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/README.md": "275af0d4a08800d5c28a80dafa5a4de61459cc82541449998b5e7bcd65a22fa5",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/gold.json": "ac6a4bec1b95bc32c9da46ab23906d7d4ac2267f6574266967290fb101e0922d",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/manifest.json": "fdfc6202505ff2e2a43d6f97796a20399ba5bebb5e473fdc418b0d3abb4cbf29",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/receipt.json": "18a90e6825507f8cc693349160dbac2cfd90a2bc6a9d25d26c2f777e6e1205a9",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/review-controls.json": "31f34ad68b198e85b292db34798121e8097d434ad64257cd3005bc19e6f22f1f",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/validate.py": "219f1c19d05f558978a91676af203d8d82301fb888615396044a3c5cf4a16c78",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update/validation.json": "d23a14f0a6f486c13bab775bd9f32e66a433d796b1ca0bf56ea140ca0b8ec7d4",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/independent-evaluation-strategy.md": "efac19181ac4ac75cc228c1396ef26a2b7a46ed7ee4220bd1da40cc7f0f9745e",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/manifest.json": "87b7b059ee8ec75266da24a8b37f74c738672b429984fef3890ae075cb62635f",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/review-controls.json": "e2f6ae16602a6e1dcea9cf56f6aaea245d516513ca4b700d09e660ff76b6b02e",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/validate.py": "96834c851275539c4dbcd6b5b824d3d6e11e81361157dadbd700904cef6cd95c",
+    "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/validation.json": "51c41f04ef28bbfb00f8c1be6119e0fa59a6d2078431aa422e4ed2a1ea02ada8"
+  },
+  "packetFiles": {
+    "README.md": "1ad8b2d0f60ffe307847266231e377c0fdeff25972dc3f557555953ea3b480fb",
+    "records.md": "e0c3c68151119452515880ec5c54c5f9fe02c6e3e945eec8f4cad3f8d96f0bd0",
+    "review-register.json": "e1050447907d2dc6f54b22ab75bae779c2294641fa50f4d17d0c64d7aee87bdf",
+    "validate.py": "24a35f661c061a9172cca196bdb09f0d27c4c9a02699e12ce430c9a2132b489e"
+  },
+  "eventLog": "review-events.jsonl",
+  "initialEventLogSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "eventLogPolicy": "Append human decisions only; not a static artifact pin after review begins. Retain external receipts for event count/head hash and original submissions.",
+  "gitBefore": {
+    "branch": "chore/sync-origin-main-d120",
+    "head": "c0312670032147c9f41ed0dc6d3ebfaa3e8270ef",
+    "merge_head": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+    "staged": 261,
+    "unmerged": 0,
+    "deleted": 59,
+    "index_sha256": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+    "cached_sha256": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+    "status_sha256": "c2f8fb369cd04ea3ac679d54293e771b3b7c41e29ff824f93e93971c566ed515",
+    "protected_paths": 704,
+    "protected_sha256": "645c642e28a57f096d658d4277d0a465e028f64ae31733ea9e3d5d07273e36d8"
+  }
+}

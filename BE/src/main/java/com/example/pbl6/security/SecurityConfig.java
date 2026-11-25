@@ -18,6 +18,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.List;
 
@@ -26,6 +28,9 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    @Value("${assistant.origins:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090,http://127.0.0.1:9090}")
+    private String assistantOrigins;
 
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -56,6 +61,9 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.POST, "/api/assistant/chat").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/assistant/session").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/api/assistant/chat", "/api/assistant/session").permitAll()
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/public/**",
@@ -99,6 +107,13 @@ public class SecurityConfig {
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration assistant = new CorsConfiguration();
+        assistant.setAllowedOrigins(java.util.Arrays.stream(assistantOrigins.split(",")).map(String::trim).toList());
+        assistant.setAllowedMethods(List.of("POST", "DELETE", "OPTIONS"));
+        assistant.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Request-ID"));
+        assistant.setExposedHeaders(List.of("X-Request-ID"));
+        assistant.setAllowCredentials(true);
+        source.registerCorsConfiguration("/api/assistant/**", assistant);
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }

@@ -1,4 +1,5 @@
 import React from "react";
+import AssistantWidget from "./components/assistant/AssistantWidget";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastContext";
@@ -247,6 +248,7 @@ export default function App() {
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <AssistantWidget />
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

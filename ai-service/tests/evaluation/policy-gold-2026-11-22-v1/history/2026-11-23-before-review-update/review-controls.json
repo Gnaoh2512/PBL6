@@ -1,0 +1,804 @@
+{
+  "schemaVersion": "pbl6-policy-review-controls-v1",
+  "datasetId": "policy-review-controls-2026-11-22-v1",
+  "status": "draft",
+  "approvalStatus": "pending_review",
+  "approved": false,
+  "scorable": false,
+  "sourceType": "AI_GENERATED_SYNTHETIC",
+  "purpose": "Known calibration controls for independent human semantic review. Separate from 80 natural policy questions and reliability/correctness denominators; no blinded/G20 closure claim.",
+  "pairs": 10,
+  "reviewRequirements": {
+    "independentReviewers": [
+      null,
+      null
+    ],
+    "disagreementResolver": null,
+    "allCasesPending": true,
+    "reviewRubric": "README.md"
+  },
+  "controls": [
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C01-P",
+      "pairId": "C01",
+      "dimension": "polarity",
+      "query": "Booking thông thường có mặc định nhận thú cưng không?",
+      "candidateAnswer": "Mặc định không; ngoại lệ cần quản lý xem trước xác nhận.",
+      "offeredEvidenceRefs": [
+        "POL-07-U01-R1",
+        "POL-07-U01-R2",
+        "POL-07-U01-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-07-U01-R1",
+        "POL-07-U01-R2",
+        "POL-07-U01-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-07-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-07-pets.md",
+          "policyVersion": "0.1.0",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "dd16adb3717d521a181f892d9e0a35f34207a09b92541061adf2d37e4685fff5",
+          "unitSha256": "ec584c2142de45889a9bb54772d2d1532c564b69c9ac11627317ef3a88df88f1"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C01-N",
+      "pairId": "C01",
+      "dimension": "polarity",
+      "query": "Booking thông thường có mặc định nhận thú cưng không?",
+      "candidateAnswer": "Mặc định có; trả thêm tiền thì tự được nhận.",
+      "offeredEvidenceRefs": [
+        "POL-07-U01-R1",
+        "POL-07-U01-R2",
+        "POL-07-U01-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-07-U01-R1",
+        "POL-07-U01-R2",
+        "POL-07-U01-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-07-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-07-pets.md",
+          "policyVersion": "0.1.0",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "dd16adb3717d521a181f892d9e0a35f34207a09b92541061adf2d37e4685fff5",
+          "unitSha256": "ec584c2142de45889a9bb54772d2d1532c564b69c9ac11627317ef3a88df88f1"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Đảo phủ định và bỏ điều kiện ngoại lệ.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C02-P",
+      "pairId": "C02",
+      "dimension": "essential_qualifier",
+      "query": "Có phải biết tỷ lệ phí là chắc chắn được nhận sớm?",
+      "candidateAnswer": "Không; khách đồng ý và nhân viên xác nhận cung cấp được mới áp phí, chưa rõ thì giữ giờ chuẩn.",
+      "offeredEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-02-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7ba4d2d5ebbc3ebe74ff2c8ef9b2706eed1898802e862e5bd0f6d440c25b1b34",
+          "unitSha256": "43be69767ab761a44efa5bb9450d3d59734ed28dc490b69de1362abd059c1eb7"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C02-N",
+      "pairId": "C02",
+      "dimension": "essential_qualifier",
+      "query": "Có phải biết tỷ lệ phí là chắc chắn được nhận sớm?",
+      "candidateAnswer": "Có, trả 30% thì chắc chắn được nhận sớm bất kể phòng sẵn sàng.",
+      "offeredEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-02-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7ba4d2d5ebbc3ebe74ff2c8ef9b2706eed1898802e862e5bd0f6d440c25b1b34",
+          "unitSha256": "43be69767ab761a44efa5bb9450d3d59734ed28dc490b69de1362abd059c1eb7"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Bỏ điều kiện đồng ý/khả năng cung cấp, biến phí thành entitlement.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C03-P",
+      "pairId": "C03",
+      "dimension": "deadline_boundary",
+      "query": "Đơn tạo 10:00, đủ cọc đúng 10:15:00 có kịp không?",
+      "candidateAnswer": "Không; đủ cọc phải trước hạn, bằng hạn là quá hạn.",
+      "offeredEvidenceRefs": [
+        "POL-01-U02-R2",
+        "POL-01-U02-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-01-U02-R2",
+        "POL-01-U02-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-01-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-01-booking.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7fd37be9ff11d0060a8f0551a32943486219bb402ee2252662b03ee4ea6a197b",
+          "unitSha256": "318215618d722140c0c772adb0f82ce580013c4c97570e714b9f7a3977d570bc"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C03-N",
+      "pairId": "C03",
+      "dimension": "deadline_boundary",
+      "query": "Đơn tạo 10:00, đủ cọc đúng 10:15:00 có kịp không?",
+      "candidateAnswer": "Có; thời hạn bao gồm cả 10:15:00.",
+      "offeredEvidenceRefs": [
+        "POL-01-U02-R2",
+        "POL-01-U02-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-01-U02-R2",
+        "POL-01-U02-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-01-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-01-booking.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7fd37be9ff11d0060a8f0551a32943486219bb402ee2252662b03ee4ea6a197b",
+          "unitSha256": "318215618d722140c0c772adb0f82ce580013c4c97570e714b9f7a3977d570bc"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Đổi điều kiện strict-before thành inclusive.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C04-P",
+      "pairId": "C04",
+      "dimension": "calendar_vs_duration",
+      "query": "Nhận hợp lệ 07/12 23:59, đến 10/12/2026, booking đã xác nhận chưa check-in: dùng mức nào?",
+      "candidateAnswer": "Trước 3 ngày lịch nên 100% phần cọc hiệu dụng; không dùng số giờ còn lại.",
+      "offeredEvidenceRefs": [
+        "POL-04-U01-R1",
+        "POL-04-U01-R2",
+        "POL-04-U02-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-04-U01-R1",
+        "POL-04-U01-R2",
+        "POL-04-U02-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-04-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-04-cancellation.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "183a492950e7bafa90109baf458f55aca8280d3e677ed7fdbddf93d56dedae11",
+          "unitSha256": "2b4845ae7f5d1e166093c80ba3b4fb36ad0374e789353ad71523f0e40a8635d4"
+        },
+        {
+          "unitId": "POL-04-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-04-cancellation.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "183a492950e7bafa90109baf458f55aca8280d3e677ed7fdbddf93d56dedae11",
+          "unitSha256": "baf025094ba80ea869f363b65fe9ddba7e6fd2db0f79438d3bf8e204271badee"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C04-N",
+      "pairId": "C04",
+      "dimension": "calendar_vs_duration",
+      "query": "Nhận hợp lệ 07/12 23:59, đến 10/12/2026, booking đã xác nhận chưa check-in: dùng mức nào?",
+      "candidateAnswer": "Chưa đủ 72 giờ nên không được mức 100% phần cọc.",
+      "offeredEvidenceRefs": [
+        "POL-04-U01-R1",
+        "POL-04-U01-R2",
+        "POL-04-U02-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-04-U01-R1",
+        "POL-04-U01-R2",
+        "POL-04-U02-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-04-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-04-cancellation.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "183a492950e7bafa90109baf458f55aca8280d3e677ed7fdbddf93d56dedae11",
+          "unitSha256": "2b4845ae7f5d1e166093c80ba3b4fb36ad0374e789353ad71523f0e40a8635d4"
+        },
+        {
+          "unitId": "POL-04-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-04-cancellation.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "183a492950e7bafa90109baf458f55aca8280d3e677ed7fdbddf93d56dedae11",
+          "unitSha256": "baf025094ba80ea869f363b65fe9ddba7e6fd2db0f79438d3bf8e204271badee"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Đổi ngày lịch sang rolling-hours làm sai nhóm hoàn.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C05-P",
+      "pairId": "C05",
+      "dimension": "discount_allocation",
+      "query": "Ví dụ đã chấp nhận G=1.700.000, A_room=60.000, A_other=40.000, cọc bao nhiêu?",
+      "candidateAnswer": "Cọc 492.000 VND, chỉ trừ A_room; cần đối soát, không phải báo giá live.",
+      "offeredEvidenceRefs": [
+        "POL-03-U02-R2",
+        "POL-03-U02-R3",
+        "POL-03-U02-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-03-U02-R2",
+        "POL-03-U02-R3",
+        "POL-03-U02-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-03-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-03-deposit-payment.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "a3386834dfcfeebd4d674e3cc4cba1d6a3dcbd7180f3825b825142144b01dc12",
+          "unitSha256": "04d7c274912f32a683daf8310f7c9acff668bd14a9ef6dbf9b9348545f640d09"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C05-N",
+      "pairId": "C05",
+      "dimension": "discount_allocation",
+      "query": "Ví dụ đã chấp nhận G=1.700.000, A_room=60.000, A_other=40.000, cọc bao nhiêu?",
+      "candidateAnswer": "Cọc 480.000 VND vì trừ tổng giảm A_bill=100.000.",
+      "offeredEvidenceRefs": [
+        "POL-03-U02-R2",
+        "POL-03-U02-R3",
+        "POL-03-U02-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-03-U02-R2",
+        "POL-03-U02-R3",
+        "POL-03-U02-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-03-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-03-deposit-payment.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "a3386834dfcfeebd4d674e3cc4cba1d6a3dcbd7180f3825b825142144b01dc12",
+          "unitSha256": "04d7c274912f32a683daf8310f7c9acff668bd14a9ef6dbf9b9348545f640d09"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Dùng discount sai scope dù công thức 30% đúng.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C06-P",
+      "pairId": "C06",
+      "dimension": "reserved_money",
+      "query": "Giữ 510.000, Reserved 300.000, cọc mới 255.000 thì cần bổ sung?",
+      "candidateAnswer": "Khả dụng 210.000 nên cần 45.000 VND, theo dữ kiện đã đối soát.",
+      "offeredEvidenceRefs": [
+        "POL-03-U04-R2",
+        "POL-03-U04-R5"
+      ],
+      "correctEvidenceRefs": [
+        "POL-03-U04-R2",
+        "POL-03-U04-R5"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-03-U04",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-03-deposit-payment.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "a3386834dfcfeebd4d674e3cc4cba1d6a3dcbd7180f3825b825142144b01dc12",
+          "unitSha256": "1dd7df8112a9c1895a8c83e8691c31060ecc97d819ecd412be21157b0a9d9b59"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C06-N",
+      "pairId": "C06",
+      "dimension": "reserved_money",
+      "query": "Giữ 510.000, Reserved 300.000, cọc mới 255.000 thì cần bổ sung?",
+      "candidateAnswer": "Khả dụng 510.000 nên không cần bổ sung.",
+      "offeredEvidenceRefs": [
+        "POL-03-U04-R2",
+        "POL-03-U04-R5"
+      ],
+      "correctEvidenceRefs": [
+        "POL-03-U04-R2",
+        "POL-03-U04-R5"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-03-U04",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-03-deposit-payment.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "a3386834dfcfeebd4d674e3cc4cba1d6a3dcbd7180f3825b825142144b01dc12",
+          "unitSha256": "1dd7df8112a9c1895a8c83e8691c31060ecc97d819ecd412be21157b0a9d9b59"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Tái dùng tiền đã dành cho lệnh khác.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C07-P",
+      "pairId": "C07",
+      "dimension": "uncollected_quote",
+      "query": "Dịch vụ chưa cung cấp mới báo giá 180.000+18.000 thuế, chưa thu tiền, có cộng C0 không?",
+      "candidateAnswer": "Không cộng C0: chỉ tính tiền thực đã thu còn giữ, đủ điều kiện và có xác minh.",
+      "offeredEvidenceRefs": [
+        "POL-05-U01-R3",
+        "POL-05-U01-R4",
+        "POL-05-U01-R5"
+      ],
+      "correctEvidenceRefs": [
+        "POL-05-U01-R3",
+        "POL-05-U01-R4",
+        "POL-05-U01-R5"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-05-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-05-refund.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "b22ab20a4f16cdf841119b6baa1cc8e2cf7a29abe511e32505af2e389f5eda74",
+          "unitSha256": "3622a6648583c44b0103c20fd2e0dcc06a6846e85e68b77db66d653f1f8d3c41"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C07-N",
+      "pairId": "C07",
+      "dimension": "uncollected_quote",
+      "query": "Dịch vụ chưa cung cấp mới báo giá 180.000+18.000 thuế, chưa thu tiền, có cộng C0 không?",
+      "candidateAnswer": "Cộng C0=198.000 vì dịch vụ chưa cung cấp.",
+      "offeredEvidenceRefs": [
+        "POL-05-U01-R3",
+        "POL-05-U01-R4",
+        "POL-05-U01-R5"
+      ],
+      "correctEvidenceRefs": [
+        "POL-05-U01-R3",
+        "POL-05-U01-R4",
+        "POL-05-U01-R5"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-05-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-05-refund.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "b22ab20a4f16cdf841119b6baa1cc8e2cf7a29abe511e32505af2e389f5eda74",
+          "unitSha256": "3622a6648583c44b0103c20fd2e0dcc06a6846e85e68b77db66d653f1f8d3c41"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Tạo quyền hoàn từ báo giá chưa thu, cộng thuế chưa thu.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C08-P",
+      "pairId": "C08",
+      "dimension": "unit_subject",
+      "query": "Hai package giặt theo giá minh họa 120.000/package thì tính sao?",
+      "candidateAnswer": "240.000 trước thuế, 264.000 gồm thuế demo; package không phải Kg, cần xác minh catalogue/giá.",
+      "offeredEvidenceRefs": [
+        "POL-08-U03-R1",
+        "POL-08-U03-R2",
+        "POL-08-U03-R3",
+        "POL-08-U03-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-08-U03-R1",
+        "POL-08-U03-R2",
+        "POL-08-U03-R3",
+        "POL-08-U03-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-08-U03",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-08-services.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "baf6435ffec3a4f00012ca1f6a1db78df68f6d47a68c60cb31493732630dc7fb",
+          "unitSha256": "88ab338b880de8ad179ab96a06d06c3c06dda4d026e5433874c078c4ea8322a9"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C08-N",
+      "pairId": "C08",
+      "dimension": "unit_subject",
+      "query": "Hai package giặt theo giá minh họa 120.000/package thì tính sao?",
+      "candidateAnswer": "Hai package 3kg là 6 Kg, tính 6×120.000 và thuế tổng 792.000.",
+      "offeredEvidenceRefs": [
+        "POL-08-U03-R1",
+        "POL-08-U03-R2",
+        "POL-08-U03-R3",
+        "POL-08-U03-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-08-U03-R1",
+        "POL-08-U03-R2",
+        "POL-08-U03-R3",
+        "POL-08-U03-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-08-U03",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-08-services.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "baf6435ffec3a4f00012ca1f6a1db78df68f6d47a68c60cb31493732630dc7fb",
+          "unitSha256": "88ab338b880de8ad179ab96a06d06c3c06dda4d026e5433874c078c4ea8322a9"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Đổi đơn vị package sang Kg, nhân sai subject/quantity.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C09-P",
+      "pairId": "C09",
+      "dimension": "citation_question_binding",
+      "query": "09:00 nhận sớm, B_first=850.000, đã đồng ý/có phòng, phí trước thuế là gì?",
+      "candidateAnswer": "425.000 VND, là 50% giá đêm đầu đã ghi, không phải giá mới/voucher lần nữa.",
+      "offeredEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-02-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7ba4d2d5ebbc3ebe74ff2c8ef9b2706eed1898802e862e5bd0f6d440c25b1b34",
+          "unitSha256": "43be69767ab761a44efa5bb9450d3d59734ed28dc490b69de1362abd059c1eb7"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C09-N",
+      "pairId": "C09",
+      "dimension": "citation_question_binding",
+      "query": "09:00 nhận sớm, B_first=850.000, đã đồng ý/có phòng, phí trước thuế là gì?",
+      "candidateAnswer": "425.000 VND, là 50% giá đêm đầu đã ghi, không phải giá mới/voucher lần nữa.",
+      "offeredEvidenceRefs": [
+        "POL-02-U02-R1",
+        "POL-02-U02-R2",
+        "POL-02-U02-R4"
+      ],
+      "correctEvidenceRefs": [
+        "POL-02-U01-R2",
+        "POL-02-U01-R3",
+        "POL-02-U01-R4"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-02-U01",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7ba4d2d5ebbc3ebe74ff2c8ef9b2706eed1898802e862e5bd0f6d440c25b1b34",
+          "unitSha256": "43be69767ab761a44efa5bb9450d3d59734ed28dc490b69de1362abd059c1eb7"
+        },
+        {
+          "unitId": "POL-02-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7ba4d2d5ebbc3ebe74ff2c8ef9b2706eed1898802e862e5bd0f6d440c25b1b34",
+          "unitSha256": "c87c090fb1467885e6547d48919dc7a482f24d143b1fa7da0131e25c2296d983"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Câu chữ/số tiền đúng nhưng citation sai: trích POL-02-U02 về trả muộn/giá đêm cuối, không hỗ trợ nhận sớm.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C10-P",
+      "pairId": "C10",
+      "dimension": "renderer_revision",
+      "query": "Sinh 05/12/2008, đặt 22/11, nhận 10/12/2026: điều kiện tuổi?",
+      "candidateAnswer": "Đủ 18 tại ngày nhận, đạt điều kiện tuổi; vẫn kiểm tra các điều kiện booking khác.",
+      "offeredEvidenceRefs": [
+        "POL-06-U02-R1",
+        "POL-06-U02-R2",
+        "POL-06-U02-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-06-U02-R1",
+        "POL-06-U02-R2",
+        "POL-06-U02-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-06-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-06-children-guests.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7a0145a79bb54beecd851aff6283169564f61c7333c3bfcf176de0b4b57a3c11",
+          "unitSha256": "e009027c9433198e15edbc9df74cf18a66e24d3834dbaf852a5d8d3a32486127"
+        }
+      ],
+      "expectedReviewDecision": "accept_supported",
+      "expectedReviewReason": "Matches cited approved source under stated hypothetical inputs; conditions remain mandatory.",
+      "syntheticFaultInjected": false,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false,
+      "revisionNote": "Stale wording is an injected proposal only; no historical source version or publication is invented."
+    },
+    {
+      "asOfDate": "2026-11-22",
+      "timeZone": "Asia/Ho_Chi_Minh (UTC+07:00)",
+      "reviewStatus": "pending_review",
+      "approved": false,
+      "scorable": false,
+      "reviewDecisions": [],
+      "id": "C10-N",
+      "pairId": "C10",
+      "dimension": "renderer_revision",
+      "query": "Sinh 05/12/2008, đặt 22/11, nhận 10/12/2026: điều kiện tuổi?",
+      "candidateAnswer": "Không đủ vì lúc đặt mới 17, booking phải bị từ chối.",
+      "offeredEvidenceRefs": [
+        "POL-06-U02-R1",
+        "POL-06-U02-R2",
+        "POL-06-U02-R3"
+      ],
+      "correctEvidenceRefs": [
+        "POL-06-U02-R1",
+        "POL-06-U02-R2",
+        "POL-06-U02-R3"
+      ],
+      "sourceVersions": [
+        {
+          "unitId": "POL-06-U02",
+          "path": "ai-service/knowledge/policies/publication-draft/pol-06-children-guests.md",
+          "policyVersion": "0.1.1",
+          "sourceDocumentVersion": "0.1.1",
+          "sourceSha256": "7a0145a79bb54beecd851aff6283169564f61c7333c3bfcf176de0b4b57a3c11",
+          "unitSha256": "e009027c9433198e15edbc9df74cf18a66e24d3834dbaf852a5d8d3a32486127"
+        }
+      ],
+      "expectedReviewDecision": "reject_unsupported",
+      "expectedReviewReason": "Rendered text dùng tiêu chí tuổi ngày đặt trái verified source; đây là lỗi stale wording được tiêm thử, không phải policy revision có thật.",
+      "syntheticFaultInjected": true,
+      "controlType": "Human semantic review of a proposed claim/evidence/rendering, not a fabricated approved fact/catalog or a prediction of the runtime gate.",
+      "semanticApprovalGranted": false,
+      "revisionNote": "Stale wording is an injected proposal only; no historical source version or publication is invented."
+    }
+  ]
+}

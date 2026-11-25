@@ -1,0 +1,38 @@
+{
+  "result": "HISTORY_INTEGRITY_PASS",
+  "historicalFiles": 27,
+  "failures": [],
+  "versions": [
+    {
+      "path": "ai-service/tests/evaluation/policy-gold-2026-11-22-v1",
+      "savedReportSha256": "51c41f04ef28bbfb00f8c1be6119e0fa59a6d2078431aa422e4ed2a1ea02ada8",
+      "savedResult": "STATIC_PASS",
+      "originalValidatorRerun": "NOT_RUN_MISSING_HISTORICAL_INPUTS"
+    },
+    {
+      "path": "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-f1-f4-resolution",
+      "savedReportSha256": "9b2c0c3ea343982ef76c310d9cd83e5369266a1ca97a3e86f6a7f670844fc529",
+      "savedResult": "STATIC_PASS",
+      "originalValidatorRerun": "NOT_RUN_MISSING_HISTORICAL_INPUTS"
+    },
+    {
+      "path": "ai-service/tests/evaluation/policy-gold-2026-11-22-v1/history/2026-11-23-before-review-update",
+      "savedReportSha256": "d23a14f0a6f486c13bab775bd9f32e66a433d796b1ca0bf56ea140ca0b8ec7d4",
+      "savedResult": "STATIC_PASS",
+      "originalValidatorRerun": "NOT_RUN_MISSING_HISTORICAL_INPUTS"
+    }
+  ],
+  "exactHistoricalSourcesRecovered": {
+    "ai-service/app/ingestion/snapshot.py": {
+      "path": "historical-reference-files/ai-service/app/ingestion/snapshot.py",
+      "sha256": "f466ed882cb98eb068d88ffcd31fc5f12e6ec9bf1a5d037032b8113f6cd22d1c",
+      "gitCommit": "318a1ddf339120da38074cd95265d6c527aa2cb2"
+    }
+  },
+  "missingOriginalReferenceBytes": [
+    "ai-service/docs/PROCESS.md",
+    "ai-service/app/ingestion/documents.py"
+  ],
+  "originalBaselineReplay": "UNAVAILABLE_MISSING_HISTORICAL_INPUTS",
+  "note": "Saved results and checksum integrity are not a rerun of historical STATIC_PASS."
+}

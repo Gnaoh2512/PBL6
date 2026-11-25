@@ -1,0 +1,6774 @@
+{
+  "format": "pbl6-static-preparation-report-v1",
+  "asOfDate": "2026-11-22",
+  "result": "STATIC_PASS",
+  "checks": 1305,
+  "failures": [],
+  "counts": {
+    "gold": 80,
+    "A": 48,
+    "U": 24,
+    "O": 8,
+    "controls": 20,
+    "families": 33,
+    "sourceUnits": 38,
+    "sourceParagraphs": 176,
+    "referencedUnits": 38,
+    "proposedMeaningSegments": 72,
+    "calculationCases": 17
+  },
+  "splitCounts": {
+    "dev": 40,
+    "held_out": 40
+  },
+  "characterRange": [
+    923,
+    1822
+  ],
+  "nearDuplicateCandidates": [],
+  "nearDuplicateThreshold": 0.55,
+  "gitState": {
+    "branch": "chore/sync-origin-main-d120",
+    "head": "c0312670032147c9f41ed0dc6d3ebfaa3e8270ef",
+    "merge_head": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+    "cached_sha256": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+    "index_sha256": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+    "staged": 261,
+    "unmerged": 0
+  },
+  "semanticSupport": "NOT_VERIFIED_BY_STATIC_CHECKS",
+  "independentHumanReview": "PENDING",
+  "heldOutBlindness": "NOT_ESTABLISHED",
+  "runtimeBinding": "NOT_RUN",
+  "modelEvaluation": "NOT_RUN",
+  "D1Acceptance": "OPEN",
+  "details": [
+    {
+      "check": "reference hash: ai-service/knowledge/policies/academic-demo-hotel-policies.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "reference hash: ai-service/knowledge/policies/publication-draft-review.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "reference hash: ai-service/docs/EVALUATION.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "reference hash: ai-service/docs/PROCESS.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "reference hash: ai-service/docs/architecture.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "reference hash: ai-service/app/ingestion/snapshot.py",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "reference hash: ai-service/app/ingestion/documents.py",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact hash: gold.json",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact hash: review-controls.json",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact hash: README.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact hash: validate.py",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-01-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-01-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-01-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-01-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-01-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-01-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-01-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-01-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-01-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-01-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-01-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-01-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-01-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-01-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-01-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-01-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-01-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-01-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-01-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-01-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U05-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U05-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U05-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-01-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-01-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-01-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-01-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U06-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U06-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U06-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U06-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U06-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U06-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U06-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U06-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U06-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U06-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U06-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U06-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-01-U06-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-01-U06-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-01-U06-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-02-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-02-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-02-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-02-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-02-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-02-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-02-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-02-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-02-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-02-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-02-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-02-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-02-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-02-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-02-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-02-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-02-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-02-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-02-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-03-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-03-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-03-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-03-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-03-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-03-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-03-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-03-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-03-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-03-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-03-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-03-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-03-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-03-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-03-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-03-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-03-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-03-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-03-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-03-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-03-U05-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-03-U05-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-03-U05-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-04-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-04-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-04-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-04-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-04-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-04-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-04-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-04-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-04-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-04-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-04-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-04-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-04-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-04-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-04-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-05-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-05-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-05-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-05-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U01-R6",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U01-R6",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U01-R6",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-05-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-05-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-05-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-05-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-05-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-05-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-05-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-05-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-05-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-05-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-05-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-05-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-05-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-05-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-05-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-05-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U05-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U05-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U05-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U05-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-05-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-05-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-05-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-05-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U06-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U06-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U06-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U06-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U06-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U06-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U06-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U06-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U06-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U06-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U06-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U06-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-05-U06-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-05-U06-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-05-U06-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-06-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-06-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-06-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-06-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-06-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-06-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-06-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-06-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-06-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-06-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-06-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-07-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-07-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-07-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-07-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-07-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-07-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-07-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-07-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-07-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-07-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-07-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-08-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-08-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-08-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-08-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U01-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-08-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-08-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-08-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-08-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-08-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-08-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-08-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-08-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-08-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-08-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-08-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-09-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-09-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-09-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-09-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-09-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-09-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-09-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-09-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-09-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-09-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-09-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-09-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-09-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-09-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-09-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-10-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-10-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-10-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-10-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U01-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U01-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U01-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U01-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-10-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-10-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-10-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-10-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U02-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U02-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U02-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U02-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U02-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-10-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-10-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-10-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-10-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U03-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U03-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U03-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U03-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U03-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source/unit identity: POL-10-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "character contract: POL-10-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "review counts/version: POL-10-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "local IDs are not runtime citations: POL-10-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U04-R1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U04-R2",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U04-R3",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U04-R4",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "paragraph anchor: POL-10-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original ranges: POL-10-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "trace row exists: POL-10-U04-R5",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "38 publication bodies unchanged",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original current SHA pinned",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original metadata reversal present: effective_from: null",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original metadata reversal present: chưa chốt ngày hiệu lực và không áp dụng hồi tố",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original metadata reversal present: chưa có ngày hiệu lực, ingestion, approved fact catalog hoặc nghiệm thu D1.",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original metadata reversal present: file vẫn ngoài allowlist, chưa có ngày hiệu lực.",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "original business text preserved",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/academic-demo-hotel-policies.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-01-booking.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-02-check-in-out.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-03-deposit-payment.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-04-cancellation.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-05-refund.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-06-children-guests.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-07-pets.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-08-services.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-09-complaints.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "approved effective metadata: ai-service/knowledge/policies/publication-draft/pol-10-privacy.md",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "version/provenance: POL-10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "11 effective documents",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "policy remains outside all ingestion allowlists",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "80 cases",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "48 A / 24 U / 8 O",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "family IDs disjoint between splits",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "40 split cases: dev",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "24/12/4 per split: dev",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "A strata: dev",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "U strata: dev",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "40 split cases: held_out",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "24/12/4 per split: held_out",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "A strata: held_out",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "U strata: held_out",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case IDs unique",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "query exact unique",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "query normalized unique",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A11",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "available": 210000,
+          "additional": 45000
+        },
+        "expected": {
+          "available": 210000,
+          "additional": 45000
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A12",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "required": 255000,
+          "additional": 0,
+          "excess": 255000
+        },
+        "expected": {
+          "required": 255000,
+          "additional": 0,
+          "excess": 255000
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A13",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "required": 765000,
+          "additional": 255000,
+          "excess": 0
+        },
+        "expected": {
+          "required": 765000,
+          "additional": 255000,
+          "excess": 0
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A14",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "deposit": 492000
+        },
+        "expected": {
+          "deposit": 492000
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A15",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "tax": 206000,
+          "bill": 2166000,
+          "deposit": 480000,
+          "balance": 1686000
+        },
+        "expected": {
+          "tax": 206000,
+          "bill": 2166000,
+          "deposit": 480000,
+          "balance": 1686000
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A18",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "age": 18
+        },
+        "expected": {
+          "age": 18
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A19",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "age": 17
+        },
+        "expected": {
+          "age": 17
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A20",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "beforeTax": 240000,
+          "tax": 24000,
+          "total": 264000
+        },
+        "expected": {
+          "beforeTax": 240000,
+          "tax": 24000,
+          "total": 264000
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A22",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "expiry": "2026-12-15T10:00:00+07:00"
+        },
+        "expected": {
+          "expiry": "2026-12-15T10:00:00+07:00"
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: D-A23",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "restoreExpiry": "2026-12-15T10:00:00+07:00",
+          "backupLastDate": "2027-01-09"
+        },
+        "expected": {
+          "restoreExpiry": "2026-12-15T10:00:00+07:00",
+          "backupLastDate": "2027-01-09"
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: D-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: D-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: D-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: D-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: D-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: D-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A01",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "fees": [
+            425000,
+            255000
+          ]
+        },
+        "expected": {
+          "fees": [
+            425000,
+            255000
+          ]
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A02",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "fees": [
+            255000,
+            425000
+          ]
+        },
+        "expected": {
+          "fees": [
+            255000,
+            425000
+          ]
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A05",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "eligible": 280500
+        },
+        "expected": {
+          "eligible": 280500
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A09",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "effectiveDeposit": 600000,
+          "H": 300000,
+          "F": 300000,
+          "room": 1900000
+        },
+        "expected": {
+          "effectiveDeposit": 600000,
+          "H": 300000,
+          "F": 300000,
+          "room": 1900000
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A10",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "effectiveDeposit": 510000,
+          "H": 255000,
+          "F": 255000,
+          "room": 345000,
+          "T": 824500,
+          "newInstruction": 524500
+        },
+        "expected": {
+          "effectiveDeposit": 510000,
+          "H": 255000,
+          "F": 255000,
+          "room": 345000,
+          "T": 824500,
+          "newInstruction": 524500
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A13",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A14",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A15",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A15",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "newInstruction": 0
+        },
+        "expected": {
+          "newInstruction": 0
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A16",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A17",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A18",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A19",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A20",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A21",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "arithmetic/date: H-A21",
+      "result": "PASS",
+      "details": {
+        "computed": {
+          "lastDate": "2026-12-23"
+        },
+        "expected": {
+          "lastDate": "2026-12-23"
+        }
+      }
+    },
+    {
+      "check": "pending/unscorable case: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A22",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A23",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "answer contract: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "citation-unit bound: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "meaning proposed binding: H-A24",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-O01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-O02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-O03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-O04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U11",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "pending/unscorable case: H-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case as-of: H-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "case evidence resolvable: H-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "source versions match evidence: H-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "abstention contract: H-U12",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "all 38 units referenced as answer or boundary context",
+      "result": "PASS",
+      "details": {
+        "used": 38
+      }
+    },
+    {
+      "check": "20 separate controls / 10 pairs",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control IDs unique",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C01",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C02",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C03",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C04",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C05",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C06",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C07",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C08",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C09",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pair decisions: C10",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C01-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C01-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C01-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C01-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C02-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C02-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C02-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C02-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C03-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C03-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C03-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C03-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C04-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C04-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C04-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C04-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C05-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C05-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C05-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C05-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C06-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C06-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C06-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C06-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C07-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C07-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C07-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C07-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C08-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C08-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C08-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C08-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C09-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C09-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C09-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C09-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C10-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C10-P",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control pending and separate: C10-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "control evidence exists: C10-N",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact not approved: policy-gold-2026-11-22-v1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact not approved: policy-review-controls-2026-11-22-v1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "artifact not approved: policy-gold-2026-11-22-v1",
+      "result": "PASS",
+      "details": null
+    },
+    {
+      "check": "Git identity/staging/merge preserved",
+      "result": "PASS",
+      "details": {
+        "branch": "chore/sync-origin-main-d120",
+        "head": "c0312670032147c9f41ed0dc6d3ebfaa3e8270ef",
+        "merge_head": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+        "cached_sha256": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+        "index_sha256": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+        "staged": 261,
+        "unmerged": 0
+      }
+    }
+  ],
+  "preservationAudit": {
+    "result": "PASS",
+    "protectedPathCount": 676,
+    "protectedFilesystemBefore": "f889ef2b3c50dd3da7b0ae150c872154cd92617bec774d07782aacebe833fc0b",
+    "protectedFilesystemAfter": "f889ef2b3c50dd3da7b0ae150c872154cd92617bec774d07782aacebe833fc0b",
+    "indexBefore": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+    "indexAfter": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+    "cachedDiffBefore": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+    "cachedDiffAfter": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+    "stagedBefore": 261,
+    "stagedAfter": 261,
+    "deletedBefore": 59,
+    "deletedAfter": 59,
+    "mergeHeadBefore": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+    "mergeHeadAfter": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+    "scope": "12 authorized policy/trace metadata files and this new evaluation directory excluded; all other repository paths, env sentinels, SQL files and historical artifacts unchanged.",
+    "statusNote": "Overall status hash changes because this task added a new evaluation directory; staging and protected file bytes do not change.",
+    "yamlDateContract": {
+      "checkedWith": "Existing PyYAML 6.0.3 safe_load, no application imports",
+      "effectiveFromDateTypedDocuments": 11,
+      "result": "PASS"
+    }
+  }
+}

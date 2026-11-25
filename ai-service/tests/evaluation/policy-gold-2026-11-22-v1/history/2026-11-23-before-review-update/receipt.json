@@ -1,0 +1,25 @@
+{
+  "kind": "immutable-pre-review-artifact-copy",
+  "capturedOn": "2026-11-23",
+  "files": {
+    "gold.json": "ac6a4bec1b95bc32c9da46ab23906d7d4ac2267f6574266967290fb101e0922d",
+    "manifest.json": "fdfc6202505ff2e2a43d6f97796a20399ba5bebb5e473fdc418b0d3abb4cbf29",
+    "README.md": "275af0d4a08800d5c28a80dafa5a4de61459cc82541449998b5e7bcd65a22fa5",
+    "review-controls.json": "31f34ad68b198e85b292db34798121e8097d434ad64257cd3005bc19e6f22f1f",
+    "validate.py": "219f1c19d05f558978a91676af203d8d82301fb888615396044a3c5cf4a16c78",
+    "validation.json": "d23a14f0a6f486c13bab775bd9f32e66a433d796b1ca0bf56ea140ca0b8ec7d4"
+  },
+  "gitState": {
+    "branch": "chore/sync-origin-main-d120",
+    "head": "c0312670032147c9f41ed0dc6d3ebfaa3e8270ef",
+    "merge_head": "9d6b581f1eb9225a17f9d1a1051a6efaf8c4e654",
+    "staged": 261,
+    "unmerged": 0,
+    "deleted": 59,
+    "index_sha256": "b25e3c62418d6acc538abfa12725e51298084a1064a891fc5f40d294c571098b",
+    "cached_sha256": "095d4d2f51ef2528805f2f06288723395bc53da1eb53e431a70471daa299fcbb",
+    "protected_paths": 683,
+    "protected_sha256": "b8a85414d10eb310b6ebd3ada49be7ad7721b577ae5a28bef1e1914eb83b0819"
+  },
+  "note": "Original files retained byte-for-byte, including historical validation.json. Archived validator is provenance only; its original relative paths are not runnable from this archive folder."
+}
