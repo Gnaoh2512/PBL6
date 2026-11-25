@@ -14,12 +14,15 @@ from app.schemas.turn import ResumeTurn
 from app.tools.schemas import TurnPlan
 
 _D2_BUSINESS_TOOLS = frozenset({"search_rooms", "list_services"})
+_PHONE_RE = re.compile(
+    r"(?<!\w)(?!\d{4}-\d{2}-\d{2}(?!\w))(?!\d{2}-\d{2}-\d{4}(?!\w))\+?\d[\d ()-]{8,}\d(?!\w)"
+)
 
 
 def public_text(text: str) -> str:
     text = re.sub(r"(?i)bearer\s+\S+|[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}", "[credential]", text)
     text = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[contact]", text)
-    return re.sub(r"(?<!\w)\+?\d[\d ()-]{8,}\d(?!\w)", "[contact]", text)
+    return _PHONE_RE.sub("[contact]", text)
 
 
 class Faq:

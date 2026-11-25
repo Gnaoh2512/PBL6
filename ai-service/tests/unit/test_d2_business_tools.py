@@ -198,3 +198,18 @@ def test_validate_service_list_plan_and_vnd_formatting():
     ) == {"limit": 5}
     assert format_vnd("1500000") == "1.500.000 VND"
     assert format_vnd("200000.50") == "200.000,5 VND"
+
+
+def test_public_text_preserves_dates_while_redacting_contacts_and_tokens():
+    from app.orchestration.faq import public_text
+
+    cleaned = public_text(
+        "Tìm phòng từ 2026-12-01 đến 03-12-2026, liên hệ +84901234567, 090-123-4567, "
+        "guest@example.invalid, Bearer secret-token-123"
+    )
+    assert "2026-12-01" in cleaned
+    assert "03-12-2026" in cleaned
+    assert "84901234567" not in cleaned
+    assert "090-123-4567" not in cleaned
+    assert "example.invalid" not in cleaned
+    assert "secret-token-123" not in cleaned
