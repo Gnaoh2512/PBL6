@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
 public class AssistantConfig {
     public final boolean enabled;
     public final boolean businessToolsEnabled;
+    public final boolean bookingToolsEnabled;
     public final String mode;
     public final String serviceToken;
     public final URI endpoint;
@@ -21,18 +22,23 @@ public class AssistantConfig {
     public final boolean secureCookie;
 
     public AssistantConfig(boolean enabled, String mode, String token, String url, String origins, Environment environment) {
-        this(enabled, true, mode, token, url, origins, environment);
+        this(enabled, true, true, mode, token, url, origins, environment);
+    }
+
+    public AssistantConfig(boolean enabled, boolean businessToolsEnabled, String mode, String token, String url, String origins, Environment environment) {
+        this(enabled, businessToolsEnabled, true, mode, token, url, origins, environment);
     }
 
     @Autowired
     public AssistantConfig(@Value("${assistant.enabled:false}") boolean enabled,
             @Value("${assistant.business-tools-enabled:true}") boolean businessToolsEnabled,
+            @Value("${assistant.booking-tools-enabled:true}") boolean bookingToolsEnabled,
             @Value("${assistant.corpus-mode:production}") String mode,
             @Value("${assistant.service-token:}") String token,
             @Value("${assistant.url:http://127.0.0.1:8006}") String url,
             @Value("${assistant.origins:http://localhost:3000,http://127.0.0.1:3000,http://localhost:9090,http://127.0.0.1:9090}") String origins,
             Environment environment) {
-        this.enabled = enabled; this.businessToolsEnabled = businessToolsEnabled; this.mode = mode; this.serviceToken = token;
+        this.enabled = enabled; this.businessToolsEnabled = businessToolsEnabled; this.bookingToolsEnabled = bookingToolsEnabled; this.mode = mode; this.serviceToken = token;
         boolean local = environment.acceptsProfiles(Profiles.of("local"));
         this.secureCookie = !local;
         this.endpoint = URI.create(url + "/internal/assistant/turn");

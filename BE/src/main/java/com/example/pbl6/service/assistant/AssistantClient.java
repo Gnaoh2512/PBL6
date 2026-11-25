@@ -29,7 +29,8 @@ public class AssistantClient {
     );
     private static final Set<String> ACTION_TYPES = Set.of("open_login", "open_room_search", "open_services");
     private static final Set<String> FINAL_STATUSES = Set.of(
-            "answered", "needs_clarification", "no_results", "insufficient_evidence", "capability_unavailable"
+            "answered", "needs_clarification", "no_results", "requires_login",
+            "insufficient_evidence", "capability_unavailable"
     );
 
     private final AssistantConfig config;
