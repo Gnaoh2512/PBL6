@@ -28,6 +28,7 @@ class TurnBudget:
     output_used: int = 0
     calls: int = 0
     started: float = field(default_factory=monotonic)
+    per_call_input_limit: int | None = None
 
     def seconds(self) -> float:
         remaining = self.remaining_ms / 1000 - (monotonic() - self.started)
@@ -44,6 +45,7 @@ class TurnBudget:
             or input_tokens < 0
             or self.input_used + input_tokens > self.input_limit
             or self.output_used >= self.output_limit
+            or (self.per_call_input_limit is not None and input_tokens > self.per_call_input_limit)
         ):
             raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
 
@@ -53,7 +55,11 @@ class TurnBudget:
         self.calls += 1
         self.input_used += input_tokens
         self.output_used += output_tokens
-        if self.input_used > self.input_limit or self.output_used > self.output_limit:
+        if (
+            self.input_used > self.input_limit
+            or self.output_used > self.output_limit
+            or (self.per_call_input_limit is not None and input_tokens > self.per_call_input_limit)
+        ):
             raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
 
 

@@ -8,13 +8,22 @@ from datetime import date
 from pathlib import Path
 
 from app.diagnostics import Category, Operation, Phase, step
-from app.ingestion.snapshot import ALGORITHM, ROOT, SOURCES, digest, document, normalize
+from app.ingestion.snapshot import ALGORITHM, ROOT, digest, document, normalize, sources_for
 from app.providers.contracts import DependencyError, Evidence
 
 
 class KnowledgeIndex:
-    def __init__(self, path: Path, mode: str, today: date, root: Path = ROOT):
+    def __init__(
+        self,
+        path: Path,
+        mode: str,
+        today: date,
+        root: Path = ROOT,
+        *,
+        source_pack: str = "d1_fixture",
+    ):
         self.path, self.mode, self.root = path.resolve(), mode, root.resolve()
+        self.source_pack = source_pack
         self.snapshot_id = self.path.name
         self.validate(today)
 
@@ -24,12 +33,9 @@ class KnowledgeIndex:
 
     def _validate(self, today):
         try:
+            allowed = sources_for(self.mode, self.source_pack)
             expected = (self.root / ".local/assistant-index" / self.mode).resolve()
-            if (
-                self.mode not in SOURCES
-                or self.path.parent != expected
-                or not re.fullmatch(r"[a-f0-9]{64}", self.snapshot_id)
-            ):
+            if self.path.parent != expected or not re.fullmatch(r"[a-f0-9]{64}", self.snapshot_id):
                 raise ValueError()
             manifest = json.loads((self.path / "manifest.json").read_text(encoding="utf8"))
             identity = {
@@ -45,10 +51,13 @@ class KnowledgeIndex:
                 raise ValueError()
             if manifest["corpusMode"] != self.mode or manifest["snapshotId"] != self.snapshot_id:
                 raise ValueError()
-            if set(manifest["sources"]) != set(SOURCES[self.mode]):
+            if set(manifest["sources"]) != set(allowed):
                 raise ValueError()
             for name, sha in manifest["sources"].items():
-                if document(self.root, name, self.mode, today)[2] != sha:
+                if (
+                    document(self.root, name, self.mode, today, source_pack=self.source_pack)[2]
+                    != sha
+                ):
                     raise ValueError()
             if digest((self.path / "index.sqlite").read_bytes()) != manifest["databaseChecksum"]:
                 raise ValueError()

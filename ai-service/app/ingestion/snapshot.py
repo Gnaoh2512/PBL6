@@ -23,6 +23,34 @@ SOURCES = {
         "knowledge/services/usage-guide.md",
     ),
 }
+DEMO_SOURCE_PACKS = {
+    "academic_policies": (
+        "knowledge/policies/publication-draft/pol-01-booking.md",
+        "knowledge/policies/publication-draft/pol-02-check-in-out.md",
+        "knowledge/policies/publication-draft/pol-03-deposit-payment.md",
+        "knowledge/policies/publication-draft/pol-04-cancellation.md",
+        "knowledge/policies/publication-draft/pol-05-refund.md",
+        "knowledge/policies/publication-draft/pol-06-children-guests.md",
+        "knowledge/policies/publication-draft/pol-07-pets.md",
+        "knowledge/policies/publication-draft/pol-08-services.md",
+        "knowledge/policies/publication-draft/pol-09-complaints.md",
+        "knowledge/policies/publication-draft/pol-10-privacy.md",
+    ),
+}
+
+
+def sources_for(mode: str, source_pack: str = "d1_fixture") -> tuple[str, ...]:
+    if mode not in SOURCES:
+        raise ValueError("Invalid corpus mode")
+    if mode == "production":
+        if source_pack != "d1_fixture":
+            raise ValueError("Production mode does not accept demo source packs")
+        return SOURCES["production"]
+    if source_pack == "d1_fixture":
+        return SOURCES["demo_synthetic"]
+    if source_pack in DEMO_SOURCE_PACKS:
+        return DEMO_SOURCE_PACKS[source_pack]
+    raise ValueError("Invalid demo source pack")
 
 
 def digest(data: bytes) -> str:
@@ -40,8 +68,8 @@ def normalize(text: str) -> str:
     )
 
 
-def document(root: Path, name: str, mode: str, today: date):
-    if name not in SOURCES[mode]:
+def document(root: Path, name: str, mode: str, today: date, *, source_pack: str = "d1_fixture"):
+    if name not in sources_for(mode, source_pack):
         raise ValueError("Source is not allowlisted")
     path = (root / name).resolve()
     if not path.is_relative_to(root.resolve()) or path.is_symlink():
@@ -89,10 +117,11 @@ def document(root: Path, name: str, mode: str, today: date):
     return meta, chunks, digest(raw)
 
 
-def build(mode: str, today: date, root: Path = ROOT) -> Path:
-    if mode not in SOURCES:
-        raise ValueError("Invalid corpus mode")
-    documents = [(name, *document(root, name, mode, today)) for name in SOURCES[mode]]
+def build(mode: str, today: date, root: Path = ROOT, *, source_pack: str = "d1_fixture") -> Path:
+    allowed = sources_for(mode, source_pack)
+    documents = [
+        (name, *document(root, name, mode, today, source_pack=source_pack)) for name in allowed
+    ]
     manifest = {
         "format": 1,
         "corpusMode": mode,
@@ -108,7 +137,7 @@ def build(mode: str, today: date, root: Path = ROOT) -> Path:
     if target.exists():
         from app.retrieval.index import KnowledgeIndex
 
-        KnowledgeIndex(target, mode, today, root)
+        KnowledgeIndex(target, mode, today, root, source_pack=source_pack)
         return target
     with tempfile.TemporaryDirectory(prefix="building-", dir=parent) as directory:
         temporary = Path(directory)
@@ -147,5 +176,8 @@ def build(mode: str, today: date, root: Path = ROOT) -> Path:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=list(SOURCES), required=True)
+    parser.add_argument(
+        "--source-pack", choices=["d1_fixture", *DEMO_SOURCE_PACKS], default="d1_fixture"
+    )
     arguments = parser.parse_args()
-    print(build(arguments.mode, date.today()))
+    print(build(arguments.mode, date.today(), source_pack=arguments.source_pack))

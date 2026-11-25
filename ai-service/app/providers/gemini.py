@@ -11,18 +11,67 @@ from app.diagnostics import Category, Phase, category, context, step
 from app.providers.contracts import DependencyError, TurnBudget
 from app.providers.http_timing import HttpTiming
 
+_DROP_SCHEMA_KEYS = frozenset(
+    {"$defs", "title", "pattern", "minLength", "maxLength", "discriminator", "format"}
+)
+_ALLOWED_THINKING_LEVELS = frozenset({"MINIMAL", "LOW", "MEDIUM", "HIGH"})
+
+
+def _gemini_schema(node, *, defs=None, seen=(), root=True):
+    """Translate Pydantic JSON Schema into a flat Gemini responseJsonSchema subset.
+
+    Host-side Pydantic validation (`schema.model_validate_json`) still enforces every
+    regex, length, format, and discriminated-union constraint strictly.
+    """
+    if isinstance(node, list):
+        return [_gemini_schema(item, defs=defs, seen=seen, root=False) for item in node]
+    if not isinstance(node, dict):
+        return node
+    defs = node.get("$defs", defs) or {}
+    ref = node.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/$defs/"):
+        name = ref.removeprefix("#/$defs/")
+        if name in defs and name not in seen:
+            return _gemini_schema(defs[name], defs=defs, seen=(*seen, name), root=False)
+    out = {}
+    for key, value in node.items():
+        if key in _DROP_SCHEMA_KEYS and not (root and key == "title"):
+            continue
+        if key == "const":
+            out["enum"] = [value]
+        elif key == "oneOf":
+            out["anyOf"] = _gemini_schema(value, defs=defs, seen=seen, root=False)
+        else:
+            out[key] = _gemini_schema(value, defs=defs, seen=seen, root=False)
+    return out
+
 
 class Gemini:
-    def __init__(self, key: str, model: str, transport=None):
+    def __init__(
+        self,
+        key: str,
+        model: str,
+        transport=None,
+        *,
+        thinking_level: str | None = None,
+    ):
         if not key or not re.fullmatch(r"gemini-[a-z0-9.-]+", model) or "latest" in model:
             raise DependencyError("AI_NOT_CONFIGURED")
+        normalized_level = None
+        if thinking_level is not None:
+            candidate = thinking_level.strip().upper()
+            if candidate not in _ALLOWED_THINKING_LEVELS:
+                raise DependencyError("AI_NOT_CONFIGURED")
+            normalized_level = candidate
         self.model = model
+        self.thinking_level = normalized_level
         self.model_version = None
         self.client = httpx.AsyncClient(
             base_url="https://generativelanguage.googleapis.com/v1beta/",
             headers={"x-goog-api-key": key},
             transport=transport,
             follow_redirects=False,
+            trust_env=False,
             timeout=20,
             limits=httpx.Limits(max_connections=8),
         )
@@ -91,16 +140,19 @@ class Gemini:
 
     async def _generate(self, system, data, schema, budget):
         budget.reserve(0)
+        generation_config = {
+            "responseMimeType": "application/json",
+            "responseJsonSchema": _gemini_schema(schema.model_json_schema()),
+            "maxOutputTokens": budget.output_limit - budget.output_used,
+        }
+        if self.thinking_level is not None:
+            generation_config["thinkingConfig"] = {"thinkingLevel": self.thinking_level}
         body = {
             "systemInstruction": {"parts": [{"text": system}]},
             "contents": [
                 {"role": "user", "parts": [{"text": json.dumps(data, ensure_ascii=False)}]}
             ],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "responseJsonSchema": schema.model_json_schema(),
-                "maxOutputTokens": budget.output_limit - budget.output_used,
-            },
+            "generationConfig": generation_config,
         }
         count = await self._post(
             "countTokens",
