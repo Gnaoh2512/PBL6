@@ -1,0 +1,11 @@
+name: pbl6-rag-index
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.17.0@sha256:f1c7272cdac52b38c1a0e89313922d940ba50afd90d593a1605dbbc214e66ffb
+    ports:
+      - "127.0.0.1:${AI_QDRANT_PORT:-6333}:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    restart: unless-stopped
+volumes:
+  qdrant-data:

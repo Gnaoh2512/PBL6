@@ -3,8 +3,11 @@
 !.env.example
 
 .venv/
+.local/
 .local/assistant-index/
 .local/assistant-evaluation/
+.local/paired-index/
+.local/grounding/
 venv/
 
 __pycache__/
