@@ -120,13 +120,13 @@ Trong batch D1.9, 5 timeout ở classify/generateContent, 1 ở answer/generateC
 - [ ] Đánh giá E2E live (Gemini thật + Spring + MySQL + trình duyệt) và ký nghiệm thu D2 theo tiêu chí đầu ra.
 - [ ] Nếu cần, đánh giá ranker ưu tiên mềm sau lọc điều kiện cứng; đây là tùy chọn, không là điều kiện để FAQ/D2 chạy.
 
-## D3 — Booking cá nhân: chưa triển khai
+## D3 — Booking cá nhân: đã triển khai và kiểm chứng offline + live MySQL
 
-- [ ] Rà/sửa quan hệ account/customer và fallback email/SĐT trong `CustomerHistoryServiceImpl` trước mở tool.
-- [ ] Spring kiểm tra principal/ownership trước khi tạo DTO tối thiểu; không gửi JWT/PII thừa vào Python/model.
-- [ ] Ràng buộc tool call/result/continuation với phiên/account, TTL và cancellation.
-- [ ] Kiểm tra A không đọc booking B dù biết mã; guest/JWT hỏng bị chặn; logout/đổi account không tái dùng dữ liệu cũ.
-- [ ] Xác định trường dữ liệu và chính sách lưu giữ trước khi dùng booking thật; không index hoặc cache dùng chung dữ liệu cá nhân.
+- [x] Rà/sửa quan hệ `Account ↔ Customer` và xóa fallback `accountId` / `email` / `phone` chưa xác minh trong [CustomerHistoryServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/CustomerHistoryServiceImpl.java), [AuthServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/AuthServiceImpl.java), [CustomerBookingServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/CustomerBookingServiceImpl.java) và [DataInitializer.java](../../BE/src/main/java/com/example/pbl6/config/DataInitializer.java) trước khi mở tool.
+- [x] Spring kiểm tra principal `ROLE_CUSTOMER` + ownership FK `Customer.account.accountId == account.accountId` trước khi tạo DTO tối thiểu (`BookingItem`/`BookingDetail`), không gửi JWT/PII/QR/số phòng/note sang Python/model.
+- [x] Ràng buộc tool call/result/continuation với phiên/account, TTL và cancellation; lỗi sai chủ hoặc không tồn tại trả đồng nhất `NOT_FOUND` (chống existence oracle).
+- [x] Kiểm tra offline & live MySQL: A không đọc được booking B dù biết mã/trùng `accountId`/trùng email-SĐT; guest nhận `requires_login` + `open_login`, JWT hỏng bị 401; logout/đổi account xóa sạch hội thoại riêng và không lưu booking vào storage trình duyệt.
+- [ ] Ký nghiệm thu D3 và chạy kiểm thử cách ly tải lớn / nhiều tài khoản khách hàng song song trước production.
 
 ## D4 — Câu hỏi kết hợp và nghiệm thu mở rộng: chưa triển khai
 
@@ -1559,3 +1559,30 @@ Thực hiện trên nhánh mới `feat/ai-d2-business-tools` (tách từ `feat/a
     2. **Hết phòng / không khớp bộ lọc trên MySQL** (`"Tìm phòng trống cho 10 khách từ 2026-12-10 đến 2026-12-12"`): **PASS (ở lần gửi lại)** — `start 2.023 ms` + `resume 0,138 ms`, `status="no_results"`, `0` cards, thông báo trung thực không tự nới `guestCount`, kèm nút `/booking`.
     3. **Tra cứu dịch vụ trên MySQL** (`"Khách sạn có những dịch vụ nào và giá bao nhiêu?"`): **PASS** — `start 5.215 ms` + `resume 0,393 ms`, `status="answered"`, trả đúng **3 thẻ dịch vụ** từ bảng `service` (`Nước khoáng Lavie 500ml` 15.000 VND/Chai, `Bữa sáng Buffet` 120.000 VND/Suất, `Giặt ủi quần áo nhanh` 50.000 VND/Kg), không phát `/services` cho khách ẩn danh.
     4. **FAQ D1 + bấm nút `Chọn phòng` chuyển sang `/booking`**: **PASS** — FAQ hủy phòng `4.754 ms` trả đủ 3 bậc + citation `POL-04-U01 · v0.1.1`; bấm `Chọn phòng` điều hướng đúng tới `/booking?roomId=3&checkIn=2026-12-10&checkOut=2026-12-12`, form đặt phòng tự điền khớp 100% (`10/12/2026` – `12/12/2026`, `2 khách`, `Phòng 201 · Phòng Deluxe Hướng Biển`, `850.000 đ/đêm`, `2 đêm`, tổng phòng `1.700.000 đ`, cọc 30% `510.000 đ`).
+
+
+### 15. Kiểm toán ownership (`R4`) và triển khai D3 — Personal Booking Tools (`list_my_bookings`, `get_my_booking`) — 2026-11-25
+
+Thực hiện trên nhánh mới `feat/ai-d3-personal-bookings` (tách từ `feat/ai-d2-business-tools@8317d6d`, giữ nguyên 7 file ngoài phạm vi chưa commit; không cài thêm dependency/dịch vụ mới).
+
+- **Các lỗ hổng ownership phát hiện & đã vá triệt để (D3.1)**:
+  - [CustomerHistoryServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/CustomerHistoryServiceImpl.java): xóa bỏ fallback `return account.getAccountId()` (IDOR nghiêm trọng) và fallback `email`/`phone` chưa xác minh; ownership gắn duy nhất FK `Customer.account.accountId == account.accountId`; thống nhất ném `ResourceNotFoundException` cho cả đơn không tồn tại lẫn đơn của người khác (xóa existence oracle).
+  - [CustomerBookingController.java](../../BE/src/main/java/com/example/pbl6/controller/CustomerBookingController.java): khóa `@PreAuthorize("hasRole('CUSTOMER')")`.
+  - [AuthServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/AuthServiceImpl.java): khóa tự đăng ký công khai ở `ROLE_CUSTOMER` và luôn tạo bản ghi `Customer` mới gắn riêng với `Account` vừa đăng ký (chặn chiếm hồ sơ khách cũ qua email chưa xác minh).
+  - [CustomerBookingServiceImpl.java](../../BE/src/main/java/com/example/pbl6/service/CustomerBookingServiceImpl.java) & [DataInitializer.java](../../BE/src/main/java/com/example/pbl6/config/DataInitializer.java): khi khách `ROLE_CUSTOMER` đặt phòng, gắn booking vào `Customer` theo FK `account_id`; bổ sung `ensureCustomerAccountLinks()` idempotent liên kết tài khoản demo `customer1` (`accountId=6 → customerId=1`).
+- **Triển khai D3.2 – D3.4**:
+  - **BE**: [AssistantConfig.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantConfig.java), [AssistantClient.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantClient.java) (thêm status `requires_login`), [AssistantToolBroker.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantToolBroker.java) (`list_my_bookings`, `get_my_booking` với `includeFinancials`, loại sạch PII/số phòng/QR/note, trả `NOT_FOUND` đồng nhất), [AssistantOrchestrator.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantOrchestrator.java) (chỉ cấp booking tools cho principal `ROLE_CUSTOMER`), [AssistantController.java](../../BE/src/main/java/com/example/pbl6/controller/assistant/AssistantController.java) & [AssistantD3BookingBrokerTest.java](../../BE/src/test/java/com/example/pbl6/service/assistant/AssistantD3BookingBrokerTest.java).
+  - **AI Service**: [schemas.py](../app/tools/schemas.py), [tools.py (prompt)](../app/prompts/tools.py) (`d3-plan-1`), [tools.py (orchestration)](../app/orchestration/tools.py), [faq.py](../app/orchestration/faq.py) & [test_d3_booking_tools.py](../tests/integration/test_d3_booking_tools.py) — trả `requires_login` + `open_login` khi guest hỏi booking cá nhân (không xin SĐT/email), deterministic renderer cho `BookingList`/`BookingDetail` (0 lượt LLM thêm).
+  - **FE**: [AssistantWidget.jsx](../../FE/src/components/assistant/AssistantWidget.jsx), [AssistantWidget.css](../../FE/src/components/assistant/AssistantWidget.css) & [AssistantWidget.test.jsx](../../FE/src/components/assistant/AssistantWidget.test.jsx) — bật gợi ý `Booking của tôi`, xử lý `requires_login`, render thẻ `booking` kèm nhãn trạng thái và nhóm tiền (khi có), không lưu vào `localStorage`/`sessionStorage`, xóa trắng khi đăng nhập/đăng xuất/đổi tài khoản.
+- **Bằng chứng kiểm chứng tự động (offline/mock, 2026-11-25)**:
+  - **BE (Maven Surefire)**: `.\mvnw.cmd test` → **`32 passed, 0 failed, 0 skipped`** (`CustomerHistoryServiceTest` 6, `AssistantD3BookingBrokerTest` 5, `AssistantToolBrokerTest` 8, `AssistantOrchestratorTest` 5, `AssistantControllerTest` 3, `AssistantSessionsTest` 3, `AssistantClientTest` 2).
+  - **AI Service (Python)**: `ruff check app tests/unit tests/integration` & `ruff format --check app tests/unit tests/integration` (**107 file**) → **PASS**; targeted D1/D2/D3 suite → **`55 passed, 0 failed`**.
+  - **FE (Vitest + oxlint)**: `oxlint` **0 warnings, 0 errors**; `npm test` → **`11 passed, 0 failed`** (`AssistantWidget.test.jsx` 9, `api.test.js` 2).
+- **Bằng chứng smoke E2E live trên MySQL thật (`hotel_management`, Spring `:9090` → FastAPI `:8006` override phiên bằng `gemini-2.5-flash` do `gemini-3.6-flash` hết RPD Free Tier trong ngày → React `:3000`, 2026-11-25)**:
+  - **Scenario 1 (Guest ẩn danh bấm `Booking của tôi`)**: **PASS** — HTTP 200 (`1.911 ms`), `status="requires_login"`, 0 cards, hiện nút `Đăng nhập tài khoản` → `/login`, không yêu cầu nhập SĐT/email.
+  - **Scenario 2 (`customer1` / `123456`, FK `accountId=6 → customerId=1`)**:
+    - Sau đăng nhập, lịch sử khách cũ được xóa sạch (`0` tin cũ).
+    - `list_my_bookings` (`"Xem danh sách đơn đặt phòng của tôi"`): **PASS** — HTTP 200 (`start 1.722 ms` + `resume 0,055 ms`), `status="answered"`, trả đúng **1 thẻ booking** `BK-CUSTOMER1-DEMO` (`Đang lưu trú`, `Phòng Standard`, `2026-11-10 → 2026-11-13 · 3 đêm · 2 khách`, `Cập nhật: 2026-11-25 21:13:16 (GMT+7)`), không lộ `roomNumber`/SĐT/email/note.
+    - `get_my_booking` kèm tài chính (`"Đơn BK-CUSTOMER1-DEMO tổng tiền và còn phải trả bao nhiêu?"`): **PASS** — HTTP 200 (`start 1.912 ms` + `resume 0,113 ms`), `status="answered"`, trả thẻ booking kèm `Tổng: 1.650.000 VND · Đã cọc: 0 VND · Còn lại: 1.650.000 VND`, không lộ PII/số phòng.
+    - Mã lạ/không thuộc tài khoản (`"Kiểm tra giúp tôi đơn BK-KHONG-TON-TAI-999"`): **PASS** — HTTP 200 (`start 1.867 ms` + `resume 0,035 ms`), `status="no_results"`, `0` cards.
+  - **Scenario 3 (Đăng xuất)**: **PASS** — Bấm `Đăng xuất` → toast `"Bạn đã đăng xuất."`, mở lại widget thấy `0` tin nhắn riêng (xóa sạch `BK-CUSTOMER1-DEMO`), kiểm tra tĩnh `AssistantWidget.jsx` xác nhận không dùng `localStorage`/`sessionStorage`.

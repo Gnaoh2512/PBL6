@@ -6,6 +6,7 @@ import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
 import com.example.pbl6.service.CustomerHistoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/customer/bookings")
+@PreAuthorize("hasRole('CUSTOMER')")
 @RequiredArgsConstructor
 public class CustomerBookingController {
 

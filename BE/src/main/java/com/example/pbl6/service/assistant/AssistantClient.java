@@ -29,7 +29,8 @@ public class AssistantClient {
     );
     private static final Set<String> ACTION_TYPES = Set.of("open_login", "open_room_search", "open_services");
     private static final Set<String> FINAL_STATUSES = Set.of(
-            "answered", "needs_clarification", "no_results", "insufficient_evidence", "capability_unavailable"
+            "answered", "needs_clarification", "no_results", "requires_login",
+            "insufficient_evidence", "capability_unavailable"
     );
 
     private final AssistantConfig config;
@@ -68,7 +69,7 @@ public class AssistantClient {
      * Backward-compatible D1 single-step turn call expecting kind=final.
      */
     public Map<String, Object> turn(Map<String, Object> payload, String requestId) {
-        TurnStep step = exchange(payload, requestId, Set.of("search_knowledge"), 1, 0, false, false, new HashMap<>());
+        TurnStep step = exchange(payload, requestId, Set.of("search_knowledge"), 1, 0, false, false, false, new HashMap<>());
         require(step.isFinal());
         return step.finalData();
     }
@@ -79,6 +80,7 @@ public class AssistantClient {
             Set<String> allowedTools,
             int remainingToolCalls,
             int remainingBrokerBatches,
+            boolean d2Enabled,
             boolean allowToolCalls,
             boolean hasBusinessLedger,
             Map<String, JsonNode> evidenceRegistry
@@ -127,7 +129,7 @@ public class AssistantClient {
                 require(root.path("continuationId").isNull());
                 empty(root.path("toolCalls"));
                 parseEvidence(root.path("evidence"), evidenceRegistry);
-                Map<String, Object> finalData = parseFinal(root.path("final"), evidenceRegistry, hasBusinessLedger, allowToolCalls);
+                Map<String, Object> finalData = parseFinal(root.path("final"), evidenceRegistry, hasBusinessLedger, d2Enabled);
                 return new TurnStep("final", null, List.of(), finalData, usage);
             }
 

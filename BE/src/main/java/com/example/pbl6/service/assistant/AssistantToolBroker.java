@@ -1,10 +1,14 @@
 package com.example.pbl6.service.assistant;
 
+import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
+import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
 import com.example.pbl6.dto.room.AvailableRoomResponse;
 import com.example.pbl6.dto.room.RoomSearchRequest;
 import com.example.pbl6.dto.room.RoomTypeResponse;
 import com.example.pbl6.dto.service.ServiceResponse;
+import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.service.CustomerBillingService;
+import com.example.pbl6.service.CustomerHistoryService;
 import com.example.pbl6.service.RoomCatalogService;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,37 +27,66 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * In-process broker for D2 public read-only business tools.
- * Enforces allowlist, strict argument schema, null-price rejection, field stripping,
- * deterministic ordering, and ledger card assembly.
+ * In-process broker for D2 public read-only business tools and D3 principal-bound booking tools.
+ * Enforces allowlist, strict principal ownership (never trusts model/client identity),
+ * strict argument schema, null-price rejection, PII/field stripping, deterministic ordering,
+ * and authoritative Turn Ledger card assembly.
  */
 @Component
 public class AssistantToolBroker {
     public static final ZoneId HOTEL_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    public static final Set<String> SUPPORTED_BUSINESS_TOOLS = Set.of("search_rooms", "list_services");
+    public static final Set<String> BOOKING_TOOLS = Set.of("list_my_bookings", "get_my_booking");
+    public static final Set<String> SUPPORTED_BUSINESS_TOOLS = Set.of(
+            "search_rooms", "list_services", "list_my_bookings", "get_my_booking"
+    );
 
     private static final int DEFAULT_LIMIT = 5;
     private static final int MAX_LIMIT = 10;
     private static final int MAX_TEXT_LENGTH = 2000;
     private static final Pattern ISO_DATE = Pattern.compile("^[0-9]{4}-[0-9]{2}-[0-9]{2}$");
     private static final Pattern MONEY = Pattern.compile("^(0|[1-9][0-9]*)(\\.[0-9]{1,2})?$");
+    private static final Pattern BOOKING_CODE = Pattern.compile("^[A-Za-z0-9-]{1,50}$");
     private static final Set<String> SEARCH_ROOMS_FIELDS = Set.of(
             "checkInDate", "checkOutDate", "guestCount", "roomTypeId", "minPrice", "maxPrice", "sortBy", "limit"
     );
     private static final Set<String> LIST_SERVICES_FIELDS = Set.of("categoryId", "limit");
+    private static final Set<String> LIST_MY_BOOKINGS_FIELDS = Set.of("status", "limit");
+    private static final Set<String> GET_MY_BOOKING_FIELDS = Set.of("bookingCode", "includeFinancials");
+    private static final Set<String> VALID_BOOKING_STATUSES = Set.of(
+            "PENDING_DEPOSIT", "CONFIRMED", "CHECKED_IN", "CHECKED_OUT", "CANCELED", "EXPIRED"
+    );
 
     private final RoomCatalogService roomCatalogService;
     private final CustomerBillingService customerBillingService;
+    private final CustomerHistoryService customerHistoryService;
     private final Clock clock;
 
     @Autowired
-    public AssistantToolBroker(RoomCatalogService roomCatalogService, CustomerBillingService customerBillingService) {
-        this(roomCatalogService, customerBillingService, Clock.system(HOTEL_ZONE));
+    public AssistantToolBroker(
+            RoomCatalogService roomCatalogService,
+            CustomerBillingService customerBillingService,
+            CustomerHistoryService customerHistoryService
+    ) {
+        this(roomCatalogService, customerBillingService, customerHistoryService, Clock.system(HOTEL_ZONE));
     }
 
-    AssistantToolBroker(RoomCatalogService roomCatalogService, CustomerBillingService customerBillingService, Clock clock) {
+    AssistantToolBroker(
+            RoomCatalogService roomCatalogService,
+            CustomerBillingService customerBillingService,
+            Clock clock
+    ) {
+        this(roomCatalogService, customerBillingService, null, clock);
+    }
+
+    AssistantToolBroker(
+            RoomCatalogService roomCatalogService,
+            CustomerBillingService customerBillingService,
+            CustomerHistoryService customerHistoryService,
+            Clock clock
+    ) {
         this.roomCatalogService = roomCatalogService;
         this.customerBillingService = customerBillingService;
+        this.customerHistoryService = customerHistoryService;
         this.clock = clock;
     }
 
@@ -78,6 +111,17 @@ public class AssistantToolBroker {
     }
 
     public Execution execute(String callId, String toolName, JsonNode arguments, Set<String> allowedTools) {
+        return execute(callId, toolName, arguments, allowedTools, null, false);
+    }
+
+    public Execution execute(
+            String callId,
+            String toolName,
+            JsonNode arguments,
+            Set<String> allowedTools,
+            String authenticatedUsername,
+            boolean isCustomer
+    ) {
         if (callId == null || toolName == null
                 || !SUPPORTED_BUSINESS_TOOLS.contains(toolName)
                 || allowedTools == null || !allowedTools.contains(toolName)) {
@@ -94,6 +138,8 @@ public class AssistantToolBroker {
         return switch (toolName) {
             case "search_rooms" -> executeSearchRooms(callId, arguments, retrievedAt);
             case "list_services" -> executeListServices(callId, arguments, retrievedAt);
+            case "list_my_bookings" -> executeListMyBookings(callId, arguments, retrievedAt, authenticatedUsername, isCustomer);
+            case "get_my_booking" -> executeGetMyBooking(callId, arguments, retrievedAt, authenticatedUsername, isCustomer);
             default -> throw new AssistantFault(502, "AI_PROTOCOL_ERROR");
         };
     }
@@ -304,13 +350,262 @@ public class AssistantToolBroker {
         return okExecution(callId, "list_services", retrievedAt, data, cards, query, hasMore);
     }
 
+    private Execution executeListMyBookings(
+            String callId,
+            JsonNode args,
+            String retrievedAt,
+            String authenticatedUsername,
+            boolean isCustomer
+    ) {
+        if (isBlank(authenticatedUsername)) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "AUTH_REQUIRED",
+                    "Vui lòng đăng nhập tài khoản khách hàng để xem đơn đặt phòng của bạn.");
+        }
+        if (!isCustomer) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "FORBIDDEN",
+                    "Chức năng xem đơn đặt phòng cá nhân chỉ áp dụng cho tài khoản khách hàng.");
+        }
+        if (customerHistoryService == null) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "CAPABILITY_UNAVAILABLE",
+                    "Chức năng tra cứu đơn đặt phòng chưa sẵn sàng.");
+        }
+        if (!hasOnlyAllowedKeys(args, LIST_MY_BOOKINGS_FIELDS)) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "VALIDATION_ERROR",
+                    "Yêu cầu danh sách đơn đặt phòng chứa tham số không được hỗ trợ.");
+        }
+        String statusFilter = null;
+        JsonNode statusNode = args.get("status");
+        if (statusNode != null && !statusNode.isNull()) {
+            if (!statusNode.isTextual()) {
+                return errorExecution(callId, "list_my_bookings", retrievedAt, "VALIDATION_ERROR",
+                        "Trạng thái đơn đặt phòng không hợp lệ.");
+            }
+            String candidate = statusNode.asText().trim().toUpperCase(Locale.ROOT);
+            if (!VALID_BOOKING_STATUSES.contains(candidate)) {
+                return errorExecution(callId, "list_my_bookings", retrievedAt, "VALIDATION_ERROR",
+                        "Trạng thái đơn đặt phòng không hợp lệ.");
+            }
+            statusFilter = candidate;
+        }
+        Integer limit = parseLimit(args.get("limit"));
+        if (limit == null) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "VALIDATION_ERROR",
+                    "Giới hạn kết quả phải từ 1 đến 10.");
+        }
+
+        List<CustomerBookingHistorySummaryResponse> rawBookings;
+        try {
+            rawBookings = customerHistoryService.getMemberHistory(authenticatedUsername, statusFilter);
+        } catch (ResourceNotFoundException ex) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "AUTH_REQUIRED",
+                    "Không xác thực được tài khoản khách hàng hiện tại.");
+        } catch (RuntimeException ex) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "DEPENDENCY_UNAVAILABLE",
+                    "Không thể tra cứu danh sách đơn đặt phòng lúc này.");
+        }
+
+        if (rawBookings == null) {
+            return errorExecution(callId, "list_my_bookings", retrievedAt, "DATA_UNAVAILABLE",
+                    "Không có dữ liệu đơn đặt phòng hợp lệ từ hệ thống.");
+        }
+
+        for (CustomerBookingHistorySummaryResponse b : rawBookings) {
+            if (!isValidBookingSummary(b)) {
+                return errorExecution(callId, "list_my_bookings", retrievedAt, "DATA_UNAVAILABLE",
+                        "Dữ liệu đơn đặt phòng không đầy đủ.");
+            }
+        }
+
+        Comparator<CustomerBookingHistorySummaryResponse> comparator = Comparator
+                .comparing(CustomerBookingHistorySummaryResponse::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(CustomerBookingHistorySummaryResponse::getBookingCode);
+
+        List<CustomerBookingHistorySummaryResponse> sorted = rawBookings.stream().sorted(comparator).toList();
+        boolean hasMore = sorted.size() > limit;
+        List<CustomerBookingHistorySummaryResponse> page = sorted.subList(0, Math.min(limit, sorted.size()));
+
+        List<Map<String, Object>> items = new ArrayList<>(page.size());
+        List<Map<String, Object>> cards = new ArrayList<>(page.size());
+        for (CustomerBookingHistorySummaryResponse b : page) {
+            Map<String, Object> item = toBookingItem(b);
+            items.add(item);
+            Map<String, Object> card = new LinkedHashMap<>();
+            card.put("type", "booking");
+            card.put("data", item);
+            card.put("retrievedAt", retrievedAt);
+            cards.add(Collections.unmodifiableMap(card));
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("items", Collections.unmodifiableList(items));
+        data.put("hasMore", hasMore);
+
+        Map<String, Object> query = new LinkedHashMap<>();
+        if (statusFilter != null) {
+            query.put("status", statusFilter);
+        }
+        return okExecution(callId, "list_my_bookings", retrievedAt, data, cards, query, hasMore);
+    }
+
+    private Execution executeGetMyBooking(
+            String callId,
+            JsonNode args,
+            String retrievedAt,
+            String authenticatedUsername,
+            boolean isCustomer
+    ) {
+        if (isBlank(authenticatedUsername)) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "AUTH_REQUIRED",
+                    "Vui lòng đăng nhập tài khoản khách hàng để xem chi tiết đơn đặt phòng.");
+        }
+        if (!isCustomer) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "FORBIDDEN",
+                    "Chức năng xem chi tiết đơn đặt phòng chỉ áp dụng cho tài khoản khách hàng.");
+        }
+        if (customerHistoryService == null) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "CAPABILITY_UNAVAILABLE",
+                    "Chức năng tra cứu đơn đặt phòng chưa sẵn sàng.");
+        }
+        if (!hasOnlyAllowedKeys(args, GET_MY_BOOKING_FIELDS)) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "VALIDATION_ERROR",
+                    "Yêu cầu chi tiết đơn đặt phòng chứa tham số không được hỗ trợ.");
+        }
+        JsonNode codeNode = args.get("bookingCode");
+        if (codeNode == null || !codeNode.isTextual()) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "VALIDATION_ERROR",
+                    "Vui lòng cung cấp mã đơn đặt phòng hợp lệ.");
+        }
+        String bookingCode = codeNode.asText().trim();
+        if (!BOOKING_CODE.matcher(bookingCode).matches()) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "VALIDATION_ERROR",
+                    "Định dạng mã đơn đặt phòng không hợp lệ.");
+        }
+        boolean includeFinancials = false;
+        JsonNode finNode = args.get("includeFinancials");
+        if (finNode != null && !finNode.isNull()) {
+            if (!finNode.isBoolean()) {
+                return errorExecution(callId, "get_my_booking", retrievedAt, "VALIDATION_ERROR",
+                        "Tham số hiển thị thông tin thanh toán không hợp lệ.");
+            }
+            includeFinancials = finNode.booleanValue();
+        }
+
+        CustomerBookingHistoryDetailResponse detail;
+        try {
+            detail = customerHistoryService.getMemberBookingDetail(authenticatedUsername, bookingCode);
+        } catch (ResourceNotFoundException ex) {
+            // Identical NOT_FOUND whether booking does not exist or belongs to another customer.
+            return errorExecution(callId, "get_my_booking", retrievedAt, "NOT_FOUND",
+                    "Không tìm thấy đơn đặt phòng phù hợp trong tài khoản của bạn.");
+        } catch (RuntimeException ex) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "DEPENDENCY_UNAVAILABLE",
+                    "Không thể tra cứu chi tiết đơn đặt phòng lúc này.");
+        }
+
+        if (!isValidBookingDetail(detail)) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "DATA_UNAVAILABLE",
+                    "Dữ liệu chi tiết đơn đặt phòng không đầy đủ.");
+        }
+
+        Map<String, Object> data = toBookingDetailItem(detail, includeFinancials);
+        if (data == null) {
+            return errorExecution(callId, "get_my_booking", retrievedAt, "DATA_UNAVAILABLE",
+                    "Dữ liệu số tiền của đơn đặt phòng không hợp lệ.");
+        }
+
+        Map<String, Object> card = new LinkedHashMap<>();
+        card.put("type", "booking");
+        card.put("data", data);
+        card.put("retrievedAt", retrievedAt);
+
+        return okExecution(
+                callId, "get_my_booking", retrievedAt, data,
+                List.of(Collections.unmodifiableMap(card)),
+                Map.of("bookingCode", bookingCode),
+                false
+        );
+    }
+
+    private static boolean isValidBookingSummary(CustomerBookingHistorySummaryResponse b) {
+        if (b == null || isBlank(b.getBookingCode()) || !BOOKING_CODE.matcher(b.getBookingCode().trim()).matches()) {
+            return false;
+        }
+        if (isBlank(b.getBookingStatus()) || !VALID_BOOKING_STATUSES.contains(b.getBookingStatus().trim().toUpperCase(Locale.ROOT))) {
+            return false;
+        }
+        return b.getCheckInDate() != null && b.getCheckOutDate() != null
+                && b.getNights() > 0 && b.getGuestCount() != null && b.getGuestCount() > 0;
+    }
+
+    private static Map<String, Object> toBookingItem(CustomerBookingHistorySummaryResponse b) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("bookingCode", b.getBookingCode().trim());
+        item.put("bookingStatus", b.getBookingStatus().trim().toUpperCase(Locale.ROOT));
+        item.put("roomTypeName", normalizeRoomTypeName(b.getRoomTypeName()));
+        item.put("checkInDate", b.getCheckInDate().toString());
+        item.put("checkOutDate", b.getCheckOutDate().toString());
+        item.put("nights", b.getNights());
+        item.put("guestCount", b.getGuestCount());
+        return Collections.unmodifiableMap(item);
+    }
+
+    private static boolean isValidBookingDetail(CustomerBookingHistoryDetailResponse d) {
+        if (d == null || isBlank(d.getBookingCode()) || !BOOKING_CODE.matcher(d.getBookingCode().trim()).matches()) {
+            return false;
+        }
+        if (isBlank(d.getBookingStatus()) || !VALID_BOOKING_STATUSES.contains(d.getBookingStatus().trim().toUpperCase(Locale.ROOT))) {
+            return false;
+        }
+        return d.getCheckInDate() != null && d.getCheckOutDate() != null
+                && d.getNights() > 0 && d.getGuestCount() != null && d.getGuestCount() > 0;
+    }
+
+    private static Map<String, Object> toBookingDetailItem(CustomerBookingHistoryDetailResponse d, boolean includeFinancials) {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("bookingCode", d.getBookingCode().trim());
+        item.put("bookingStatus", d.getBookingStatus().trim().toUpperCase(Locale.ROOT));
+        item.put("roomTypeName", normalizeRoomTypeName(d.getRoomTypeName()));
+        item.put("checkInDate", d.getCheckInDate().toString());
+        item.put("checkOutDate", d.getCheckOutDate().toString());
+        item.put("nights", d.getNights());
+        item.put("guestCount", d.getGuestCount());
+
+        if (includeFinancials) {
+            String depositRequired = nullableMoney(d.getDepositRequired());
+            String depositPaid = nullableMoney(d.getDepositPaid());
+            String totalAmount = nullableMoney(d.getTotalAmount());
+            String remainingBalance = nullableMoney(d.getRemainingBalance());
+            if ((d.getDepositRequired() != null && depositRequired == null)
+                    || (d.getDepositPaid() != null && depositPaid == null)
+                    || (d.getTotalAmount() != null && totalAmount == null)
+                    || (d.getRemainingBalance() != null && remainingBalance == null)) {
+                return null;
+            }
+            item.put("depositRequired", depositRequired);
+            item.put("depositPaid", depositPaid);
+            item.put("totalAmount", totalAmount);
+            item.put("remainingBalance", remainingBalance);
+            item.put("currency", "VND");
+        }
+        return Collections.unmodifiableMap(item);
+    }
+
+    private static String normalizeRoomTypeName(String raw) {
+        if (isBlank(raw) || "N/A".equalsIgnoreCase(raw.trim())) return null;
+        return clampText(raw);
+    }
+
+    private static String nullableMoney(BigDecimal value) {
+        return value == null ? null : formatMoney(value);
+    }
+
     private static boolean isValidRoomRecord(AvailableRoomResponse room) {
         if (room == null || room.getRoomId() == null || room.getRoomId() <= 0) return false;
         RoomTypeResponse type = room.getRoomType();
         if (type == null || type.getRoomTypeId() == null || type.getRoomTypeId() <= 0) return false;
         if (isBlank(type.getTypeName()) || type.getCapacity() == null || type.getCapacity() <= 0) return false;
         if (room.getCheckInDate() == null || room.getCheckOutDate() == null || room.getNights() <= 0) return false;
-        // Guard against null basePrice coerced to ZERO by RoomCatalogServiceImpl / AvailableRoomResponse.
         if (type.getBasePrice() == null || type.getBasePrice().signum() < 0) return false;
         if (room.getPricePerNight() == null || room.getPricePerNight().signum() < 0) return false;
         if (room.getTotalRoomCharge() == null || room.getTotalRoomCharge().signum() < 0) return false;

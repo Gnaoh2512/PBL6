@@ -154,6 +154,21 @@ class AssistantOrchestratorTest {
                         ));
                         body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 20, "outputTokensUsed", 15));
                     }
+                    case "two_batch_error_final" -> {
+                        body.put("kind", "tool_calls");
+                        body.put("continuationId", contId);
+                        body.put("toolCalls", List.of(Map.of(
+                                "callId", callId,
+                                "name", "search_rooms",
+                                "arguments", Map.of(
+                                        "checkInDate", "2020-01-01",
+                                        "checkOutDate", "2020-01-02",
+                                        "guestCount", 2
+                                )
+                        )));
+                        body.put("evidence", List.of());
+                        body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 10, "outputTokensUsed", 10));
+                    }
                     case "ungrounded_answer" -> {
                         body.put("kind", "final");
                         body.put("continuationId", null);
@@ -179,6 +194,35 @@ class AssistantOrchestratorTest {
                             "requestId", req.path("requestId").asText(),
                             "error", Map.of("code", "DATA_UNAVAILABLE", "message", "Missing price", "retryable", true)
                     );
+                } else if ("two_batch_error_final".equals(mode) && req.path("budget").path("remainingBrokerBatches").asInt() > 0) {
+                    body.put("kind", "tool_calls");
+                    body.put("continuationId", UUID.randomUUID().toString());
+                    body.put("toolCalls", List.of(Map.of(
+                            "callId", UUID.randomUUID().toString(),
+                            "name", "search_rooms",
+                            "arguments", Map.of(
+                                    "checkInDate", "2020-01-03",
+                                    "checkOutDate", "2020-01-04",
+                                    "guestCount", 2
+                            )
+                    )));
+                    body.put("evidence", List.of());
+                    body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 5, "outputTokensUsed", 5));
+                } else if ("two_batch_error_final".equals(mode)) {
+                    body.put("kind", "final");
+                    body.put("continuationId", null);
+                    body.put("toolCalls", List.of());
+                    body.put("evidence", List.of());
+                    body.put("final", Map.of(
+                            "status", "needs_clarification",
+                            "answer", "Ngày nhận phòng phải từ ngày hôm nay trở đi.",
+                            "missingFields", List.of("checkInDate"),
+                            "citations", List.of(),
+                            "cards", List.of(),
+                            "actions", List.of(action("open_room_search", "Mở trang tìm phòng")),
+                            "corpusMode", "demo_synthetic"
+                    ));
+                    body.put("usage", Map.of("toolCallsUsed", 0, "brokerBatchesUsed", 0, "inputTokensUsed", 0, "outputTokensUsed", 0));
                 } else {
                     List<Map<String, Object>> cards = "forged_cards".equals(mode)
                             ? List.of(Map.of("type", "room", "data", Map.of("pricePerNight", "1"), "retrievedAt", "2026-11-25T10:00:00+07:00"))
@@ -335,5 +379,23 @@ class AssistantOrchestratorTest {
         ));
         assertEquals(503, fault.status);
         assertEquals("DATA_UNAVAILABLE", fault.code);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void acceptsD2StatusAndActionsOnFinalResumeAfterSecondFailedBatch() {
+        scenario.set("two_batch_error_final");
+        var result = orchestrator.executeTurn(
+                "req-2batch", UUID.randomUUID().toString(), UUID.randomUUID().toString(),
+                "Tìm phòng ngày 1/1/2020", List.of(), false, System.nanoTime()
+        );
+        assertEquals("needs_clarification", result.get("status"));
+        assertEquals(List.of("checkInDate"), result.get("missingFields"));
+        assertEquals(List.of(), result.get("cards"));
+        var actions = (List<Map<String, Object>>) result.get("actions");
+        assertEquals(1, actions.size());
+        assertEquals("open_room_search", actions.get(0).get("type"));
+        assertEquals(3, receivedRequests.size());
+        assertEquals(0, receivedRequests.get(2).path("budget").path("remainingBrokerBatches").asInt());
     }
 }

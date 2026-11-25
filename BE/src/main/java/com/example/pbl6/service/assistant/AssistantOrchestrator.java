@@ -39,10 +39,30 @@ public class AssistantOrchestrator {
             boolean isCustomer,
             long startedNanos
     ) {
+        return executeTurn(requestId, conversationId, turnId, message, history, null, isCustomer, startedNanos);
+    }
+
+    public Map<String, Object> executeTurn(
+            String requestId,
+            String conversationId,
+            String turnId,
+            String message,
+            List<Map<String, String>> history,
+            String authenticatedUsername,
+            boolean isCustomer,
+            long startedNanos
+    ) {
         boolean d2ToolsActive = config.businessToolsEnabled && broker != null;
-        List<String> allowedTools = d2ToolsActive
-                ? List.of("search_knowledge", "search_rooms", "list_services")
-                : List.of("search_knowledge");
+        boolean d3BookingActive = d2ToolsActive && config.bookingToolsEnabled
+                && isCustomer && authenticatedUsername != null && !authenticatedUsername.isBlank();
+        List<String> allowedTools;
+        if (d3BookingActive) {
+            allowedTools = List.of("search_knowledge", "search_rooms", "list_services", "list_my_bookings", "get_my_booking");
+        } else if (d2ToolsActive) {
+            allowedTools = List.of("search_knowledge", "search_rooms", "list_services");
+        } else {
+            allowedTools = List.of("search_knowledge");
+        }
         Set<String> allowedSet = Set.copyOf(allowedTools);
 
         int remainingToolCalls = d2ToolsActive ? 4 : 1;
@@ -78,7 +98,7 @@ public class AssistantOrchestrator {
                 ? client.exchange(
                         startPayload, requestId, allowedSet,
                         remainingToolCalls, remainingBrokerBatches,
-                        true, false, evidenceRegistry
+                        true, true, false, evidenceRegistry
                 )
                 : new AssistantClient.TurnStep("final", null, List.of(), client.turn(startPayload, requestId),
                         new AssistantClient.Usage(0, 0, 0, 0));
@@ -102,7 +122,8 @@ public class AssistantOrchestrator {
                     throw new AssistantFault(502, "AI_PROTOCOL_ERROR");
                 }
                 AssistantToolBroker.Execution exec = broker.execute(
-                        call.callId(), call.name(), call.arguments(), allowedSet
+                        call.callId(), call.name(), call.arguments(), allowedSet,
+                        authenticatedUsername, isCustomer
                 );
                 toolResults.add(exec.toolResult());
                 if (exec.isOk()) {
@@ -138,7 +159,7 @@ public class AssistantOrchestrator {
             step = client.exchange(
                     resumePayload, requestId, allowedSet,
                     remainingToolCalls, remainingBrokerBatches,
-                    remainingBrokerBatches > 0, hasBusinessLedger, evidenceRegistry
+                    d2ToolsActive, remainingBrokerBatches > 0, hasBusinessLedger, evidenceRegistry
             );
 
             remainingToolCalls -= step.usage().toolCallsUsed();

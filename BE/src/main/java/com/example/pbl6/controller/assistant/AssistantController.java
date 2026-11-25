@@ -64,9 +64,11 @@ public class AssistantController {
             try { body = mapper.readTree(bytes); } catch (Exception e) { throw new AssistantFault(400, "INVALID_JSON"); }
             ChatRequest parsed = ChatRequest.parse(body);
             String conversation = parsed.conversationId(), messageId = parsed.clientMessageId(), message = parsed.message();
-            String owner = authentication != null && authentication.isAuthenticated()
-                    && !authentication.getName().equals("anonymousUser")
-                    ? authentication.getName() + ":" + hash(Objects.toString(request.getHeader("Authorization"), "")) : "guest";
+            boolean isAuthenticated = authentication != null && authentication.isAuthenticated()
+                    && !authentication.getName().equals("anonymousUser");
+            String authenticatedUsername = isAuthenticated ? authentication.getName() : null;
+            String owner = isAuthenticated
+                    ? authenticatedUsername + ":" + hash(Objects.toString(request.getHeader("Authorization"), "")) : "guest";
             var session = sessions.resolve(cookie(request), owner, conversation);
             output.setHeader(HttpHeaders.SET_COOKIE, setCookie(session.cookie, 1800));
             String messageHash = hash(message);
@@ -76,13 +78,13 @@ public class AssistantController {
             else {
                 try {
                     String turn = UUID.randomUUID().toString();
-                    boolean isCustomer = authentication != null && authentication.isAuthenticated()
+                    boolean isCustomer = isAuthenticated
                             && authentication.getAuthorities().stream()
                             .map(GrantedAuthority::getAuthority)
                             .anyMatch(role -> "ROLE_CUSTOMER".equalsIgnoreCase(role) || "CUSTOMER".equalsIgnoreCase(role));
                     data = new LinkedHashMap<>(orchestrator.executeTurn(
                             requestId, session.conversation, turn, message,
-                            sessions.history(session), isCustomer, started
+                            sessions.history(session), authenticatedUsername, isCustomer, started
                     ));
                     data.put("requestId", requestId); data.put("conversationId", session.conversation);
                     data.put("turnId", turn); data.put("clientMessageId", messageId);

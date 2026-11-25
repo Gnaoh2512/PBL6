@@ -53,12 +53,8 @@ public class AuthServiceImpl implements AuthService {
             }
         }
 
-        String roleCode = StringUtils.hasText(request.getRole()) ? request.getRole().trim().toUpperCase() : "ROLE_CUSTOMER";
-        if (!roleCode.startsWith("ROLE_")) {
-            roleCode = "ROLE_" + roleCode;
-        }
-        Role role = roleRepository.findByRoleCode(roleCode)
-                .orElseGet(() -> roleRepository.findByRoleCode("ROLE_CUSTOMER").orElse(null));
+        // Public self-registration is strictly scoped to ROLE_CUSTOMER.
+        Role role = roleRepository.findByRoleCode("ROLE_CUSTOMER").orElse(null);
 
         Account account = Account.builder()
                 .username(username)
@@ -72,13 +68,13 @@ public class AuthServiceImpl implements AuthService {
 
         Account saved = accountRepository.save(account);
         if (role != null && "ROLE_CUSTOMER".equalsIgnoreCase(role.getRoleCode())) {
-            Customer customer = StringUtils.hasText(saved.getEmail())
-                    ? customerRepository.findByEmail(saved.getEmail()).orElseGet(Customer::new)
-                    : new Customer();
-            customer.setAccount(saved);
-            customer.setFullName(saved.getFullName());
-            customer.setEmail(saved.getEmail());
-            customer.setPhone(saved.getPhone());
+            // Always create a dedicated Customer row bound to this Account; never hijack an existing Customer by unverified email.
+            Customer customer = Customer.builder()
+                    .account(saved)
+                    .fullName(saved.getFullName())
+                    .email(saved.getEmail())
+                    .phone(saved.getPhone())
+                    .build();
             Customer savedCustomer = customerRepository.save(customer);
             if (customerLoyaltyRepository.findByCustomer_CustomerId(savedCustomer.getCustomerId()).isEmpty()) {
                 loyaltyTierRepository.findByTierCode("SEASHELL").ifPresent(tier ->

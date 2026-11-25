@@ -5,6 +5,7 @@ import com.example.pbl6.common.enums.PaymentType;
 import com.example.pbl6.dto.history.CustomerBookingHistoryDetailResponse;
 import com.example.pbl6.dto.history.CustomerBookingHistorySummaryResponse;
 import com.example.pbl6.entity.*;
+import com.example.pbl6.exception.ResourceNotFoundException;
 import com.example.pbl6.repository.*;
 import com.example.pbl6.service.financial.FinancialCalculator;
 import com.example.pbl6.service.financial.VietQrService;
@@ -26,9 +27,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -77,13 +78,14 @@ class CustomerHistoryServiceTest {
                 .email("customer1@gmail.com")
                 .phone("0901234567")
                 .role(Role.builder()
-                        .roleCode("CUSTOMER")
+                        .roleCode("ROLE_CUSTOMER")
                         .roleName("Customer")
                         .build())
                 .build();
 
         mockCustomer = Customer.builder()
                 .customerId(10)
+                .account(mockAccount)
                 .fullName("Nguyễn Văn Khách")
                 .email("customer1@gmail.com")
                 .phone("0901234567")
@@ -126,10 +128,10 @@ class CustomerHistoryServiceTest {
     }
 
     @Test
-    @DisplayName("Thành công: Khách thành viên lấy danh sách lịch sử đặt phòng")
+    @DisplayName("Thành công: Khách thành viên lấy danh sách lịch sử đặt phòng qua FK account_id")
     void testGetMemberHistory_Success() {
         when(accountRepository.findByUsername("customer1")).thenReturn(Optional.of(mockAccount));
-        when(customerRepository.findByEmail("customer1@gmail.com")).thenReturn(Optional.of(mockCustomer));
+        when(customerRepository.findByAccount_AccountId(1)).thenReturn(Optional.of(mockCustomer));
         when(bookingRepository.findByCustomer_CustomerIdOrderByCreatedAtDesc(10)).thenReturn(List.of(mockBooking));
         when(bookingRoomRepository.findByBooking_BookingId(100)).thenReturn(List.of(mockBookingRoom));
         when(paymentRepository.findByBooking_BookingId(100)).thenReturn(Collections.emptyList());
@@ -145,10 +147,28 @@ class CustomerHistoryServiceTest {
     }
 
     @Test
+    @DisplayName("Bảo mật: Tài khoản chưa gắn Customer không được rơi về accountId == customerId")
+    void testGetMemberHistory_UnlinkedAccountNeverFallsBackToAccountId() {
+        Account unlinkedAccount = Account.builder()
+                .accountId(10) // collides with mockCustomer.customerId == 10
+                .username("newuser")
+                .email("customer1@gmail.com") // even matching unverified email must NOT grant access
+                .phone("0901234567")
+                .build();
+        when(accountRepository.findByUsername("newuser")).thenReturn(Optional.of(unlinkedAccount));
+        when(customerRepository.findByAccount_AccountId(10)).thenReturn(Optional.empty());
+
+        List<CustomerBookingHistorySummaryResponse> history = customerHistoryService.getMemberHistory("newuser", "ALL");
+
+        assertThat(history).isEmpty();
+        verifyNoInteractions(bookingRepository);
+    }
+
+    @Test
     @DisplayName("Thành công: Khách thành viên xem chi tiết toàn diện 1 đơn trong lịch sử")
     void testGetMemberBookingDetail_Success() {
         when(accountRepository.findByUsername("customer1")).thenReturn(Optional.of(mockAccount));
-        when(customerRepository.findByEmail("customer1@gmail.com")).thenReturn(Optional.of(mockCustomer));
+        when(customerRepository.findByAccount_AccountId(1)).thenReturn(Optional.of(mockCustomer));
         when(bookingRepository.findByBookingCode("BK-20261001-A1B2")).thenReturn(Optional.of(mockBooking));
         when(bookingRoomRepository.findByBooking_BookingId(100)).thenReturn(List.of(mockBookingRoom));
         when(serviceUsageRepository.findByBooking_BookingId(100)).thenReturn(Collections.emptyList());
@@ -177,21 +197,22 @@ class CustomerHistoryServiceTest {
     }
 
     @Test
-    @DisplayName("Thất bại: Khách thành viên cố tình xem đơn của người khác")
-    void testGetMemberBookingDetail_Unauthorized() {
+    @DisplayName("Bảo mật: Khách thành viên cố xem đơn người khác (kể cả trùng email/SĐT) bị chặn đồng nhất bằng ResourceNotFoundException")
+    void testGetMemberBookingDetail_UnauthorizedReturnsNotFoundEvenWithMatchingEmailOrPhone() {
         Account anotherAccount = Account.builder()
                 .accountId(2)
                 .username("customer2")
-                .email("other@gmail.com")
-                .phone("0999999999")
+                .email("customer1@gmail.com")
+                .phone("0901234567")
                 .build();
+        Customer anotherCustomer = Customer.builder().customerId(20).account(anotherAccount).build();
 
         when(accountRepository.findByUsername("customer2")).thenReturn(Optional.of(anotherAccount));
+        when(customerRepository.findByAccount_AccountId(2)).thenReturn(Optional.of(anotherCustomer));
         when(bookingRepository.findByBookingCode("BK-20261001-A1B2")).thenReturn(Optional.of(mockBooking));
 
         assertThatThrownBy(() -> customerHistoryService.getMemberBookingDetail("customer2", "BK-20261001-A1B2"))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("không có quyền truy cập");
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test

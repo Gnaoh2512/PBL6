@@ -7,7 +7,7 @@ import AssistantWidget, { AssistantChat } from './AssistantWidget';
 import { apiCall } from '../../services/api';
 
 vi.mock('../../services/api', () => ({ apiCall: vi.fn(), waitForAssistantSessionReset: () => Promise.resolve() }));
-const auth = vi.hoisted(() => ({ token: '' }));
+const auth = vi.hoisted(() => ({ token: '', isAuthenticated: false, hasRole: () => false }));
 vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
 
 const answer = { success: true, data: { status: 'answered', answer: 'Wi-Fi giả lập tại sảnh.',
@@ -51,15 +51,109 @@ describe('FAQ widget', () => {
     expect(screen.queryByText(/onerror/)).not.toBeInTheDocument();
   });
 
-  it('shows errors and marks unsupported groups without calling backend', async () => {
+  it('shows errors cleanly when backend fails', async () => {
     apiCall.mockRejectedValue(new Error('Dịch vụ tạm thời chưa sẵn sàng.'));
     const user = userEvent.setup(); render(<AssistantChat />); await open(user);
-    await user.click(screen.getByRole('button', { name: 'Booking của tôi' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('chưa được hỗ trợ');
-    expect(apiCall).not.toHaveBeenCalled();
     await user.type(screen.getByLabelText('Câu hỏi'), 'wifi');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Dịch vụ tạm thời');
+  });
+
+  it('omits floating callout text and adapts the 4th quick pill by customer login state', async () => {
+    vi.stubEnv('VITE_ASSISTANT_ENABLED', 'true');
+    auth.token = '';
+    auth.isAuthenticated = false;
+    auth.hasRole = () => false;
+    const user = userEvent.setup();
+    const view = render(<MemoryRouter><AssistantWidget /></MemoryRouter>);
+
+    expect(screen.queryByText('Hỏi đáp về khách sạn')).not.toBeInTheDocument();
+    await open(user);
+    expect(screen.getByRole('button', { name: 'Quy định nhận / trả phòng?', exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).not.toBeInTheDocument();
+
+    auth.token = 'customer-jwt';
+    auth.isAuthenticated = true;
+    auth.hasRole = roles => roles.includes('CUSTOMER');
+    view.rerender(<MemoryRouter><AssistantWidget /></MemoryRouter>);
+    await open(user);
+    expect(screen.getByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Quy định nhận / trả phòng?', exact: true })).not.toBeInTheDocument();
+
+    auth.token = 'staff-jwt';
+    auth.isAuthenticated = true;
+    auth.hasRole = () => false;
+    view.rerender(<MemoryRouter><AssistantWidget /></MemoryRouter>);
+    await open(user);
+    expect(screen.getByRole('button', { name: 'Quy định nhận / trả phòng?', exact: true })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).not.toBeInTheDocument();
+
+    auth.token = '';
+    auth.isAuthenticated = false;
+    auth.hasRole = () => false;
+  });
+
+  it('handles D3 requires_login and renders personal booking cards cleanly', async () => {
+    apiCall
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'requires_login',
+          answer: 'Để xem danh sách đơn đặt phòng của bạn, vui lòng đăng nhập tài khoản khách hàng trước nhé.',
+          conversationId: 'conv-d3',
+          corpusMode: 'production',
+          citations: [],
+          cards: [],
+          actions: [{ type: 'open_login', label: 'Đăng nhập tài khoản', targetId: null }],
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          status: 'answered',
+          answer: 'Thông tin đơn đặt phòng BK-CUSTOMER1-DEMO:',
+          conversationId: 'conv-d3',
+          corpusMode: 'production',
+          citations: [],
+          cards: [{
+            type: 'booking',
+            retrievedAt: '2026-11-25T21:00:00+07:00',
+            data: {
+              bookingCode: 'BK-CUSTOMER1-DEMO',
+              bookingStatus: 'CHECKED_IN',
+              roomTypeName: 'Phòng Standard',
+              checkInDate: '2026-11-24',
+              checkOutDate: '2026-11-27',
+              nights: 3,
+              guestCount: 2,
+              depositRequired: '450000',
+              depositPaid: '450000',
+              totalAmount: '1650000',
+              remainingBalance: '1200000',
+              currency: 'VND',
+            },
+          }],
+          actions: [],
+        },
+      });
+    const user = userEvent.setup();
+    const guestView = render(<MemoryRouter><AssistantChat /></MemoryRouter>);
+    await open(user);
+    expect(screen.queryByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true })).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('Câu hỏi'), 'Xem danh sách đơn đặt phòng của tôi');
+    await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
+    expect(await screen.findByRole('link', { name: 'Đăng nhập tài khoản' })).toHaveAttribute('href', '/login');
+    guestView.unmount();
+
+    render(<MemoryRouter><AssistantChat isCustomer /></MemoryRouter>);
+    await open(user);
+    await user.click(screen.getByRole('button', { name: 'Đơn đặt phòng của tôi', exact: true }));
+    expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Xem danh sách đơn đặt phòng của tôi');
+    await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
+    expect(await screen.findByText('BK-CUSTOMER1-DEMO')).toBeInTheDocument();
+    expect(screen.getByText('Đang lưu trú')).toBeInTheDocument();
+    expect(screen.getByText(/1\.650\.000 VND/)).toBeInTheDocument();
+    expect(screen.getByText(/1\.200\.000 VND/)).toBeInTheDocument();
   });
 
   it('hides in staff/admin routes', () => {
@@ -132,8 +226,8 @@ describe('FAQ widget', () => {
     const user = userEvent.setup();
     render(<MemoryRouter><AssistantChat /></MemoryRouter>);
     await open(user);
-    await user.click(screen.getByRole('button', { name: 'Phòng', exact: true }));
-    expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Tìm phòng trống cho 2 khách');
+    await user.click(screen.getByRole('button', { name: 'Giá phòng hiện tại?', exact: true }));
+    expect(screen.getByLabelText('Câu hỏi')).toHaveValue('Tìm phòng trống và giá hiện tại cho 2 khách');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText('Deluxe Sea View')).toBeInTheDocument();
     expect(screen.getByText(/1\.500\.000 VND\/đêm/)).toBeInTheDocument();
@@ -191,7 +285,7 @@ describe('FAQ widget', () => {
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText(/ngày nhận phòng và ngày trả phòng/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Dịch vụ', exact: true }));
+    await user.type(screen.getByLabelText('Câu hỏi'), 'Dịch vụ');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
     expect(await screen.findByText('Massage thư giãn')).toBeInTheDocument();
     expect(screen.getByText(/450\.000 VND/)).toBeInTheDocument();

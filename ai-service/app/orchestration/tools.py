@@ -1,4 +1,4 @@
-"""Deterministic D2 business-tool planning and grounded resume rendering."""
+"""Deterministic D2/D3 business & booking tool planning and grounded resume rendering."""
 
 from decimal import Decimal
 from uuid import uuid4
@@ -6,8 +6,22 @@ from uuid import uuid4
 from app.diagnostics import Category
 from app.orchestration.continuations import ContinuationStore, PendingCall
 from app.providers.contracts import DependencyError, TurnBudget
-from app.schemas.turn import ResumeTurn, RoomList, ServiceList, StartTurn, ToolResult
-from app.tools.schemas import TurnPlan, validate_room_search_plan, validate_service_list_plan
+from app.schemas.turn import (
+    BookingDetail,
+    BookingList,
+    ResumeTurn,
+    RoomList,
+    ServiceList,
+    StartTurn,
+    ToolResult,
+)
+from app.tools.schemas import (
+    TurnPlan,
+    validate_get_booking_plan,
+    validate_list_bookings_plan,
+    validate_room_search_plan,
+    validate_service_list_plan,
+)
 
 _MAX_ANSWER_LEN = 4000
 _ACTION_OPEN_ROOM_SEARCH = {
@@ -19,6 +33,19 @@ _ACTION_OPEN_SERVICES = {
     "type": "open_services",
     "label": "Xem trang dịch vụ",
     "targetId": None,
+}
+_ACTION_OPEN_LOGIN = {
+    "type": "open_login",
+    "label": "Đăng nhập tài khoản",
+    "targetId": None,
+}
+_BOOKING_STATUS_LABELS = {
+    "PENDING_DEPOSIT": "Chờ thanh toán cọc",
+    "CONFIRMED": "Đã xác nhận",
+    "CHECKED_IN": "Đang lưu trú",
+    "CHECKED_OUT": "Đã trả phòng",
+    "CANCELED": "Đã hủy",
+    "EXPIRED": "Đã hết hạn",
 }
 
 
@@ -74,6 +101,42 @@ def _final_response(
     }
 
 
+def _emit_single_tool_call(
+    *,
+    tool_name: str,
+    arguments: dict,
+    payload: StartTurn,
+    budget: TurnBudget,
+    continuations: ContinuationStore,
+    usage: dict,
+) -> dict:
+    if payload.budget.remainingToolCalls < 1 or payload.budget.remainingBrokerBatches < 1:
+        raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
+    call_id = uuid4()
+    continuation_id = continuations.create(
+        conversation_id=payload.conversationId,
+        turn_id=payload.turnId,
+        pending_calls=[PendingCall(call_id=call_id, name=tool_name)],
+        remaining_ms=max(1, int(budget.seconds() * 1000)),
+    )
+    return {
+        "requestId": payload.requestId,
+        "conversationId": str(payload.conversationId),
+        "turnId": str(payload.turnId),
+        "kind": "tool_calls",
+        "continuationId": str(continuation_id),
+        "toolCalls": [
+            {
+                "callId": str(call_id),
+                "name": tool_name,
+                "arguments": arguments,
+            }
+        ],
+        "usage": usage,
+        "evidence": [],
+    }
+
+
 def plan_business_turn(
     plan: TurnPlan,
     payload: StartTurn,
@@ -115,31 +178,14 @@ def plan_business_turn(
                 actions=[_ACTION_OPEN_ROOM_SEARCH],
                 usage=usage,
             )
-        if payload.budget.remainingToolCalls < 1 or payload.budget.remainingBrokerBatches < 1:
-            raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
-        call_id = uuid4()
-        continuation_id = continuations.create(
-            conversation_id=payload.conversationId,
-            turn_id=payload.turnId,
-            pending_calls=[PendingCall(call_id=call_id, name="search_rooms")],
-            remaining_ms=max(1, int(budget.seconds() * 1000)),
+        return _emit_single_tool_call(
+            tool_name="search_rooms",
+            arguments=arguments,
+            payload=payload,
+            budget=budget,
+            continuations=continuations,
+            usage=usage,
         )
-        return {
-            "requestId": payload.requestId,
-            "conversationId": str(payload.conversationId),
-            "turnId": str(payload.turnId),
-            "kind": "tool_calls",
-            "continuationId": str(continuation_id),
-            "toolCalls": [
-                {
-                    "callId": str(call_id),
-                    "name": "search_rooms",
-                    "arguments": arguments,
-                }
-            ],
-            "usage": usage,
-            "evidence": [],
-        }
 
     if plan.intent == "list_services":
         if "list_services" not in payload.allowedTools:
@@ -152,32 +198,74 @@ def plan_business_turn(
                 mode=mode,
                 usage=usage,
             )
-        if payload.budget.remainingToolCalls < 1 or payload.budget.remainingBrokerBatches < 1:
-            raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
-        arguments = validate_service_list_plan(plan)
-        call_id = uuid4()
-        continuation_id = continuations.create(
-            conversation_id=payload.conversationId,
-            turn_id=payload.turnId,
-            pending_calls=[PendingCall(call_id=call_id, name="list_services")],
-            remaining_ms=max(1, int(budget.seconds() * 1000)),
+        return _emit_single_tool_call(
+            tool_name="list_services",
+            arguments=validate_service_list_plan(plan),
+            payload=payload,
+            budget=budget,
+            continuations=continuations,
+            usage=usage,
         )
-        return {
-            "requestId": payload.requestId,
-            "conversationId": str(payload.conversationId),
-            "turnId": str(payload.turnId),
-            "kind": "tool_calls",
-            "continuationId": str(continuation_id),
-            "toolCalls": [
-                {
-                    "callId": str(call_id),
-                    "name": "list_services",
-                    "arguments": arguments,
-                }
-            ],
-            "usage": usage,
-            "evidence": [],
-        }
+
+    if plan.intent == "list_my_bookings":
+        if "list_my_bookings" not in payload.allowedTools:
+            return _final_response(
+                request_id=payload.requestId,
+                conversation_id=str(payload.conversationId),
+                turn_id=str(payload.turnId),
+                status="requires_login",
+                answer=(
+                    "Để xem danh sách đơn đặt phòng của bạn, vui lòng đăng nhập tài khoản "
+                    "khách hàng trước nhé."
+                ),
+                mode=mode,
+                actions=[_ACTION_OPEN_LOGIN],
+                usage=usage,
+            )
+        return _emit_single_tool_call(
+            tool_name="list_my_bookings",
+            arguments=validate_list_bookings_plan(plan),
+            payload=payload,
+            budget=budget,
+            continuations=continuations,
+            usage=usage,
+        )
+
+    if plan.intent == "get_my_booking":
+        if "get_my_booking" not in payload.allowedTools:
+            return _final_response(
+                request_id=payload.requestId,
+                conversation_id=str(payload.conversationId),
+                turn_id=str(payload.turnId),
+                status="requires_login",
+                answer=(
+                    "Để xem chi tiết đơn đặt phòng cá nhân, vui lòng đăng nhập tài khoản "
+                    "khách hàng trước nhé."
+                ),
+                mode=mode,
+                actions=[_ACTION_OPEN_LOGIN],
+                usage=usage,
+            )
+        arguments, missing, clarification = validate_get_booking_plan(plan)
+        if arguments is None:
+            return _final_response(
+                request_id=payload.requestId,
+                conversation_id=str(payload.conversationId),
+                turn_id=str(payload.turnId),
+                status="needs_clarification",
+                answer=clarification or "Bạn vui lòng cung cấp mã đơn đặt phòng cần kiểm tra.",
+                mode=mode,
+                missing_fields=missing,
+                usage=usage,
+            )
+        return _emit_single_tool_call(
+            tool_name="get_my_booking",
+            arguments=arguments,
+            payload=payload,
+            budget=budget,
+            continuations=continuations,
+            usage=usage,
+        )
 
     return _final_response(
         request_id=payload.requestId,
@@ -185,9 +273,8 @@ def plan_business_turn(
         turn_id=str(payload.turnId),
         status="capability_unavailable",
         answer=(
-            "Chức năng tra cứu đơn đặt phòng cá nhân hoặc thao tác đặt/hủy/thanh toán "
-            "chưa hỗ trợ trực tiếp trong khung chat. Bạn vui lòng sử dụng các màn hình "
-            "nghiệp vụ tương ứng trên website."
+            "Các thao tác đặt phòng, hủy phòng, thanh toán hoặc thay đổi hồ sơ chưa thực hiện "
+            "trực tiếp trong khung chat. Bạn vui lòng sử dụng các màn hình nghiệp vụ trên website."
         ),
         mode=mode,
         usage=usage,
@@ -214,10 +301,7 @@ def _render_rooms(data: RoomList) -> tuple[str, str, list[dict]]:
             f"Tiền phòng dự kiến {format_vnd(item.totalRoomCharge)} · "
             f"Cọc dự kiến {item.depositPercentage}% ({format_vnd(item.estimatedDeposit)})."
         )
-    lines.append(
-        "Lưu ý: Đây là giá phòng dự kiến (room_charge_estimate), chưa bao gồm thuế VAT "
-        "và các dịch vụ phát sinh."
-    )
+    lines.append("Lưu ý: Đây là giá phòng dự kiến, chưa bao gồm thuế VAT và các dịch vụ phát sinh.")
     if data.hasMore:
         lines.append(
             "Vẫn còn thêm phòng trống phù hợp ngoài danh sách rút gọn này; bạn có thể thu hẹp "
@@ -247,6 +331,53 @@ def _render_services(data: ServiceList) -> tuple[str, str, list[dict]]:
     return "answered", "\n".join(lines), [_ACTION_OPEN_SERVICES]
 
 
+def _render_booking_list(data: BookingList) -> tuple[str, str, list[dict]]:
+    if not data.items:
+        return (
+            "no_results",
+            "Hiện chưa có đơn đặt phòng nào trong tài khoản của bạn phù hợp với yêu cầu.",
+            [],
+        )
+    lines = [f"Bạn hiện có {len(data.items)} đơn đặt phòng phù hợp:"]
+    for item in data.items:
+        status_label = _BOOKING_STATUS_LABELS.get(item.bookingStatus, item.bookingStatus)
+        room_part = f" · {item.roomTypeName}" if item.roomTypeName else ""
+        lines.append(
+            f"- Mã đơn {item.bookingCode} ({status_label}){room_part}: "
+            f"{item.checkInDate.isoformat()} → {item.checkOutDate.isoformat()} "
+            f"({item.nights} đêm, {item.guestCount} khách)."
+        )
+    if data.hasMore:
+        lines.append(
+            "Vẫn còn thêm đơn đặt phòng cũ hơn ngoài danh sách rút gọn này; bạn có thể lọc theo "
+            "trạng thái hoặc xem đầy đủ trong trang lịch sử đặt phòng."
+        )
+    return "answered", "\n".join(lines), []
+
+
+def _render_booking_detail(data: BookingDetail) -> tuple[str, str, list[dict]]:
+    status_label = _BOOKING_STATUS_LABELS.get(data.bookingStatus, data.bookingStatus)
+    room_part = f" · Hạng phòng: {data.roomTypeName}" if data.roomTypeName else ""
+    lines = [
+        f"Thông tin đơn đặt phòng {data.bookingCode}:",
+        f"- Trạng thái: {status_label}{room_part}.",
+        f"- Kỳ lưu trú: {data.checkInDate.isoformat()} → {data.checkOutDate.isoformat()} "
+        f"({data.nights} đêm, {data.guestCount} khách).",
+    ]
+    financial_parts: list[str] = []
+    if data.depositRequired is not None:
+        financial_parts.append(f"Cọc yêu cầu: {format_vnd(data.depositRequired)}")
+    if data.depositPaid is not None:
+        financial_parts.append(f"Cọc đã nộp: {format_vnd(data.depositPaid)}")
+    if data.totalAmount is not None:
+        financial_parts.append(f"Tổng cộng: {format_vnd(data.totalAmount)}")
+    if data.remainingBalance is not None:
+        financial_parts.append(f"Còn lại: {format_vnd(data.remainingBalance)}")
+    if financial_parts:
+        lines.append("- Thanh toán: " + " · ".join(financial_parts) + ".")
+    return "answered", "\n".join(lines), []
+
+
 def _handle_tool_error(result: ToolResult, payload: ResumeTurn, mode: str) -> dict:
     assert result.error is not None
     code = result.error.code
@@ -256,6 +387,16 @@ def _handle_tool_error(result: ToolResult, payload: ResumeTurn, mode: str) -> di
         raise DependencyError("DEPENDENCY_UNAVAILABLE")
     if code == "DATA_UNAVAILABLE":
         raise DependencyError("DATA_UNAVAILABLE")
+    if code == "AUTH_REQUIRED":
+        return _final_response(
+            request_id=payload.requestId,
+            conversation_id=str(payload.conversationId),
+            turn_id=str(payload.turnId),
+            status="requires_login",
+            answer=result.error.message,
+            mode=mode,
+            actions=[_ACTION_OPEN_LOGIN],
+        )
     if code == "VALIDATION_ERROR":
         actions = [_ACTION_OPEN_ROOM_SEARCH] if result.name == "search_rooms" else []
         return _final_response(
@@ -287,7 +428,7 @@ def _handle_tool_error(result: ToolResult, payload: ResumeTurn, mode: str) -> di
 
 
 def render_resume(payload: ResumeTurn, mode: str) -> dict:
-    """Deterministically render verified business tool results without another LLM call."""
+    """Deterministically render verified business/booking tool results without another LLM call."""
     for result in payload.toolResults:
         if result.status == "error":
             return _handle_tool_error(result, payload, mode)
@@ -302,6 +443,10 @@ def render_resume(payload: ResumeTurn, mode: str) -> dict:
             status, text, item_actions = _render_rooms(result.data)
         elif result.name == "list_services" and isinstance(result.data, ServiceList):
             status, text, item_actions = _render_services(result.data)
+        elif result.name == "list_my_bookings" and isinstance(result.data, BookingList):
+            status, text, item_actions = _render_booking_list(result.data)
+        elif result.name == "get_my_booking" and isinstance(result.data, BookingDetail):
+            status, text, item_actions = _render_booking_detail(result.data)
         else:
             raise DependencyError("AI_PROTOCOL_ERROR")
         if status == "answered":
