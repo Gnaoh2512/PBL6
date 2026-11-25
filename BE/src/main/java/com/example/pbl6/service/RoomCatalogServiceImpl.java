@@ -26,7 +26,7 @@ public class RoomCatalogServiceImpl implements RoomCatalogService {
     private final RoomRepository roomRepository;
     private final FinancialCalculator financialCalculator;
 
-    @Value("${hotel.deposit-percentage:30}")
+    @Value("${hotel.bank.deposit-percentage:${hotel.deposit-percentage:30}}")
     private int depositPercentage;
 
     @Override

@@ -5,12 +5,13 @@ import com.example.pbl6.service.assistant.*;
 import com.example.pbl6.dto.assistant.ChatRequest;
 import com.fasterxml.jackson.databind.*;
 import jakarta.servlet.http.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.*;
 import java.util.*;
 
 @RestController
@@ -18,10 +19,16 @@ import java.util.*;
 public class AssistantController {
     private final AssistantConfig config;
     private final AssistantSessions sessions;
-    private final AssistantClient client;
+    private final AssistantOrchestrator orchestrator;
     private final ObjectMapper mapper = new ObjectMapper();
+
+    @Autowired
+    public AssistantController(AssistantConfig config, AssistantSessions sessions, AssistantOrchestrator orchestrator) {
+        this.config = config; this.sessions = sessions; this.orchestrator = orchestrator;
+    }
+
     public AssistantController(AssistantConfig config, AssistantSessions sessions, AssistantClient client) {
-        this.config = config; this.sessions = sessions; this.client = client;
+        this(config, sessions, new AssistantOrchestrator(config, client, null));
     }
     private void origin(HttpServletRequest request) {
         String origin = request.getHeader("Origin");
@@ -69,13 +76,14 @@ public class AssistantController {
             else {
                 try {
                     String turn = UUID.randomUUID().toString();
-                    Map<String, Object> payload = Map.of("phase", "start", "requestId", requestId,
-                        "conversationId", session.conversation, "turnId", turn, "message", message,
-                        "history", sessions.history(session), "allowedTools", List.of("search_knowledge"),
-                        "context", Map.of("locale", "vi-VN", "timeZone", "Asia/Ho_Chi_Minh", "today", LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh")).toString(), "currency", "VND"),
-                        "budget", Map.of("remainingToolCalls", 1, "remainingBrokerBatches", 0, "remainingMs", Math.max(0, 20000 - (int)((System.nanoTime()-started)/1000000)), "remainingInputTokens", 8000, "remainingOutputTokens", 2000));
-                    data = new LinkedHashMap<>(client.turn(payload, requestId));
-                    if ((System.nanoTime()-started)/1000000 >= 20000) throw new AssistantFault(504, "DEADLINE_EXCEEDED");
+                    boolean isCustomer = authentication != null && authentication.isAuthenticated()
+                            && authentication.getAuthorities().stream()
+                            .map(GrantedAuthority::getAuthority)
+                            .anyMatch(role -> "ROLE_CUSTOMER".equalsIgnoreCase(role) || "CUSTOMER".equalsIgnoreCase(role));
+                    data = new LinkedHashMap<>(orchestrator.executeTurn(
+                            requestId, session.conversation, turn, message,
+                            sessions.history(session), isCustomer, started
+                    ));
                     data.put("requestId", requestId); data.put("conversationId", session.conversation);
                     data.put("turnId", turn); data.put("clientMessageId", messageId);
                     sessions.finish(session, messageId, messageHash, message, data);
