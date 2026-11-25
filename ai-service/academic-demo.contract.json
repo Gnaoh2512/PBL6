@@ -1,0 +1,44 @@
+{
+  "schema_version": "academic-demo-configuration-1",
+  "working_directory": "ai-service",
+  "entrypoint": ["python", "-m", "uvicorn", "app.main:create_app", "--factory", "--host", "127.0.0.1", "--port", "8006"],
+  "snapshot_family": "paired_bm25_vector",
+  "secret_environment": ["GEMINI_API_KEY", "AI_SERVICE_AUTH_TOKEN"],
+  "environment": {
+    "AI_CORPUS_MODE": "demo_synthetic",
+    "AI_DEMO_SOURCE_PACK": "academic_policies",
+    "AI_RETRIEVAL_MODE": "hybrid",
+    "GEMINI_MODEL": "gemini-3.6-flash",
+    "GEMINI_THINKING_LEVEL": "MINIMAL",
+    "AI_EMBEDDING": {
+      "provider": "gemini",
+      "model": "gemini-embedding-001",
+      "api_version": "v1beta",
+      "dimension": 768,
+      "document_task": "RETRIEVAL_DOCUMENT",
+      "query_task": "RETRIEVAL_QUERY",
+      "normalization": "l2-v1",
+      "input_recipe": "text-search-v1",
+      "revision": "001"
+    },
+    "AI_CHUNKING": {
+      "algorithm": "complete-section-with-preamble-v1",
+      "max_characters": 2000,
+      "overlap": 0
+    },
+    "AI_HYBRID": {"bm25_top_k": 10, "vector_top_k": 10, "final_top_k": 3, "rrf_constant": 60},
+    "AI_QDRANT_URL": "http://127.0.0.1:6333",
+    "AI_INDEX_HTTP_TIMEOUT": 30.0,
+    "AI_DEPENDENCY_LATCH_COOLDOWN_S": 5.0,
+    "AI_GROUNDING": {
+      "catalog_path": ".local/grounding/demo_synthetic/academic-policies-2026-11-25-v3/catalog.json",
+      "catalog_sha256": "d4bc52d294cc34f5125f26374ece7fa2f2e766e6b0849d3e367bc701eb323499",
+      "sources_path": ".local/grounding/demo_synthetic/academic-policies-2026-11-25-v3/sources.json",
+      "sources_sha256": "53dc01c5cc0c086f27f2e910a7f9ff82913855648f0868c7eb3f1ca660a8b6f3",
+      "authorities": ["user-academic-demo"],
+      "context_input_tokens": 6000,
+      "max_evidence": 3,
+      "proposal_mode": "fact_selection"
+    }
+  }
+}

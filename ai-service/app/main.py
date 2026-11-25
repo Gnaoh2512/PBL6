@@ -2,6 +2,7 @@
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from time import monotonic
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -10,9 +11,12 @@ from starlette.responses import JSONResponse
 
 from app.api.boundary import FoundationBoundary, error_response
 from app.diagnostics import Operation, Phase, context, step
+from app.indexing import IndexingError
 from app.orchestration.faq import Faq
+from app.orchestration.verification.artifacts import load_verification_gate
 from app.providers.contracts import DependencyError, TurnBudget
 from app.providers.gemini import Gemini
+from app.retrieval.hybrid import create_hybrid_index
 from app.retrieval.index import KnowledgeIndex
 from app.schemas.faq import Probe
 from app.schemas.turn import ResumeTurn, TurnPayload
@@ -21,22 +25,56 @@ from app.settings import Settings
 
 def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
     settings = settings if settings is not None else Settings()
-    state = {"faq": faq, "provider": None, "dependency_failed": False}
+    state = {
+        "faq": faq,
+        "provider": None,
+        "dependency_failed": False,
+        "dependency_failed_at": None,
+        "retrieval": None,
+    }
+
+    def dependency_latched() -> bool:
+        if not state["dependency_failed"]:
+            return False
+        cooldown = settings.dependency_latch_cooldown_s
+        failed_at = state["dependency_failed_at"]
+        if cooldown > 0 and failed_at is not None and monotonic() - failed_at >= cooldown:
+            state["dependency_failed"] = False
+            state["dependency_failed_at"] = None
+            return False
+        return True
 
     async def initialize():
         if (
             state["faq"] is None
             and settings.gemini_key
-            and settings.index_path
+            and (settings.index_path or settings.retrieval_mode == "hybrid")
             and settings.service_token
         ):
             try:
-                index = KnowledgeIndex(
-                    settings.index_path,
-                    settings.corpus_mode,
-                    datetime.now(timezone(timedelta(hours=7))).date(),
+                today = datetime.now(timezone(timedelta(hours=7))).date()
+                if settings.retrieval_mode == "hybrid":
+                    index = await create_hybrid_index(settings)
+                    state["retrieval"] = index
+                    await index.ready_async(today)
+                else:
+                    index = KnowledgeIndex(
+                        settings.index_path,
+                        settings.corpus_mode,
+                        today,
+                        source_pack=settings.demo_source_pack,
+                    )
+                gate = load_verification_gate(settings, index, today)
+                gemini_kwargs = (
+                    {"thinking_level": settings.gemini_thinking_level}
+                    if settings.gemini_thinking_level is not None
+                    else {}
                 )
-                provider = Gemini(settings.gemini_key.get_secret_value(), settings.gemini_model)
+                provider = Gemini(
+                    settings.gemini_key.get_secret_value(),
+                    settings.gemini_model,
+                    **gemini_kwargs,
+                )
                 state["provider"] = provider
                 budget = TurnBudget(remaining_ms=5000, output_limit=100)
                 with (
@@ -46,8 +84,14 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
                     probe = await provider.generate("Return ok=true.", {}, Probe, budget)
                     if not probe.ok:
                         raise DependencyError()
-                state["faq"] = Faq(provider, index, settings.corpus_mode)
-            except (DependencyError, OSError, ValueError):
+                state["faq"] = Faq(
+                    provider,
+                    index,
+                    settings.corpus_mode,
+                    verification_gate=gate,
+                    grounding_config=settings.grounding,
+                )
+            except (DependencyError, IndexingError, OSError, ValueError):
                 state["faq"] = None
 
     @asynccontextmanager
@@ -56,8 +100,12 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
             await initialize()
             yield
         finally:
-            if state["provider"]:
-                await state["provider"].close()
+            try:
+                if state["provider"]:
+                    await state["provider"].close()
+            finally:
+                if state["retrieval"]:
+                    await state["retrieval"].close()
 
     application = FastAPI(
         title="Hotel Assistant Foundation",
@@ -97,9 +145,16 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
         if retrieval:
             try:
                 state["faq"].index.validate(datetime.now(timezone(timedelta(hours=7))).date())
+                if state["faq"].verification_gate is None:
+                    raise DependencyError()
+                state["faq"].verification_gate.catalog.check_current()
+                if hasattr(state["faq"].index, "ready_async"):
+                    await state["faq"].index.ready_async(
+                        datetime.now(timezone(timedelta(hours=7))).date()
+                    )
             except DependencyError:
                 retrieval = False
-        llm = state["faq"] is not None and not state["dependency_failed"]
+        llm = state["faq"] is not None and not dependency_latched()
         ready = llm and retrieval and settings.service_token is not None
         return JSONResponse(
             {
@@ -122,7 +177,7 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
         if isinstance(payload, ResumeTurn):
             # No continuations can exist until orchestration is implemented.
             return error_response(request.state.request_id, 409, "CONTINUATION_NOT_FOUND")
-        if state["faq"] is not None and not state["dependency_failed"]:
+        if state["faq"] is not None and not dependency_latched():
             try:
                 return await state["faq"].run(payload)
             except TimeoutError:
@@ -132,6 +187,7 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
             except DependencyError as error:
                 if error.code == "DEPENDENCY_UNAVAILABLE":
                     state["dependency_failed"] = True
+                    state["dependency_failed_at"] = monotonic()
                 status = {"DEADLINE_EXCEEDED": 504, "AI_PROTOCOL_ERROR": 502}.get(error.code, 503)
                 return error_response(request.state.request_id, status, error.code, retryable=True)
         return error_response(

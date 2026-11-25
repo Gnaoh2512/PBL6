@@ -3,9 +3,10 @@
 import re
 
 from app.diagnostics import Category, Operation, Phase, bind_budget, context, deadline, step
-from app.prompts.faq import ANSWER, CLASSIFY
+from app.orchestration.verification.settings import GroundingConfig
+from app.prompts.faq import CLASSIFY
 from app.providers.contracts import DependencyError, TurnBudget
-from app.schemas.faq import GroundedAnswer, Intent
+from app.schemas.faq import Intent
 
 
 def public_text(text: str) -> str:
@@ -15,14 +16,18 @@ def public_text(text: str) -> str:
 
 
 class Faq:
-    def __init__(self, provider, index, mode):
+    def __init__(self, provider, index, mode, *, verification_gate=None, grounding_config=None):
         self.provider, self.index, self.mode = provider, index, mode
+        self.verification_gate = verification_gate
+        self.grounding_config = grounding_config or GroundingConfig()
 
     async def run(self, payload):
         with context(operation=Operation.TURN, new=True), step(Phase.APPLICATION):
             return await self._run(payload)
 
     async def _run(self, payload):
+        if self.verification_gate is None:
+            raise DependencyError()
         self.index.validate(payload.context.today)
         budget = TurnBudget(
             remaining_ms=payload.budget.remainingMs,
@@ -54,35 +59,28 @@ class Faq:
                     raise DependencyError(
                         "BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT
                     )
-                evidence = self.index.search(intent.query, payload.context.today)
-                status, answer = "insufficient_evidence", "Chưa có đủ nguồn để trả lời câu hỏi này."
-                if evidence:
-                    with context(operation=Operation.ANSWER):
-                        result = await self.provider.generate(
-                            ANSWER,
-                            {
-                                "message": public_text(payload.message),
-                                "query": intent.query,
-                                "evidence": [e.model_dump() for e in evidence],
-                            },
-                            GroundedAnswer,
-                            budget,
-                        )
-                    if result.supported:
-                        registry = {e.citationId: e for e in evidence}
-                        if (
-                            not result.citationIds
-                            or len(set(result.citationIds)) != len(result.citationIds)
-                            or any(cid not in registry for cid in result.citationIds)
-                        ):
-                            raise DependencyError(
-                                "AI_PROTOCOL_ERROR", diagnostic_category=Category.RESPONSE_SCHEMA
-                            )
-                        selected = [
-                            registry[cid].model_dump(exclude={"excerpt", "corpusMode"})
-                            for cid in result.citationIds
-                        ]
-                        status, answer = "answered", result.answer
+                retrieval_index = self.index
+                if hasattr(self.index, "retrieve"):
+                    batch = await self.index.retrieve(
+                        public_text(intent.query), payload.context.today, budget
+                    )
+                    evidence = list(batch.evidence)
+                    retrieval_index = batch
+                else:
+                    evidence = self.index.search(intent.query, payload.context.today)
+                from app.orchestration.verification.runtime import verified_faq_answer
+
+                return await verified_faq_answer(
+                    self.verification_gate,
+                    self.provider,
+                    payload,
+                    evidence,
+                    intent.query,
+                    budget,
+                    retrieval_index,
+                    self.mode,
+                    self.grounding_config,
+                )
         return {
             "requestId": payload.requestId,
             "conversationId": str(payload.conversationId),
