@@ -1,16 +1,21 @@
-"""Turn orchestration: D1 verified FAQ + D2 read-only business tool planning and resume."""
+"""Turn orchestration: D1 verified FAQ + D2/D3 business/booking tools + D4 combined policy."""
 
 import re
+from types import SimpleNamespace
 
 from app.diagnostics import Category, Operation, Phase, bind_budget, context, deadline, step
 from app.orchestration.continuations import ContinuationStore
-from app.orchestration.tools import plan_business_turn, render_resume
+from app.orchestration.tools import (
+    compose_combined_booking_policy,
+    plan_business_turn,
+    render_resume,
+)
 from app.orchestration.verification.settings import GroundingConfig
 from app.prompts.faq import CLASSIFY
 from app.prompts.tools import PLAN_TURN
 from app.providers.contracts import DependencyError, TurnBudget
 from app.schemas.faq import Intent
-from app.schemas.turn import ResumeTurn
+from app.schemas.turn import BookingList, ResumeTurn
 from app.tools.schemas import TurnPlan
 
 _BUSINESS_TOOLS = frozenset({"search_rooms", "list_services", "list_my_bookings", "get_my_booking"})
@@ -54,13 +59,65 @@ class Faq:
             )
             bind_budget(budget)
             budget.seconds()
-            self.continuations.consume(
+            entry = self.continuations.consume(
                 continuation_id=payload.continuationId,
                 conversation_id=payload.conversationId,
                 turn_id=payload.turnId,
                 tool_results=payload.toolResults,
             )
-            return render_resume(payload, self.mode)
+            if entry.policy_context is None:
+                return render_resume(payload, self.mode)
+
+            # Fail closed / short-circuit before policy retrieval if booking lookup failed or returned empty.
+            if any(res.status == "error" for res in payload.toolResults):
+                return render_resume(payload, self.mode)
+            primary = payload.toolResults[0]
+            if isinstance(primary.data, BookingList) and not primary.data.items:
+                return render_resume(payload, self.mode)
+
+            policy_ctx = entry.policy_context
+            if self.verification_gate is None:
+                raise DependencyError()
+            if (
+                "search_knowledge" not in policy_ctx.allowed_tools
+                or payload.budget.remainingToolCalls < 1
+            ):
+                raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
+
+            self.index.validate(policy_ctx.today)
+            async with deadline(budget.seconds()):
+                retrieval_index = self.index
+                if hasattr(self.index, "retrieve"):
+                    batch = await self.index.retrieve(
+                        public_text(policy_ctx.policy_query), policy_ctx.today, budget
+                    )
+                    evidence = list(batch.evidence)
+                    retrieval_index = batch
+                else:
+                    evidence = self.index.search(
+                        public_text(policy_ctx.policy_query), policy_ctx.today
+                    )
+                from app.orchestration.verification.runtime import verified_faq_answer
+
+                host_policy_payload = SimpleNamespace(
+                    requestId=payload.requestId,
+                    conversationId=payload.conversationId,
+                    turnId=payload.turnId,
+                    message=policy_ctx.original_message,
+                    context=SimpleNamespace(today=policy_ctx.today),
+                )
+                policy_result = await verified_faq_answer(
+                    self.verification_gate,
+                    self.provider,
+                    host_policy_payload,
+                    evidence,
+                    policy_ctx.policy_query,
+                    budget,
+                    retrieval_index,
+                    self.mode,
+                    self.grounding_config,
+                )
+            return compose_combined_booking_policy(primary, policy_result, payload, self.mode)
 
     async def _run(self, payload):
         if self.verification_gate is None:
