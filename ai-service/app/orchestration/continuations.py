@@ -33,6 +33,15 @@ class CombinedPolicyContext:
 
 
 @dataclass(frozen=True)
+class FollowupClarification:
+    """Optional clarification appended deterministically after rendering partial multi-intent results."""
+
+    note: str
+    missing_fields: tuple[str, ...] = ()
+    actions: tuple[dict, ...] = ()
+
+
+@dataclass(frozen=True)
 class ContinuationEntry:
     continuation_id: UUID
     conversation_id: UUID
@@ -40,6 +49,7 @@ class ContinuationEntry:
     pending_calls: tuple[PendingCall, ...]
     expires_at: float
     policy_context: CombinedPolicyContext | None = None
+    followup: FollowupClarification | None = None
 
 
 class ContinuationStore:
@@ -70,6 +80,7 @@ class ContinuationStore:
         pending_calls: list[PendingCall],
         remaining_ms: int,
         policy_context: CombinedPolicyContext | None = None,
+        followup: FollowupClarification | None = None,
     ) -> UUID:
         if not pending_calls or remaining_ms <= 0:
             raise DependencyError("DEADLINE_EXCEEDED")
@@ -86,6 +97,7 @@ class ContinuationStore:
             pending_calls=tuple(pending_calls),
             expires_at=now + ttl,
             policy_context=policy_context,
+            followup=followup,
         )
         return continuation_id
 
