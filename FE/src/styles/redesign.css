@@ -51,7 +51,7 @@
 .ops-page .hc-card {
   overflow: hidden;
   border: 1px solid var(--ops-line);
-  border-radius: 14px;
+  border-radius: var(--hc-radius-lg);
   background: var(--ops-surface);
   box-shadow: var(--ops-shadow);
   transition:
@@ -80,7 +80,7 @@
 .ops-page .hc-btn {
   min-height: 40px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   font-size: 12px;
   font-weight: 700;
   transition:
@@ -111,7 +111,7 @@
 .ops-page .hc-form-group textarea {
   min-height: 42px;
   border: 1px solid #dce6e7;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   background: #fff;
   color: var(--ops-ink);
   font-size: 13px;
@@ -170,13 +170,13 @@
   max-width: 100%;
   padding: 4px;
   border: 1px solid var(--ops-line);
-  border-radius: 10px;
+  border-radius: var(--hc-radius-md);
   background: #fff;
 }
 .ops-page .hc-tab-btn {
   min-height: 38px;
   padding: 0 14px;
-  border-radius: 7px;
+  border-radius: var(--hc-radius-sm);
   color: #71858a;
   font-size: 11px;
   font-weight: 700;
@@ -203,7 +203,7 @@
 }
 .ops-page .hc-modal {
   border: 1px solid var(--ops-line);
-  border-radius: 15px;
+  border-radius: var(--hc-radius-lg);
   box-shadow: 0 24px 70px rgba(18, 48, 57, 0.18);
 }
 .ops-page .hc-modal-header {
@@ -227,25 +227,25 @@
 .ops-page .portal-toolbar select {
   min-height: 42px;
   border: 1px solid #dce6e7;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   background: #fff;
   color: var(--ops-ink);
   font-size: 13px;
 }
 .ops-page .portal-action {
   min-height: 40px;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   font-size: 11px;
   font-weight: 700;
 }
 .ops-page .portal-panel {
   border: 1px solid var(--ops-line);
-  border-radius: 14px;
+  border-radius: var(--hc-radius-lg);
   box-shadow: var(--ops-shadow);
 }
 .ops-page .portal-table-wrap {
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: var(--hc-radius-md);
 }
 .ops-page .portal-table-wrap table {
   min-width: 720px;
@@ -341,7 +341,7 @@
 .services-experience .hc-card {
   overflow: hidden;
   border: 1px solid var(--commerce-line);
-  border-radius: 16px;
+  border-radius: var(--hc-radius-lg);
   background: #fff;
   box-shadow: 0 15px 42px rgba(24, 60, 68, 0.065);
 }
@@ -377,7 +377,7 @@
 .services-experience textarea {
   min-height: 46px;
   border: 1px solid #d9e4e4;
-  border-radius: 9px;
+  border-radius: var(--hc-radius-md);
   color: var(--commerce-ink);
   background: #fff;
   box-shadow: none;
@@ -393,7 +393,7 @@
 .booking-experience .hc-btn,
 .services-experience .hc-btn {
   min-height: 43px;
-  border-radius: 9px;
+  border-radius: var(--hc-radius-md);
   font-weight: 700;
   transition:
     transform 0.16s ease,
@@ -409,14 +409,14 @@
   gap: 6px;
   padding: 5px;
   border: 1px solid var(--commerce-line);
-  border-radius: 11px;
+  border-radius: var(--hc-radius-md);
   background: #f7faf9;
 }
 .booking-experience .hc-tab-btn,
 .services-experience .hc-tab-btn {
   min-height: 38px;
   padding: 0 14px;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
 }
 .booking-search-card {
   margin: 0 0 35px;
@@ -460,7 +460,7 @@
   grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.4fr);
   overflow: hidden;
   border: 1px solid var(--commerce-line);
-  border-radius: 15px;
+  border-radius: var(--hc-radius-lg);
   background: #fff;
   box-shadow: 0 12px 34px rgba(24, 60, 68, 0.055);
 }
@@ -536,13 +536,13 @@
 }
 .booking-details-layout .booking-customer-card,
 .booking-order-summary > .hc-card {
-  border-radius: 15px;
+  border-radius: var(--hc-radius-lg);
   box-shadow: 0 12px 34px rgba(24, 60, 68, 0.065);
 }
 .booking-selected-room {
   overflow: hidden;
   border: 1px solid var(--commerce-line);
-  border-radius: 15px;
+  border-radius: var(--hc-radius-lg);
   background: #fff;
   box-shadow: 0 12px 34px rgba(24, 60, 68, 0.065);
 }
@@ -592,7 +592,7 @@
 .services-experience .hc-container > div[style*="grid-template-columns"] > div:first-child .hc-card-body > div[style*="flex-direction: column"] > div {
   min-height: 94px;
   border-color: #e5eceb !important;
-  border-radius: 12px !important;
+  border-radius: var(--hc-radius-md) !important;
   background: #fff !important;
   transition:
     transform 0.16s ease,

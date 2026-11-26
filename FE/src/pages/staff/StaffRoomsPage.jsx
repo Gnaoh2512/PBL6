@@ -720,7 +720,7 @@ export default function StaffRoomsPage() {
             {roomBookings.map((booking) => {
               const bookingStatus = BOOKING_STATUS_META[booking.status] || { label: booking.status || "Không rõ", badge: "hc-badge-muted" };
               return (
-                <section key={booking.bookingId} style={{ border: "1px solid var(--hc-border-light)", borderRadius: "10px", padding: "14px" }}>
+                <section key={booking.bookingId} style={{ border: "1px solid var(--hc-border-light)", borderRadius: "var(--hc-radius-md)", padding: "14px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "12px" }}>
                     <div>
                       <strong>{booking.customerName || "Khách chưa cập nhật tên"}</strong>
@@ -847,7 +847,7 @@ export default function StaffRoomsPage() {
               style={{
                 background: "var(--hc-bg-subtle, #f8fafc)",
                 border: "1px solid var(--hc-border-light, #e2e8f0)",
-                borderRadius: "8px",
+                borderRadius: "var(--hc-radius-sm)",
                 padding: "12px 16px",
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",

@@ -481,7 +481,7 @@ export default function StaffRequestsPage() {
               style={{
                 background: "var(--hc-bg-subtle, #f8fafc)",
                 border: "1px solid var(--hc-border-light, #e2e8f0)",
-                borderRadius: "8px",
+                borderRadius: "var(--hc-radius-sm)",
                 padding: "14px 16px",
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",

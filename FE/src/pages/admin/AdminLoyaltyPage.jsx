@@ -504,19 +504,19 @@ export default function AdminLoyaltyPage() {
     switch (b.benefitType) {
       case "ROOM_DISCOUNT":
         return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#f3e8ff", color: "#7e22ce", fontSize: 11, fontWeight: 700 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "var(--hc-radius-md)", background: "#f3e8ff", color: "#7e22ce", fontSize: 11, fontWeight: 700 }}>
             <i className="bi bi-tag-fill"></i> Giảm {b.discountPercent ? `${Number(b.discountPercent)}%` : ""} tiền phòng
           </span>
         );
       case "FREE_SERVICE":
         return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#e0f2fe", color: "#0369a1", fontSize: 11, fontWeight: 700 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "var(--hc-radius-md)", background: "#e0f2fe", color: "#0369a1", fontSize: 11, fontWeight: 700 }}>
             <i className="bi bi-stars"></i> Miễn phí DV {b.serviceName ? `(${b.serviceName})` : ""}
           </span>
         );
       default:
         return (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "12px", background: "#f1f5f9", color: "#475569", fontSize: 11, fontWeight: 700 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: "var(--hc-radius-md)", background: "#f1f5f9", color: "#475569", fontSize: 11, fontWeight: 700 }}>
             {b.benefitType}
           </span>
         );
@@ -684,7 +684,7 @@ export default function AdminLoyaltyPage() {
                                       openTierEdit(c.tierCode);
                                     }}
                                     title="Bấm để chỉnh sửa hạng này"
-                                    style={{ border: 0, cursor: "pointer", background: getTierColor(c.tierCode), color: "#fff", borderRadius: "12px", padding: "2px 8px", fontSize: "11px", fontWeight: 700 }}
+                                    style={{ border: 0, cursor: "pointer", background: getTierColor(c.tierCode), color: "#fff", borderRadius: "var(--hc-radius-md)", padding: "2px 8px", fontSize: "11px", fontWeight: 700 }}
                                   >
                                     {c.tierName || c.tierCode || "—"}
                                   </button>
@@ -815,7 +815,7 @@ export default function AdminLoyaltyPage() {
                                     display: "inline-block",
                                     background: getTierColor(b.tierCode),
                                     color: "#fff",
-                                    borderRadius: "12px",
+                                    borderRadius: "var(--hc-radius-md)",
                                     padding: "2px 8px",
                                     fontSize: "11px",
                                     fontWeight: 700,
@@ -916,7 +916,7 @@ export default function AdminLoyaltyPage() {
                 { label: "Tổng đêm lưu trú", value: `${selectedCustomer.totalStayDays || 0} đêm` },
                 { label: "Tổng chi tiêu", value: formatVND(selectedCustomer.totalSpent || 0) },
               ].map((stat) => (
-                <div key={stat.label} style={{ background: "var(--hc-bg-light, #f8fafc)", borderRadius: "8px", padding: "10px 12px", border: "1px solid var(--hc-border-light)" }}>
+                <div key={stat.label} style={{ background: "var(--hc-bg-light, #f8fafc)", borderRadius: "var(--hc-radius-sm)", padding: "10px 12px", border: "1px solid var(--hc-border-light)" }}>
                   <div style={{ fontSize: "11px", color: "var(--hc-text-secondary)", marginBottom: "4px" }}>{stat.label}</div>
                   <div style={{ fontWeight: 700, fontSize: "14px", color: stat.color || "inherit" }}>{stat.value}</div>
                 </div>
