@@ -828,9 +828,6 @@
   .resort-room-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .resort-room-card:last-child {
-    display: none;
-  }
   .resort-bento {
     grid-template-columns: repeat(3, 1fr);
   }

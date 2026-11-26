@@ -9,6 +9,7 @@ import { useToast } from "../../contexts/ToastContext";
 import DatePicker from "../../components/common/DatePicker";
 import SelectMenu from "../../components/common/SelectMenu";
 import { addDaysISO, todayISO } from "../../utils/dateUtils";
+import { getRoomVisual } from "../../utils/roomVisuals";
 import "./BookingPage.css";
 
 const getTodayStr = todayISO;
@@ -27,6 +28,7 @@ export default function BookingPage() {
   const { addToast } = useToast();
 
   const queryRoomId = searchParams.get("roomId") || "";
+  const queryRoomTypeId = searchParams.get("roomTypeId") || "";
   const queryCheckIn = searchParams.get("checkIn") || "";
   const queryCheckOut = searchParams.get("checkOut") || "";
   const queryGuests = searchParams.get("guests") || "2";
@@ -34,6 +36,12 @@ export default function BookingPage() {
   const [availableRooms, setAvailableRooms] = useState([]);
   const [roomsLoading, setRoomsLoading] = useState(true);
   const [selectedRoomId, setSelectedRoomId] = useState(queryRoomId);
+  const [selectedRoomTypeId, setSelectedRoomTypeId] = useState(queryRoomTypeId);
+  const [prevQueryRoomTypeId, setPrevQueryRoomTypeId] = useState(queryRoomTypeId);
+  if (queryRoomTypeId !== prevQueryRoomTypeId) {
+    setPrevQueryRoomTypeId(queryRoomTypeId);
+    setSelectedRoomTypeId(queryRoomTypeId);
+  }
   const [checkInDate, setCheckInDate] = useState(() => queryCheckIn || getTodayStr());
   const [checkOutDate, setCheckOutDate] = useState(() => queryCheckOut || getTomorrowStr());
   const [guestCount, setGuestCount] = useState(queryGuests);
@@ -120,8 +128,15 @@ export default function BookingPage() {
 
   const nights = Math.max(1, Math.round((new Date(checkOutDate) - new Date(checkInDate)) / (1000 * 60 * 60 * 24)) || 1);
   const roomsForGuests = availableRooms.filter((room) => Number(room.roomType?.capacity || room.capacity || 10) >= Number(guestCount));
+  const filteredRooms = selectedRoomTypeId
+    ? roomsForGuests.filter((room) => String(room.roomType?.roomTypeId || room.roomTypeId || "") === String(selectedRoomTypeId))
+    : roomsForGuests;
+  const activeRoomTypeName =
+    filteredRooms[0]?.roomType?.typeName ||
+    availableRooms.find((room) => String(room.roomType?.roomTypeId || room.roomTypeId || "") === String(selectedRoomTypeId))?.roomType?.typeName ||
+    "";
   const currentRoom = roomsForGuests.find((r) => String(r.roomId) === String(selectedRoomId));
-  const pricePerNight = currentRoom ? currentRoom.pricePerNight || currentRoom.roomType?.basePrice || currentRoom.basePrice || 500000 : 500000;
+  const pricePerNight = currentRoom ? Number(currentRoom.pricePerNight ?? currentRoom.roomType?.basePrice ?? currentRoom.basePrice ?? 0) : 0;
   const subtotal = pricePerNight * nights;
   const discountAmount = appliedVoucher ? appliedVoucher.discountAmount || 0 : 0;
   const finalTotal = Math.max(0, subtotal - discountAmount);
@@ -295,23 +310,37 @@ export default function BookingPage() {
             <section className="booking-room-results">
               <div className="booking-results-heading">
                 <div>
-                  <h2>Chọn không gian lưu trú</h2>
-                  <p>{roomsForGuests.length} phòng phù hợp với ngày ở và số khách đã chọn.</p>
+                  <h2>{activeRoomTypeName ? `Hạng phòng: ${activeRoomTypeName}` : "Chọn không gian lưu trú"}</h2>
+                  <p>{filteredRooms.length} phòng phù hợp với ngày ở và số khách đã chọn.</p>
                 </div>
+                {selectedRoomTypeId && (
+                  <button type="button" className="hc-btn hc-btn-outline hc-btn-sm" onClick={() => setSelectedRoomTypeId("")}>
+                    <i className="bi bi-grid"></i> Xem tất cả hạng phòng
+                  </button>
+                )}
               </div>
               {roomsLoading ? (
                 <div className="hc-card hc-empty-state">Đang kiểm tra phòng trống…</div>
-              ) : roomsForGuests.length === 0 ? (
+              ) : filteredRooms.length === 0 ? (
                 <div className="hc-card hc-empty-state">
                   <i className="bi bi-door-closed" />
-                  <p>Không tìm thấy phòng phù hợp. Hãy đổi ngày hoặc số khách.</p>
+                  <p>
+                    {selectedRoomTypeId && roomsForGuests.length > 0
+                      ? "Hạng phòng bạn chọn hiện đã hết phòng trống trong ngày này."
+                      : "Không tìm thấy phòng phù hợp. Hãy đổi ngày hoặc số khách."}
+                  </p>
+                  {selectedRoomTypeId && roomsForGuests.length > 0 && (
+                    <button type="button" className="hc-btn hc-btn-primary hc-btn-sm" style={{ marginTop: "12px" }} onClick={() => setSelectedRoomTypeId("")}>
+                      Xem tất cả {roomsForGuests.length} phòng trống khác
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="booking-room-grid">
-                  {roomsForGuests.map((room) => {
+                  {filteredRooms.map((room, index) => {
                     const roomName = room.roomType?.typeName || room.roomTypeName || `Phòng ${room.roomNumber}`;
-                    const roomImage = room.imageUrl || room.roomType?.imageUrl || "https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=85";
-                    const roomPrice = room.pricePerNight || room.roomType?.basePrice || room.basePrice || 0;
+                    const roomImage = getRoomVisual(room, index).image;
+                    const roomPrice = Number(room.pricePerNight ?? room.roomType?.basePrice ?? room.basePrice ?? 0);
                     return (
                       <article className="booking-room-card" key={room.roomId}>
                         <img src={roomImage} alt={roomName} loading="lazy" />
@@ -324,7 +353,7 @@ export default function BookingPage() {
                             <span className="hc-hero-badge">AZURE BAY</span>
                           )}
                           <h3>{roomName}</h3>
-                          <p>{room.roomType?.description || room.description || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái."}</p>
+                          <p>{room.roomType?.description || room.description || room.roomType?.amenities || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái."}</p>
                           <div className="booking-room-facts">
                             <span>
                               <i className="bi bi-people" /> Tối đa {room.roomType?.capacity || room.capacity || "—"} khách
@@ -429,7 +458,7 @@ export default function BookingPage() {
               <div className="booking-order-summary">
                 <article className="booking-selected-room">
                   <img
-                    src={currentRoom.imageUrl || currentRoom.roomType?.imageUrl || "https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=85"}
+                    src={getRoomVisual(currentRoom).image}
                     alt={currentRoom.roomType?.typeName || currentRoom.roomTypeName || "Phòng nghỉ Azure Bay"}
                   />
                   <div className="booking-selected-room-copy">
@@ -442,7 +471,7 @@ export default function BookingPage() {
                       )}
                     </div>
                     <h2>{currentRoom.roomType?.typeName || currentRoom.roomTypeName || `Phòng ${currentRoom.roomNumber}`}</h2>
-                    <p>{currentRoom.roomType?.description || currentRoom.description || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái."}</p>
+                    <p>{currentRoom.roomType?.description || currentRoom.description || currentRoom.roomType?.amenities || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái."}</p>
                     <div className="booking-room-facts">
                       <span>
                         <i className="bi bi-people" /> {guestCount} khách

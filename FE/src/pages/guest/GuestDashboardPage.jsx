@@ -7,8 +7,8 @@ import "./PortalPages.css";
 import "../../styles/GuestPages.css";
 import Paginated from "../../components/common/TablePagination";
 import { renderServiceStatusBadge } from "../../components/common/ServiceStatusBadge";
+import { getRoomVisual } from "../../utils/roomVisuals";
 
-const resortRoomPhoto = "https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=85";
 const stayStates = new Set(["CONFIRMED", "CHECKED_IN"]);
 
 const STATUS_LABEL = {
@@ -125,7 +125,7 @@ export default function GuestDashboardPage() {
             {nextStay ? (
               <div className="hc-card-body guest-stay">
                 <div className="guest-stay-photo-wrap">
-                  <img className="guest-stay-photo" src={resortRoomPhoto} alt="Phòng nghỉ tại Azure Bay" />
+                  <img className="guest-stay-photo" src={getRoomVisual({ roomTypeName: nextStay.roomTypeName }).image} alt={nextStay.roomTypeName || "Phòng nghỉ tại Azure Bay"} />
                   <span className="guest-stay-tag">Azure Bay Resort</span>
                 </div>
 

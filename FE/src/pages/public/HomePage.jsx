@@ -6,6 +6,8 @@ import DatePicker from "../../components/common/DatePicker";
 import SelectMenu from "../../components/common/SelectMenu";
 import { addDaysISO } from "../../utils/dateUtils";
 import { useToast } from "../../contexts/ToastContext";
+import { apiCall, formatVND } from "../../services/api";
+import { getPrimaryAmenityLabel, getRoomVisual } from "../../utils/roomVisuals";
 import "./HomePage.css";
 
 const photos = {
@@ -16,39 +18,6 @@ const photos = {
   retreat: "https://images.unsplash.com/photo-1588504633950-9dc518941e93?auto=format&fit=crop&w=1800&q=88",
   loyalty: "https://images.unsplash.com/photo-1679069389827-a633b8905d95?auto=format&fit=crop&w=1800&q=88",
 };
-
-const featuredRooms = [
-  {
-    name: "Suite Sân Hiên Biển",
-    label: "SUITE ĐẶC TRƯNG",
-    image: photos.room,
-    alternate: "https://images.unsplash.com/photo-1597126729864-51740ac05236?auto=format&fit=crop&w=1200&q=85",
-    price: "5.850.000 ₫",
-    guests: "2 khách",
-    size: "58 m²",
-    copy: "Không gian nghỉ dưỡng thoáng đãng, nơi đường chân trời hòa vào căn phòng.",
-  },
-  {
-    name: "Biệt Thự Hướng Vịnh",
-    label: "DINH THỰ RIÊNG",
-    image: photos.suite,
-    alternate: "https://images.unsplash.com/photo-1666433638132-16f0185d2fdf?auto=format&fit=crop&w=1200&q=85",
-    price: "7.600.000 ₫",
-    guests: "4 khách",
-    size: "86 m²",
-    copy: "Không gian ngập nắng, sân hiên rộng rãi và tầm nhìn trọn vẹn ra vịnh.",
-  },
-  {
-    name: "Biệt Thự Hồ Bơi Sân Vườn",
-    label: "BIỆT THỰ BIỆT LẬP",
-    image: photos.pool,
-    alternate: "https://images.unsplash.com/photo-1739066500258-2c131cdf9852?auto=format&fit=crop&w=1200&q=85",
-    price: "9.200.000 ₫",
-    guests: "4 khách",
-    size: "112 m²",
-    copy: "Chốn nghỉ yên bình với hồ bơi riêng và khu vườn ven biển xanh mát.",
-  },
-];
 
 const moments = [
   [
@@ -195,21 +164,25 @@ const REVEAL_TARGETS = [
   [".resort-offers > *", ""],
 ];
 
-function useScrollReveal(rootRef) {
+function useScrollReveal(rootRef, refreshKey) {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!root) return undefined;
     const items = [];
     REVEAL_TARGETS.forEach(([selector, variant]) => {
       root.querySelectorAll(selector).forEach((el, i) => {
-        if (el.classList.contains("reveal")) return;
-        el.classList.add("reveal");
-        if (variant) el.classList.add(variant);
-        // stagger siblings that share a selector (cards, copy lines, ...)
-        el.style.setProperty("--reveal-delay", `${(i % 6) * 0.1}s`);
-        items.push(el);
+        if (!el.classList.contains("reveal")) {
+          el.classList.add("reveal");
+          if (variant) el.classList.add(variant);
+          // stagger siblings that share a selector (cards, copy lines, ...)
+          el.style.setProperty("--reveal-delay", `${(i % 6) * 0.1}s`);
+        }
+        if (!el.classList.contains("is-visible")) {
+          items.push(el);
+        }
       });
     });
+    if (items.length === 0) return undefined;
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -224,18 +197,27 @@ function useScrollReveal(rootRef) {
     items.forEach((el) => observer.observe(el));
     return () => {
       observer.disconnect();
-      items.forEach((el) => {
-        el.classList.remove("reveal", "reveal-left", "reveal-right", "reveal-zoom", "is-visible");
-        el.style.removeProperty("--reveal-delay");
-      });
     };
-  }, [rootRef]);
+  }, [rootRef, refreshKey]);
 }
 
 export default function HomePage() {
   const rootRef = useRef(null);
   const location = useLocation();
-  useScrollReveal(rootRef);
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  const [checkInDate, setCheckInDate] = useState(getToday);
+  const [checkOutDate, setCheckOutDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  });
+  const [guestCount, setGuestCount] = useState(2);
+  const [rooms, setRooms] = useState([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [roomsError, setRoomsError] = useState("");
+
+  useScrollReveal(rootRef, rooms.length);
 
   // Scroll to the section named in the URL hash (works from the navbar, from
   // other pages, and when the same link is clicked twice).
@@ -252,15 +234,87 @@ export default function HomePage() {
     return () => clearTimeout(timer);
   }, [location.hash, location.key]);
 
-  const navigate = useNavigate();
-  const { addToast } = useToast();
-  const [checkInDate, setCheckInDate] = useState(getToday);
-  const [checkOutDate, setCheckOutDate] = useState(() => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    return new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  });
-  const [guestCount, setGuestCount] = useState(2);
+  const loadRooms = useCallback(async () => {
+    setRoomsLoading(true);
+    setRoomsError("");
+    try {
+      const [typesRes, availableRes] = await Promise.allSettled([
+        apiCall("/api/public/rooms/room-types", { auth: false, silentError: true }),
+        apiCall("/api/public/rooms/available", {
+          method: "POST",
+          body: { checkInDate, checkOutDate },
+          auth: false,
+          silentError: true,
+        }),
+      ]);
+
+      const availableList =
+        availableRes.status === "fulfilled" && availableRes.value?.success && Array.isArray(availableRes.value.data)
+          ? availableRes.value.data
+          : [];
+
+      let roomTypesList =
+        typesRes.status === "fulfilled" && typesRes.value?.success && Array.isArray(typesRes.value.data)
+          ? typesRes.value.data
+          : [];
+
+      if (roomTypesList.length === 0 && availableList.length > 0) {
+        const typeMap = new Map();
+        availableList.forEach((item) => {
+          const rt = item.roomType;
+          if (rt?.roomTypeId && !typeMap.has(rt.roomTypeId)) {
+            typeMap.set(rt.roomTypeId, {
+              ...rt,
+              basePrice: item.pricePerNight ?? rt.basePrice,
+            });
+          }
+        });
+        roomTypesList = Array.from(typeMap.values());
+      }
+
+      if (roomTypesList.length === 0 && typesRes.status === "rejected" && availableRes.status === "rejected") {
+        setRoomsError("Không thể tải danh sách hạng phòng từ máy chủ.");
+        setRooms([]);
+        return;
+      }
+
+      const sortedTypes = [...roomTypesList].sort(
+        (a, b) => Number(a.basePrice || 0) - Number(b.basePrice || 0) || Number(a.roomTypeId || 0) - Number(b.roomTypeId || 0),
+      );
+
+      const mapped = sortedTypes.map((rt, index) => {
+        const matchingAvailable = availableList.filter((item) => String(item.roomType?.roomTypeId) === String(rt.roomTypeId));
+        const firstAvailable = matchingAvailable[0] || null;
+        const priceValue = Number(firstAvailable?.pricePerNight ?? rt.basePrice ?? 0);
+        const visual = getRoomVisual(rt, index);
+        const capacity = Number(rt.capacity || 2);
+
+        return {
+          id: firstAvailable?.roomId || null,
+          roomTypeId: rt.roomTypeId,
+          name: rt.typeName || "Hạng phòng Azure Bay",
+          label: visual.label,
+          image: visual.image,
+          alternate: visual.alternate,
+          price: formatVND(priceValue),
+          capacity,
+          guests: `Tối đa ${capacity} khách`,
+          availabilityText: matchingAvailable.length > 0 ? `Còn ${matchingAvailable.length} phòng trống` : "Kiểm tra lịch trống",
+          amenityHighlight: getPrimaryAmenityLabel(rt.amenities),
+          copy: rt.description || rt.amenities || "Không gian nghỉ dưỡng được chuẩn bị cho kỳ lưu trú thoải mái.",
+        };
+      });
+
+      setRooms(mapped);
+    } finally {
+      setRoomsLoading(false);
+    }
+  }, [checkInDate, checkOutDate]);
+
+  useEffect(() => {
+    loadRooms();
+  }, [loadRooms]);
+
   const searchRooms = useCallback(() => {
     if (new Date(checkOutDate) <= new Date(checkInDate)) {
       addToast("Ngày trả phòng phải sau ngày nhận phòng.", "error");
@@ -279,12 +333,17 @@ export default function HomePage() {
     }
   };
 
-  const bookRoom = (roomId) => {
-    const filters = { checkIn: checkInDate, checkOut: checkOutDate, guests: String(guestCount) };
-    if (roomId) filters.roomId = String(roomId);
-    navigate(`/booking?${new URLSearchParams(filters)}`);
+  const bookRoom = (room) => {
+    const safeGuests = room?.capacity ? Math.min(Number(guestCount), Number(room.capacity)) : Number(guestCount);
+    const filters = new URLSearchParams({
+      checkIn: checkInDate,
+      checkOut: checkOutDate,
+      guests: String(Math.max(1, safeGuests)),
+    });
+    if (room?.roomTypeId) filters.set("roomTypeId", String(room.roomTypeId));
+    if (room?.id) filters.set("roomId", String(room.id));
+    navigate(`/booking?${filters.toString()}`);
   };
-  const rooms = featuredRooms;
 
   return (
     <div className="resort-home" ref={rootRef}>
@@ -379,45 +438,58 @@ export default function HomePage() {
             </div>
             <p>Mỗi không gian được kiến tạo cho buổi sáng thong thả, chiều ngập hương biển và đêm đảo dịu êm.</p>
           </div>
-          <div className="resort-room-grid">
-            {rooms.map((room, index) => (
-              <article className="resort-room-card" key={room.id || room.name}>
-                <div className="resort-room-image">
-                  <img className="alternate" src={room.alternate || featuredRooms[index % featuredRooms.length].alternate} alt="" />
-                  <img className="primary-image" src={room.image} alt={room.name} />
-                  <span>{room.label}</span>
-                </div>
-                <div className="resort-room-content">
-                  <h3>{room.name}</h3>
-                  <p>{room.copy}</p>
-                  <div className="resort-room-meta">
-                    <span>
-                      <Icon name="users" size={16} />
-                      {room.guests}
-                    </span>
-                    <span>
-                      <Icon name="bed" size={16} />
-                      {room.size}
-                    </span>
-                    <span>
-                      <Icon name="wifi" size={16} />
-                      Wi-Fi
-                    </span>
+          {roomsLoading && rooms.length === 0 ? (
+            <div className="hc-card hc-empty-state" style={{ padding: "48px 24px", textAlign: "center" }}>
+              Đang tải danh sách hạng phòng…
+            </div>
+          ) : rooms.length === 0 ? (
+            <div className="hc-card hc-empty-state" style={{ padding: "48px 24px", textAlign: "center" }}>
+              <p>{roomsError || "Hiện chưa có hạng phòng khả dụng để hiển thị."}</p>
+              <button type="button" className="resort-button outline" onClick={loadRooms} style={{ marginTop: "14px" }}>
+                Thử lại
+              </button>
+            </div>
+          ) : (
+            <div className="resort-room-grid">
+              {rooms.map((room) => (
+                <article className="resort-room-card" key={room.roomTypeId || room.name}>
+                  <div className="resort-room-image">
+                    <img className="alternate" src={room.alternate} alt="" />
+                    <img className="primary-image" src={room.image} alt={room.name} />
+                    <span>{room.label}</span>
                   </div>
-                  <div className="resort-room-footer">
-                    <div>
-                      <small>GIÁ TỪ</small>
-                      <b>{room.price}</b>
-                      <span>/ đêm</span>
+                  <div className="resort-room-content">
+                    <h3>{room.name}</h3>
+                    <p>{room.copy}</p>
+                    <div className="resort-room-meta">
+                      <span>
+                        <Icon name="users" size={16} />
+                        {room.guests}
+                      </span>
+                      <span>
+                        <Icon name="bed" size={16} />
+                        {room.availabilityText}
+                      </span>
+                      <span>
+                        <Icon name="wifi" size={16} />
+                        {room.amenityHighlight}
+                      </span>
                     </div>
-                    <button aria-label={`Đặt ${room.name}`} onClick={() => bookRoom(room.id)}>
-                      <Icon name="arrow" />
-                    </button>
+                    <div className="resort-room-footer">
+                      <div>
+                        <small>GIÁ TỪ</small>
+                        <b>{room.price}</b>
+                        <span>/ đêm</span>
+                      </div>
+                      <button aria-label={`Đặt ${room.name}`} onClick={() => bookRoom(room)}>
+                        <Icon name="arrow" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
-          </div>
+                </article>
+              ))}
+            </div>
+          )}
           <Link className="resort-button outline all-rooms" to="/booking">
             Khám phá tất cả phòng nghỉ <Icon name="arrow" size={18} />
           </Link>
