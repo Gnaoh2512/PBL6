@@ -515,7 +515,7 @@ export default function AdminAccountsPage() {
                       style={{
                         background: modalTab === "services" ? "rgba(255,255,255,0.25)" : "var(--hc-bg-muted, #e2e8f0)",
                         color: modalTab === "services" ? "#fff" : "inherit",
-                        borderRadius: "10px",
+                        borderRadius: "var(--hc-radius-md)",
                         padding: "1px 7px",
                         fontSize: "11px",
                         marginLeft: "4px",
@@ -550,7 +550,7 @@ export default function AdminAccountsPage() {
                     style={{
                       background: "var(--hc-bg-card, #f8fafc)",
                       border: "1px solid var(--hc-border, #e2e8f0)",
-                      borderRadius: "8px",
+                      borderRadius: "var(--hc-radius-sm)",
                       padding: "10px 14px",
                     }}
                   >
@@ -565,7 +565,7 @@ export default function AdminAccountsPage() {
                     style={{
                       background: "var(--hc-bg-card, #f8fafc)",
                       border: "1px solid var(--hc-border, #e2e8f0)",
-                      borderRadius: "8px",
+                      borderRadius: "var(--hc-radius-sm)",
                       padding: "10px 14px",
                     }}
                   >
@@ -580,7 +580,7 @@ export default function AdminAccountsPage() {
                     style={{
                       background: "var(--hc-bg-card, #f8fafc)",
                       border: "1px solid var(--hc-border, #e2e8f0)",
-                      borderRadius: "8px",
+                      borderRadius: "var(--hc-radius-sm)",
                       padding: "10px 14px",
                     }}
                   >

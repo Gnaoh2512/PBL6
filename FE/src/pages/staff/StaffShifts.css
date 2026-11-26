@@ -78,7 +78,7 @@
 .sh-swatch {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--hc-radius-sm);
   flex: none;
 }
 
@@ -439,7 +439,7 @@
   height: 36px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   font-size: 1.1rem;
 }
 .sh-breakdown-lbl {
@@ -500,7 +500,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--hc-radius-sm);
   font-size: 12px;
   font-weight: 600;
 }

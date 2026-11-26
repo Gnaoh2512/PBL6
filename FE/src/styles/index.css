@@ -67,11 +67,12 @@
   --hc-space-12: 48px;
   --hc-space-16: 64px;
 
-  /* ── Radius ── */
-  --hc-radius-sm: 6px;
-  --hc-radius-md: 10px;
-  --hc-radius-lg: 16px;
-  --hc-radius-xl: 24px;
+  /* ── Radius (Azure Bay architectural sharp-corner system — single source of truth) ── */
+  --hc-radius-none: 0px;
+  --hc-radius-sm: 2px;
+  --hc-radius-md: 2px;
+  --hc-radius-lg: 2px;
+  --hc-radius-xl: 2px;
   --hc-radius-full: 9999px;
 
   /* ── Shadows (elevation) ── */
@@ -1461,7 +1462,7 @@ a.hc-btn-danger:hover {
 .u-notice-warn {
   align-items: flex-start !important;
   background: #fffbeb !important;
-  border-radius: 8px !important;
+  border-radius: var(--hc-radius-sm) !important;
   border: 1px solid #fef3c7 !important;
   color: #92400e !important;
   display: flex !important;

@@ -218,8 +218,8 @@ export default function StaffSchedulesPage() {
 
       {/* Monthly Stats Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "20px" }}>
-        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "10px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "rgba(2, 132, 199, 0.1)", color: "var(--hc-primary, #0284c7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "var(--hc-radius-md)", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "42px", height: "42px", borderRadius: "var(--hc-radius-sm)", background: "rgba(2, 132, 199, 0.1)", color: "var(--hc-primary, #0284c7)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
             <i className="bi bi-calendar-check-fill"></i>
           </div>
           <div>
@@ -230,8 +230,8 @@ export default function StaffSchedulesPage() {
           </div>
         </div>
 
-        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "10px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "var(--hc-radius-md)", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "42px", height: "42px", borderRadius: "var(--hc-radius-sm)", background: "rgba(16, 185, 129, 0.1)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
             <i className="bi bi-clock-history"></i>
           </div>
           <div>
@@ -242,8 +242,8 @@ export default function StaffSchedulesPage() {
           </div>
         </div>
 
-        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "10px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "var(--hc-radius-md)", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "42px", height: "42px", borderRadius: "var(--hc-radius-sm)", background: "rgba(59, 130, 246, 0.1)", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
             <i className="bi bi-check-circle-fill"></i>
           </div>
           <div>
@@ -254,8 +254,8 @@ export default function StaffSchedulesPage() {
           </div>
         </div>
 
-        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "10px", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "8px", background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+        <div style={{ background: "var(--hc-bg-card, #fff)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "var(--hc-radius-md)", padding: "14px 18px", display: "flex", alignItems: "center", gap: "14px" }}>
+          <div style={{ width: "42px", height: "42px", borderRadius: "var(--hc-radius-sm)", background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
             <i className="bi bi-bell-fill"></i>
           </div>
           <div style={{ minWidth: 0 }}>
@@ -478,7 +478,7 @@ export default function StaffSchedulesPage() {
       >
         {selectedSchedule && (
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "var(--hc-bg-card, #f8fafc)", padding: "14px", borderRadius: "8px", border: "1px solid var(--hc-border, #e2e8f0)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", background: "var(--hc-bg-card, #f8fafc)", padding: "14px", borderRadius: "var(--hc-radius-sm)", border: "1px solid var(--hc-border, #e2e8f0)" }}>
               <div>
                 <div style={{ fontSize: "11px", color: "var(--hc-text-muted)", textTransform: "uppercase", fontWeight: 600 }}>Ngày làm việc</div>
                 <div style={{ fontSize: "14px", fontWeight: 700, color: "var(--hc-text-dark, #0f172a)", marginTop: "2px" }}>
@@ -518,7 +518,7 @@ export default function StaffSchedulesPage() {
 
             <div className="hc-form-group">
               <label className="hc-label">Ghi chú phân công ca trực</label>
-              <div style={{ padding: "10px 14px", background: "var(--hc-bg, #f8fafc)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "6px", fontSize: "13px", color: "var(--hc-text-secondary, #475569)", minHeight: "60px" }}>
+              <div style={{ padding: "10px 14px", background: "var(--hc-bg, #f8fafc)", border: "1px solid var(--hc-border, #e2e8f0)", borderRadius: "var(--hc-radius-sm)", fontSize: "13px", color: "var(--hc-text-secondary, #475569)", minHeight: "60px" }}>
                 {selectedSchedule.notes ? selectedSchedule.notes : <em style={{ color: "var(--hc-text-muted)" }}>Không có ghi chú thêm cho ca trực này.</em>}
               </div>
             </div>

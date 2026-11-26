@@ -471,7 +471,7 @@ export default function StaffMaintenancePage() {
                     style={{
                       background: "#fffbeb",
                       border: "1px solid #fef3c7",
-                      borderRadius: "8px",
+                      borderRadius: "var(--hc-radius-sm)",
                       padding: "10px 14px",
                       fontSize: "0.85rem",
                       color: "#92400e",

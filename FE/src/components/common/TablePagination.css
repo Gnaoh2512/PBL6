@@ -27,7 +27,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--hc-border, #d1d5db);
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   background: #fff;
   color: var(--hc-text, #1f2937);
   font: inherit;

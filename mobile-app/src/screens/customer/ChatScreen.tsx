@@ -5,78 +5,304 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
+  ScrollView,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
+import { useAuthStore } from '../../store/useAuthStore';
+import {
+  assistantService,
+  AssistantAction,
+  AssistantCard,
+  AssistantCitation,
+  AssistantStatus,
+} from '../../services/assistantService';
 
-interface Message {
+interface ChatMessage {
   id: string;
   text: string;
   sender: 'user' | 'bot';
+  status?: AssistantStatus;
+  citations?: AssistantCitation[];
+  cards?: AssistantCard[];
+  actions?: AssistantAction[];
   timestamp: Date;
 }
 
+const WELCOME_MESSAGE: ChatMessage = {
+  id: 'welcome',
+  text: 'Chào bạn! Tôi là trợ lý AI của Azure Bay Hotel. Bạn có thể hỏi về chính sách khách sạn, tìm phòng trống, dịch vụ hoặc kiểm tra đơn đặt phòng của bạn.',
+  sender: 'bot',
+  timestamp: new Date(),
+};
+
+const QUICK_PROMPTS = [
+  { label: 'Giá phòng trống', prompt: 'Tìm phòng trống cho 2 khách từ 2026-12-10 đến 2026-12-12' },
+  { label: 'Dịch vụ', prompt: 'Khách sạn hiện có những dịch vụ nào và giá bao nhiêu?' },
+  { label: 'Chính sách hủy', prompt: 'Chính sách hủy đặt phòng hoàn cọc thế nào?' },
+  { label: 'Đơn của tôi', prompt: 'Xem danh sách đơn đặt phòng của tôi' },
+];
+
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  PENDING_DEPOSIT: 'Chờ cọc',
+  CONFIRMED: 'Đã xác nhận',
+  CHECKED_IN: 'Đang lưu trú',
+  CHECKED_OUT: 'Đã trả phòng',
+  CANCELED: 'Đã hủy',
+  EXPIRED: 'Đã hết hạn',
+};
+
+function formatVnd(raw?: string | number): string {
+  if (raw === undefined || raw === null) return '';
+  const text = String(raw).trim();
+  if (!/^(0|[1-9][0-9]*)(\.[0-9]{1,2})?$/.test(text)) return text;
+  const [intPart, fracPart] = text.split('.');
+  const formatted = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return fracPart ? `${formatted},${fracPart} VND` : `${formatted} VND`;
+}
+
+function cleanAnswerText(text: string): string {
+  return text.replace(/\[[^\]]*Chính sách demo đã duyệt[^\]]*\]\s*/g, '').trim();
+}
+
 export default function ChatScreen() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'msg_1',
-      text: 'Chào bạn! Tôi là trợ lý ảo của Azure Bay Hotel. Tôi có thể giúp gì cho kỳ nghỉ của bạn?',
-      sender: 'bot',
-      timestamp: new Date(),
-    },
-  ]);
+  const navigation = useNavigation<any>();
+  const token = useAuthStore((s) => s.token);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [errorText, setErrorText] = useState<string | null>(null);
+
+  const conversationIdRef = useRef<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
+  // Clear private chat state whenever account/token changes (never store chat in AsyncStorage).
+  useEffect(() => {
+    abortRef.current?.abort();
+    conversationIdRef.current = null;
+    setMessages([{ ...WELCOME_MESSAGE, timestamp: new Date() }]);
+    setErrorText(null);
+  }, [token, userId]);
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
+  const handleReset = async () => {
+    abortRef.current?.abort();
+    conversationIdRef.current = null;
+    setMessages([{ ...WELCOME_MESSAGE, timestamp: new Date() }]);
+    setErrorText(null);
+    setIsTyping(false);
+    await assistantService.resetSession();
+  };
+
+  const handleActionPress = (action: AssistantAction) => {
+    if (action.type === 'open_room_search') {
+      navigation.navigate('CustomerTabs', { screen: 'Rooms' });
+    } else if (action.type === 'open_services') {
+      navigation.navigate('Services');
+    } else if (action.type === 'open_login') {
+      navigation.navigate('Auth');
+    }
+  };
+
+  const sendPrompt = async (rawText: string) => {
+    const trimmed = rawText.trim();
+    if (!trimmed || isTyping) return;
+
+    const userMessage: ChatMessage = {
+      id: `u-${Date.now()}`,
+      text: trimmed,
       sender: 'user',
       timestamp: new Date(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputText('');
+    setErrorText(null);
     setIsTyping(true);
 
-    // ==========================================
-    // 💡 TÍCH HỢP API AI Ở ĐÂY (SAU NÀY)
-    // Thay vì dùng setTimeout, bạn sẽ gọi API AI
-    // truyền vào `inputText` và nhận về câu trả lời.
-    // ==========================================
-    setTimeout(() => {
-      const botResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'Hiện tại hệ thống AI đang được bảo trì để nâng cấp. Cảm ơn bạn đã nhắn tin, chúng tôi sẽ sớm ra mắt tính năng này!',
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const data = await assistantService.sendMessage(
+        trimmed,
+        conversationIdRef.current,
+        controller.signal
+      );
+      if (controller.signal.aborted) return;
+
+      conversationIdRef.current = data.conversationId;
+
+      const botMessage: ChatMessage = {
+        id: `b-${Date.now()}`,
+        text: cleanAnswerText(data.answer),
         sender: 'bot',
+        status: data.status,
+        citations: data.citations,
+        cards: data.cards,
+        actions: data.actions,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, botResponse]);
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (err: any) {
+      if (controller.signal.aborted) return;
+      const errCode = err?.response?.data?.data?.code;
+      if (errCode === 'CONVERSATION_NOT_FOUND') {
+        conversationIdRef.current = null;
+      }
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Không thể kết nối tới trợ lý AI lúc này. Vui lòng thử lại.';
+      setErrorText(msg);
+    } finally {
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
-  const renderMessage = ({ item }: { item: Message }) => {
+  const renderCard = (card: AssistantCard, index: number) => {
+    if (card.type === 'room') {
+      return (
+        <TouchableOpacity
+          key={`room-${card.roomId ?? index}`}
+          style={styles.infoCard}
+          onPress={() => navigation.navigate('CustomerTabs', { screen: 'Rooms' })}
+          activeOpacity={0.8}
+        >
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>{card.typeName || 'Phòng trống'}</Text>
+            {card.capacity ? (
+              <Text style={styles.cardBadge}>Tối đa {card.capacity} khách</Text>
+            ) : null}
+          </View>
+          <Text style={styles.cardPrice}>
+            {formatVnd(card.pricePerNight)}/đêm
+            {card.totalRoomCharge ? ` · Dự kiến ${formatVnd(card.totalRoomCharge)}` : ''}
+          </Text>
+          {card.estimatedDeposit ? (
+            <Text style={styles.cardMeta}>
+              Cọc {card.depositPercentage ?? 30}%: {formatVnd(card.estimatedDeposit)}
+            </Text>
+          ) : null}
+          <Text style={styles.cardLink}>Xem & đặt phòng →</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (card.type === 'service') {
+      return (
+        <TouchableOpacity
+          key={`svc-${card.serviceId ?? index}`}
+          style={styles.infoCard}
+          onPress={() => navigation.navigate('Services')}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.cardTitle}>{card.serviceName}</Text>
+          <Text style={styles.cardPrice}>
+            {formatVnd(card.unitPrice)} / {card.unit}
+          </Text>
+          {card.categoryName ? <Text style={styles.cardMeta}>{card.categoryName}</Text> : null}
+        </TouchableOpacity>
+      );
+    }
+
+    if (card.type === 'booking') {
+      return (
+        <TouchableOpacity
+          key={`bk-${card.bookingCode ?? index}`}
+          style={styles.infoCard}
+          onPress={() => navigation.navigate('CustomerTabs', { screen: 'MyBookings' })}
+          activeOpacity={0.8}
+        >
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardTitle}>{card.bookingCode}</Text>
+            {card.status ? (
+              <Text style={styles.cardBadge}>
+                {BOOKING_STATUS_LABELS[card.status] || card.status}
+              </Text>
+            ) : null}
+          </View>
+          {card.roomTypeName ? <Text style={styles.cardMeta}>{card.roomTypeName}</Text> : null}
+          {card.checkInDate && card.checkOutDate ? (
+            <Text style={styles.cardMeta}>
+              {card.checkInDate} → {card.checkOutDate}
+              {card.nights ? ` (${card.nights} đêm)` : ''}
+            </Text>
+          ) : null}
+          {card.totalAmount !== undefined ? (
+            <Text style={styles.cardPrice}>
+              Tổng: {formatVnd(card.totalAmount)}
+              {card.remainingAmount !== undefined
+                ? ` · Còn lại: ${formatVnd(card.remainingAmount)}`
+                : ''}
+            </Text>
+          ) : null}
+        </TouchableOpacity>
+      );
+    }
+
+    return null;
+  };
+
+  const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isUser = item.sender === 'user';
     return (
       <View style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowBot]}>
         {!isUser && (
           <View style={styles.botAvatar}>
-            <Ionicons name="hardware-chip" size={16} color={COLORS.surface} />
+            <Ionicons name="sparkles" size={15} color={COLORS.surface} />
           </View>
         )}
-        <View style={[styles.messageBubble, isUser ? styles.messageBubbleUser : styles.messageBubbleBot]}>
-          <Text style={[styles.messageText, isUser ? styles.messageTextUser : styles.messageTextBot]}>
-            {item.text}
-          </Text>
+        <View style={styles.bubbleWrap}>
+          <View
+            style={[
+              styles.messageBubble,
+              isUser ? styles.messageBubbleUser : styles.messageBubbleBot,
+            ]}
+          >
+            <Text
+              style={[styles.messageText, isUser ? styles.messageTextUser : styles.messageTextBot]}
+            >
+              {item.text}
+            </Text>
+          </View>
+
+          {item.cards && item.cards.length > 0 && (
+            <View style={styles.cardsContainer}>
+              {item.cards.map((card, i) => renderCard(card, i))}
+            </View>
+          )}
+
+          {item.actions && item.actions.length > 0 && (
+            <View style={styles.actionsRow}>
+              {item.actions.map((act, i) => (
+                <TouchableOpacity
+                  key={`${act.type}-${i}`}
+                  style={styles.actionBtn}
+                  onPress={() => handleActionPress(act)}
+                >
+                  <Text style={styles.actionBtnText}>{act.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -89,6 +315,17 @@ export default function ChatScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        <View style={styles.topUtilityBar}>
+          <View style={styles.statusRow}>
+            <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.secondary} />
+            <Text style={styles.statusLabel}>Azure Bay AI Concierge</Text>
+          </View>
+          <TouchableOpacity onPress={handleReset} style={styles.resetBtn}>
+            <Ionicons name="refresh-outline" size={15} color={COLORS.primary} />
+            <Text style={styles.resetBtnText}>Mới</Text>
+          </TouchableOpacity>
+        </View>
+
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -96,31 +333,57 @@ export default function ChatScreen() {
           renderItem={renderMessage}
           contentContainerStyle={styles.listContent}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
         />
 
         {isTyping && (
           <View style={styles.typingIndicator}>
-            <Text style={styles.typingText}>Trợ lý ảo đang gõ...</Text>
+            <ActivityIndicator size="small" color={COLORS.secondary} />
+            <Text style={styles.typingText}>Trợ lý AI đang kiểm tra thông tin...</Text>
           </View>
         )}
+
+        {errorText && (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle-outline" size={16} color={COLORS.error} />
+            <Text style={styles.errorText}>{errorText}</Text>
+          </View>
+        )}
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.pillsBar}
+          contentContainerStyle={styles.pillsContent}
+        >
+          {QUICK_PROMPTS.map((item) => (
+            <TouchableOpacity
+              key={item.label}
+              style={styles.pill}
+              onPress={() => sendPrompt(item.prompt)}
+              disabled={isTyping}
+            >
+              <Text style={styles.pillText}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
-            placeholder="Nhập tin nhắn..."
+            placeholder="Hỏi về phòng, dịch vụ, chính sách..."
             placeholderTextColor={COLORS.textMuted}
             multiline
-            maxLength={500}
+            maxLength={1000}
+            editable={!isTyping}
           />
-          <TouchableOpacity 
-            style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]} 
-            onPress={handleSend}
-            disabled={!inputText.trim()}
+          <TouchableOpacity
+            style={[styles.sendBtn, (!inputText.trim() || isTyping) && styles.sendBtnDisabled]}
+            onPress={() => sendPrompt(inputText)}
+            disabled={!inputText.trim() || isTyping}
           >
-            <Ionicons name="send" size={20} color={COLORS.surface} />
+            <Ionicons name="send" size={18} color={COLORS.surface} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -131,8 +394,30 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   container: { flex: 1 },
-  listContent: { padding: SPACING.md, flexGrow: 1, justifyContent: 'flex-end' },
-  messageRow: { flexDirection: 'row', marginBottom: SPACING.md, alignItems: 'flex-end' },
+  topUtilityBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusLabel: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, fontWeight: '500' },
+  resetBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.background,
+  },
+  resetBtnText: { fontSize: FONTS.sizes.xs, color: COLORS.primary, fontWeight: '600' },
+  listContent: { padding: SPACING.md, flexGrow: 1 },
+  messageRow: { flexDirection: 'row', marginBottom: SPACING.md, alignItems: 'flex-start' },
   messageRowUser: { justifyContent: 'flex-end' },
   messageRowBot: { justifyContent: 'flex-start' },
   botAvatar: {
@@ -143,11 +428,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
+    marginTop: 2,
   },
+  bubbleWrap: { maxWidth: '82%' },
   messageBubble: {
-    maxWidth: '75%',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.sm + 2,
     borderRadius: RADIUS.lg,
   },
   messageBubbleUser: {
@@ -157,38 +443,123 @@ const styles = StyleSheet.create({
   messageBubbleBot: {
     backgroundColor: COLORS.surface,
     borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  messageText: { fontSize: FONTS.sizes.md, lineHeight: 22 },
+  messageText: { fontSize: FONTS.sizes.md, lineHeight: 20 },
   messageTextUser: { color: COLORS.surface },
-  messageTextBot: { color: COLORS.text },
-  typingIndicator: { paddingHorizontal: SPACING.lg, paddingBottom: SPACING.sm },
-  typingText: { fontSize: FONTS.sizes.sm, color: COLORS.textMuted, fontStyle: 'italic' },
+  messageTextBot: { color: COLORS.textPrimary },
+  citationBox: {
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.xs + 2,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  citationHeading: {
+    fontSize: FONTS.sizes.xs,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  citationItem: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, lineHeight: 16 },
+  cardsContainer: { marginTop: SPACING.xs + 2, gap: SPACING.xs + 2 },
+  infoCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.sm + 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  cardTitle: { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
+  cardBadge: {
+    fontSize: 11,
+    color: COLORS.primary,
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+    fontWeight: '600',
+  },
+  cardPrice: {
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '600',
+    color: COLORS.secondary,
+    marginTop: 4,
+  },
+  cardMeta: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
+  cardLink: {
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.primary,
+    fontWeight: '600',
+    marginTop: 6,
+  },
+  actionsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginTop: SPACING.xs + 2 },
+  actionBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+  },
+  actionBtnText: { fontSize: FONTS.sizes.xs, color: COLORS.surface, fontWeight: '600' },
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs + 2,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+  },
+  typingText: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, fontStyle: 'italic' },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginHorizontal: SPACING.md,
+    marginBottom: SPACING.xs,
+    padding: SPACING.sm,
+    borderRadius: RADIUS.md,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  errorText: { fontSize: FONTS.sizes.xs, color: COLORS.error, flex: 1 },
+  pillsBar: { maxHeight: 42, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface },
+  pillsContent: { paddingHorizontal: SPACING.sm, alignItems: 'center', gap: SPACING.xs + 2 },
+  pill: {
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    paddingHorizontal: SPACING.sm + 4,
+    paddingVertical: 6,
+    borderRadius: RADIUS.full,
+  },
+  pillText: { fontSize: FONTS.sizes.xs, color: COLORS.textPrimary, fontWeight: '500' },
   inputContainer: {
     flexDirection: 'row',
-    padding: SPACING.sm,
+    alignItems: 'flex-end',
     paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    alignItems: 'flex-end',
+    gap: SPACING.sm,
   },
   input: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
     backgroundColor: COLORS.background,
     borderRadius: RADIUS.lg,
     paddingHorizontal: SPACING.md,
-    paddingTop: 10,
-    paddingBottom: 10,
+    paddingVertical: Platform.OS === 'ios' ? SPACING.sm + 2 : SPACING.sm,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    marginRight: SPACING.sm,
+    color: COLORS.textPrimary,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   sendBtn: {
     width: 40,
@@ -197,9 +568,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
   },
-  sendBtnDisabled: {
-    backgroundColor: COLORS.textMuted,
-  },
+  sendBtnDisabled: { backgroundColor: COLORS.textMuted, opacity: 0.5 },
 });

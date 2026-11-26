@@ -82,7 +82,7 @@
 .admin-calendar-card {
   overflow: hidden;
   background: var(--hc-card-bg, #ffffff);
-  border-radius: 12px;
+  border-radius: var(--hc-radius-md);
   border: 1px solid var(--hc-border-light, #e2e8f0);
 }
 
@@ -165,7 +165,7 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--hc-radius-sm);
   font-style: normal;
   font-size: 11px;
   font-weight: 800;
@@ -212,7 +212,7 @@
   gap: 6px;
   height: 38px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   font-family: inherit;
   font-size: 13px;
   font-weight: 600;
@@ -258,7 +258,7 @@
   padding: 4px;
   background: var(--hc-card-bg, #ffffff);
   border: 1px solid var(--hc-border-light, #e2e8f0);
-  border-radius: 12px;
+  border-radius: var(--hc-radius-md);
 }
 
 .admin-calendar-wrapper .admin-cal-btn.is-view {
@@ -344,7 +344,7 @@
   box-sizing: border-box;
   height: var(--cal-slot-row-h, 22px);
   padding: 0 6px 0 3px;
-  border-radius: 6px;
+  border-radius: var(--hc-radius-sm);
   font-size: 11.5px;
   line-height: 1.35;
   background: var(--slot-bg);
@@ -365,7 +365,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 5px;
+  border-radius: var(--hc-radius-sm);
   background: var(--slot-fg);
   color: #ffffff;
   font-size: 10.5px;
@@ -416,7 +416,7 @@
   overflow: auto;
   max-height: 640px;
   border: 1px solid var(--hc-border-light, #e2e8f0);
-  border-radius: 10px;
+  border-radius: var(--hc-radius-md);
   background: var(--hc-card-bg, #ffffff);
 }
 
@@ -600,7 +600,7 @@
   padding: 0 6px;
   overflow: hidden;
   white-space: nowrap;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   background: var(--slot-bg);
   border: 1px solid var(--slot-border);
   color: var(--slot-fg);
@@ -624,7 +624,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 5px;
+  border-radius: var(--hc-radius-sm);
   background: var(--slot-fg);
   color: #ffffff;
   font-size: 10.5px;
@@ -695,7 +695,7 @@
   color: var(--hc-primary, #0284c7);
   font-size: 11px;
   font-weight: 700;
-  border-radius: 12px;
+  border-radius: var(--hc-radius-md);
 }
 
 .bulk-staff-actions {
@@ -730,7 +730,7 @@
   max-height: 190px;
   overflow-y: auto;
   border: 1px solid var(--hc-border, #cbd5e1);
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   padding: 6px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -751,7 +751,7 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: var(--hc-radius-sm);
   border: 1px solid var(--hc-border-light, #f1f5f9);
   background: var(--hc-bg, #f8fafc);
   cursor: pointer;
@@ -822,7 +822,7 @@
   align-items: center;
   justify-content: center;
   padding: 8px 4px;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   border: 1px solid var(--hc-border, #cbd5e1);
   background: var(--hc-bg, #f8fafc);
   color: var(--hc-text-secondary, #475569);
@@ -861,7 +861,7 @@
 .bulk-options-row {
   background: var(--hc-bg-subtle, #f8fafc);
   border: 1px solid var(--hc-border-light, #e2e8f0);
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   padding: 10px 14px;
 }
 
@@ -908,7 +908,7 @@
 
 .admin-calendar-status {
   width: max-content;
-  border-radius: 20px;
+  border-radius: var(--hc-radius-lg);
   padding: 3px 10px;
   font-size: 11.5px !important;
   font-weight: 700;
@@ -955,7 +955,7 @@
   align-items: center;
   gap: 6px;
   padding: 3px 10px 3px 4px;
-  border-radius: 20px;
+  border-radius: var(--hc-radius-lg);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -1003,7 +1003,7 @@
   align-items: center;
   text-align: left;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--hc-radius-md);
   border: 1px solid var(--hc-border, #cbd5e1);
   background: var(--hc-card-bg, #ffffff);
   color: var(--hc-text-primary, #1e293b);
@@ -1020,7 +1020,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--hc-radius-sm);
   background: var(--slot-bg);
   color: var(--slot-fg);
   font-size: 13px;
@@ -1070,7 +1070,7 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  border-radius: 6px;
+  border-radius: var(--hc-radius-sm);
   font-size: 12px;
   font-weight: 600;
 }

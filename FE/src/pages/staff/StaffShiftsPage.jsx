@@ -911,7 +911,7 @@ export default function StaffShiftsPage() {
               Danh Sách Giao Dịch Trong Ca
             </div>
 
-            <div style={{ maxHeight: "320px", overflowY: "auto", border: "1px solid var(--hc-border)", borderRadius: "6px" }}>
+            <div style={{ maxHeight: "320px", overflowY: "auto", border: "1px solid var(--hc-border)", borderRadius: "var(--hc-radius-sm)" }}>
               {!selectedHistoryShift.transactions || selectedHistoryShift.transactions.length === 0 ? (
                 <div style={{ padding: "24px", textAlign: "center", color: "var(--hc-text-secondary)", fontSize: "13px" }}>
                   Ca này không ghi nhận giao dịch phát sinh nào.

@@ -8,6 +8,7 @@ from app.diagnostics import Category, Operation, Phase, bind_budget, context, de
 from app.orchestration.continuations import ContinuationStore
 from app.orchestration.tools import (
     compose_combined_booking_policy,
+    compose_combined_room_policy,
     plan_business_turn,
     render_resume,
 )
@@ -87,11 +88,11 @@ class Faq:
                 tool_results=payload.toolResults,
             )
             if entry.policy_context is None:
-                return render_resume(payload, self.mode)
+                return render_resume(payload, self.mode, followup=entry.followup)
 
-            # Fail closed / short-circuit before policy retrieval if booking lookup failed or returned empty.
+            # Fail closed / short-circuit before policy retrieval if tool lookup failed or returned empty.
             if any(res.status == "error" for res in payload.toolResults):
-                return render_resume(payload, self.mode)
+                return render_resume(payload, self.mode, followup=entry.followup)
             primary = payload.toolResults[0]
             if isinstance(primary.data, BookingList) and not primary.data.items:
                 return render_resume(payload, self.mode)
@@ -142,6 +143,8 @@ class Faq:
                     self.mode,
                     self.grounding_config,
                 )
+            if primary.name == "search_rooms":
+                return compose_combined_room_policy(primary, policy_result, payload, self.mode)
             return compose_combined_booking_policy(primary, policy_result, payload, self.mode)
 
     async def _run(self, payload):
@@ -225,6 +228,113 @@ class Faq:
                     self.mode,
                     self.grounding_config,
                 )
+
+            if plan is not None and plan.intent == "policy_and_rooms":
+                from app.tools.schemas import validate_room_search_plan
+
+                room_args, missing, clarification = (
+                    validate_room_search_plan(plan, payload.context.today)
+                    if "search_rooms" in payload.allowedTools
+                    else (None, [], None)
+                )
+                if room_args is not None and "search_knowledge" in payload.allowedTools:
+                    return plan_business_turn(plan, payload, budget, self.continuations, self.mode)
+                # Room dates/guests missing: try answering the policy part right away and append
+                # a helpful room-price clarification so the guest gets actionable guidance.
+                policy_q = (plan.policyQuery or plan.query).strip() or plan.query.strip()
+                policy_answer_text = ""
+                policy_citations: list = []
+                policy_evidence: list = []
+                if (
+                    "search_knowledge" in payload.allowedTools
+                    and payload.budget.remainingToolCalls >= 1
+                ):
+                    retrieval_index = self.index
+                    retrieval_query = _merge_retrieval_query(
+                        public_text(policy_q), public_text(payload.message)
+                    )
+                    if hasattr(self.index, "retrieve"):
+                        batch = await self.index.retrieve(
+                            retrieval_query, payload.context.today, budget
+                        )
+                        evidence = list(batch.evidence)
+                        retrieval_index = batch
+                    else:
+                        evidence = await asyncio.to_thread(
+                            self.index.search, retrieval_query, payload.context.today
+                        )
+                    from app.orchestration.verification.runtime import verified_faq_answer
+
+                    policy_payload = SimpleNamespace(
+                        requestId=payload.requestId,
+                        conversationId=payload.conversationId,
+                        turnId=payload.turnId,
+                        message=policy_q,
+                        context=payload.context,
+                    )
+                    policy_res = await verified_faq_answer(
+                        self.verification_gate,
+                        self.provider,
+                        policy_payload,
+                        evidence,
+                        policy_q,
+                        budget,
+                        retrieval_index,
+                        self.mode,
+                        self.grounding_config,
+                    )
+                    p_final = policy_res.get("final") or {}
+                    if p_final.get("status") == "answered" and p_final.get("citations"):
+                        policy_answer_text = str(p_final.get("answer") or "").strip()
+                        policy_citations = list(p_final.get("citations") or [])
+                        policy_evidence = list(policy_res.get("evidence") or [])
+
+                room_note = (
+                    f"Về giá phòng trống: {clarification}"
+                    if clarification
+                    else "Về giá phòng trống: Bạn vui lòng cho biết ngày nhận phòng, ngày trả phòng và số lượng khách để tôi báo giá chính xác nhé."
+                )
+                if policy_answer_text:
+                    full_answer = f"{policy_answer_text}\n\n{room_note}"
+                    resp_status = "answered"
+                else:
+                    full_answer = (
+                        f"{room_note}\n\n"
+                        "Về chính sách khách sạn, bạn có thể hỏi cụ thể mục bạn quan tâm "
+                        "(ví dụ: giờ nhận/trả phòng, tỷ lệ đặt cọc & giữ chỗ 15 phút, "
+                        "chính sách hủy phòng hoàn cọc, hoặc quy định thú cưng/trẻ em)."
+                    )
+                    resp_status = "needs_clarification"
+                return {
+                    "requestId": payload.requestId,
+                    "conversationId": str(payload.conversationId),
+                    "turnId": str(payload.turnId),
+                    "kind": "final",
+                    "continuationId": None,
+                    "toolCalls": [],
+                    "final": {
+                        "status": resp_status,
+                        "answer": full_answer,
+                        "missingFields": missing,
+                        "citations": policy_citations,
+                        "cards": [],
+                        "actions": [
+                            {
+                                "type": "open_room_search",
+                                "label": "Mở trang tìm & đặt phòng",
+                                "targetId": None,
+                            }
+                        ],
+                        "corpusMode": self.mode,
+                    },
+                    "evidence": policy_evidence,
+                    "usage": {
+                        "toolCallsUsed": 1 if policy_evidence else 0,
+                        "brokerBatchesUsed": 0,
+                        "inputTokensUsed": budget.input_used,
+                        "outputTokensUsed": budget.output_used,
+                    },
+                }
 
             if plan is not None:
                 return plan_business_turn(plan, payload, budget, self.continuations, self.mode)

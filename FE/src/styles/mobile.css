@@ -306,7 +306,7 @@
     max-width: 100%;
     max-height: 92vh;
     max-height: 92dvh;
-    border-radius: 20px 20px 0 0;
+    border-radius: var(--hc-radius-lg) var(--hc-radius-lg) 0 0;
     animation: hcSlideUp var(--hc-duration-normal) var(--hc-ease);
   }
   .hc-modal-header {
@@ -575,7 +575,7 @@
     align-items: center;
     justify-content: center;
     padding: 0;
-    border-radius: 12px;
+    border-radius: var(--hc-radius-md);
     background: rgba(41, 108, 122, 0.09);
     font-size: 20px;
     transition: background 0.18s ease;
@@ -598,7 +598,7 @@
     padding: 8px;
     background: #fff;
     border: 1px solid rgba(23, 71, 81, 0.08);
-    border-radius: 20px;
+    border-radius: var(--hc-radius-lg);
     box-shadow: 0 22px 50px rgba(15, 38, 45, 0.22);
   }
   header.hc-navbar.resort-nav .resort-nav-links.open {
@@ -611,7 +611,7 @@
     gap: 12px;
     min-height: 50px;
     padding: 6px 10px;
-    border-radius: 14px;
+    border-radius: var(--hc-radius-lg);
     color: var(--hc-primary);
     font-size: 15px;
     font-weight: 600;
@@ -631,7 +631,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
+    border-radius: var(--hc-radius-md);
     background: rgba(41, 108, 122, 0.09);
     font-size: 16px;
   }
@@ -663,7 +663,7 @@
     min-height: 44px;
     padding: 0 10px;
     border: 1px solid var(--hc-border, #dfe7e6);
-    border-radius: 12px;
+    border-radius: var(--hc-radius-md);
     background: transparent;
     box-shadow: none;
     color: var(--hc-primary) !important;
@@ -712,7 +712,7 @@
   footer.resort-footer .resort-footer-logo {
     gap: 12px;
     padding: 12px 16px;
-    border-radius: 12px;
+    border-radius: var(--hc-radius-md);
   }
   footer.resort-footer .resort-footer-logo-mark {
     width: 38px;

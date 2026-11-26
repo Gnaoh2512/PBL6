@@ -35,6 +35,8 @@ class TurnPlan(StrictModel):
         "faq",
         "search_rooms",
         "list_services",
+        "rooms_and_services",
+        "policy_and_rooms",
         "list_my_bookings",
         "get_my_booking",
         "booking_with_policy",
