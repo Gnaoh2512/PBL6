@@ -527,11 +527,7 @@ export function AssistantChat({ routeKey = '', isCustomer = false }) {
             </form>
             <p className="assistant-trust-note">
               <ShieldCheckIcon />
-              <span>
-                {mode === 'demo_synthetic'
-                  ? 'Thông tin từ nguồn demo đã cấu hình · Chỉ dùng cho demo'
-                  : 'Thông tin được trích xuất từ nguồn chính thức của khách sạn'}
-              </span>
+              <span>Thông tin được trích xuất từ nguồn chính thức của khách sạn</span>
             </p>
           </div>
         </section>
