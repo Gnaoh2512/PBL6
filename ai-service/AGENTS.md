@@ -10,7 +10,7 @@
 ## Phạm vi
 
 - Sáu nhóm: FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách. Widget góc dưới bên phải.
-- Đã có FastAPI, Gemini REST, ingestion/retrieval FTS5, FAQ orchestration, Spring facade và widget opt-in. D1 chưa đóng nghiệm thu live/grounding; business tools D2–D4 chưa triển khai. Đọc PROCESS.md để phân biệt code, kiểm thử offline và bằng chứng Gemini thật.
+- Đã triển khai đầy đủ D1–D4: FastAPI, Gemini REST, hybrid retrieval (FTS5 + Qdrant), Phase 3 Verification Gate (catalog `v4`), business/booking tool broker (`search_rooms`, `list_services`, `list_my_bookings`, `get_my_booking`), `ContinuationStore`, câu hỏi kết hợp `booking_with_policy`, Spring facade/orchestrator và widget opt-in. D1 được chấp nhận `ACCEPTED_WITH_LIMITATIONS` cho Academic Demo; corpus production thật, live reliability dài hạn và ký nghiệm thu chính thức D2–D4 vẫn mở. Đọc `docs/PROCESS.md` để phân biệt code, kiểm thử offline và bằng chứng Gemini/MySQL thật.
 - Tái sử dụng React/Vite, Spring Boot/MySQL và convention sẵn có; Python/FastAPI chạy FAQ/RAG.
 - Không tự mở rộng sang OCR, thanh toán, thao tác ghi booking, message broker, vector service hoặc triển khai cloud.
 - Theo yêu cầu người dùng, khi xong mỗi bước hãy làm trên nhánh riêng và commit đúng phạm vi; giữ nguyên staging của công việc khác. Không tự push/deploy hoặc refactor toàn dự án.
@@ -28,7 +28,7 @@
 ## Thực hiện và kiểm chứng
 
 - Chỉ làm lát được giao trong `docs/PROCESS.md`; bổ sung module khi có hành vi kiểm chứng được.
-- Thay đổi contract phải đồng bộ Spring/Python/FE và tài liệu liên quan. Contract chat/final FAQ đã triển khai; business tool broker/continuation chưa triển khai.
+- Thay đổi contract phải đồng bộ Spring/Python/FE và tài liệu liên quan. Contract chat/final FAQ và business/booking tool broker/continuation (D1–D4) đã triển khai.
 - Kiểm tra unit, integration, quyền và chất lượng theo phạm vi; phân biệt fake có nhãn với model/provider thật.
 - Khi chỉ sửa tài liệu: kiểm tra liên kết, cây thư mục và mâu thuẫn; không báo test runtime đã pass.
 - Ghi command/kết quả thực tế; số liệu chưa đo ghi “chưa đo”. Cập nhật `docs/PROCESS.md` với thay đổi, kiểm tra, giới hạn và bước tiếp theo.

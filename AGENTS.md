@@ -4,7 +4,7 @@
 - Kiểm tra `git status` trước khi làm việc; giữ nguyên thay đổi chưa commit của người dùng.
 - Đọc `AGENTS.md` ở thư mục con liên quan. Hướng dẫn con bổ sung ranh giới cho phần đó; yêu cầu trực tiếp của người dùng có ưu tiên cao nhất.
 - Phạm vi trợ lý mới: `ai-service/docs/architecture.md`; lộ trình và đánh giá nằm cùng thư mục.
-- Trợ lý đã có FastAPI, Gemini REST, ingestion/retrieval FTS5, FAQ orchestration, Spring facade và widget opt-in. D1 chưa đóng nghiệm thu live/grounding; tools nghiệp vụ chưa triển khai. Tiến độ và bằng chứng nằm ở `ai-service/docs/PROCESS.md`; chỉ coi phần có bằng chứng kiểm thử là đã chạy.
+- Trợ lý đã triển khai đầy đủ D1–D4: FastAPI, Gemini REST, hybrid retrieval (SQLite FTS5 + Qdrant), Phase 3 Verification Gate (catalog `v4`), business/booking tools chỉ đọc qua Spring broker (`search_rooms`, `list_services`, `list_my_bookings`, `get_my_booking`), câu hỏi kết hợp `booking_with_policy` và widget opt-in góc dưới bên phải. D1 được chấp nhận `ACCEPTED_WITH_LIMITATIONS` cho Academic Demo; D2–D4 đã có bằng chứng offline và smoke live MySQL, nhưng corpus production thật, live reliability dài hạn và nghiệm thu chính thức vẫn mở. Tiến độ và bằng chứng nằm ở `ai-service/docs/PROCESS.md`; chỉ coi phần có bằng chứng kiểm thử là đã chạy.
 
 ## Kiến trúc và dữ liệu
 - React/Vite ở `FE/`; Spring Boot/MySQL ở `BE/`; Python/FastAPI chạy FAQ/RAG ở `ai-service/`.

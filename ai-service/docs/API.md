@@ -1,6 +1,6 @@
 # Hợp đồng API trợ lý khách sạn — v1 đề xuất
 
-Ngày khảo sát: 2026-11-13; đồng bộ trạng thái 2026-11-19. Hợp đồng tổng thể v1; D1 FAQ đã có implementation và 3 E2E pass với Gemini thật. Batch live D1.9 mới nhất còn 6/24 deadline; độ ổn định/grounding chưa đóng nghiệm thu, xem PROCESS cho số đo và giới hạn. Business tool_calls/continuation vẫn chưa triển khai. Facade Recommendation đã gỡ trong c300a5b. Các giới hạn dưới đây không phải cam kết hiệu năng; mục 10 và phần quyết định D1 phân biệt contract đã triển khai và thiết kế tương lai.
+Ngày khảo sát: 2026-11-13; đồng bộ trạng thái **2026-11-26**. Hợp đồng tổng thể v1 đã triển khai đầy đủ D1–D4: FAQ có nguồn qua Verification Gate (D1, chấp nhận `ACCEPTED_WITH_LIMITATIONS` cho Academic Demo), business tools `search_rooms`/`list_services` (D2), booking cá nhân `list_my_bookings`/`get_my_booking` sau kiểm toán ownership `R4` (D3), và câu hỏi kết hợp `booking_with_policy` + `ContinuationStore` single-use (D4). Facade Recommendation cũ đã gỡ trong `c300a5b`. Xem [PROCESS.md](PROCESS.md) cho bằng chứng offline, smoke live MySQL/Gemini và các giới hạn/gate production còn mở. Các giới hạn dưới đây không phải cam kết hiệu năng.
 
 Đọc cùng [kiến trúc](architecture.md), [process và tiến độ](PROCESS.md), [đánh giá](EVALUATION.md) và [UI](UI.md).
 
