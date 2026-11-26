@@ -103,6 +103,31 @@ _QUESTION_FRAME_STOP = frozenset(
         "va",
         "hay",
         "hoac",
+        # Generic hotel/self-reference and Vietnamese question framing tokens only
+        # (never domain-topic nouns like wifi/pool/pet/parking/laundry).
+        "khach",
+        "san",
+        "azure",
+        "bay",
+        "ben",
+        "minh",
+        "toi",
+        "em",
+        "anh",
+        "chi",
+        "ban",
+        "hoi",
+        "giup",
+        "biet",
+        "xem",
+        "ap",
+        "dung",
+        "tinh",
+        "day",
+        "nay",
+        "tieu",
+        "chuan",
+        "muc",
     }
 )
 

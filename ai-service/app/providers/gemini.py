@@ -15,6 +15,28 @@ _DROP_SCHEMA_KEYS = frozenset(
     {"$defs", "title", "pattern", "minLength", "maxLength", "discriminator", "format"}
 )
 _ALLOWED_THINKING_LEVELS = frozenset({"MINIMAL", "LOW", "MEDIUM", "HIGH"})
+_TRANSIENT_HTTP_STATUSES = frozenset({429, 503})
+_MAX_TRANSIENT_RETRIES = 2
+_MAX_RETRY_BACKOFF_MS = 5000
+_MIN_REMAINING_AFTER_BACKOFF_S = 1.0
+
+
+class _TransientHttpError(Exception):
+    def __init__(self, status_code: int, retry_after_s: float | None):
+        self.status_code = status_code
+        self.retry_after_s = retry_after_s
+        super().__init__(str(status_code))
+
+
+def _parse_retry_after_seconds(raw: str | None) -> float | None:
+    """Parse numeric Retry-After seconds header; return None if missing or non-numeric."""
+    if not raw:
+        return None
+    text = raw.strip()
+    if not re.fullmatch(r"\d+(?:\.\d+)?", text):
+        return None
+    value = float(text)
+    return value if value >= 0 else None
 
 
 def _gemini_schema(node, *, defs=None, seen=(), root=True):
@@ -54,8 +76,18 @@ class Gemini:
         transport=None,
         *,
         thinking_level: str | None = None,
+        transient_retries: int = 0,
+        retry_backoff_ms: int = 400,
+        sleep=asyncio.sleep,
     ):
         if not key or not re.fullmatch(r"gemini-[a-z0-9.-]+", model) or "latest" in model:
+            raise DependencyError("AI_NOT_CONFIGURED")
+        if (
+            type(transient_retries) is not int
+            or not 0 <= transient_retries <= _MAX_TRANSIENT_RETRIES
+            or type(retry_backoff_ms) is not int
+            or not 0 <= retry_backoff_ms <= _MAX_RETRY_BACKOFF_MS
+        ):
             raise DependencyError("AI_NOT_CONFIGURED")
         normalized_level = None
         if thinking_level is not None:
@@ -65,6 +97,9 @@ class Gemini:
             normalized_level = candidate
         self.model = model
         self.thinking_level = normalized_level
+        self.transient_retries = transient_retries
+        self.retry_backoff_ms = retry_backoff_ms
+        self._sleep = sleep
         self.model_version = None
         self.client = httpx.AsyncClient(
             base_url="https://generativelanguage.googleapis.com/v1beta/",
@@ -81,11 +116,37 @@ class Gemini:
 
     async def _post(self, method: str, body: dict, budget: TurnBudget):
         phase = Phase(method)
-        with step(phase, provider_method=phase) as event:
-            with HttpTiming(phase, budget) as timing:
-                return await self._request(method, body, budget, event, timing)
+        for attempt in range(self.transient_retries + 1):
+            can_retry = attempt < self.transient_retries
+            try:
+                with step(phase, provider_method=phase) as event:
+                    with HttpTiming(phase, budget) as timing:
+                        return await self._request(
+                            method, body, budget, event, timing, allow_transient_retry=can_retry
+                        )
+            except _TransientHttpError as transient:
+                remaining = budget.seconds()
+                base_delay = (self.retry_backoff_ms / 1000.0) * (2**attempt)
+                if transient.retry_after_s is not None:
+                    if transient.retry_after_s > _MAX_RETRY_BACKOFF_MS / 1000.0:
+                        raise DependencyError(diagnostic_category=Category.HTTP_STATUS) from None
+                    delay_s = max(base_delay, transient.retry_after_s)
+                else:
+                    delay_s = base_delay
+                if delay_s + _MIN_REMAINING_AFTER_BACKOFF_S >= remaining:
+                    raise DependencyError(diagnostic_category=Category.HTTP_STATUS) from None
+                if delay_s > 0:
+                    try:
+                        async with asyncio.timeout(budget.seconds()):
+                            await self._sleep(delay_s)
+                    except TimeoutError:
+                        raise DependencyError(
+                            "DEADLINE_EXCEEDED",
+                            diagnostic_category=Category.APPLICATION_DEADLINE,
+                        ) from None
+        raise DependencyError(diagnostic_category=Category.HTTP_STATUS)
 
-    async def _request(self, method, body, budget, event, timing):
+    async def _request(self, method, body, budget, event, timing, *, allow_transient_retry=False):
         timeout = None
         try:
             timeout = asyncio.timeout(budget.seconds())
@@ -99,6 +160,14 @@ class Gemini:
                     event.http_status = response.status_code
                     timing.observe_httpx_response(response)
                     if response.status_code != 200:
+                        if (
+                            allow_transient_retry
+                            and response.status_code in _TRANSIENT_HTTP_STATUSES
+                        ):
+                            retry_after = _parse_retry_after_seconds(
+                                response.headers.get("Retry-After")
+                            )
+                            raise _TransientHttpError(response.status_code, retry_after)
                         raise DependencyError(diagnostic_category=Category.HTTP_STATUS)
                     chunks = bytearray()
                     async for chunk in response.aiter_bytes():

@@ -116,6 +116,8 @@ def test_repo_academic_demo_contract_matches_strict_schema():
     assert contract.environment.AI_RETRIEVAL_MODE == "hybrid"
     assert contract.environment.GEMINI_MODEL == "gemini-3.6-flash"
     assert contract.environment.GEMINI_THINKING_LEVEL == "MINIMAL"
+    assert contract.environment.GEMINI_TRANSIENT_RETRIES == 1
+    assert contract.environment.GEMINI_RETRY_BACKOFF_MS == 400
     assert contract.environment.AI_DEPENDENCY_LATCH_COOLDOWN_S == 5.0
     assert contract.secret_environment == ("GEMINI_API_KEY", "AI_SERVICE_AUTH_TOKEN")
 

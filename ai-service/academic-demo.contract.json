@@ -10,6 +10,8 @@
     "AI_RETRIEVAL_MODE": "hybrid",
     "GEMINI_MODEL": "gemini-3.6-flash",
     "GEMINI_THINKING_LEVEL": "MINIMAL",
+    "GEMINI_TRANSIENT_RETRIES": 1,
+    "GEMINI_RETRY_BACKOFF_MS": 400,
     "AI_EMBEDDING": {
       "provider": "gemini",
       "model": "gemini-embedding-001",
@@ -31,10 +33,10 @@
     "AI_INDEX_HTTP_TIMEOUT": 30.0,
     "AI_DEPENDENCY_LATCH_COOLDOWN_S": 5.0,
     "AI_GROUNDING": {
-      "catalog_path": ".local/grounding/demo_synthetic/academic-policies-2026-11-25-v4/catalog.json",
-      "catalog_sha256": "87ab8f3cae315dedd0a14aed3fc7e75de1fd9abf0c0ceba66dc3e4d0341ea00e",
-      "sources_path": ".local/grounding/demo_synthetic/academic-policies-2026-11-25-v4/sources.json",
-      "sources_sha256": "2fd2cc51fecfe00c691249abd4b4d0a53f2ecedafb3f524d81a840f798634e70",
+      "catalog_path": ".local/grounding/demo_synthetic/academic-policies-2026-11-26-v5/catalog.json",
+      "catalog_sha256": "3eaf05ef80ac6a3c2c21dd9c019459ad198964602fcd3b096ae5c3afeb65070c",
+      "sources_path": ".local/grounding/demo_synthetic/academic-policies-2026-11-26-v5/sources.json",
+      "sources_sha256": "7c96a71526b069a0e938f6a2e1a296abf9d4011cd2011e3bf7c65b0689ff939c",
       "authorities": ["user-academic-demo"],
       "context_input_tokens": 6000,
       "max_evidence": 3,

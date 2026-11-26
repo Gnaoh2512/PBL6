@@ -1618,3 +1618,27 @@ Thực hiện trên nhánh mới `feat/ai-d4-combined-and-eval` (tách từ `mai
     - `D4-LIVE-2` (diễn đạt *"nếu hủy phòng áp dụng chính sách hoàn cọc thế nào?"*): retrieval/preflight từ chối fail-closed `insufficient_evidence` (do tập top-3 hoặc điều kiện phủ của rule chưa đủ trên diễn đạt này — hành vi an toàn fail-closed, không bịa chính sách).
     - `D4-LIVE-2B` (*"trả phòng muộn lúc 15h"* trên `gemini-2.5-flash` bật thinking mặc định): `answer/generateContent` dùng hết `12,77s` và bị cắt JSON → `502 AI_PROTOCOL_ERROR` (`error_category="response_schema"`), không phát nội dung chưa kiểm chứng và không làm bẩn `/ready`. Ghi nhận khuyến nghị dùng model có cấu hình `GEMINI_THINKING_LEVEL=MINIMAL` (hoặc paid tier) khi chạy ổn định dài hạn.
 - **Cập nhật Runbook**: bổ sung mục vận hành D1–D4 (cờ bật/tắt, thứ tự khởi chạy, lệnh kiểm chứng và xử lý sự cố) trong [README.md](../README.md).
+
+
+### 17. Ưu tiên 2 — Giảm false-abstention ở `QuestionBinding` (catalog `v5`) & Bounded Transient Retry opt-in cho Gemini — 2026-11-26
+
+Thực hiện trên nhánh riêng `feat/ai-priority2-binding-and-resilience` (tách từ `docs/sync-d1-d4-and-cleanup`, không cài thêm dependency/model/dịch vụ mới, giữ nguyên các thay đổi chưa commit ngoài phạm vi và giữ bất biến các catalog `v1`–`v4`).
+
+- **1. Sửa false-abstention từ khung câu hỏi trong `QuestionBinding` ([questions.py](../app/orchestration/verification/questions.py))**:
+  - Mở rộng `_QUESTION_FRAME_STOP` bằng đúng các từ khung câu hỏi/quy chiếu khách sạn tiếng Việt an toàn (`khach`, `san`, `azure`, `bay`, `ben`, `minh`, `toi`, `tieu`, `chuan`...; tuyệt đối không thêm danh từ chủ đề ngoài miền như `wifi`/`ho`/`boi`/`bai`/`xe`/`thu`/`cung`).
+  - Khắc phục lỗi câu hỏi phối hợp cùng chủ đề (ví dụ *"Giờ nhận phòng và trả phòng của khách sạn là mấy giờ?"*) bị từ chối nhầm `compound_question_uncovered`, trong khi mọi câu ghép 2 chủ đề khác nhau vẫn fail-closed 100%.
+- **2. Phát hành catalog bất biến `academic-policies-2026-11-26-v5` ([build_academic_catalog_v5.py](../tests/evaluation/build_academic_catalog_v5.py))**:
+  - Kế thừa đủ **42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates** từ `v4`, mở rộng cụm diễn đạt tự nhiên cho 5 rule tần suất cao (`p-pol02-standard-hours`, `p-pol02-early-checkin`, `p-pol02-late-checkout`, `p-pol03-deposit-rate`, `p-pol04-cancellation`) và giữ chặt `noneOf`.
+  - Artifact mới (ignored): `.local/grounding/demo_synthetic/academic-policies-2026-11-26-v5/{catalog.json,sources.json}` (`catalog_sha256=3eaf05ef...`, `sources_sha256=7c96a715...`), đã pin trong [academic-demo.contract.json](../academic-demo.contract.json).
+- **3. Cơ chế Bounded Transient Retry opt-in cho Gemini ([gemini.py](../app/providers/gemini.py), [settings.py](../app/settings.py), [main.py](../app/main.py), [academic_demo_contract.py](../app/academic_demo_contract.py))**:
+  - Thêm `GEMINI_TRANSIENT_RETRIES` (mặc định `0` giữ nguyên 100% hành vi no-retry cũ; hợp lệ `0..2`, bật `1` trong profile Academic Demo) và `GEMINI_RETRY_BACKOFF_MS` (mặc định `400`, hợp lệ `0..5000`).
+  - Chỉ retry có giới hạn cho `HTTP 503` và `HTTP 429` (tôn trọng header `Retry-After` trong giới hạn backoff tối đa 5s và yêu cầu còn tối thiểu `1.0s` sau khi ngủ trong `TurnBudget` 20s; fail-fast nếu không đủ budget).
+  - Tuyệt đối không retry `400/401/403/404`, `AI_PROTOCOL_ERROR`, `BUDGET_EXCEEDED`, `DEADLINE_EXCEEDED`, hoặc `CancelledError`; retry thành công không kích hoạt `/ready` dependency latch.
+- **Bằng chứng kiểm chứng offline (2026-11-26)**:
+  - `ruff check` & `ruff format --check`: **PASS** (0 lỗi).
+  - `academic_demo_preflight --contract academic-demo.contract.json` → **`LOCAL_ARTIFACTS_VALID`** (`42` facts, `38/38` chunk hashes & review declarations).
+  - `evaluate_question_binding.py` trên catalog `v5` (`held_out_touched: false`): **`19/19` `dev-A` exact + BM25 gate ready**, **`0/10` `dev-U`**, **`0/4` `dev-O`**, **`19/19` paraphrase**, **`12/12` adversarial (`0` false-bound)**.
+  - `evaluate_grounding.py`: **`27/27` contract pass** (giữ G20 `semantic_acceptance: false`).
+  - `run_d4_eval.py`: **`80/80` passed** (`dev=47/47`, `held_out=33/33`, 9/9 nhóm 100%).
+  - Regression suite 11 file (`test_priority2_binding_and_resilience.py` + 10 suite liên quan): **`114 passed, 0 failed, 1 warning`**.
+- **Giới hạn**: Chưa chạy lại live Gemini trong lượt này; cơ chế retry giảm rủi ro 503/429 nhất thời nhưng không thay thế quota paid-tier khi gọi batch dài hạn hoặc corpus production thật (R1/R3 vẫn mở).

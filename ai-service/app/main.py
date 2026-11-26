@@ -71,6 +71,9 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
                     if settings.gemini_thinking_level is not None
                     else {}
                 )
+                if settings.gemini_transient_retries:
+                    gemini_kwargs["transient_retries"] = settings.gemini_transient_retries
+                    gemini_kwargs["retry_backoff_ms"] = settings.gemini_retry_backoff_ms
                 provider = Gemini(
                     settings.gemini_key.get_secret_value(),
                     settings.gemini_model,

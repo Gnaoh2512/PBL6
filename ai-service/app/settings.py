@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     gemini_thinking_level: Literal["MINIMAL", "LOW", "MEDIUM", "HIGH"] | None = Field(
         default=None, validation_alias="GEMINI_THINKING_LEVEL"
     )
+    gemini_transient_retries: int = Field(
+        default=0, ge=0, le=2, validation_alias="GEMINI_TRANSIENT_RETRIES"
+    )
+    gemini_retry_backoff_ms: int = Field(
+        default=400, ge=0, le=5000, validation_alias="GEMINI_RETRY_BACKOFF_MS"
+    )
     index_path: Path | None = Field(default=None, validation_alias="AI_INDEX_PATH")
     retrieval_mode: Literal["bm25", "hybrid"] = Field(
         default="hybrid", validation_alias="AI_RETRIEVAL_MODE"

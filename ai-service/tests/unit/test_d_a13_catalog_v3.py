@@ -52,6 +52,7 @@ def test_d_a13_requires_both_topup_rule_and_15_minute_deadline_conditions_in_v3(
     assert catalog.data.catalogVersion in {
         "academic-policies-2026-11-25-v3",
         "academic-policies-2026-11-25-v4",
+        "academic-policies-2026-11-26-v5",
     }
     assert len(catalog.data.facts) == 42
 
