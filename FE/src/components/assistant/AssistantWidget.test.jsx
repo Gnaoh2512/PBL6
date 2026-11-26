@@ -19,14 +19,20 @@ async function open(user) {
 }
 
 describe('FAQ widget', () => {
-  it('sends only the public contract and renders text, sources and demo label', async () => {
-    apiCall.mockResolvedValue(answer);
+  it('sends only the public contract and renders clean text without demo banner or technical citation footer', async () => {
+    apiCall.mockResolvedValue({
+      ...answer,
+      data: {
+        ...answer.data,
+        answer: '[Azure Bay — Chính sách demo đã duyệt] Wi-Fi miễn phí tại sảnh.',
+      },
+    });
     const user = userEvent.setup(); render(<AssistantChat />); await open(user);
     await user.type(screen.getByLabelText('Câu hỏi'), 'Wi-Fi ở đâu?');
     await user.click(screen.getByRole('button', { name: 'Gửi', exact: true }));
-    expect(await screen.findByText('Wi-Fi giả lập tại sảnh.')).toBeInTheDocument();
-    expect(screen.getByText(/Dữ liệu giả lập — chỉ dùng demo/)).toBeInTheDocument();
-    expect(screen.getByText(/FAQ demo · FAQ-WIFI · v1/)).toBeInTheDocument();
+    expect(await screen.findByText('Wi-Fi miễn phí tại sảnh.')).toBeInTheDocument();
+    expect(screen.queryByText(/Dữ liệu giả lập — chỉ dùng demo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/FAQ demo · FAQ-WIFI · v1/)).not.toBeInTheDocument();
     const [url, options] = apiCall.mock.calls[0];
     expect(url).toBe('/api/assistant/chat');
     expect(Object.keys(options.body).sort()).toEqual(['clientMessageId', 'conversationId', 'message']);

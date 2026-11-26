@@ -67,6 +67,10 @@ function formatVnd(raw?: string | number): string {
   return fracPart ? `${formatted},${fracPart} VND` : `${formatted} VND`;
 }
 
+function cleanAnswerText(text: string): string {
+  return text.replace(/\[[^\]]*Chính sách demo đã duyệt[^\]]*\]\s*/g, '').trim();
+}
+
 export default function ChatScreen() {
   const navigation = useNavigation<any>();
   const token = useAuthStore((s) => s.token);
@@ -76,7 +80,6 @@ export default function ChatScreen() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
-  const [corpusMode, setCorpusMode] = useState<'production' | 'demo_synthetic' | null>(null);
 
   const conversationIdRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -88,7 +91,6 @@ export default function ChatScreen() {
     conversationIdRef.current = null;
     setMessages([{ ...WELCOME_MESSAGE, timestamp: new Date() }]);
     setErrorText(null);
-    setCorpusMode(null);
   }, [token, userId]);
 
   useEffect(() => {
@@ -144,11 +146,10 @@ export default function ChatScreen() {
       if (controller.signal.aborted) return;
 
       conversationIdRef.current = data.conversationId;
-      setCorpusMode(data.corpusMode);
 
       const botMessage: ChatMessage = {
         id: `b-${Date.now()}`,
-        text: data.answer,
+        text: cleanAnswerText(data.answer),
         sender: 'bot',
         status: data.status,
         citations: data.citations,
@@ -281,19 +282,6 @@ export default function ChatScreen() {
             >
               {item.text}
             </Text>
-
-            {item.citations && item.citations.length > 0 && (
-              <View style={styles.citationBox}>
-                <Text style={styles.citationHeading}>Nguồn chính sách:</Text>
-                {item.citations.map((cit, i) => (
-                  <Text key={`${cit.citationId || i}`} style={styles.citationItem}>
-                    • {cit.title || cit.documentId}
-                    {cit.sectionId ? ` · ${cit.sectionId}` : ''}
-                    {cit.version ? ` · v${cit.version}` : ''}
-                  </Text>
-                ))}
-              </View>
-            )}
           </View>
 
           {item.cards && item.cards.length > 0 && (
@@ -330,11 +318,7 @@ export default function ChatScreen() {
         <View style={styles.topUtilityBar}>
           <View style={styles.statusRow}>
             <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.secondary} />
-            <Text style={styles.statusLabel}>
-              {corpusMode === 'demo_synthetic'
-                ? 'Azure Bay AI · Dữ liệu giả lập (demo)'
-                : 'Azure Bay AI Concierge'}
-            </Text>
+            <Text style={styles.statusLabel}>Azure Bay AI Concierge</Text>
           </View>
           <TouchableOpacity onPress={handleReset} style={styles.resetBtn}>
             <Ionicons name="refresh-outline" size={15} color={COLORS.primary} />

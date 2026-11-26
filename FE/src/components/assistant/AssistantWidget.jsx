@@ -77,6 +77,11 @@ function formatRetrievedAt(iso) {
   return iso.replace('T', ' ').replace(/\+07:00$/, ' (GMT+7)');
 }
 
+function cleanAnswerText(text) {
+  if (typeof text !== 'string') return '';
+  return text.replace(/\[[^\]]*Chính sách demo đã duyệt[^\]]*\]\s*/g, '').trim();
+}
+
 function SafeNavLink({ to, className, children, onClick }) {
   const inRouter = useInRouterContext();
   if (inRouter) {
@@ -299,7 +304,6 @@ export function AssistantChat({ routeKey = '', isCustomer = false }) {
   const [messages, setMessages] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState('');
   const conversation = useRef(null);
   const request = useRef(null);
   const launcher = useRef(null);
@@ -371,11 +375,11 @@ export function AssistantChat({ routeKey = '', isCustomer = false }) {
           || !['production', 'demo_synthetic'].includes(data.corpusMode) || typeof data.answer !== 'string'
           || !Array.isArray(data.citations) || !Array.isArray(cards) || !Array.isArray(actions))
         throw new Error('Phản hồi trợ lý không hợp lệ.');
-      conversation.current = data.conversationId; setMode(data.corpusMode);
+      conversation.current = data.conversationId;
       setMessages(old => [...old, {
         role: 'assistant',
         status: data.status,
-        text: data.answer,
+        text: cleanAnswerText(data.answer),
         citations: data.citations,
         cards,
         actions: actions.filter(a => a && typeof a.type === 'string' && ACTION_ROUTES[a.type] && typeof a.label === 'string'),
@@ -420,10 +424,6 @@ export function AssistantChat({ routeKey = '', isCustomer = false }) {
               </button>
             </div>
           </header>
-
-          {mode === 'demo_synthetic' && (
-            <p className="assistant-demo" role="note">Dữ liệu giả lập — chỉ dùng demo</p>
-          )}
 
           <div
             className="assistant-messages"
@@ -488,15 +488,6 @@ export function AssistantChat({ routeKey = '', isCustomer = false }) {
                           </SafeNavLink>
                         ))}
                       </div>
-                    )}
-                    {item.citations?.length > 0 && (
-                      <ul className="assistant-citations" aria-label="Nguồn">
-                        {item.citations.map(citation => (
-                          <li key={citation.citationId}>
-                            {citation.title} · {citation.sectionId} · v{citation.version}
-                          </li>
-                        ))}
-                      </ul>
                     )}
                   </article>
                 ))}
