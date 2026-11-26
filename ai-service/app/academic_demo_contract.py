@@ -31,6 +31,8 @@ class DemoEnvironment(BaseModel):
     AI_RETRIEVAL_MODE: Literal["hybrid"]
     GEMINI_MODEL: Literal["gemini-3.6-flash"]
     GEMINI_THINKING_LEVEL: Literal["MINIMAL"]
+    GEMINI_TRANSIENT_RETRIES: Literal[1]
+    GEMINI_RETRY_BACKOFF_MS: Literal[400]
     AI_EMBEDDING: EmbeddingProfile
     AI_CHUNKING: ChunkingConfig
     AI_HYBRID: HybridConfig

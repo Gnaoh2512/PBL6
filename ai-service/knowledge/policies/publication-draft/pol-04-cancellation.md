@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-04"
-title: "Hủy đặt phòng — Academic Demo"
+title: "Chính sách hủy đặt phòng — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

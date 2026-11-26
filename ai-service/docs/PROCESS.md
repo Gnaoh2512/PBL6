@@ -1,11 +1,9 @@
 # Process và tiến độ trợ lý khách sạn
 
-Cập nhật: **2026-11-25**, Asia/Ho_Chi_Minh. HEAD `c031267`, nhánh `chore/sync-origin-main-d120`,
-merge `origin/main@9d6b581` đã resolve nhưng giữ nguyên chưa commit để bảo toàn 261 staged paths ngoài `ai-service/`. Phase 3 nối hybrid → context →
-typed proposal (`FactSelectionProposal` gọn `d1-fact-selection-1` được bật qua `proposal_mode="fact_selection"` trong profile Academic Demo; giữ tương thích `CandidateDraft` v2) → gate bắt buộc (gồm máy tính giả định quyết định phía host cho `D-A14`) → verified rendering/abstention vào factory. Đợt 24–25/11 đã mở allowlist `AI_DEMO_SOURCE_PACK=academic_policies` (10 policy/38 units), dựng paired snapshot Qdrant (`fd7d1e18...`), phát hành catalog bất biến **`academic-policies-2026-11-25-v3`** (**42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates**, bổ sung điều kiện hạn 15 phút & không giao dịch 0 cho `D-A13`, giữ nguyên `v1`/`v2` bất biến) và cập nhật pin runtime trong `academic-demo.contract.json` + `.env` (`LOCAL_ARTIFACTS_VALID`), bổ sung FTS5 adjacent bigrams cho nhánh BM25 (`HybridRetriever.bm25`), sửa các lỗi soundness của `QuestionBinding`, đo offline trên `dev` với catalog runtime đang pin (`19/19` `dev-A` khớp đúng + `19/19` BM25 `complete-evidence-set@3` + `19/19` BM25 gate ready, `0/10` `dev-U`, `0/4` `dev-O`, `19/19` paraphrase, `12/12` adversarial, `held_out_touched: false`), nâng `app/prompts/faq.py` lên `VERSION="d1-faq-3"` (tách ví dụ chính sách giả định thuộc `faq` khỏi tra cứu giá/booking thật), thêm `GEMINI_THINKING_LEVEL` (chuyển profile Academic Demo sang `gemini-3.6-flash` + `MINIMAL`) và đạt **`644 passed, 0 failed, 0 skipped`** (offline + Docker).
-**Milestone D1: ACCEPTED_WITH_LIMITATIONS**, do user chấp nhận ngày 23/11/2026 cho
-Academic Demo — Approved Synthetic Hotel Knowledge; Gold mới có `single-reviewer-v1` (chưa independent review). Đợt đối chiếu & smoke live ngày 25/11 xác nhận tổ hợp `FactSelectionProposal` (416 B) + catalog v3 + `d1-faq-3` hoạt động end-to-end với tốc độ **`3,28–4,38s`** trên cả câu đơn, multi-fact (`D-A13`, `D-A20`) và hủy phòng (`S04` `POL-04-U01`), đồng thời định lượng rõ đánh đổi upstream của API key hiện tại (`gemini-3.6-flash + MINIMAL`: **`0/36` HTTP 503**, `0` deadline, nhưng chạm quota **`HTTP 429`** ở 11/12 ca smoke v4 sau batch 10 lượt; `gemini-3.5-flash-lite`: quota rộng hơn nhưng có **HTTP 503** ngắt quãng); benchmark hybrid trên 80 câu Gold và live reliability gates (R1) vẫn còn mở.
-Public API/budget không đổi. Các kết quả kiểm thử Phase 3 và D1.15 bên dưới là lịch sử; kết quả kiểm chứng mới ngày 24–25/11 ghi cuối file.
+Cập nhật: **2026-11-26**, Asia/Ho_Chi_Minh (đồng bộ sau merge D1–D4 và commit chuẩn hóa thương hiệu Azure Bay `3a0121e` / catalog **`academic-policies-2026-11-25-v4`**).
+Toàn bộ các khối **D1–D4** đã triển khai: Phase 3 nối hybrid → context → typed proposal (`FactSelectionProposal` gọn `d1-fact-selection-1` được bật qua `proposal_mode="fact_selection"` trong profile Academic Demo; giữ tương thích `CandidateDraft` v2) → gate bắt buộc (gồm máy tính giả định quyết định phía host cho `D-A14`) → verified rendering/abstention; D2 nối `search_rooms`/`list_services` qua Spring `AssistantToolBroker` + `ContinuationStore` single-use + deterministic renderer; D3 kiểm toán ownership (`R4`) và nối `list_my_bookings`/`get_my_booking`; D4 nối câu hỏi kết hợp `booking_with_policy` kèm bộ đánh giá 80 ca synthetic ([d4_suite.json](../tests/evaluation/d4_suite.json)) và runbook vận hành. Profile Academic Demo hiện pin catalog bất biến **`academic-policies-2026-11-25-v4`** (42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates, nhãn Azure Bay) trong [academic-demo.contract.json](../academic-demo.contract.json) với `gemini-3.6-flash` + `GEMINI_THINKING_LEVEL=MINIMAL`.
+**Milestone D1: ACCEPTED_WITH_LIMITATIONS** (user chấp nhận ngày 23/11/2026 cho Academic Demo — Approved Synthetic Hotel Knowledge); **D2–D4 đã triển khai và kiểm chứng offline + smoke live MySQL** (xem mục 14–16 cuối file: Python `668 passed`, BE `35 passed`, FE `12 passed`, bộ đánh giá D4 offline `80/80 passed`), nhưng corpus/catalog production thật, benchmark live dài hạn / live reliability gates (R1) và ký nghiệm thu chính thức vẫn còn mở.
+Public API/budget không đổi. Các kết quả kiểm thử Phase 3 và D1.15 bên dưới được giữ làm bằng chứng lịch sử; kết quả kiểm chứng mới ngày 24–25/11 ghi ở các mục cuối file.
 
 Quyết định hiện hành: [D1 Acceptance Decision — 2026-11-23](#d1-acceptance-decision--2026-11-23).
 Quyết định milestone không làm mọi quality gate PASS; các trạng thái D1 còn mở/PARTIAL ở mốc cũ được giữ như lịch sử.
@@ -24,9 +22,9 @@ Không phải Production readiness; giữ nguyên ngưỡng hiện hành, không
 
 ## Kết luận hiện tại
 
-**D0 xong; milestone D1 được user chấp nhận ACCEPTED_WITH_LIMITATIONS; D2–D4 chưa triển khai.** Kiến trúc hiện tại là RAG có luồng cố định: React → Spring → FastAPI → Gemini + hybrid BM25/query embedding/Qdrant và gate bắt buộc. Chưa có business tool broker hoặc agent loop.
+**D0 xong; milestone D1 được user chấp nhận `ACCEPTED_WITH_LIMITATIONS`; D2–D4 đã triển khai và có bằng chứng kiểm thử offline + smoke live MySQL (chờ corpus production & ký nghiệm thu chính thức).** Kiến trúc hiện tại gồm React → Spring (`AssistantOrchestrator` / `AssistantToolBroker`) → FastAPI → Gemini + hybrid BM25/query embedding/Qdrant + Verification Gate (catalog `v4`) + `ContinuationStore` single-use cho business/booking tools chỉ đọc và câu hỏi kết hợp `booking_with_policy`.
 
-FAQ có nguồn đã chạy xuyên browser/Spring/Python bằng Gemini thật. Batch live gần nhất D1.15 trả final đúng trạng thái **10/24 ca (41,7%)**, còn **9 application deadlines và 5 HTTP 503**; quality gates reliability/semantic chưa có bằng chứng đạt hoặc khắc phục. D1.9 trước đó là 18/24, giữ nguyên bằng chứng lịch sử. Corpus production vẫn là bản nháp chưa được duyệt; approved synthetic policy chỉ dành cho demo. Các gợi ý phòng/giá/dịch vụ/booking trên widget chưa tương ứng với tool đã hoạt động.
+FAQ, tìm phòng/dịch vụ, booking cá nhân (`ROLE_CUSTOMER`) và câu hỏi kết hợp đã chạy smoke E2E xuyên browser/Spring/MySQL/Qdrant/Python bằng Gemini thật ở chế độ `demo_synthetic`. Tuy nhiên, live reliability dài hạn (R1: `HTTP 429` free-tier ở `gemini-3.6-flash` / `HTTP 503` ngắt quãng ở `gemini-3.5-flash-lite`; lịch sử D1.15 đạt 10/24 ca), review độc lập Gold và corpus production thật (R3: `knowledge/` vẫn là bản nháp chưa duyệt) vẫn là các gate mở trước khi phát hành production.
 
 ## Definition of Done và gate nghiệm thu D0–D4
 
@@ -1620,3 +1618,42 @@ Thực hiện trên nhánh mới `feat/ai-d4-combined-and-eval` (tách từ `mai
     - `D4-LIVE-2` (diễn đạt *"nếu hủy phòng áp dụng chính sách hoàn cọc thế nào?"*): retrieval/preflight từ chối fail-closed `insufficient_evidence` (do tập top-3 hoặc điều kiện phủ của rule chưa đủ trên diễn đạt này — hành vi an toàn fail-closed, không bịa chính sách).
     - `D4-LIVE-2B` (*"trả phòng muộn lúc 15h"* trên `gemini-2.5-flash` bật thinking mặc định): `answer/generateContent` dùng hết `12,77s` và bị cắt JSON → `502 AI_PROTOCOL_ERROR` (`error_category="response_schema"`), không phát nội dung chưa kiểm chứng và không làm bẩn `/ready`. Ghi nhận khuyến nghị dùng model có cấu hình `GEMINI_THINKING_LEVEL=MINIMAL` (hoặc paid tier) khi chạy ổn định dài hạn.
 - **Cập nhật Runbook**: bổ sung mục vận hành D1–D4 (cờ bật/tắt, thứ tự khởi chạy, lệnh kiểm chứng và xử lý sự cố) trong [README.md](../README.md).
+
+
+### 17. Ưu tiên 2 — Giảm false-abstention ở `QuestionBinding` (catalog `v5`) & Bounded Transient Retry opt-in cho Gemini — 2026-11-26
+
+Thực hiện trên nhánh riêng `feat/ai-priority2-binding-and-resilience` (tách từ `docs/sync-d1-d4-and-cleanup`, không cài thêm dependency/model/dịch vụ mới, giữ nguyên các thay đổi chưa commit ngoài phạm vi và giữ bất biến các catalog `v1`–`v4`).
+
+- **1. Sửa false-abstention từ khung câu hỏi trong `QuestionBinding` ([questions.py](../app/orchestration/verification/questions.py))**:
+  - Mở rộng `_QUESTION_FRAME_STOP` bằng đúng các từ khung câu hỏi/quy chiếu khách sạn tiếng Việt an toàn (`khach`, `san`, `azure`, `bay`, `ben`, `minh`, `toi`, `tieu`, `chuan`...; tuyệt đối không thêm danh từ chủ đề ngoài miền như `wifi`/`ho`/`boi`/`bai`/`xe`/`thu`/`cung`).
+  - Khắc phục lỗi câu hỏi phối hợp cùng chủ đề (ví dụ *"Giờ nhận phòng và trả phòng của khách sạn là mấy giờ?"*) bị từ chối nhầm `compound_question_uncovered`, trong khi mọi câu ghép 2 chủ đề khác nhau vẫn fail-closed 100%.
+- **2. Phát hành catalog bất biến `academic-policies-2026-11-26-v5` ([build_academic_catalog_v5.py](../tests/evaluation/build_academic_catalog_v5.py))**:
+  - Kế thừa đủ **42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates** từ `v4`, mở rộng cụm diễn đạt tự nhiên cho 5 rule tần suất cao (`p-pol02-standard-hours`, `p-pol02-early-checkin`, `p-pol02-late-checkout`, `p-pol03-deposit-rate`, `p-pol04-cancellation`) và giữ chặt `noneOf`.
+  - Artifact mới (ignored): `.local/grounding/demo_synthetic/academic-policies-2026-11-26-v5/{catalog.json,sources.json}` (`catalog_sha256=3eaf05ef...`, `sources_sha256=7c96a715...`), đã pin trong [academic-demo.contract.json](../academic-demo.contract.json).
+- **3. Cơ chế Bounded Transient Retry opt-in cho Gemini ([gemini.py](../app/providers/gemini.py), [settings.py](../app/settings.py), [main.py](../app/main.py), [academic_demo_contract.py](../app/academic_demo_contract.py))**:
+  - Thêm `GEMINI_TRANSIENT_RETRIES` (mặc định `0` giữ nguyên 100% hành vi no-retry cũ; hợp lệ `0..2`, bật `1` trong profile Academic Demo) và `GEMINI_RETRY_BACKOFF_MS` (mặc định `400`, hợp lệ `0..5000`).
+  - Chỉ retry có giới hạn cho `HTTP 503` và `HTTP 429` (tôn trọng header `Retry-After` trong giới hạn backoff tối đa 5s và yêu cầu còn tối thiểu `1.0s` sau khi ngủ trong `TurnBudget` 20s; fail-fast nếu không đủ budget).
+  - Tuyệt đối không retry `400/401/403/404`, `AI_PROTOCOL_ERROR`, `BUDGET_EXCEEDED`, `DEADLINE_EXCEEDED`, hoặc `CancelledError`; retry thành công không kích hoạt `/ready` dependency latch.
+- **Bằng chứng kiểm chứng offline (2026-11-26)**:
+  - `ruff check` & `ruff format --check`: **PASS** (0 lỗi).
+  - `academic_demo_preflight --contract academic-demo.contract.json` → **`LOCAL_ARTIFACTS_VALID`** (`42` facts, `38/38` chunk hashes & review declarations).
+  - `evaluate_question_binding.py` trên catalog `v5` (`held_out_touched: false`): **`19/19` `dev-A` exact + BM25 gate ready**, **`0/10` `dev-U`**, **`0/4` `dev-O`**, **`19/19` paraphrase**, **`12/12` adversarial (`0` false-bound)**.
+  - `evaluate_grounding.py`: **`27/27` contract pass** (giữ G20 `semantic_acceptance: false`).
+  - `run_d4_eval.py`: **`80/80` passed** (`dev=47/47`, `held_out=33/33`, 9/9 nhóm 100%).
+  - Regression suite 11 file (`test_priority2_binding_and_resilience.py` + 10 suite liên quan): **`114 passed, 0 failed, 1 warning`**.
+- **Giới hạn**: Chưa chạy lại live Gemini trong lượt này; cơ chế retry giảm rủi ro 503/429 nhất thời nhưng không thay thế quota paid-tier khi gọi batch dài hạn hoặc corpus production thật (R1/R3 vẫn mở).
+
+
+### 18. Ưu tiên 3 — Gỡ blocking I/O (SQLite / validate / catalog) khỏi `asyncio` event loop (`R7`) — 2026-11-26
+
+Thực hiện trên nhánh riêng `feat/ai-priority3-async-io-offload` (tách từ `feat/ai-priority2-binding-and-resilience`, không cài thêm dependency/model/dịch vụ mới, giữ nguyên các thay đổi chưa commit ngoài phạm vi và không tự ý duyệt corpus production `knowledge/`).
+
+- **Các điểm blocking đồng bộ đã chuyển sang `asyncio.to_thread()`**:
+  - [hybrid.py](../app/retrieval/hybrid.py): chuyển `HybridRetriever.bm25()` (SQLite FTS5), bước kiểm tra lại snapshot sau retrieval (`self.pin(today)`) và `HybridFaqIndex.ready_async()` sang `asyncio.to_thread()` để nhánh BM25 chạy song song thực sự với nhánh vector embedding + Qdrant mà không chặn event loop.
+  - [main.py](../app/main.py): chuyển `index.validate(today)` và `catalog.check_current()` trong `GET /ready` cùng `load_verification_gate()` lúc khởi động sang `asyncio.to_thread()`.
+  - [faq.py](../app/orchestration/faq.py): chuyển `self.index.validate()` và `self.index.search()` (nhánh BM25) ở cả `Faq._run` và `Faq.resume` sang `asyncio.to_thread()`; đồng thời giữ chặt hợp đồng `_merge_retrieval_query()` (không biến query rỗng thành non-empty và không cắt query vượt 2000 ký tự để bảo toàn lỗi `AI_PROTOCOL_ERROR`).
+- **Kiểm chứng (offline + Docker Qdrant, 2026-11-26)**:
+  - Thêm [test_priority3_async_offload.py](../tests/unit/test_priority3_async_offload.py) chứng minh `bm25()`, recheck `pin()`, `/ready` (`validate` + `check_current`) và `Faq.run()` (`validate` + `search`) chạy trên worker thread khác với event loop chính, đồng thời nhánh vector chạy song song khi BM25 đang bận.
+  - `ruff format --check` & `ruff check`: **PASS** (`All checks passed!`).
+  - `PBL6_QDRANT_DOCKER=1 pytest` trên 12 suite unit + integration trọng tâm (`test_priority3_async_offload`, `test_priority2_binding_and_resilience`, `test_hybrid_retrieval`, `test_faq_runtime`, `test_hybrid_faq`, `test_hybrid_qdrant`, `test_grounded_factory`, `test_foundation_contract`, `test_d1_observability`, `test_d2_tools_runtime`, `test_d3_booking_tools`, `test_d4_combined_booking_policy`): **`146 passed, 0 failed, 0 skipped, 1 warning`**.
+- **Phần còn lại của Production readiness (cần quyết định nghiệp vụ/hạ tầng riêng)**: duyệt nội dung corpus production thật trong `ai-service/knowledge/` (`R3`) và lưu phiên dùng chung (ví dụ Redis) nếu triển khai nhiều instance (`R5`).

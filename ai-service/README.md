@@ -1,10 +1,8 @@
-# AI Hotel — trợ lý khách sạn
+# Azure Bay — Trợ lý khách sạn (AI Service)
 
 Trợ lý hỗ trợ FAQ, phòng, giá phòng, dịch vụ, booking cá nhân khi đăng nhập và chính sách khách sạn. Widget đặt ở **góc dưới bên phải**.
 
-**Trạng thái:** Phase 3 có hybrid retrieval mặc định, context assembly, typed proposal (`FactSelectionProposal` gọn `d1-fact-selection-1` bật qua `proposal_mode="fact_selection"` trong profile Academic Demo; giữ tương thích `CandidateDraft` v2) và gate
-D1.20 bắt buộc trong factory/FAQ (gồm máy tính giả định quyết định phía host cho `D-A14`); không có free-form supported=true bypass. Milestone D1 được user chấp nhận `ACCEPTED_WITH_LIMITATIONS` (23/11) cho Academic Demo; đợt 24–25/11 đã hoàn thiện allowlist `AI_DEMO_SOURCE_PACK=academic_policies` (10 policy/38 units), paired snapshot Qdrant (`fd7d1e18...`), phát hành & pin catalog bất biến `academic-policies-2026-11-25-v3` (42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates, bổ sung điều kiện hạn 15 phút cho `D-A13`, `LOCAL_ARTIFACTS_VALID`), bổ sung FTS5 bigrams cho BM25, hoàn thiện kiểm tra câu ghép/tham số cho `QuestionBinding` (`19/19` `dev-A` bound + BM25 gate ready, `0/10` `dev-U`, `0/4` `dev-O`, `12/12` adversarial, `held_out_touched: false`), nâng `CLASSIFY` lên `d1-faq-3`, hỗ trợ `GEMINI_THINKING_LEVEL` (`gemini-3.6-flash + MINIMAL`) và đạt `644 passed, 0 failed, 0 skipped` (offline + Docker). Chưa có approved production corpus/catalog hoặc đóng quality gates live reliability/semantic. Runtime/runbook ở
-[GROUNDING](docs/GROUNDING.md), bằng chứng ở [PROCESS](docs/PROCESS.md).
+**Trạng thái:** Đã triển khai đầy đủ luồng **D1–D4** (FAQ hybrid + Verification Gate, business tools `search_rooms`/`list_services`, booking cá nhân `list_my_bookings`/`get_my_booking`, và câu hỏi kết hợp `booking_with_policy`). Phase 3 chạy hybrid retrieval mặc định, context assembly, typed proposal (`FactSelectionProposal` gọn `d1-fact-selection-1` bật qua `proposal_mode="fact_selection"` trong profile Academic Demo; giữ tương thích `CandidateDraft` v2) và gate D1.20 bắt buộc trong factory/FAQ (gồm máy tính giả định quyết định phía host cho `D-A14`); không có free-form `supported=true` bypass. Profile Academic Demo hiện pin catalog bất biến **`academic-policies-2026-11-25-v4`** (42 facts / 31 `questionRules` / 33 `QuestionPattern`s / 42 templates, chuẩn hóa thương hiệu **Azure Bay**) với `gemini-3.6-flash` + `GEMINI_THINKING_LEVEL=MINIMAL` trong [academic-demo.contract.json](academic-demo.contract.json). Milestone D1 được user chấp nhận `ACCEPTED_WITH_LIMITATIONS` (23/11) cho Academic Demo; D2–D4 đã có kiểm chứng offline (gồm bộ đánh giá 80 ca D1–D4) và smoke live MySQL + Qdrant + Gemini thật. Chưa có approved production corpus/catalog, chưa đóng live reliability (R1) hoặc ký nghiệm thu production. Runtime/runbook ở [GROUNDING](docs/GROUNDING.md), bằng chứng ở [PROCESS](docs/PROCESS.md).
 
 ## Cách chia trách nhiệm
 
@@ -52,13 +50,13 @@ Python không kết nối MySQL hoặc dùng SDK LLM. Qdrant phục vụ paired 
 | GET /ready | 503 khi thiếu dependency; 200 sau valid index/catalog/source receipts và startup probe thật |
 | POST /internal/assistant/turn thiếu cấu hình token | 503 AI_NOT_CONFIGURED |
 | Cùng route, có cấu hình nhưng thiếu/sai credential hoặc gửi USER_JWT | 401 UNAUTHORIZED |
-| Start hợp lệ với đúng token | 503 khi chưa sẵn sàng; khi ready chạy FAQ và trả final có nguồn hoặc trạng thái từ chối |
-| Resume đúng schema | 409 CONTINUATION_NOT_FOUND; chưa có continuation nào được cấp |
+| Start hợp lệ với đúng token | 503 khi chưa sẵn sàng; khi ready chạy FAQ (trả `final` có nguồn/từ chối) hoặc đề xuất `tool_calls` + `continuationId` (D2–D4) |
+| Resume đúng schema | Tiêu thụ nguyên tử `ContinuationStore` single-use để render tất định (D2–D3) hoặc ghép policy qua Verification Gate (D4); trả `409 CONTINUATION_NOT_FOUND` nếu ID lạ/hết TTL/replay/lệch turn |
 | Payload sai/ID không khớp header | 422 VALIDATION_ERROR |
 | JSON sai cú pháp có Content-Type application/json | 400 INVALID_JSON |
 | Body nội bộ vượt 128 KiB kể cả gửi chunk | 413 PAYLOAD_TOO_LARGE |
 
-Các payload lỗi trả requestId và error.code/message/retryable, không phản chiếu nội dung đầu vào. [API.md](docs/API.md) ghi rõ phần D1 final FAQ và các contract tool nghiệp vụ chưa triển khai. Nếu gửi X-Request-ID thì phải khớp requestId trong body; server sinh ID nếu header thiếu, do đó request turn với body khác ID sẽ bị từ chối.
+Các payload lỗi trả requestId và error.code/message/retryable, không phản chiếu nội dung đầu vào. [API.md](docs/API.md) mô tả hợp đồng `start`/`resume`/`final`, business/booking tools D2–D4 và các ràng buộc bảo mật. Nếu gửi X-Request-ID thì phải khớp requestId trong body; server sinh ID nếu header thiếu, do đó request turn với body khác ID sẽ bị từ chối.
 
 ## Kiểm tra
 

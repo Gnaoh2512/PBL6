@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-06"
-title: "Trẻ em và người đi cùng — Academic Demo"
+title: "Chính sách trẻ em và người đi cùng — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

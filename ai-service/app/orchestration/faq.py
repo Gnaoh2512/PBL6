@@ -1,5 +1,6 @@
 """Turn orchestration: D1 verified FAQ + D2/D3 business/booking tools + D4 combined policy."""
 
+import asyncio
 import re
 from types import SimpleNamespace
 
@@ -28,6 +29,26 @@ def public_text(text: str) -> str:
     text = re.sub(r"(?i)bearer\s+\S+|[\w-]{8,}\.[\w-]{8,}\.[\w-]{8,}", "[credential]", text)
     text = re.sub(r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}", "[contact]", text)
     return _PHONE_RE.sub("[contact]", text)
+
+
+_FORMULA_TOKEN_RE = re.compile(
+    r"(?i)\b(?:a_room|a_other|a_bill|d_held|d_new|pol-\d{2}(?:-u\d{2})?)\b"
+)
+
+
+def _merge_retrieval_query(rewritten: str, original_redacted: str) -> str:
+    """Preserve policy/formula identifiers from the redacted message if classifier dropped them."""
+    if not rewritten.strip() or len(rewritten) > 1900:
+        return rewritten
+    rewritten_lower = rewritten.casefold()
+    missing = [
+        tok
+        for tok in dict.fromkeys(_FORMULA_TOKEN_RE.findall(original_redacted))
+        if tok.casefold() not in rewritten_lower
+    ]
+    if not missing:
+        return rewritten
+    return f"{rewritten} {' '.join(missing)}"
 
 
 class Faq:
@@ -84,18 +105,22 @@ class Faq:
             ):
                 raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
 
-            self.index.validate(policy_ctx.today)
+            await asyncio.to_thread(self.index.validate, policy_ctx.today)
+            combined_policy_query = _merge_retrieval_query(
+                public_text(policy_ctx.policy_query),
+                public_text(policy_ctx.original_message),
+            )
             async with deadline(budget.seconds()):
                 retrieval_index = self.index
                 if hasattr(self.index, "retrieve"):
                     batch = await self.index.retrieve(
-                        public_text(policy_ctx.policy_query), policy_ctx.today, budget
+                        combined_policy_query, policy_ctx.today, budget
                     )
                     evidence = list(batch.evidence)
                     retrieval_index = batch
                 else:
-                    evidence = self.index.search(
-                        public_text(policy_ctx.policy_query), policy_ctx.today
+                    evidence = await asyncio.to_thread(
+                        self.index.search, combined_policy_query, policy_ctx.today
                     )
                 from app.orchestration.verification.runtime import verified_faq_answer
 
@@ -122,7 +147,7 @@ class Faq:
     async def _run(self, payload):
         if self.verification_gate is None:
             raise DependencyError()
-        self.index.validate(payload.context.today)
+        await asyncio.to_thread(self.index.validate, payload.context.today)
         budget = TurnBudget(
             remaining_ms=payload.budget.remainingMs,
             input_limit=payload.budget.remainingInputTokens,
@@ -174,14 +199,19 @@ class Faq:
                         "BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT
                     )
                 retrieval_index = self.index
+                retrieval_query = _merge_retrieval_query(
+                    public_text(query), public_text(payload.message)
+                )
                 if hasattr(self.index, "retrieve"):
                     batch = await self.index.retrieve(
-                        public_text(query), payload.context.today, budget
+                        retrieval_query, payload.context.today, budget
                     )
                     evidence = list(batch.evidence)
                     retrieval_index = batch
                 else:
-                    evidence = self.index.search(query, payload.context.today)
+                    evidence = await asyncio.to_thread(
+                        self.index.search, retrieval_query, payload.context.today
+                    )
                 from app.orchestration.verification.runtime import verified_faq_answer
 
                 return await verified_faq_answer(

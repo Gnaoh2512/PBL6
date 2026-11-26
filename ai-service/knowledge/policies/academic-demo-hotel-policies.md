@@ -1,6 +1,6 @@
 ---
 document_id: synthetic-hotel-policies-academic-demo
-title: "Hotel Policies — khách sạn hư cấu PBL6 Academic Demo"
+title: "Chính sách khách sạn Azure Bay — Academic Demo"
 category: policy
 version: "0.1.1"
 status: approved
@@ -17,7 +17,7 @@ observed_at: "2026-11-22"
 updated_at: "2026-11-22"
 ---
 
-# Hotel Policies — PBL6 Academic Demo
+# Chính sách khách sạn Azure Bay — Academic Demo
 
 > Toàn bộ policy AI_GENERATED_SYNTHETIC cho khách sạn hư cấu đã được người dùng phê duyệt nội dung ngày 22/11/2026.
 > Mọi mức phí, tuổi, thời hạn, quyền và điều kiện dưới đây vẫn là giả định cho Academic Demo, không phải chính sách khách sạn thực tế.

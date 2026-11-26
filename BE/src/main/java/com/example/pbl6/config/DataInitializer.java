@@ -545,7 +545,7 @@ public class DataInitializer implements CommandLineRunner {
                         .actionType("KHỞI TẠO")
                         .targetTable("system")
                         .targetId(1L)
-                        .newValue("Khởi tạo hệ thống quản lý khách sạn Hotel California thành công")
+                        .newValue("Khởi tạo hệ thống quản lý khách sạn Azure Bay thành công")
                         .ipAddress("127.0.0.1")
                         .loggedAt(now.minusHours(48))
                         .build(),

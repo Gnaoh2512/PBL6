@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-09"
-title: "Khiếu nại — Academic Demo"
+title: "Chính sách khiếu nại — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

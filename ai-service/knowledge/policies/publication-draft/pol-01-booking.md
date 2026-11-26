@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-01"
-title: "Đặt phòng — Academic Demo"
+title: "Chính sách đặt phòng — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

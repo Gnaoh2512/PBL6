@@ -1,6 +1,6 @@
 ---
 document_id: "pbl6-publication-pol-10"
-title: "Quyền riêng tư và lưu giữ dữ liệu — Academic Demo"
+title: "Chính sách quyền riêng tư và dữ liệu — Azure Bay"
 category: "policy"
 version: "0.1.1"
 status: "approved"

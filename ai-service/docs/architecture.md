@@ -1,24 +1,27 @@
 # Kiến trúc trợ lý khách sạn
 
-Cập nhật: **2026-11-21**, working tree tại HEAD `c031267`, merge `origin/main` chưa commit.
-Phase 3 đã nối gate D1.20 vào factory và mọi FAQ; default retrieval là hybrid. Public API,
-Spring/React, generation model và tổng budget không đổi. Bằng chứng/acceptance ở
-[PROCESS](PROCESS.md#phase-3--grounded-generation), runbook ở [GROUNDING](GROUNDING.md).
+Cập nhật: **2026-11-26** (đồng bộ sau triển khai D1–D4 và chuẩn hóa thương hiệu Azure Bay / catalog `v4`).
+Phase 3 nối gate D1.20 vào factory và mọi FAQ; default retrieval là hybrid. D2–D4 đã triển khai
+business/booking tool broker in-process tại Spring (`AssistantOrchestrator` + `AssistantToolBroker`),
+`ContinuationStore` single-use và deterministic renderer ở Python, cùng luồng kết hợp
+`booking_with_policy`. Bằng chứng/acceptance ở [PROCESS](PROCESS.md), runbook ở [GROUNDING](GROUNDING.md)
+và [README](../README.md#runbook-vận-hành-d1d4-faq-business-tools-booking-cá-nhân--kết-hợp).
 
-**Đang sử dụng: RAG với luồng điều phối cố định cho FAQ trong miền facts được duyệt.**
-React/Vite → Spring Boot → FastAPI → Hybrid BM25/Qdrant → context → typed Gemini proposal →
-verification → canonical rendering/abstention. Có kiểm chứng offline/Docker, chưa có Gemini
-run mới hoặc corpus/catalog production được duyệt. Reliability/semantic D1 vẫn mở; business
-broker, booking và agent loop D2–D4 chưa triển khai.
+**Đang sử dụng: RAG có Verification Gate cho FAQ + Spring Tool Broker chỉ đọc cho phòng/dịch vụ/booking cá nhân và câu hỏi kết hợp.**
+React/Vite → Spring Boot (`AssistantOrchestrator` / `AssistantToolBroker`) → FastAPI (`Faq` / `tools` / `ContinuationStore`) →
+Hybrid BM25/Qdrant → context → typed Gemini proposal (`FactSelectionProposal` hoặc `CandidateDraft` v2) →
+verification → canonical rendering/abstention (hoặc deterministic tool resume). Đã có kiểm chứng offline/Docker
+và smoke E2E live trên MySQL + Qdrant + Gemini thật (Academic Demo, catalog **`academic-policies-2026-11-25-v4`**);
+chưa có corpus/catalog production được duyệt, live reliability dài hạn (R1) và ký nghiệm thu production vẫn mở.
 
 ## Phân chia trách nhiệm hiện tại
 
 | Thành phần | Vai trò đã có | Điểm vào/source |
 | --- | --- | --- |
-| React/Vite | Widget góc dưới bên phải, gửi chat/reset tới Spring, hiện nguồn/nhãn demo, hủy request và bỏ phản hồi muộn khi đổi account | [AssistantWidget.jsx](../../FE/src/components/assistant/AssistantWidget.jsx), [api.js](../../FE/src/services/api.js) |
-| Spring Boot | Xác thực guest/member, ràng buộc phiên/owner, idempotency/TTL, budget, kiểm tra response/evidence/citation từ Python | [AssistantController.java](../../BE/src/main/java/com/example/pbl6/controller/assistant/AssistantController.java), [AssistantSessions.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantSessions.java), [AssistantClient.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantClient.java) |
+| React/Vite | Widget góc dưới bên phải, gửi chat/reset tới Spring, hiện nguồn/nhãn demo, thẻ phòng/dịch vụ/booking, `requires_login`, hủy request và bỏ phản hồi muộn khi đổi account | [AssistantWidget.jsx](../../FE/src/components/assistant/AssistantWidget.jsx), [api.js](../../FE/src/services/api.js) |
+| Spring Boot | Xác thực guest/member, ràng buộc phiên/owner, idempotency/TTL, budget, thực thi business/booking tools in-process, lắp ráp Turn Ledger `cards`/allowlist `actions`, kiểm tra response/evidence/citation từ Python | [AssistantController.java](../../BE/src/main/java/com/example/pbl6/controller/assistant/AssistantController.java), [AssistantOrchestrator.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantOrchestrator.java), [AssistantToolBroker.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantToolBroker.java), [AssistantSessions.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantSessions.java), [AssistantClient.java](../../BE/src/main/java/com/example/pbl6/service/assistant/AssistantClient.java) |
 | FastAPI | API nội bộ với service auth, validation/body cap/request ID, lifecycle và health/readiness | [main.py](../app/main.py), [boundary.py](../app/api/boundary.py) |
-| FAQ orchestration | Classify, một retrieval, context selection, typed claims, gate bắt buộc và verified renderer | [faq.py](../app/orchestration/faq.py) |
+| Turn & FAQ orchestration | Classify/TurnPlan, retrieval, context selection, typed claims, gate bắt buộc, `ContinuationStore` single-use, deterministic tool resume và kết hợp `booking_with_policy` | [faq.py](../app/orchestration/faq.py), [tools.py](../app/orchestration/tools.py), [continuations.py](../app/orchestration/continuations.py) |
 | Gemini adapter | REST countTokens/generateContent qua HTTPX; structured JSON, kiểm tra schema/usage, budget và lỗi | [gemini.py](../app/providers/gemini.py), [contracts.py](../app/providers/contracts.py) |
 | Ingestion/retrieval | Paired FTS5/Qdrant offline, hybrid/RRF, source approval/version/checksum, tối đa ba evidence | [snapshot.py](../app/ingestion/snapshot.py), [index.py](../app/retrieval/index.py) |
 | Diagnostics | Events tổng hợp và timing HTTP theo request; bỏ dữ liệu nhạy cảm, queue timing có giới hạn | [diagnostics.py](../app/diagnostics.py), [http_timing.py](../app/providers/http_timing.py) |
@@ -105,28 +108,28 @@ FTS5 giữ lexical baseline; paired ingestion/hybrid query dùng Qdrant/query em
 - Diagnostics D1.8 dùng UUID nội bộ, phase/category/duration/budget/status đã làm sạch. Timing D1.10 dùng HTTPX trace theo request, tối đa 32 samples và queue 128 records; worker ghi stderr, delivery best effort, không drain/join trên request path.
 - Thiếu phase hoặc terminal timing là unavailable, không suy 0 ms, connection reuse hoặc Gemini compute time. [D1.10_HTTP_TIMING.md](D1.10_HTTP_TIMING.md) giữ schema, cách diễn giải và giới hạn.
 
-## Kiến trúc mục tiêu D2–D4: chưa triển khai
+## Kiến trúc D2–D4: đã triển khai (chờ corpus production và ký nghiệm thu)
 
-Spring tiếp tục sở hữu MySQL, xác thực, quyền, giá, tồn phòng và booking. Python chỉ đề xuất tool call typed; Spring sẽ kiểm tra allowlist/schema/ownership, gọi service trực tiếp rồi gửi DTO tối thiểu đã cấp quyền để tổng hợp.
+Spring sở hữu MySQL, xác thực, quyền, giá, tồn phòng và booking. Python đề xuất tool call typed (`TurnPlan` + `ContinuationStore` single-use); Spring (`AssistantOrchestrator` + `AssistantToolBroker`) kiểm tra allowlist/schema/ownership (`ROLE_CUSTOMER` + FK `Customer.account.accountId`), gọi service trực tiếp in-process rồi gửi DTO tối thiểu đã cấp quyền để Python render tất định (D2–D3) hoặc ghép với chính sách đã duyệt qua Verification Gate (D4).
 
 ```mermaid
 flowchart LR
-    A[Python đề xuất tool call] -.-> B[Spring broker: kiểm tra quyền và allowlist]
-    B -.-> S[Service phòng, giá, dịch vụ, booking]
-    S -.-> D[(MySQL do Spring truy cập)]
-    S -.-> T[DTO tối thiểu được cấp quyền]
-    T -.-> A
+    A[Python đề xuất tool call + continuationId] --> B[Spring broker: kiểm tra quyền và allowlist]
+    B --> S[Service phòng, giá, dịch vụ, booking]
+    S --> D[(MySQL do Spring truy cập)]
+    S --> T[DTO tối thiểu + Turn Ledger cards]
+    T --> A
 ```
 
-Sơ đồ nét đứt là thiết kế tương lai; hiện D1 không thực thi chuỗi này. Mức tối đa bốn tool calls/hai vòng từng được đề xuất cho các bước sau chưa phải hành vi runtime D1.
+Giới hạn runtime D2–D4 đã kích hoạt: tối đa 4 tool calls / 2 broker batches, deadline tích lũy 20 giây, budget 8000 input / 2000 output tokens, và cờ bật/tắt độc lập tại Spring (`assistant.business-tools-enabled`, `assistant.booking-tools-enabled`).
 
 | Nhóm | Nguồn chuẩn / điểm tái sử dụng | Trạng thái assistant |
 | --- | --- | --- |
-| FAQ/chính sách | Tài liệu khách sạn duyệt, có version/hiệu lực | Pipeline FAQ chạy trên synthetic; corpus production chưa duyệt |
-| Phòng | `RoomCatalogService`; `/api/public/rooms/room-types`, `/available` | Chưa nối `search_rooms` |
-| Giá | Kết quả nghiệp vụ từ backend; đơn vị/currency/kỳ ở rõ ràng | Chưa nối tool; chưa tạo engine giá hoặc `get_room_quote` |
-| Dịch vụ | `CustomerBillingService`; `/api/public/services` | Chưa nối `list_services`; knowledge chỉ cho hướng dẫn |
-| Booking cá nhân | `CustomerBookingController`/`CustomerHistoryService` theo principal | Chưa mở tool; phải rà ownership/fallback email/SĐT trước |
+| FAQ/chính sách | Tài liệu khách sạn duyệt, có version/hiệu lực | Đã chạy hybrid + Phase 3 Verification Gate (catalog `v4` synthetic); corpus production chưa duyệt |
+| Phòng | `RoomCatalogService.findAvailableRooms` | Đã nối `search_rooms` in-process qua `AssistantToolBroker` + thẻ phòng Turn Ledger |
+| Giá | Kết quả nghiệp vụ từ backend (`VND`, `priceScope="room_charge_estimate"`) | Đã trả giá/cọc dự kiến từ `RoomCatalogService`, chặn ép `null` → `0` (`DATA_UNAVAILABLE`) |
+| Dịch vụ | `CustomerBillingService.getActiveServices` | Đã nối `list_services` in-process + thẻ dịch vụ Turn Ledger |
+| Booking cá nhân | `CustomerHistoryService` theo principal `ROLE_CUSTOMER` + FK `account_id` | Đã kiểm toán ownership (xóa fallback `accountId`/email/SĐT) và nối `list_my_bookings`, `get_my_booking`, `booking_with_policy` |
 
 Không đưa giá hoặc booking vào index để thay thế dữ liệu sống. Không mở thao tác ghi đặt/hủy/thanh toán qua chat; các action sau này dẫn tới màn hình nghiệp vụ hợp lệ.
 
@@ -146,13 +149,13 @@ ai-service/
 ├── app/
 │   ├── main.py, settings.py, diagnostics.py
 │   ├── api/boundary.py
-│   ├── orchestration/faq.py, orchestration/verification/
-│   ├── ingestion/snapshot.py
-│   ├── retrieval/{index,hybrid,fusion}.py
-│   ├── providers/{contracts,gemini,http_timing}.py
-│   ├── schemas/{turn,faq}.py
-│   ├── prompts/{faq,verified_faq}.py
-│   └── tools/                 # Hiện chỉ có hướng dẫn, chưa có executor
+│   ├── orchestration/{faq,tools,continuations}.py, orchestration/verification/
+│   ├── ingestion/{documents,snapshot,vector_cli,vector_pipeline}.py
+│   ├── retrieval/{index,hybrid,hybrid_cli,fusion}.py
+│   ├── providers/{contracts,embeddings,gemini,http_timing,qdrant,retrieval_http}.py
+│   ├── schemas/{turn,faq,verification}.py
+│   ├── prompts/{faq,tools,verified_faq}.py
+│   └── tools/schemas.py       # Schema/validator cho TurnPlan và tham số tool D2–D4
 ├── knowledge/                 # Bản nháp chờ duyệt, không phải corpus production
 ├── tests/{unit,integration,evaluation,fixtures}/
 ├── docs/
