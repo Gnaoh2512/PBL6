@@ -273,3 +273,69 @@ def test_gemini_rejects_invalid_retry_configuration():
         Settings(_env_file=None, GEMINI_TRANSIENT_RETRIES=5)
     with pytest.raises(ValidationError):
         Settings(_env_file=None, GEMINI_RETRY_BACKOFF_MS=9999)
+
+
+def test_transient_retry_logs_http_status_category_not_unexpected(caplog):
+    import json
+    import logging
+
+    attempts = {"gen": 0}
+
+    async def fake_sleep(_seconds: float):
+        return None
+
+    def handler(request):
+        if request.url.path.endswith(":countTokens"):
+            return httpx.Response(200, json={"totalTokens": 12})
+        attempts["gen"] += 1
+        if attempts["gen"] == 1:
+            return httpx.Response(503, text="busy")
+        return httpx.Response(200, json=_ok_body())
+
+    async def run():
+        client = Gemini(
+            "test-key",
+            "gemini-3.6-flash",
+            httpx.MockTransport(handler),
+            transient_retries=1,
+            retry_backoff_ms=100,
+            sleep=fake_sleep,
+        )
+        try:
+            assert (await client.generate("sys", {}, _Answer, TurnBudget())).answer == "ok"
+        finally:
+            await client.close()
+
+    diag_logger = logging.getLogger("ai_service.diagnostics")
+    prev_propagate = diag_logger.propagate
+    diag_logger.propagate = True
+    try:
+        with caplog.at_level(logging.INFO, logger="ai_service.diagnostics"):
+            asyncio.run(run())
+    finally:
+        diag_logger.propagate = prev_propagate
+
+    events = [
+        json.loads(rec.getMessage())
+        for rec in caplog.records
+        if rec.name == "ai_service.diagnostics"
+    ]
+    failed_gen = [
+        e for e in events if e.get("phase") == "generateContent" and e.get("outcome") == "error"
+    ]
+    assert len(failed_gen) == 1
+    assert failed_gen[0]["http_status"] == 503
+    assert failed_gen[0]["error_category"] == "http_status"
+
+
+def test_merge_retrieval_query_preserves_domain_terms_and_deduplicates():
+    from app.orchestration.faq import _merge_retrieval_query
+
+    merged = _merge_retrieval_query(
+        "tinh tien coc giam gia",
+        "Gia su G=2.000.000, A_room=360.000, A_other=100.000 tinh coc the nao?",
+    )
+    assert "tinh tien coc giam gia" in merged
+    assert "A_room" in merged and "A_other" in merged
+    assert _merge_retrieval_query("nonexistent-xyz", "Wi-Fi o dau?") == "nonexistent-xyz"
+    assert _merge_retrieval_query("", "chinh sach huy phong") == "chinh sach huy phong"

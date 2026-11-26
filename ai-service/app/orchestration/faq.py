@@ -30,6 +30,27 @@ def public_text(text: str) -> str:
     return _PHONE_RE.sub("[contact]", text)
 
 
+_FORMULA_TOKEN_RE = re.compile(
+    r"(?i)\b(?:a_room|a_other|a_bill|d_held|d_new|pol-\d{2}(?:-u\d{2})?)\b"
+)
+
+
+def _merge_retrieval_query(rewritten: str, original_redacted: str, *, limit: int = 500) -> str:
+    """Preserve policy/formula identifiers from the redacted message if classifier dropped them."""
+    clean_rewritten = " ".join(rewritten.split())
+    if not clean_rewritten:
+        return " ".join(original_redacted.split())[:limit]
+    rewritten_lower = clean_rewritten.casefold()
+    missing = [
+        tok
+        for tok in dict.fromkeys(_FORMULA_TOKEN_RE.findall(original_redacted))
+        if tok.casefold() not in rewritten_lower
+    ]
+    if not missing:
+        return clean_rewritten[:limit]
+    return f"{clean_rewritten} {' '.join(missing)}"[:limit]
+
+
 class Faq:
     def __init__(
         self,
@@ -85,18 +106,20 @@ class Faq:
                 raise DependencyError("BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT)
 
             self.index.validate(policy_ctx.today)
+            combined_policy_query = _merge_retrieval_query(
+                public_text(policy_ctx.policy_query),
+                public_text(policy_ctx.original_message),
+            )
             async with deadline(budget.seconds()):
                 retrieval_index = self.index
                 if hasattr(self.index, "retrieve"):
                     batch = await self.index.retrieve(
-                        public_text(policy_ctx.policy_query), policy_ctx.today, budget
+                        combined_policy_query, policy_ctx.today, budget
                     )
                     evidence = list(batch.evidence)
                     retrieval_index = batch
                 else:
-                    evidence = self.index.search(
-                        public_text(policy_ctx.policy_query), policy_ctx.today
-                    )
+                    evidence = self.index.search(combined_policy_query, policy_ctx.today)
                 from app.orchestration.verification.runtime import verified_faq_answer
 
                 host_policy_payload = SimpleNamespace(
@@ -174,14 +197,17 @@ class Faq:
                         "BUDGET_EXCEEDED", diagnostic_category=Category.BUDGET_LIMIT
                     )
                 retrieval_index = self.index
+                retrieval_query = _merge_retrieval_query(
+                    public_text(query), public_text(payload.message)
+                )
                 if hasattr(self.index, "retrieve"):
                     batch = await self.index.retrieve(
-                        public_text(query), payload.context.today, budget
+                        retrieval_query, payload.context.today, budget
                     )
                     evidence = list(batch.evidence)
                     retrieval_index = batch
                 else:
-                    evidence = self.index.search(query, payload.context.today)
+                    evidence = self.index.search(retrieval_query, payload.context.today)
                 from app.orchestration.verification.runtime import verified_faq_answer
 
                 return await verified_faq_answer(

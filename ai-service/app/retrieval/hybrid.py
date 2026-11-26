@@ -67,7 +67,26 @@ class HybridResult:
 
 
 _BM25_STOPWORDS = frozenset(
-    {"co", "khong", "la", "gi", "toi", "cho", "hoi", "cua", "va", "the", "nao", "o"}
+    {
+        "co",
+        "khong",
+        "la",
+        "gi",
+        "toi",
+        "cho",
+        "hoi",
+        "cua",
+        "va",
+        "the",
+        "nao",
+        "o",
+        "may",
+        "bao",
+        "nhieu",
+        "thi",
+        "phai",
+        "luc",
+    }
 )
 
 

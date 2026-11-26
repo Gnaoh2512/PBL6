@@ -21,11 +21,11 @@ _MAX_RETRY_BACKOFF_MS = 5000
 _MIN_REMAINING_AFTER_BACKOFF_S = 1.0
 
 
-class _TransientHttpError(Exception):
+class _TransientHttpError(DependencyError):
     def __init__(self, status_code: int, retry_after_s: float | None):
         self.status_code = status_code
         self.retry_after_s = retry_after_s
-        super().__init__(str(status_code))
+        super().__init__("DEPENDENCY_UNAVAILABLE", diagnostic_category=Category.HTTP_STATUS)
 
 
 def _parse_retry_after_seconds(raw: str | None) -> float | None:
