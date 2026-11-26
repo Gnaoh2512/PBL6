@@ -1,5 +1,6 @@
 """Internal FAQ runtime. Never connects to the business database or accepts customer JWTs."""
 
+import asyncio
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from time import monotonic
@@ -65,7 +66,7 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
                         today,
                         source_pack=settings.demo_source_pack,
                     )
-                gate = load_verification_gate(settings, index, today)
+                gate = await asyncio.to_thread(load_verification_gate, settings, index, today)
                 gemini_kwargs = (
                     {"thinking_level": settings.gemini_thinking_level}
                     if settings.gemini_thinking_level is not None
@@ -148,14 +149,13 @@ def create_app(settings: Settings | None = None, *, faq=None) -> FastAPI:
         retrieval = state["faq"] is not None
         if retrieval:
             try:
-                state["faq"].index.validate(datetime.now(timezone(timedelta(hours=7))).date())
+                today = datetime.now(timezone(timedelta(hours=7))).date()
+                await asyncio.to_thread(state["faq"].index.validate, today)
                 if state["faq"].verification_gate is None:
                     raise DependencyError()
-                state["faq"].verification_gate.catalog.check_current()
+                await asyncio.to_thread(state["faq"].verification_gate.catalog.check_current)
                 if hasattr(state["faq"].index, "ready_async"):
-                    await state["faq"].index.ready_async(
-                        datetime.now(timezone(timedelta(hours=7))).date()
-                    )
+                    await state["faq"].index.ready_async(today)
             except DependencyError:
                 retrieval = False
         llm = state["faq"] is not None and not dependency_latched()

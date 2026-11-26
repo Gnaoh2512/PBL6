@@ -338,4 +338,4 @@ def test_merge_retrieval_query_preserves_domain_terms_and_deduplicates():
     assert "tinh tien coc giam gia" in merged
     assert "A_room" in merged and "A_other" in merged
     assert _merge_retrieval_query("nonexistent-xyz", "Wi-Fi o dau?") == "nonexistent-xyz"
-    assert _merge_retrieval_query("", "chinh sach huy phong") == "chinh sach huy phong"
+    assert _merge_retrieval_query("", "chinh sach huy phong") == ""

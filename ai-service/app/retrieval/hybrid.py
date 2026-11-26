@@ -214,8 +214,8 @@ class HybridRetriever:
         async def bm25():
             tick = perf_counter()
             try:
-                candidates = self.bm25(
-                    query, manifest, today, category=category, source_id=source_id
+                candidates = await asyncio.to_thread(
+                    self.bm25, query, manifest, today, category=category, source_id=source_id
                 )
                 budget.seconds()
                 return BackendResult(
@@ -269,7 +269,7 @@ class HybridRetriever:
                 "failed", manifest["snapshot_id"], (), a, b, (perf_counter() - started) * 1000
             )
         try:
-            if self.pin(today)["snapshot_id"] != manifest["snapshot_id"]:
+            if (await asyncio.to_thread(self.pin, today))["snapshot_id"] != manifest["snapshot_id"]:
                 raise IndexingError("INDEX_CHANGED_DURING_QUERY")
         except IndexingError as error:
             return HybridResult(
@@ -360,7 +360,7 @@ class HybridFaqIndex:
 
     async def ready_async(self, today):
         try:
-            manifest = self.retriever.pin(today)
+            manifest = await asyncio.to_thread(self.retriever.pin, today)
             await self.retriever.vector.ready(
                 manifest, self.retriever.paired.profile.dimension, TurnBudget(remaining_ms=5000)
             )

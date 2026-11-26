@@ -1642,3 +1642,18 @@ Thực hiện trên nhánh riêng `feat/ai-priority2-binding-and-resilience` (t�
   - `run_d4_eval.py`: **`80/80` passed** (`dev=47/47`, `held_out=33/33`, 9/9 nhóm 100%).
   - Regression suite 11 file (`test_priority2_binding_and_resilience.py` + 10 suite liên quan): **`114 passed, 0 failed, 1 warning`**.
 - **Giới hạn**: Chưa chạy lại live Gemini trong lượt này; cơ chế retry giảm rủi ro 503/429 nhất thời nhưng không thay thế quota paid-tier khi gọi batch dài hạn hoặc corpus production thật (R1/R3 vẫn mở).
+
+
+### 18. Ưu tiên 3 — Gỡ blocking I/O (SQLite / validate / catalog) khỏi `asyncio` event loop (`R7`) — 2026-11-26
+
+Thực hiện trên nhánh riêng `feat/ai-priority3-async-io-offload` (tách từ `feat/ai-priority2-binding-and-resilience`, không cài thêm dependency/model/dịch vụ mới, giữ nguyên các thay đổi chưa commit ngoài phạm vi và không tự ý duyệt corpus production `knowledge/`).
+
+- **Các điểm blocking đồng bộ đã chuyển sang `asyncio.to_thread()`**:
+  - [hybrid.py](../app/retrieval/hybrid.py): chuyển `HybridRetriever.bm25()` (SQLite FTS5), bước kiểm tra lại snapshot sau retrieval (`self.pin(today)`) và `HybridFaqIndex.ready_async()` sang `asyncio.to_thread()` để nhánh BM25 chạy song song thực sự với nhánh vector embedding + Qdrant mà không chặn event loop.
+  - [main.py](../app/main.py): chuyển `index.validate(today)` và `catalog.check_current()` trong `GET /ready` cùng `load_verification_gate()` lúc khởi động sang `asyncio.to_thread()`.
+  - [faq.py](../app/orchestration/faq.py): chuyển `self.index.validate()` và `self.index.search()` (nhánh BM25) ở cả `Faq._run` và `Faq.resume` sang `asyncio.to_thread()`; đồng thời giữ chặt hợp đồng `_merge_retrieval_query()` (không biến query rỗng thành non-empty và không cắt query vượt 2000 ký tự để bảo toàn lỗi `AI_PROTOCOL_ERROR`).
+- **Kiểm chứng (offline + Docker Qdrant, 2026-11-26)**:
+  - Thêm [test_priority3_async_offload.py](../tests/unit/test_priority3_async_offload.py) chứng minh `bm25()`, recheck `pin()`, `/ready` (`validate` + `check_current`) và `Faq.run()` (`validate` + `search`) chạy trên worker thread khác với event loop chính, đồng thời nhánh vector chạy song song khi BM25 đang bận.
+  - `ruff format --check` & `ruff check`: **PASS** (`All checks passed!`).
+  - `PBL6_QDRANT_DOCKER=1 pytest` trên 12 suite unit + integration trọng tâm (`test_priority3_async_offload`, `test_priority2_binding_and_resilience`, `test_hybrid_retrieval`, `test_faq_runtime`, `test_hybrid_faq`, `test_hybrid_qdrant`, `test_grounded_factory`, `test_foundation_contract`, `test_d1_observability`, `test_d2_tools_runtime`, `test_d3_booking_tools`, `test_d4_combined_booking_policy`): **`146 passed, 0 failed, 0 skipped, 1 warning`**.
+- **Phần còn lại của Production readiness (cần quyết định nghiệp vụ/hạ tầng riêng)**: duyệt nội dung corpus production thật trong `ai-service/knowledge/` (`R3`) và lưu phiên dùng chung (ví dụ Redis) nếu triển khai nhiều instance (`R5`).
