@@ -13,12 +13,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useNavigation } from '@react-navigation/native';
 import { authService } from '../../services/authService';
 import Button from '../../components/common/Button';
 import { validateEmail, validatePhone } from '../../utils/validationUtils';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 export default function AuthScreen() {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
@@ -68,6 +70,7 @@ export default function AuthScreen() {
     try {
       const user = await authService.login(username.trim(), password);
       setUser(user);
+      navigation.goBack();
     } catch (e: any) {
       const msg =
         e.response?.data?.message || e.message || 'Lỗi đăng nhập. Vui lòng kiểm tra lại.';
@@ -124,6 +127,7 @@ export default function AuthScreen() {
       // Tự động đăng nhập
       const loggedInUser = await authService.login(username.trim(), password);
       setUser(loggedInUser);
+      navigation.goBack();
     } catch (e: any) {
       const msg =
         e.response?.data?.message || e.message || 'Lỗi đăng ký. Vui lòng thử lại.';

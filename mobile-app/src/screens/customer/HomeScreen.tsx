@@ -75,9 +75,11 @@ export default function HomeScreen() {
               <Ionicons name="business" size={22} color={COLORS.secondary} />
               <Text style={styles.logoText}>{info.name}</Text>
             </View>
-            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-              <Ionicons name="log-out-outline" size={22} color={COLORS.surface} />
-            </TouchableOpacity>
+            {user ? (
+              <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} accessibilityLabel="Đăng xuất">
+                <Ionicons name="log-out-outline" size={22} color={COLORS.surface} />
+              </TouchableOpacity>
+            ) : null}
           </View>
           {/* Hero text */}
           <View style={styles.heroContent}>

@@ -8,14 +8,10 @@ export const authService = {
       username,
       password,
     });
-    console.log('[authService] login raw response:', response.data);
     const data = response.data.data;
     
     // API actual format for login:
     // { accessToken, tokenType, expiresInMs, user: { accountId, username, fullName, email, phone, role, status, lastLogin, createdAt } }
-    
-    // Save token using accessToken instead of token
-    useAuthStore.getState().setToken(data.accessToken);
     
     // Map response to our User model
     const userData = data.user;
@@ -31,6 +27,7 @@ export const authService = {
       lastLogin: userData.lastLogin,
       createdAt: userData.createdAt,
     };
+    useAuthStore.getState().setSession(user, data.accessToken);
     return user;
   },
 
@@ -48,7 +45,6 @@ export const authService = {
       phone,
       email,
     });
-    console.log('[authService] register raw response:', response.data);
     
     // API actual format for register/me:
     // { accountId, username, fullName, email, phone, role, status, createdAt }
@@ -69,7 +65,6 @@ export const authService = {
 
   getMe: async (): Promise<User> => {
     const response = await apiClient.get<ApiResponse<any>>('/api/auth/me');
-    console.log('[authService] getMe raw response:', response.data);
     const data = response.data?.data || response.data || {};
     const user: User = {
       id: data.accountId?.toString() || data.username || '',

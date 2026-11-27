@@ -14,6 +14,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -42,6 +43,7 @@ interface ProfileRowItem {
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const cachedUser = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
   const logout = useAuthStore((s) => s.logout);
@@ -297,9 +299,10 @@ export default function ProfileScreen() {
     idempotencyKeyRef.current = '';
   }, [redeemingId]);
 
+  const isSignedIn = Boolean(cachedUser);
   useEffect(() => {
-    refreshAll();
-  }, []);
+    if (isSignedIn) refreshAll();
+  }, [isSignedIn, refreshAll]);
 
   const handleCallHotel = () => {
     const cleanPhone = HOTEL_INFO.phone.replace(/[^0-9+]/g, '');
@@ -412,6 +415,33 @@ export default function ProfileScreen() {
       value: formatDateTime(profile?.lastLogin),
     },
   ];
+
+  if (!cachedUser) {
+    return (
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
+          <View style={styles.headerRow}>
+            <HeaderBackButton style={styles.backBtn} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitle}>Tài khoản</Text>
+              <Text style={styles.headerSubtitle}>Đăng nhập để xem hồ sơ và quyền lợi hội viên</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.errorContainer}>
+          <EmptyState
+            icon="person-circle-outline"
+            title="Chào mừng bạn"
+            subtitle="Bạn có thể xem phòng và đặt phòng với tư cách khách. Đăng nhập để quản lý hồ sơ, lịch sử và điểm thưởng."
+          />
+          <View style={{ marginTop: SPACING.md }}>
+            <Button title="Đăng nhập / Đăng ký" onPress={() => navigation.navigate('Auth')} size="md" />
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

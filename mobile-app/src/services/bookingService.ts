@@ -48,9 +48,7 @@ export const bookingService = {
       note: params.specialRequests || '',
     };
 
-    console.log('[bookingService] createBooking request payload:', payload);
     const response = await apiClient.post<ApiResponse<any>>('/api/public/bookings', payload);
-    console.log('[bookingService] createBooking raw response:', response.data);
     const data = response.data?.data || {};
 
     let rawStatus = (data.status ?? data.bookingStatus ?? 'PENDING_DEPOSIT').toString().toUpperCase();
@@ -93,13 +91,11 @@ export const bookingService = {
     const response = await apiClient.get<ApiResponse<any>>(
       `/api/public/bookings/${bookingCode}/payment-status`
     );
-    console.log('[bookingService] getPaymentStatus raw response:', response.data);
     return response.data?.data;
   },
 
   simulateDeposit: async (bookingCode: string): Promise<any> => {
     const response = await apiClient.post(`/api/public/bookings/${bookingCode}/simulate-deposit`);
-    console.log('[bookingService] simulateDeposit raw response:', response.data);
     return response.data;
   },
 
@@ -108,7 +104,6 @@ export const bookingService = {
       '/api/public/history/lookup',
       { params: { phone } }
     );
-    console.log('[bookingService] lookupByPhone raw response:', response.data);
     return (response.data?.data || []).map(mapApiToBooking);
   },
 
@@ -116,14 +111,12 @@ export const bookingService = {
     const response = await apiClient.get<ApiResponse<any>>(
       `/api/public/history/lookup/${bookingCode}`
     );
-    console.log('[bookingService] lookupByCode raw response:', response.data);
     return mapApiToBooking(response.data?.data);
   },
 
   getBookingByCode: async (bookingCode: string): Promise<Booking> => {
     try {
       const response = await apiClient.get<ApiResponse<any>>(`/api/public/history/lookup/${bookingCode}`);
-      console.log('[bookingService] getBookingByCode (lookup) raw response:', response.data);
       return mapApiToBooking(response.data?.data);
     } catch (err) {
       console.log('[bookingService] getBookingByCode error:', err);
@@ -137,7 +130,6 @@ export const bookingService = {
     const response = await apiClient.get<ApiResponse<any[]>>(
       '/api/customer/bookings/history'
     );
-    console.log('[bookingService] getMyBookings raw response:', response.data);
     return (response.data?.data || []).map(mapApiToBooking);
   },
 
@@ -145,7 +137,6 @@ export const bookingService = {
     const response = await apiClient.get<ApiResponse<any[]>>(
       '/api/customer/bookings/history'
     );
-    console.log('[bookingService] getBookingHistory raw response:', response.data);
     return (response.data?.data || []).map(mapApiToBooking);
   },
 
@@ -153,7 +144,6 @@ export const bookingService = {
     const response = await apiClient.get<ApiResponse<any>>(
       `/api/customer/bookings/history/${bookingCode}`
     );
-    console.log('[bookingService] getBookingDetail raw response:', response.data);
     return mapApiToBooking(response.data?.data);
   },
 
@@ -165,12 +155,10 @@ export const bookingService = {
       reason: params?.reason?.trim() || undefined,
       refundOption: params?.refundOption || 'CASH_REFUND',
     };
-    console.log('[bookingService] cancelBooking request:', { bookingCode, payload });
     const response = await apiClient.post<ApiResponse<any>>(
       `/api/customer/bookings/${bookingCode}/cancel`,
       payload
     );
-    console.log('[bookingService] cancelBooking raw response:', response.data);
     return response.data;
   },
 
@@ -179,7 +167,6 @@ export const bookingService = {
       const response = await apiClient.get<ApiResponse<any>>(
         `/api/customer/bookings/history/${bookingCode}`
       );
-      console.log('[bookingService] getBookingServicesUsed raw response:', response.data);
       const data = response.data?.data;
       const list = data?.servicesUsed || data?.serviceUsages || data?.services || [];
       return Array.isArray(list) ? list.map((s: any) => ({

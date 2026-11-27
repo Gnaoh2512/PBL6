@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusLabel: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, fontWeight: '500' },
+  statusLabel: { fontSize: FONTS.sizes.xs, color: COLORS.textLight, fontWeight: '500' },
   resetBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -448,7 +448,7 @@ const styles = StyleSheet.create({
   },
   messageText: { fontSize: FONTS.sizes.md, lineHeight: 20 },
   messageTextUser: { color: COLORS.surface },
-  messageTextBot: { color: COLORS.textPrimary },
+  messageTextBot: { color: COLORS.text },
   citationBox: {
     marginTop: SPACING.sm,
     paddingTop: SPACING.xs + 2,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   citationHeading: {
     fontSize: FONTS.sizes.xs,
     fontWeight: '600',
-    color: COLORS.textSecondary,
+    color: COLORS.textLight,
     marginBottom: 2,
   },
   citationItem: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, lineHeight: 16 },
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xs,
   },
-  cardTitle: { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.textPrimary, flex: 1 },
+  cardTitle: { fontSize: FONTS.sizes.sm, fontWeight: '700', color: COLORS.text, flex: 1 },
   cardBadge: {
     fontSize: 11,
     color: COLORS.primary,
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     color: COLORS.secondary,
     marginTop: 4,
   },
-  cardMeta: { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
+  cardMeta: { fontSize: FONTS.sizes.xs, color: COLORS.textLight, marginTop: 2 },
   cardLink: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.primary,
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: RADIUS.full,
   },
-  pillText: { fontSize: FONTS.sizes.xs, color: COLORS.textPrimary, fontWeight: '500' },
+  pillText: { fontSize: FONTS.sizes.xs, color: COLORS.text, fontWeight: '500' },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -556,7 +556,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: Platform.OS === 'ios' ? SPACING.sm + 2 : SPACING.sm,
     fontSize: FONTS.sizes.md,
-    color: COLORS.textPrimary,
+    color: COLORS.text,
     maxHeight: 100,
     borderWidth: 1,
     borderColor: COLORS.border,

@@ -18,7 +18,10 @@ export interface ApiResponse<T = any> {
   timestamp: string;
 }
 
-apiClient.interceptors.request.use((config) => {
+apiClient.interceptors.request.use(async (config) => {
+  if (!useAuthStore.persist.hasHydrated()) {
+    await useAuthStore.persist.rehydrate();
+  }
   const token = useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
