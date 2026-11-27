@@ -1,4 +1,5 @@
 import React from 'react';
+import ToastHost from '../components/common/Toast';
 import { NavigationContainer, NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { COLORS, FONTS } from '../utils/constants';
@@ -38,7 +39,7 @@ export type BookingDataParam = {
 };
 
 export type RootStackParamList = {
-  Auth: undefined;
+  Auth: { mode?: 'login' | 'register' } | undefined;
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
   RoomDetail: { room: Room };
   BookingForm: undefined;
@@ -58,6 +59,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export default function AppNavigator() {
   return (
     <NavigationContainer>
+      <>
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.primary },
@@ -76,6 +78,8 @@ export default function AppNavigator() {
         <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Trợ lý ảo hỗ trợ' }} />
         <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Chi tiết hóa đơn' }} />
       </Stack.Navigator>
+      <ToastHost />
+      </>
     </NavigationContainer>
   );
 }

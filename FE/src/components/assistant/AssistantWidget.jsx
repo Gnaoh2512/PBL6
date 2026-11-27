@@ -13,6 +13,23 @@ const ALLOWED_STATUSES = [
   'capability_unavailable',
 ];
 
+const ASSISTANT_ERROR_MESSAGES = {
+  AI_NOT_CONFIGURED: 'Trợ lý AI đang tắt trên backend. Bật AI_ASSISTANT_ENABLED và cấu hình token cho Spring Boot cùng AI Service.',
+  AI_UNREACHABLE: 'Backend không kết nối được AI Service. Kiểm tra AI_SERVICE_URL và trạng thái AI Service.',
+  AI_AUTH_FAILED: 'Token giữa Spring Boot và AI Service không khớp. Kiểm tra AI_SERVICE_TOKEN và AI_SERVICE_AUTH_TOKEN.',
+  DEPENDENCY_UNAVAILABLE: 'AI Service chưa sẵn sàng. Kiểm tra Gemini API key, kho dữ liệu và endpoint /ready của AI Service.',
+  DATA_UNAVAILABLE: 'Kho dữ liệu trợ lý chưa sẵn sàng. Kiểm tra index và nguồn tri thức đã được nạp.',
+  AI_PROTOCOL_ERROR: 'Spring Boot và AI Service đang không tương thích về hợp đồng phản hồi.',
+  DEADLINE_EXCEEDED: 'Trợ lý AI mất quá nhiều thời gian để phản hồi. Hãy thử lại.',
+  FORBIDDEN: 'Nguồn website hiện tại chưa được cho phép trong assistant.origins của backend.',
+};
+
+function getAssistantErrorMessage(error) {
+  return ASSISTANT_ERROR_MESSAGES[error?.code]
+    || (error?.name === 'AbortError' ? 'Yêu cầu đã bị hủy hoặc hết thời gian chờ.' : error?.message)
+    || 'Không thể xử lý yêu cầu trợ lý lúc này.';
+}
+
 const ACTION_ROUTES = {
   open_room_search: '/booking',
   open_services: '/guest/services',
@@ -291,7 +308,7 @@ function AssistantCard({ card }) {
 export default function AssistantWidget() {
   const { token, isAuthenticated, hasRole } = useAuth();
   const { pathname } = useLocation();
-  if (import.meta.env.VITE_ASSISTANT_ENABLED !== 'true') return null;
+  if (import.meta.env.VITE_ASSISTANT_ENABLED === 'false') return null;
   if (pathname.startsWith('/admin') || pathname.startsWith('/staff')) return null;
   const isCustomer = Boolean(isAuthenticated ?? token) && (typeof hasRole === 'function' ? hasRole(['CUSTOMER']) : false);
   return <AssistantChat key={token || 'guest'} routeKey={pathname} isCustomer={isCustomer} />;
@@ -387,7 +404,7 @@ export function AssistantChat({ routeKey = '', isCustomer = false }) {
     } catch (failure) {
       if (!active.current) return;
       if (failure.code === 'CONVERSATION_NOT_FOUND') conversation.current = null;
-      setError(failure.name === 'AbortError' ? 'Yêu cầu đã hủy hoặc hết thời gian chờ.' : failure.message);
+      setError(getAssistantErrorMessage(failure));
     } finally {
       clearTimeout(timer); pending.current = false;
       if (active.current) setBusy(false);

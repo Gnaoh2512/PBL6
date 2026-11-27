@@ -82,7 +82,7 @@ export default function StaffBookingsPage() {
     try {
       const response = await apiCall(`/api/staff/billing/bookings/${encodeURIComponent(refundModal.bookingCode)}/cancel-with-refund`, {
         method: "POST",
-        body: { note: refundNote || "Hủy và hoàn tiền cọc." },
+        body: { reason: refundNote || "Hủy và hoàn tiền cọc." },
       });
       if (response?.success) {
         addToast("Đã hủy đặt phòng và tính hoàn cọc theo chính sách.", "success");
