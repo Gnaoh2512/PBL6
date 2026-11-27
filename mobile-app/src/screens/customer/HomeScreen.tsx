@@ -9,6 +9,9 @@ import { useHotelStore } from '../../store/useHotelStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Button from '../../components/common/Button';
+import DateRangePicker, { DateRangeValue } from '../../components/booking/DateRangePicker';
+import { useBookingStore } from '../../store/useBookingStore';
+import { toApiDate } from '../../utils/dateUtils';
 import { COLORS, FONTS, SPACING, RADIUS, HOTEL_INFO } from '../../utils/constants';
 import { authService } from '../../services/authService';
 
@@ -31,7 +34,18 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { hotel, isLoading, loadHotel } = useHotelStore();
   const { user, logout } = useAuthStore();
+  const setDraftDates = useBookingStore((state) => state.setDraftDates);
+  const setDraftGuests = useBookingStore((state) => state.setDraftGuests);
+  const existingDraft = useBookingStore((state) => state.draft);
   const navigation = useNavigation();
+  const today = toApiDate(new Date());
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const [dateRange, setDateRange] = React.useState<DateRangeValue>({
+    checkIn: existingDraft.checkIn ? toApiDate(existingDraft.checkIn) : today,
+    checkOut: existingDraft.checkOut ? toApiDate(existingDraft.checkOut) : toApiDate(tomorrowDate),
+  });
+  const [guestCount, setGuestCount] = React.useState(existingDraft.checkIn ? existingDraft.guests : 2);
 
   useEffect(() => {
     loadHotel();
@@ -40,6 +54,15 @@ export default function HomeScreen() {
   const handleLogout = async () => {
     await authService.logout();
     logout();
+  };
+
+  const handleSearchRooms = () => {
+    if (!dateRange.checkIn || !dateRange.checkOut) return;
+    const [startYear, startMonth, startDay] = dateRange.checkIn.split('-').map(Number);
+    const [endYear, endMonth, endDay] = dateRange.checkOut.split('-').map(Number);
+    setDraftDates(new Date(startYear, startMonth - 1, startDay), new Date(endYear, endMonth - 1, endDay));
+    setDraftGuests(guestCount);
+    (navigation as any).navigate('Rooms');
   };
 
   if (isLoading && !hotel) {
@@ -91,6 +114,28 @@ export default function HomeScreen() {
               style={styles.heroCta}
             />
           </View>
+        </View>
+
+        {/* FE home booking search */}
+        <View style={styles.bookingSearch}>
+          <AppText style={styles.bookingEyebrow}>LÊN KẾ HOẠCH LƯU TRÚ</AppText>
+          <DateRangePicker value={dateRange} onChange={setDateRange} />
+          <View style={styles.guestSelector}>
+            <View style={styles.guestLabelRow}>
+              <Ionicons name="people-outline" size={19} color={COLORS.primary} />
+              <AppText style={styles.guestLabel}>Khách</AppText>
+            </View>
+            <View style={styles.guestControls}>
+              <TouchableOpacity accessibilityLabel="Giảm số khách" style={styles.guestControl} onPress={() => setGuestCount((n) => Math.max(1, n - 1))}>
+                <Ionicons name="remove" size={18} color={COLORS.primary} />
+              </TouchableOpacity>
+              <AppText style={styles.guestCount}>{guestCount} khách</AppText>
+              <TouchableOpacity accessibilityLabel="Tăng số khách" style={styles.guestControl} onPress={() => setGuestCount((n) => Math.min(6, n + 1))}>
+                <Ionicons name="add" size={18} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Button title="Kiểm tra phòng trống" onPress={handleSearchRooms} fullWidth />
         </View>
 
         {/* Welcome greeting */}
@@ -220,6 +265,14 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   heroCta: { alignSelf: 'flex-start', marginTop: SPACING.md },
+  bookingSearch: { marginHorizontal: SPACING.md, marginTop: -SPACING.md, marginBottom: SPACING.md, padding: SPACING.md, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, gap: SPACING.md },
+  bookingEyebrow: { color: COLORS.primary, fontSize: FONTS.sizes.xs, fontWeight: FONTS.weights.bold, letterSpacing: 1.2 },
+  guestSelector: { minHeight: 48, borderBottomWidth: 1, borderColor: COLORS.borderLight, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  guestLabelRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  guestLabel: { color: COLORS.textLight, fontSize: FONTS.sizes.sm },
+  guestControls: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
+  guestControl: { width: 34, height: 34, borderWidth: 1, borderColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
+  guestCount: { minWidth: 64, textAlign: 'center', color: COLORS.text, fontWeight: FONTS.weights.semiBold },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText: {
     color: COLORS.surface,

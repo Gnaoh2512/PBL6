@@ -19,6 +19,7 @@ export default function AuthScreen() {
   // Form fields
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -83,14 +84,10 @@ export default function AuthScreen() {
     if (!fullName.trim()) {
       errors.fullName = 'Vui lòng nhập họ và tên';
     }
-    if (!email.trim()) {
-      errors.email = 'Vui lòng nhập email';
-    } else if (!validateEmail(email.trim())) {
+    if (email.trim() && !validateEmail(email.trim())) {
       errors.email = 'Email không đúng định dạng (VD: example@email.com)';
     }
-    if (!phone.trim()) {
-      errors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!validatePhone(phone.trim())) {
+    if (phone.trim() && !validatePhone(phone.trim())) {
       errors.phone = 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)';
     }
     if (!password) {
@@ -114,12 +111,9 @@ export default function AuthScreen() {
         email.trim(),
         phone.trim()
       );
-      setSuccessMessage('Đăng ký thành công! Đang tự động đăng nhập...');
-
-      // Tự động đăng nhập
-      const loggedInUser = await authService.login(username.trim(), password);
-      setUser(loggedInUser);
-      navigation.goBack();
+      setSuccessMessage('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
+      setPassword('');
+      setMode('login');
     } catch (e: any) {
       const msg =
         e.response?.data?.message || e.message || 'Lỗi đăng ký. Vui lòng thử lại.';
@@ -304,8 +298,11 @@ export default function AuthScreen() {
                   setPassword(t);
                   clearFieldError('password');
                 }}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
+              <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} hitSlop={8}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.textMuted} />
+              </TouchableOpacity>
             </View>
             {fieldErrors.password ? (
               <AppText style={styles.fieldErrorText}>{fieldErrors.password}</AppText>

@@ -12,7 +12,7 @@ import { roomService } from '../../services/roomService';
 import Button from '../../components/common/Button';
 import DateRangePicker, { DateRangeValue } from '../../components/booking/DateRangePicker';
 import { formatPrice } from '../../utils/priceUtils';
-import { countNights } from '../../utils/dateUtils';
+import { countNights, toApiDate } from '../../utils/dateUtils';
 import { getRoomExtras } from '../../data/roomTypeExtras';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
@@ -32,7 +32,11 @@ export default function RoomDetailScreen() {
   const roomBedType = room.bedType || extras.bedType;
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [dateRange, setDateRange] = useState<DateRangeValue>({ checkIn: null, checkOut: null });
+  const draft = useBookingStore((state) => state.draft);
+  const [dateRange, setDateRange] = useState<DateRangeValue>({
+    checkIn: draft.checkIn ? toApiDate(draft.checkIn) : null,
+    checkOut: draft.checkOut ? toApiDate(draft.checkOut) : null,
+  });
   const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [availabilityMsg, setAvailabilityMsg] = useState('');
@@ -40,7 +44,7 @@ export default function RoomDetailScreen() {
   const [totalCharge, setTotalCharge] = useState<number | null>(null);
   const [deposit, setDeposit] = useState<number | null>(null);
 
-  const { setDraftRoom, setDraftDates } = useBookingStore();
+  const { setDraftRoom, setDraftDates, setDraftGuests } = useBookingStore();
 
   const handleDateChange = (v: DateRangeValue) => {
     setDateRange(v);
@@ -55,6 +59,10 @@ export default function RoomDetailScreen() {
       Alert.alert('Chưa chọn ngày', 'Vui lòng chọn ngày nhận phòng và trả phòng');
       return;
     }
+    if ((draft.guests || 1) > room.maxGuests) {
+      Alert.alert('Số khách vượt quá sức chứa', `Hạng phòng này nhận tối đa ${room.maxGuests} khách.`);
+      return;
+    }
     setChecking(true);
     try {
       // room.id = roomTypeId.toString() (set bởi roomTypeToRoom)
@@ -63,7 +71,7 @@ export default function RoomDetailScreen() {
       const result = await roomService.getAvailableRooms(
         dateRange.checkIn,
         dateRange.checkOut,
-        1,
+        draft.guests || 1,
         roomTypeId
       );
 
@@ -104,6 +112,7 @@ export default function RoomDetailScreen() {
     const [y1, m1, d1] = dateRange.checkIn.split('-').map(Number);
     const [y2, m2, d2] = dateRange.checkOut.split('-').map(Number);
     setDraftDates(new Date(y1, m1 - 1, d1), new Date(y2, m2 - 1, d2));
+    setDraftGuests(draft.guests || 1);
     navigation.navigate('BookingForm');
   };
 

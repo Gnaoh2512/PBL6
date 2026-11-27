@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHotelStore } from '../../store/useHotelStore';
+import { useBookingStore } from '../../store/useBookingStore';
 import { Room } from '../../models/Room';
 import RoomCard from '../../components/rooms/RoomCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
@@ -18,6 +19,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function RoomsScreen() {
   const insets = useSafeAreaInsets();
   const { rooms, isLoading, error, loadRooms } = useHotelStore();
+  const guestCount = useBookingStore((state) => state.draft.guests);
   const navigation = useNavigation<Nav>();
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export default function RoomsScreen() {
   const handleRoomPress = (room: Room) => {
     navigation.navigate('RoomDetail', { room });
   };
+  const guestCompatibleRooms = rooms.filter((room) => room.maxGuests >= (guestCount || 1));
 
   if (isLoading && rooms.length === 0) {
     return <LoadingSpinner fullScreen message="Đang tải danh sách phòng..." />;
@@ -52,14 +55,15 @@ export default function RoomsScreen() {
           <HeaderBackButton style={styles.backBtn} />
           <View style={{ flex: 1 }}>
             <AppText style={styles.title}>Các loại phòng</AppText>
-            <AppText style={styles.subtitle}>{rooms.length} loại phòng có sẵn</AppText>
+            <AppText style={styles.subtitle}>{guestCompatibleRooms.length} loại phòng phù hợp</AppText>
           </View>
         </View>
       </View>
 
       <FlatList
-        data={rooms}
+        data={guestCompatibleRooms}
         keyExtractor={(item) => item.id}
+        ListEmptyComponent={<View style={styles.empty}><AppText style={styles.emptyText}>Không có hạng phòng phù hợp với {guestCount} khách.</AppText></View>}
         renderItem={({ item }) => (
           <RoomCard room={item} onPress={handleRoomPress} />
         )}
@@ -97,6 +101,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   list: { paddingTop: SPACING.md, paddingBottom: SPACING.xl },
+  empty: { margin: SPACING.md, padding: SPACING.lg, backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border },
+  emptyText: { textAlign: 'center', color: COLORS.textLight, fontSize: FONTS.sizes.sm },
   errorContainer: {
     flex: 1,
     alignItems: 'center',

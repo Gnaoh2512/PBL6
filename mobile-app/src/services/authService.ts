@@ -42,8 +42,8 @@ export const authService = {
       username,
       password,
       fullName,
-      phone,
-      email,
+      phone: phone.trim() || null,
+      email: email.trim() || null,
     });
     
     // API actual format for register/me:
