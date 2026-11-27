@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { AppText, AppTextInput } from './AppText';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { COLORS, FONTS, SPACING } from '../../utils/constants';
 
 interface LoadingSpinnerProps {
@@ -11,7 +12,7 @@ export default function LoadingSpinner({ message, fullScreen = false }: LoadingS
   return (
     <View style={[styles.container, fullScreen && styles.fullScreen]}>
       <ActivityIndicator size="large" color={COLORS.primary} />
-      {message && <Text style={styles.message}>{message}</Text>}
+      {message && <AppText style={styles.message}>{message}</AppText>}
     </View>
   );
 }

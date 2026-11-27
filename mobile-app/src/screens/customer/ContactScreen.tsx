@@ -1,13 +1,6 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Linking,
-  Alert,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -29,8 +22,8 @@ function ContactItem({ icon, label, value, onPress }: ContactItemProps) {
         <Ionicons name={icon} size={22} color={COLORS.primary} />
       </View>
       <View style={styles.contactText}>
-        <Text style={styles.contactLabel}>{label}</Text>
-        <Text style={styles.contactValue}>{value}</Text>
+        <AppText style={styles.contactLabel}>{label}</AppText>
+        <AppText style={styles.contactValue}>{value}</AppText>
       </View>
       <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
     </TouchableOpacity>
@@ -70,24 +63,24 @@ export default function ContactScreen() {
       <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
         <View style={styles.headerRow}>
           <HeaderBackButton style={styles.backBtn} />
-          <Text style={styles.title}>Liên hệ & Thông tin</Text>
+          <AppText style={styles.title}>Liên hệ & Thông tin</AppText>
         </View>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: SPACING.xl + insets.bottom }} showsVerticalScrollIndicator={false}>
         {/* Map placeholder */}
         <View style={styles.mapBanner}>
-          <Ionicons name="location" size={40} color={COLORS.secondary} />
-          <Text style={styles.mapBannerTitle}>{HOTEL_INFO.name}</Text>
-          <Text style={styles.mapBannerAddr}>{HOTEL_INFO.address}</Text>
+          <Ionicons name="location" size={40} color={COLORS.primary} />
+          <AppText style={styles.mapBannerTitle}>{HOTEL_INFO.name}</AppText>
+          <AppText style={styles.mapBannerAddr}>{HOTEL_INFO.address}</AppText>
           <TouchableOpacity style={styles.mapBtn} onPress={openMaps}>
             <Ionicons name="navigate" size={16} color={COLORS.surface} />
-            <Text style={styles.mapBtnText}>Mở bản đồ</Text>
+            <AppText style={styles.mapBtnText}>Mở bản đồ</AppText>
           </TouchableOpacity>
         </View>
 
         {/* Contact info */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Thông tin liên hệ</Text>
+          <AppText style={styles.cardTitle}>Thông tin liên hệ</AppText>
           <ContactItem
             icon="call"
             label="Điện thoại"
@@ -119,25 +112,25 @@ export default function ContactScreen() {
 
         {/* Check-in/out policy */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Chính sách lưu trú</Text>
+          <AppText style={styles.cardTitle}>Chính sách lưu trú</AppText>
           <View style={styles.policyRow}>
             <View style={styles.policyItem}>
               <Ionicons name="enter-outline" size={24} color={COLORS.primary} />
-              <Text style={styles.policyLabel}>Check-in từ</Text>
-              <Text style={styles.policyValue}>{HOTEL_INFO.checkInTime}</Text>
+              <AppText style={styles.policyLabel}>Check-in từ</AppText>
+              <AppText style={styles.policyValue}>{HOTEL_INFO.checkInTime}</AppText>
             </View>
             <View style={styles.policyDivider} />
             <View style={styles.policyItem}>
               <Ionicons name="exit-outline" size={24} color={COLORS.primary} />
-              <Text style={styles.policyLabel}>Check-out trước</Text>
-              <Text style={styles.policyValue}>{HOTEL_INFO.checkOutTime}</Text>
+              <AppText style={styles.policyLabel}>Check-out trước</AppText>
+              <AppText style={styles.policyValue}>{HOTEL_INFO.checkOutTime}</AppText>
             </View>
           </View>
         </Card>
 
         {/* FAQ */}
         <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Câu hỏi thường gặp</Text>
+          <AppText style={styles.cardTitle}>Câu hỏi thường gặp</AppText>
           {[
             {
               q: 'Có hỗ trợ đặt phòng cho nhóm lớn không?',
@@ -153,8 +146,8 @@ export default function ContactScreen() {
             },
           ].map((faq, i) => (
             <View key={i} style={styles.faqItem}>
-              <Text style={styles.faqQ}>❓ {faq.q}</Text>
-              <Text style={styles.faqA}>{faq.a}</Text>
+              <AppText style={styles.faqQ}>❓ {faq.q}</AppText>
+              <AppText style={styles.faqA}>{faq.a}</AppText>
             </View>
           ))}
         </Card>
@@ -205,7 +198,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
@@ -228,7 +221,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: RADIUS.md,
-    backgroundColor: '#EEF4FA',
+    backgroundColor: COLORS.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,

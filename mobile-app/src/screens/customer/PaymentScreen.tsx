@@ -1,14 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-  Linking,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Linking } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -146,7 +138,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Đang tải thông tin thanh toán...</Text>
+        <AppText style={styles.loadingText}>Đang tải thông tin thanh toán...</AppText>
       </SafeAreaView>
     );
   }
@@ -158,49 +150,49 @@ export default function PaymentScreen({ navigation, route }: Props) {
         contentContainerStyle={[styles.content, { paddingBottom: SPACING.xxl + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.pageTitle}>Thanh toán đặt cọc</Text>
-        <Text style={styles.pageSubtitle}>
+        <AppText style={styles.pageTitle}>Thanh toán đặt cọc</AppText>
+        <AppText style={styles.pageSubtitle}>
           Vui lòng chuyển khoản theo thông tin dưới đây để hoàn tất đặt phòng
-        </Text>
+        </AppText>
 
         {/* Trạng thái hết hạn */}
         {isExpired ? (
           <View style={styles.expiredCard}>
             <Ionicons name="time-outline" size={48} color={COLORS.error} />
-            <Text style={styles.expiredTitle}>Đơn đã hết hạn thanh toán cọc</Text>
-            <Text style={styles.expiredDesc}>
+            <AppText style={styles.expiredTitle}>Đơn đã hết hạn thanh toán cọc</AppText>
+            <AppText style={styles.expiredDesc}>
               Thời gian giữ phòng (15 phút) đã kết thúc. Vui lòng quay lại tìm phòng và đặt lại đơn mới.
-            </Text>
+            </AppText>
             <TouchableOpacity style={styles.homeBtn} onPress={handleGoHome}>
-              <Text style={styles.homeBtnText}>Về trang chủ</Text>
+              <AppText style={styles.homeBtnText}>Về trang chủ</AppText>
             </TouchableOpacity>
           </View>
         ) : (
           <>
             {/* Đồng hồ đếm ngược */}
             <View style={styles.countdownBox}>
-              <Ionicons name="timer-outline" size={22} color={COLORS.secondary} />
-              <Text style={styles.countdownLabel}>Thời gian giữ phòng còn lại:</Text>
-              <Text style={styles.countdownTime}>{timeFormatted}</Text>
+              <Ionicons name="timer-outline" size={22} color={COLORS.primary} />
+              <AppText style={styles.countdownLabel}>Thời gian giữ phòng còn lại:</AppText>
+              <AppText style={styles.countdownTime}>{timeFormatted}</AppText>
             </View>
 
             {/* Khối hiển thị thông tin chuyển khoản dạng chữ hoặc thông báo nếu không có qrInfo */}
             {!qrInfo ? (
               <View style={styles.noQrCard}>
-                <Ionicons name="information-circle-outline" size={44} color={COLORS.secondary} style={{ marginBottom: SPACING.sm }} />
-                <Text style={styles.noQrText}>
+                <Ionicons name="information-circle-outline" size={44} color={COLORS.primary} style={{ marginBottom: SPACING.sm }} />
+                <AppText style={styles.noQrText}>
                   Không lấy lại được thông tin chuyển khoản. Vui lòng liên hệ khách sạn để được hỗ trợ đặt cọc.
-                </Text>
+                </AppText>
                 <TouchableOpacity style={styles.callHotelBtn} onPress={handleCallHotel} activeOpacity={0.8}>
                   <Ionicons name="call" size={16} color={COLORS.surface} style={{ marginRight: 6 }} />
-                  <Text style={styles.callHotelBtnText}>Gọi khách sạn ({HOTEL_INFO.phone})</Text>
+                  <AppText style={styles.callHotelBtnText}>Gọi khách sạn ({HOTEL_INFO.phone})</AppText>
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.infoCard}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="wallet-outline" size={22} color={COLORS.primary} />
-                  <Text style={styles.cardHeaderTitle}>Thông tin chuyển khoản</Text>
+                  <AppText style={styles.cardHeaderTitle}>Thông tin chuyển khoản</AppText>
                 </View>
 
                 <View style={styles.divider} />
@@ -226,9 +218,9 @@ export default function PaymentScreen({ navigation, route }: Props) {
             {/* Trạng thái chờ */}
             <View style={styles.waitingBox}>
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.waitingText}>
+              <AppText style={styles.waitingText}>
                 Hệ thống đang tự động kiểm tra giao dịch mỗi 3 giây...
-              </Text>
+              </AppText>
             </View>
 
             {/* Nút Demo giả lập đã thanh toán (chỉ khi __DEV__) */}
@@ -239,7 +231,7 @@ export default function PaymentScreen({ navigation, route }: Props) {
                 activeOpacity={0.8}
               >
                 <Ionicons name="flask-outline" size={18} color={COLORS.surface} />
-                <Text style={styles.demoBtnText}>🧪 Demo: Giả lập đã thanh toán</Text>
+                <AppText style={styles.demoBtnText}>🧪 Demo: Giả lập đã thanh toán</AppText>
               </TouchableOpacity>
             )}
           </>
@@ -262,8 +254,8 @@ function InfoRow({
 }) {
   return (
     <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text
+      <AppText style={styles.infoLabel}>{label}</AppText>
+      <AppText
         style={[
           styles.infoValue,
           bold && styles.valueBold,
@@ -272,7 +264,7 @@ function InfoRow({
         selectable
       >
         {value}
-      </Text>
+      </AppText>
     </View>
   );
 }
@@ -301,9 +293,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
-    backgroundColor: '#FEF9EC',
+    backgroundColor: COLORS.warningBackground,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: COLORS.secondaryLight,
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.md,
@@ -313,7 +305,7 @@ const styles = StyleSheet.create({
   countdownTime: {
     fontSize: FONTS.sizes.lg,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.secondary,
+    color: COLORS.primary,
     letterSpacing: 1,
   },
   infoCard: {
@@ -357,14 +349,14 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   valueBold: { fontWeight: FONTS.weights.bold, color: COLORS.text },
-  valueHighlight: { color: COLORS.secondary, fontWeight: FONTS.weights.bold, fontSize: FONTS.sizes.md },
+  valueHighlight: { color: COLORS.primary, fontWeight: FONTS.weights.bold, fontSize: FONTS.sizes.md },
   waitingBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
     padding: SPACING.md,
-    backgroundColor: '#EEF4FA',
+    backgroundColor: COLORS.primarySubtle,
     borderRadius: RADIUS.lg,
     marginBottom: SPACING.md,
   },
@@ -374,7 +366,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
-    backgroundColor: '#F59E0B',
+    backgroundColor: COLORS.warning,
     borderRadius: RADIUS.lg,
     paddingVertical: 14,
   },
@@ -385,7 +377,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: COLORS.error,
     marginTop: SPACING.md,
   },
   expiredTitle: {

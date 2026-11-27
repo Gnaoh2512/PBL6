@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { AppText, AppTextInput } from '../common/AppText';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LoyaltyProfile } from '../../models/Loyalty';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
@@ -29,7 +30,7 @@ const TIER_THEMES: Record<string, TierTheme> = {
   },
   STARFISH: {
     cardBg: '#C2410C', // cam biển
-    badgeBg: '#FFEDD5',
+    badgeBg: COLORS.warningBackground,
     badgeText: '#9A3412',
     progressFill: '#FDBA74',
     icon: 'star-outline',
@@ -55,7 +56,7 @@ const getTierTheme = (tierCode?: string): TierTheme => {
   return (
     TIER_THEMES[code] || {
       cardBg: COLORS.primary,
-      badgeBg: '#FEF3C7',
+      badgeBg: COLORS.warningBackground,
       badgeText: '#92400E',
       progressFill: COLORS.secondary,
       icon: 'ribbon-outline',
@@ -101,24 +102,24 @@ export default function LoyaltyCard({ profile, style }: LoyaltyCardProps) {
       {/* Header của thẻ: Tên hạng lớn và Badge */}
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardSuperTitle}>HẠNG HỘI VIÊN</Text>
-          <Text style={styles.tierName}>{profile.tierName || profile.tierCode}</Text>
+          <AppText style={styles.cardSuperTitle}>HẠNG HỘI VIÊN</AppText>
+          <AppText style={styles.tierName}>{profile.tierName || profile.tierCode}</AppText>
         </View>
         <View style={[styles.badge, { backgroundColor: theme.badgeBg }]}>
           <Ionicons name={theme.icon} size={14} color={theme.badgeText} style={{ marginRight: 4 }} />
-          <Text style={[styles.badgeText, { color: theme.badgeText }]}>
+          <AppText style={[styles.badgeText, { color: theme.badgeText }]}>
             {profile.tierCode || 'MEMBER'}
-          </Text>
+          </AppText>
         </View>
       </View>
 
       {/* Khối điểm hiện tại */}
       <View style={styles.scoreSection}>
         <View style={styles.scoreRow}>
-          <Text style={styles.scoreValue}>{currentScoreDisplay}</Text>
-          <Text style={styles.scoreUnit}>điểm</Text>
+          <AppText style={styles.scoreValue}>{currentScoreDisplay}</AppText>
+          <AppText style={styles.scoreUnit}>điểm</AppText>
         </View>
-        <Text style={styles.scoreLabel}>Điểm tích lũy hiện tại</Text>
+        <AppText style={styles.scoreLabel}>Điểm tích lũy hiện tại</AppText>
       </View>
 
       {/* Thanh tiến độ lên hạng */}
@@ -141,7 +142,7 @@ export default function LoyaltyCard({ profile, style }: LoyaltyCardProps) {
             color="rgba(255, 255, 255, 0.9)"
             style={{ marginRight: 4 }}
           />
-          <Text style={styles.progressNoteText}>{nextTierInfoText}</Text>
+          <AppText style={styles.progressNoteText}>{nextTierInfoText}</AppText>
         </View>
       </View>
 
@@ -151,24 +152,24 @@ export default function LoyaltyCard({ profile, style }: LoyaltyCardProps) {
       {/* Thống kê: Số đêm, Tổng chi tiêu, Hội viên từ */}
       <View style={styles.statsRow}>
         <View style={styles.statCol}>
-          <Text style={styles.statLabel}>Đã ở</Text>
-          <Text style={styles.statValue}>{profile.totalStayDays ?? 0} đêm</Text>
+          <AppText style={styles.statLabel}>Đã ở</AppText>
+          <AppText style={styles.statValue}>{profile.totalStayDays ?? 0} đêm</AppText>
         </View>
 
         <View style={styles.statDivider} />
 
         <View style={[styles.statCol, { flex: 1.3 }]}>
-          <Text style={styles.statLabel}>Tổng chi tiêu</Text>
-          <Text style={styles.statValue}>{formatPrice(profile.totalSpent ?? 0)}</Text>
+          <AppText style={styles.statLabel}>Tổng chi tiêu</AppText>
+          <AppText style={styles.statValue}>{formatPrice(profile.totalSpent ?? 0)}</AppText>
         </View>
 
         <View style={styles.statDivider} />
 
         <View style={styles.statCol}>
-          <Text style={styles.statLabel}>Hội viên từ</Text>
-          <Text style={styles.statValue}>
+          <AppText style={styles.statLabel}>Hội viên từ</AppText>
+          <AppText style={styles.statValue}>
             {formatDateTime(profile.memberSince)}
-          </Text>
+          </AppText>
         </View>
       </View>
     </View>

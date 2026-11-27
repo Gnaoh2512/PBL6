@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { AppText, AppTextInput } from '../common/AppText';
+import { View, StyleSheet } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 interface ServiceItem {
@@ -43,34 +44,34 @@ export default function PriceBreakdown({
 }: PriceBreakdownProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Chi tiết thanh toán</Text>
+      <AppText style={styles.title}>Chi tiết thanh toán</AppText>
 
       {/* Tiền phòng */}
       <View style={styles.section}>
         <View style={styles.row}>
-          <Text style={styles.label}>Tiền phòng</Text>
-          <Text style={styles.value}>{formatCurrency(roomCharge)}</Text>
+          <AppText style={styles.label}>Tiền phòng</AppText>
+          <AppText style={styles.value}>{formatCurrency(roomCharge)}</AppText>
         </View>
-        <Text style={styles.sub}>
+        <AppText style={styles.sub}>
           {formatCurrency(pricePerNight)} × {nights} đêm
-        </Text>
+        </AppText>
       </View>
 
       {/* Dịch vụ */}
       {serviceCharges > 0 && (
         <View style={styles.section}>
           <View style={styles.row}>
-            <Text style={styles.label}>Dịch vụ thêm</Text>
-            <Text style={styles.value}>{formatCurrency(serviceCharges)}</Text>
+            <AppText style={styles.label}>Dịch vụ thêm</AppText>
+            <AppText style={styles.value}>{formatCurrency(serviceCharges)}</AppText>
           </View>
           {serviceBreakdown.map((item, idx) => (
             <View key={idx} style={styles.subRow}>
-              <Text style={styles.sub} numberOfLines={1}>
+              <AppText style={styles.sub} numberOfLines={1}>
                 • {item.serviceName || item.name} ({item.quantity} {item.unit})
-              </Text>
-              <Text style={styles.sub}>
+              </AppText>
+              <AppText style={styles.sub}>
                 {formatCurrency(item.totalPrice ?? item.subtotal ?? 0)}
-              </Text>
+              </AppText>
             </View>
           ))}
         </View>
@@ -79,10 +80,10 @@ export default function PriceBreakdown({
       {/* Giảm giá */}
       {discount > 0 && (
         <View style={styles.row}>
-          <Text style={styles.label}>Giảm giá</Text>
-          <Text style={[styles.value, { color: COLORS.success }]}>
+          <AppText style={styles.label}>Giảm giá</AppText>
+          <AppText style={[styles.value, { color: COLORS.success }]}>
             -{formatCurrency(discount)}
-          </Text>
+          </AppText>
         </View>
       )}
 
@@ -90,33 +91,33 @@ export default function PriceBreakdown({
 
       {/* Thuế */}
       <View style={styles.row}>
-        <Text style={styles.label}>Thuế VAT ({taxRate}%)</Text>
-        <Text style={styles.value}>{formatCurrency(tax)}</Text>
+        <AppText style={styles.label}>Thuế VAT ({taxRate}%)</AppText>
+        <AppText style={styles.value}>{formatCurrency(tax)}</AppText>
       </View>
 
       <View style={styles.totalDivider} />
 
       {/* Tổng thanh toán */}
       <View style={styles.row}>
-        <Text style={styles.totalLabel}>Tổng thanh toán</Text>
-        <Text style={styles.totalValue}>{formatCurrency(totalAmount)}</Text>
+        <AppText style={styles.totalLabel}>Tổng thanh toán</AppText>
+        <AppText style={styles.totalValue}>{formatCurrency(totalAmount)}</AppText>
       </View>
 
       {/* Hai dòng: Đã cọc & Còn lại phải trả */}
       <View style={styles.settleDivider} />
 
       <View style={styles.settleRow}>
-        <Text style={styles.depositLabel}>Đã cọc</Text>
-        <Text style={styles.depositValue}>
+        <AppText style={styles.depositLabel}>Đã cọc</AppText>
+        <AppText style={styles.depositValue}>
           {formatCurrency(depositPaid)}
-        </Text>
+        </AppText>
       </View>
 
       <View style={[styles.settleRow, { marginTop: 4 }]}>
-        <Text style={styles.remainingLabel}>Còn lại phải trả</Text>
-        <Text style={styles.remainingValue}>
+        <AppText style={styles.remainingLabel}>Còn lại phải trả</AppText>
+        <AppText style={styles.remainingValue}>
           {formatCurrency(remainingBalance)}
-        </Text>
+        </AppText>
       </View>
     </View>
   );

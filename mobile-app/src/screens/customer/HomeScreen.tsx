@@ -1,13 +1,6 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, ScrollView, Image, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -15,12 +8,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useHotelStore } from '../../store/useHotelStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import Button from '../../components/common/Button';
 import { COLORS, FONTS, SPACING, RADIUS, HOTEL_INFO } from '../../utils/constants';
 import { authService } from '../../services/authService';
 
 const { width, height } = Dimensions.get('window');
 
-const HERO_IMAGE = 'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200';
+const HERO_IMAGE = 'https://images.unsplash.com/photo-1735770517146-e95c872226fc?auto=format&fit=crop&w=2200&q=88';
 
 const AMENITY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   water: 'water',
@@ -73,7 +67,7 @@ export default function HomeScreen() {
           <View style={[styles.topBar, { top: insets.top + SPACING.sm }]}>
             <View style={styles.logoRow}>
               <Ionicons name="business" size={22} color={COLORS.secondary} />
-              <Text style={styles.logoText}>{info.name}</Text>
+              <AppText style={styles.logoText}>{info.name}</AppText>
             </View>
             {user ? (
               <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} accessibilityLabel="Đăng xuất">
@@ -83,22 +77,28 @@ export default function HomeScreen() {
           </View>
           {/* Hero text */}
           <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>{info.name}</Text>
-            <Text style={styles.heroTagline}>{info.tagline}</Text>
+            <AppText style={styles.heroTitle}>Nơi đường chân trời</AppText>
+            <AppText style={styles.heroTagline}>khiến bạn sống chậm lại.</AppText>
             <View style={styles.ratingRow}>
               <Ionicons name="star" size={16} color={COLORS.secondary} />
-              <Text style={styles.ratingText}>{info.rating}</Text>
-              <Text style={styles.reviewText}>({info.reviewCount} đánh giá)</Text>
+              <AppText style={styles.ratingText}>{info.rating}</AppText>
+              <AppText style={styles.reviewText}>({info.reviewCount} đánh giá)</AppText>
             </View>
+            <Button
+              title="Kiểm tra phòng trống"
+              onPress={() => (navigation as any).navigate('Rooms')}
+              size="md"
+              style={styles.heroCta}
+            />
           </View>
         </View>
 
         {/* Welcome greeting */}
         {user && (
           <View style={styles.greeting}>
-            <Text style={styles.greetingText}>
-              Xin chào, <Text style={styles.greetingName}>{user.fullName}</Text> 👋
-            </Text>
+            <AppText style={styles.greetingText}>
+              Xin chào, <AppText style={styles.greetingName}>{user.fullName}</AppText> 👋
+            </AppText>
           </View>
         )}
 
@@ -106,33 +106,33 @@ export default function HomeScreen() {
         <View style={styles.infoRow}>
           <View style={styles.infoBox}>
             <Ionicons name="enter-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.infoLabel}>Check-in</Text>
-            <Text style={styles.infoValue}>{HOTEL_INFO.checkInTime}</Text>
+            <AppText style={styles.infoLabel}>Check-in</AppText>
+            <AppText style={styles.infoValue}>{HOTEL_INFO.checkInTime}</AppText>
           </View>
           <View style={styles.infoDivider} />
           <View style={styles.infoBox}>
             <Ionicons name="exit-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.infoLabel}>Check-out</Text>
-            <Text style={styles.infoValue}>{HOTEL_INFO.checkOutTime}</Text>
+            <AppText style={styles.infoLabel}>Check-out</AppText>
+            <AppText style={styles.infoValue}>{HOTEL_INFO.checkOutTime}</AppText>
           </View>
           <View style={styles.infoDivider} />
           <View style={styles.infoBox}>
             <Ionicons name="location-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.infoLabel}>Vị trí</Text>
-            <Text style={styles.infoValue}>Đà Nẵng</Text>
+            <AppText style={styles.infoLabel}>Vị trí</AppText>
+            <AppText style={styles.infoValue}>Đà Nẵng</AppText>
           </View>
         </View>
 
         {/* About */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Về chúng tôi</Text>
-          <Text style={styles.description}>{info.description}</Text>
+          <AppText style={styles.sectionTitle}>Về chúng tôi</AppText>
+          <AppText style={styles.description}>{info.description}</AppText>
         </View>
 
         {/* Amenities */}
         {info.amenities.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Tiện ích khách sạn</Text>
+            <AppText style={styles.sectionTitle}>Tiện ích khách sạn</AppText>
             <View style={styles.amenitiesGrid}>
               {info.amenities.map((a) => (
                 <View key={a.id} style={styles.amenityItem}>
@@ -143,7 +143,7 @@ export default function HomeScreen() {
                       color={COLORS.primary}
                     />
                   </View>
-                  <Text style={styles.amenityName}>{a.name}</Text>
+                  <AppText style={styles.amenityName}>{a.name}</AppText>
                 </View>
               ))}
             </View>
@@ -152,13 +152,13 @@ export default function HomeScreen() {
 
         {/* Location placeholder */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Vị trí</Text>
+          <AppText style={styles.sectionTitle}>Vị trí</AppText>
           <View style={styles.mapPlaceholder}>
             <Ionicons name="map-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.mapText}>{HOTEL_INFO.address}</Text>
-            <Text style={styles.mapCoords}>
+            <AppText style={styles.mapText}>{HOTEL_INFO.address}</AppText>
+            <AppText style={styles.mapCoords}>
               {HOTEL_INFO.latitude}°N, {HOTEL_INFO.longitude}°E
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: '100%' },
   heroOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(26,60,94,0.55)',
+    backgroundColor: 'rgba(4,25,31,0.48)',
   },
   topBar: {
     position: 'absolute',
@@ -210,15 +210,16 @@ const styles = StyleSheet.create({
   heroTitle: {
     color: COLORS.surface,
     fontSize: FONTS.sizes.xxxl,
-    fontWeight: FONTS.weights.bold,
+    fontWeight: FONTS.weights.medium,
     marginBottom: SPACING.xs,
   },
   heroTagline: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: FONTS.sizes.md,
-    fontStyle: 'italic',
+    color: COLORS.secondary,
+    fontSize: FONTS.sizes.xl,
+    fontFamily: FONTS.family.heading,
     marginBottom: SPACING.sm,
   },
+  heroCta: { alignSelf: 'flex-start', marginTop: SPACING.md },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   ratingText: {
     color: COLORS.surface,
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.lg,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.secondary,
+    borderLeftColor: COLORS.primary,
   },
   greetingText: { fontSize: FONTS.sizes.md, color: COLORS.textLight },
   greetingName: { fontWeight: FONTS.weights.semiBold, color: COLORS.primary },
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: RADIUS.md,
-    backgroundColor: '#EEF4FA',
+    backgroundColor: COLORS.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -317,7 +318,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

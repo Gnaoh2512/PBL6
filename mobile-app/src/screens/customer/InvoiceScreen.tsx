@@ -1,33 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-  Share,
-  ActivityIndicator,
-  Alert,
-  Platform,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, ScrollView, TouchableOpacity, StyleSheet, Share, ActivityIndicator, Alert, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/AppNavigator';
 import { LiveFolio, invoiceService } from '../../services/invoiceService';
 import PriceBreakdown from '../../components/booking/PriceBreakdown';
-import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
+import { COLORS, FONTS, SPACING, RADIUS, STATUS_COLORS } from '../../utils/constants';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Invoice'>;
 
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING_DEPOSIT: { label: 'Chờ đặt cọc', color: '#D97706', bg: '#FEF3C7' },
-  CONFIRMED: { label: 'Đã xác nhận', color: '#059669', bg: '#D1FAE5' },
-  CHECKED_IN: { label: 'Đang lưu trú', color: '#2563EB', bg: '#DBEAFE' },
-  CHECKED_OUT: { label: 'Hoàn thành', color: '#6B7280', bg: '#F3F4F6' },
-  CANCELED: { label: 'Đã hủy', color: '#DC2626', bg: '#FEE2E2' },
-  CANCELLED: { label: 'Đã hủy', color: '#DC2626', bg: '#FEE2E2' },
-  EXPIRED: { label: 'Hết hạn', color: '#EA580C', bg: '#FFEDD5' },
+  PENDING_DEPOSIT: { label: 'Chờ đặt cọc', color: STATUS_COLORS.pending.color, bg: STATUS_COLORS.pending.bg },
+  CONFIRMED: { label: 'Đã xác nhận', color: STATUS_COLORS.success.color, bg: STATUS_COLORS.success.bg },
+  CHECKED_IN: { label: 'Đang lưu trú', color: STATUS_COLORS.info.color, bg: STATUS_COLORS.info.bg },
+  CHECKED_OUT: { label: 'Hoàn thành', color: STATUS_COLORS.neutral.color, bg: STATUS_COLORS.neutral.bg },
+  CANCELED: { label: 'Đã hủy', color: STATUS_COLORS.error.color, bg: STATUS_COLORS.error.bg },
+  CANCELLED: { label: 'Đã hủy', color: STATUS_COLORS.error.color, bg: STATUS_COLORS.error.bg },
+  EXPIRED: { label: 'Hết hạn', color: STATUS_COLORS.pending.color, bg: STATUS_COLORS.pending.bg },
 };
 
 const formatCurrency = (amount: number) => amount.toLocaleString('vi-VN') + ' ₫';
@@ -102,7 +93,7 @@ export default function InvoiceScreen({ navigation, route }: Props) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Đang tải hóa đơn lưu trú...</Text>
+        <AppText style={styles.loadingText}>Đang tải hóa đơn lưu trú...</AppText>
       </SafeAreaView>
     );
   }
@@ -111,9 +102,9 @@ export default function InvoiceScreen({ navigation, route }: Props) {
     return (
       <SafeAreaView style={styles.center}>
         <Ionicons name="alert-circle-outline" size={48} color={COLORS.error} />
-        <Text style={styles.errorText}>Không tìm thấy hóa đơn cho đơn #{bookingId}</Text>
+        <AppText style={styles.errorText}>Không tìm thấy hóa đơn cho đơn #{bookingId}</AppText>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>Quay lại</Text>
+          <AppText style={styles.backBtnText}>Quay lại</AppText>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -130,26 +121,26 @@ export default function InvoiceScreen({ navigation, route }: Props) {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header hóa đơn */}
         <View style={styles.invoiceHeader}>
-          <Text style={styles.hotelName}>AZURE BAY HOTEL</Text>
-          <Text style={styles.invoiceSubtitle}>BẢNG KÊ CHI PHÍ LƯU TRÚ (LIVE FOLIO)</Text>
-          <Text style={styles.invoiceId}>Mã đơn: #{folio.bookingCode}</Text>
+          <AppText style={styles.hotelName}>AZURE BAY HOTEL</AppText>
+          <AppText style={styles.invoiceSubtitle}>BẢNG KÊ CHI PHÍ LƯU TRÚ (LIVE FOLIO)</AppText>
+          <AppText style={styles.invoiceId}>Mã đơn: #{folio.bookingCode}</AppText>
           <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
-            <Text style={[styles.statusText, { color: statusCfg.color }]}>
+            <AppText style={[styles.statusText, { color: statusCfg.color }]}>
               {statusCfg.label}
-            </Text>
+            </AppText>
           </View>
         </View>
 
         {/* Thông tin khách hàng */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
+          <AppText style={styles.sectionTitle}>Thông tin khách hàng</AppText>
           <Row label="Họ và tên" value={folio.customerName || 'Khách vãng lai'} />
           <Row label="Số điện thoại" value={folio.customerPhone || '—'} />
         </View>
 
         {/* Thông tin lưu trú */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông tin lưu trú</Text>
+          <AppText style={styles.sectionTitle}>Thông tin lưu trú</AppText>
           <Row
             label="Loại phòng"
             value={`${folio.roomTypeName}${folio.roomNumber ? ` (Phòng ${folio.roomNumber})` : ''}`}
@@ -177,7 +168,7 @@ export default function InvoiceScreen({ navigation, route }: Props) {
 
         {/* Trạng thái quyết toán */}
         <View style={[styles.section, { marginTop: SPACING.md }]}>
-          <Text style={styles.sectionTitle}>Tình trạng quyết toán</Text>
+          <AppText style={styles.sectionTitle}>Tình trạng quyết toán</AppText>
           <Row label="Đã đặt cọc" value={formatCurrency(folio.depositPaid)} />
           <Row
             label="Còn lại phải trả"
@@ -206,7 +197,7 @@ export default function InvoiceScreen({ navigation, route }: Props) {
       >
         <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.8}>
           <Ionicons name="share-outline" size={20} color={COLORS.primary} style={{ marginRight: 6 }} />
-          <Text style={styles.shareBtnText}>Chia sẻ hóa đơn</Text>
+          <AppText style={styles.shareBtnText}>Chia sẻ hóa đơn</AppText>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -226,8 +217,8 @@ function Row({
 }) {
   return (
     <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text
+      <AppText style={styles.rowLabel}>{label}</AppText>
+      <AppText
         style={[
           styles.rowValue,
           bold && { fontWeight: 'bold', color: COLORS.error, fontSize: FONTS.sizes.md },
@@ -235,7 +226,7 @@ function Row({
         ]}
       >
         {value}
-      </Text>
+      </AppText>
     </View>
   );
 }
@@ -264,7 +255,7 @@ const styles = StyleSheet.create({
   hotelName: {
     fontSize: FONTS.sizes.lg,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.secondary,
+    color: COLORS.primary,
     letterSpacing: 1.5,
   },
   invoiceSubtitle: {

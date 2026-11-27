@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, ScrollView, Image, StyleSheet, Dimensions, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -162,10 +154,10 @@ export default function RoomDetailScreen() {
         <View style={styles.content}>
           {/* Title row */}
           <View style={styles.titleRow}>
-            <Text style={styles.roomName}>{room.name}</Text>
+            <AppText style={styles.roomName}>{room.name}</AppText>
             <View>
-              <Text style={styles.price}>{formatPrice(room.pricePerNight)}</Text>
-              <Text style={styles.perNight}>/đêm</Text>
+              <AppText style={styles.price}>{formatPrice(room.pricePerNight)}</AppText>
+              <AppText style={styles.perNight}>/đêm</AppText>
             </View>
           </View>
 
@@ -173,34 +165,34 @@ export default function RoomDetailScreen() {
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <Ionicons name="people-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{room.maxGuests} khách</Text>
+              <AppText style={styles.metaText}>{room.maxGuests} khách</AppText>
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="expand-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{roomArea} m²</Text>
+              <AppText style={styles.metaText}>{roomArea} m²</AppText>
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="bed-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{roomBedType}</Text>
+              <AppText style={styles.metaText}>{roomBedType}</AppText>
             </View>
           </View>
 
           {/* Description */}
-          <Text style={styles.description}>{room.description}</Text>
+          <AppText style={styles.description}>{room.description}</AppText>
 
           {/* Amenities */}
-          <Text style={styles.sectionTitle}>Tiện nghi phòng</Text>
+          <AppText style={styles.sectionTitle}>Tiện nghi phòng</AppText>
           <View style={styles.amenitiesWrap}>
             {room.amenities.map((a) => (
               <View key={a.id} style={styles.amenityBadge}>
                 <Ionicons name="checkmark-circle-outline" size={13} color={COLORS.primary} />
-                <Text style={styles.amenityText}>{a.name}</Text>
+                <AppText style={styles.amenityText}>{a.name}</AppText>
               </View>
             ))}
           </View>
 
           {/* Date selection */}
-          <Text style={styles.sectionTitle}>Chọn ngày</Text>
+          <AppText style={styles.sectionTitle}>Chọn ngày</AppText>
           <DateRangePicker value={dateRange} onChange={handleDateChange} />
 
           {/* Summary box — dùng totalRoomCharge nếu API đã trả, fallback tính tay */}
@@ -208,24 +200,24 @@ export default function RoomDetailScreen() {
             <View style={styles.summaryBox}>
               {totalCharge !== null ? (
                 <>
-                  <Text style={styles.summaryText}>
+                  <AppText style={styles.summaryText}>
                     Tổng tiền phòng:{' '}
-                    <Text style={styles.summaryTotal}>{formatPrice(totalCharge)}</Text>
-                  </Text>
+                    <AppText style={styles.summaryTotal}>{formatPrice(totalCharge)}</AppText>
+                  </AppText>
                   {deposit !== null && (
-                    <Text style={styles.summaryText}>
+                    <AppText style={styles.summaryText}>
                       Đặt cọc:{' '}
-                      <Text style={styles.summaryTotal}>{formatPrice(deposit)}</Text>
-                    </Text>
+                      <AppText style={styles.summaryTotal}>{formatPrice(deposit)}</AppText>
+                    </AppText>
                   )}
                 </>
               ) : (
-                <Text style={styles.summaryText}>
+                <AppText style={styles.summaryText}>
                   {nights} đêm × {formatPrice(room.pricePerNight)} ={' '}
-                  <Text style={styles.summaryTotal}>
+                  <AppText style={styles.summaryTotal}>
                     {formatPrice(room.pricePerNight * nights)}
-                  </Text>
-                </Text>
+                  </AppText>
+                </AppText>
               )}
             </View>
           )}
@@ -235,7 +227,7 @@ export default function RoomDetailScreen() {
             <View
               style={[
                 styles.availabilityBox,
-                { backgroundColor: available ? '#D1FAE5' : '#FEE2E2' },
+                { backgroundColor: available ? COLORS.successBackground : COLORS.errorBackground },
               ]}
             >
               <Ionicons
@@ -243,14 +235,14 @@ export default function RoomDetailScreen() {
                 size={20}
                 color={available ? COLORS.success : COLORS.error}
               />
-              <Text
+              <AppText
                 style={[
                   styles.availabilityText,
                   { color: available ? COLORS.success : COLORS.error },
                 ]}
               >
                 {availabilityMsg}
-              </Text>
+              </AppText>
             </View>
           )}
         </View>
@@ -321,7 +313,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: SPACING.sm,
   },
-  price: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.secondary, textAlign: 'right' },
+  price: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.primary, textAlign: 'right' },
   perNight: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, textAlign: 'right' },
   metaRow: { flexDirection: 'row', gap: SPACING.md, flexWrap: 'wrap', marginBottom: SPACING.md },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -343,23 +335,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#EEF4FA',
+    backgroundColor: COLORS.primarySubtle,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 5,
     borderRadius: RADIUS.full,
   },
   amenityText: { fontSize: FONTS.sizes.xs, color: COLORS.primary },
   summaryBox: {
-    backgroundColor: '#FEF9EC',
+    backgroundColor: COLORS.warningBackground,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#F0D58C',
+    borderColor: COLORS.secondary,
     gap: 4,
   },
   summaryText: { fontSize: FONTS.sizes.md, color: COLORS.text, textAlign: 'center' },
-  summaryTotal: { fontWeight: FONTS.weights.bold, color: COLORS.secondary },
+  summaryTotal: { fontWeight: FONTS.weights.bold, color: COLORS.primary },
   availabilityBox: {
     flexDirection: 'row',
     alignItems: 'center',

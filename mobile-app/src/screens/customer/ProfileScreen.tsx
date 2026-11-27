@@ -1,18 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-  Linking,
-  Platform,
-  ActivityIndicator,
-  Modal,
-  FlatList,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Linking, Platform, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StatusBar } from 'expo-status-bar';
@@ -424,8 +412,8 @@ export default function ProfileScreen() {
           <View style={styles.headerRow}>
             <HeaderBackButton style={styles.backBtn} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.headerTitle}>Tài khoản</Text>
-              <Text style={styles.headerSubtitle}>Đăng nhập để xem hồ sơ và quyền lợi hội viên</Text>
+              <AppText style={styles.headerTitle}>Tài khoản</AppText>
+              <AppText style={styles.headerSubtitle}>Đăng nhập để xem hồ sơ và quyền lợi hội viên</AppText>
             </View>
           </View>
         </View>
@@ -452,8 +440,8 @@ export default function ProfileScreen() {
         <View style={styles.headerRow}>
           <HeaderBackButton style={styles.backBtn} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>Tài khoản</Text>
-            <Text style={styles.headerSubtitle}>Thông tin cá nhân khách hàng</Text>
+            <AppText style={styles.headerTitle}>Tài khoản</AppText>
+            <AppText style={styles.headerSubtitle}>Thông tin cá nhân khách hàng</AppText>
           </View>
         </View>
       </View>
@@ -499,9 +487,9 @@ export default function ProfileScreen() {
           {errorMessage && (
             <View style={styles.errorBanner}>
               <Ionicons name="warning-outline" size={16} color={COLORS.error} />
-              <Text style={styles.errorBannerText}>{errorMessage}</Text>
+              <AppText style={styles.errorBannerText}>{errorMessage}</AppText>
               <TouchableOpacity onPress={() => fetchProfile()}>
-                <Text style={styles.retryText}>Thử lại</Text>
+                <AppText style={styles.retryText}>Thử lại</AppText>
               </TouchableOpacity>
             </View>
           )}
@@ -509,10 +497,10 @@ export default function ProfileScreen() {
           {/* Phần Avatar & Tên */}
           <View style={styles.profileHeader}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarText}>{getInitials(profile?.fullName)}</Text>
+              <AppText style={styles.avatarText}>{getInitials(profile?.fullName)}</AppText>
             </View>
-            <Text style={styles.fullName}>{profile?.fullName || 'Khách hàng'}</Text>
-            <Text style={styles.username}>@{profile?.username || 'khachhang'}</Text>
+            <AppText style={styles.fullName}>{profile?.fullName || 'Khách hàng'}</AppText>
+            <AppText style={styles.username}>@{profile?.username || 'khachhang'}</AppText>
           </View>
 
           {/* Hạng hội viên */}
@@ -520,19 +508,19 @@ export default function ProfileScreen() {
             {loyaltyProfileLoading && !loyaltyProfile && !isNotMember && !loyaltyProfileError ? (
               <Card style={styles.loadingCard}>
                 <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.loadingCardText}>Đang tải thông tin hội viên...</Text>
+                <AppText style={styles.loadingCardText}>Đang tải thông tin hội viên...</AppText>
               </Card>
             ) : isNotMember ? (
               <Card style={styles.notMemberCard}>
                 <View style={styles.notMemberRow}>
                   <View style={styles.notMemberIconWrap}>
-                    <Ionicons name="sparkles" size={22} color={COLORS.secondary} />
+                    <Ionicons name="sparkles" size={22} color={COLORS.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.notMemberTitle}>Hội viên Azure Bay</Text>
-                    <Text style={styles.notMemberText}>
+                    <AppText style={styles.notMemberTitle}>Hội viên Azure Bay</AppText>
+                    <AppText style={styles.notMemberText}>
                       Bạn chưa là hội viên. Đặt phòng để bắt đầu tích điểm
-                    </Text>
+                    </AppText>
                   </View>
                 </View>
               </Card>
@@ -540,13 +528,13 @@ export default function ProfileScreen() {
               <Card style={styles.sectionErrorCard}>
                 <View style={styles.sectionErrorRow}>
                   <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} />
-                  <Text style={styles.sectionErrorText}>{loyaltyProfileError}</Text>
+                  <AppText style={styles.sectionErrorText}>{loyaltyProfileError}</AppText>
                 </View>
                 <TouchableOpacity
                   style={styles.sectionRetryBtn}
                   onPress={() => fetchLoyaltyProfile()}
                 >
-                  <Text style={styles.sectionRetryText}>Thử lại</Text>
+                  <AppText style={styles.sectionRetryText}>Thử lại</AppText>
                 </TouchableOpacity>
               </Card>
             ) : loyaltyProfile ? (
@@ -559,34 +547,34 @@ export default function ProfileScreen() {
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderRow}>
                 <Ionicons name="gift-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionHeaderTitle}>Ưu đãi của bạn</Text>
+                <AppText style={styles.sectionHeaderTitle}>Ưu đãi của bạn</AppText>
               </View>
-              <Text style={styles.roomDiscountNoteText}>
+              <AppText style={styles.roomDiscountNoteText}>
                 Ưu đãi giảm giá phòng theo hạng hội viên được tự động trừ trên hóa đơn.
-              </Text>
+              </AppText>
 
               {benefitsLoading && benefits.length === 0 ? (
                 <Card style={styles.loadingCard}>
                   <ActivityIndicator size="small" color={COLORS.primary} />
-                  <Text style={styles.loadingCardText}>Đang tải danh sách ưu đãi...</Text>
+                  <AppText style={styles.loadingCardText}>Đang tải danh sách ưu đãi...</AppText>
                 </Card>
               ) : benefitsError ? (
                 <Card style={styles.sectionErrorCard}>
                   <View style={styles.sectionErrorRow}>
                     <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} />
-                    <Text style={styles.sectionErrorText}>{benefitsError}</Text>
+                    <AppText style={styles.sectionErrorText}>{benefitsError}</AppText>
                   </View>
                   <TouchableOpacity
                     style={styles.sectionRetryBtn}
                     onPress={() => fetchLoyaltyBenefits()}
                   >
-                    <Text style={styles.sectionRetryText}>Thử lại</Text>
+                    <AppText style={styles.sectionRetryText}>Thử lại</AppText>
                   </TouchableOpacity>
                 </Card>
               ) : benefits.length === 0 ? (
                 <Card style={styles.emptyBoxCard}>
                   <Ionicons name="gift-outline" size={32} color={COLORS.textMuted} style={{ marginBottom: 6 }} />
-                  <Text style={styles.emptyBoxText}>Chưa có ưu đãi cho hạng này</Text>
+                  <AppText style={styles.emptyBoxText}>Chưa có ưu đãi cho hạng này</AppText>
                 </Card>
               ) : (
                 <Card style={styles.benefitsCard} padding={0}>
@@ -599,17 +587,17 @@ export default function ProfileScreen() {
                       <View key={b.tierBenefitId || b.id || idx}>
                         <View style={styles.benefitItem}>
                           <View style={styles.benefitIconWrap}>
-                            <Ionicons name="ribbon" size={18} color={COLORS.secondary} />
+                            <Ionicons name="ribbon" size={18} color={COLORS.primary} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <View style={styles.benefitTitleRow}>
-                              <Text style={styles.benefitName}>{b.benefitName}</Text>
+                              <AppText style={styles.benefitName}>{b.benefitName}</AppText>
                             </View>
                             {b.description ? (
-                              <Text style={styles.benefitDesc}>{b.description}</Text>
+                              <AppText style={styles.benefitDesc}>{b.description}</AppText>
                             ) : null}
                             {quotaText ? (
-                              <Text style={styles.benefitQuota}>{quotaText}</Text>
+                              <AppText style={styles.benefitQuota}>{quotaText}</AppText>
                             ) : null}
                             {showRedeem && (
                               <TouchableOpacity
@@ -623,7 +611,7 @@ export default function ProfileScreen() {
                                 ) : (
                                   <>
                                     <Ionicons name="flash-outline" size={14} color={COLORS.surface} style={{ marginRight: 4 }} />
-                                    <Text style={styles.redeemBtnText}>Sử dụng</Text>
+                                    <AppText style={styles.redeemBtnText}>Sử dụng</AppText>
                                   </>
                                 )}
                               </TouchableOpacity>
@@ -644,31 +632,31 @@ export default function ProfileScreen() {
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderRow}>
                 <Ionicons name="time-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
-                <Text style={styles.sectionHeaderTitle}>Lịch sử tích điểm</Text>
+                <AppText style={styles.sectionHeaderTitle}>Lịch sử tích điểm</AppText>
               </View>
 
               {transactionsLoading && transactions.length === 0 ? (
                 <Card style={styles.loadingCard}>
                   <ActivityIndicator size="small" color={COLORS.primary} />
-                  <Text style={styles.loadingCardText}>Đang tải lịch sử tích điểm...</Text>
+                  <AppText style={styles.loadingCardText}>Đang tải lịch sử tích điểm...</AppText>
                 </Card>
               ) : transactionsError ? (
                 <Card style={styles.sectionErrorCard}>
                   <View style={styles.sectionErrorRow}>
                     <Ionicons name="alert-circle-outline" size={18} color={COLORS.error} />
-                    <Text style={styles.sectionErrorText}>{transactionsError}</Text>
+                    <AppText style={styles.sectionErrorText}>{transactionsError}</AppText>
                   </View>
                   <TouchableOpacity
                     style={styles.sectionRetryBtn}
                     onPress={() => fetchLoyaltyTransactions()}
                   >
-                    <Text style={styles.sectionRetryText}>Thử lại</Text>
+                    <AppText style={styles.sectionRetryText}>Thử lại</AppText>
                   </TouchableOpacity>
                 </Card>
               ) : transactions.length === 0 ? (
                 <Card style={styles.emptyBoxCard}>
                   <Ionicons name="receipt-outline" size={32} color={COLORS.textMuted} style={{ marginBottom: 6 }} />
-                  <Text style={styles.emptyBoxText}>Chưa có giao dịch</Text>
+                  <AppText style={styles.emptyBoxText}>Chưa có giao dịch</AppText>
                 </Card>
               ) : (
                 <Card style={styles.transactionsCard} padding={0}>
@@ -681,7 +669,7 @@ export default function ProfileScreen() {
                           <View
                             style={[
                               styles.txnIconWrap,
-                              { backgroundColor: isEarn ? '#ECFDF5' : '#FEF3C7' },
+                              { backgroundColor: isEarn ? COLORS.successBackground : COLORS.warningBackground },
                             ]}
                           >
                             <Ionicons
@@ -692,29 +680,29 @@ export default function ProfileScreen() {
                           </View>
 
                           <View style={{ flex: 1, marginRight: SPACING.sm }}>
-                            <Text style={styles.txnTitle}>
+                            <AppText style={styles.txnTitle}>
                               {txn.note || (isEarn ? 'Tích điểm lưu trú' : 'Điều chỉnh điểm')}
-                            </Text>
-                            <Text style={styles.txnDate}>{formatDateTime(txn.createdAt)}</Text>
+                            </AppText>
+                            <AppText style={styles.txnDate}>{formatDateTime(txn.createdAt)}</AppText>
                             {(txn.stayDays || txn.amountSpent) ? (
-                              <Text style={styles.txnSub}>
+                              <AppText style={styles.txnSub}>
                                 {txn.stayDays ? `${txn.stayDays} đêm` : ''}
                                 {txn.stayDays && txn.amountSpent ? ' • ' : ''}
                                 {txn.amountSpent ? formatPrice(txn.amountSpent) : ''}
-                              </Text>
+                              </AppText>
                             ) : null}
                           </View>
 
                           <View style={styles.txnScoreWrap}>
-                            <Text
+                            <AppText
                               style={[
                                 styles.txnScore,
                                 { color: isEarn ? COLORS.success : COLORS.text },
                               ]}
                             >
                               {txn.scoreEarned > 0 ? `+${txn.scoreEarned}` : txn.scoreEarned}
-                            </Text>
-                            <Text style={styles.txnScoreUnit}>điểm</Text>
+                            </AppText>
+                            <AppText style={styles.txnScoreUnit}>điểm</AppText>
                           </View>
                         </View>
                         {!isLast && <View style={styles.divider} />}
@@ -729,7 +717,7 @@ export default function ProfileScreen() {
           {/* Tiêu đề thông tin tài khoản */}
           <View style={styles.sectionHeaderRow}>
             <Ionicons name="person-circle-outline" size={18} color={COLORS.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.sectionHeaderTitle}>Thông tin tài khoản</Text>
+            <AppText style={styles.sectionHeaderTitle}>Thông tin tài khoản</AppText>
           </View>
 
           {/* Card thông tin chi tiết */}
@@ -745,17 +733,17 @@ export default function ProfileScreen() {
                       <View style={styles.iconWrap}>
                         <Ionicons name={row.icon} size={18} color={COLORS.primary} />
                       </View>
-                      <Text style={styles.rowLabel}>{row.label}</Text>
+                      <AppText style={styles.rowLabel}>{row.label}</AppText>
                     </View>
 
                     <View style={styles.rowValueContainer}>
                       {isActiveStatus ? (
                         <View style={styles.statusBadge}>
                           <View style={styles.statusDot} />
-                          <Text style={styles.statusBadgeText}>{row.value}</Text>
+                          <AppText style={styles.statusBadgeText}>{row.value}</AppText>
                         </View>
                       ) : (
-                        <Text
+                        <AppText
                           style={[
                             styles.rowValue,
                             row.value === 'Chưa cập nhật' && styles.rowValueMuted,
@@ -763,7 +751,7 @@ export default function ProfileScreen() {
                           numberOfLines={2}
                         >
                           {row.value}
-                        </Text>
+                        </AppText>
                       )}
                     </View>
                   </View>
@@ -775,12 +763,12 @@ export default function ProfileScreen() {
 
           {/* Dòng liên hệ thay đổi thông tin */}
           <View style={styles.contactSupportBox}>
-            <Text style={styles.contactSupportText}>
+            <AppText style={styles.contactSupportText}>
               Cần thay đổi thông tin? Vui lòng liên hệ khách sạn:
-            </Text>
+            </AppText>
             <TouchableOpacity style={styles.phoneLink} onPress={handleCallHotel} activeOpacity={0.7}>
               <Ionicons name="call" size={13} color={COLORS.primary} style={{ marginRight: 4 }} />
-              <Text style={styles.phoneLinkText}>{HOTEL_INFO.phone}</Text>
+              <AppText style={styles.phoneLinkText}>{HOTEL_INFO.phone}</AppText>
             </TouchableOpacity>
           </View>
 
@@ -792,7 +780,7 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
             >
               <Ionicons name="log-out-outline" size={18} color={COLORS.error} style={{ marginRight: 6 }} />
-              <Text style={styles.logoutButtonText}>Đăng xuất</Text>
+              <AppText style={styles.logoutButtonText}>Đăng xuất</AppText>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -827,7 +815,7 @@ export default function ProfileScreen() {
 
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn đơn đặt phòng</Text>
+              <AppText style={styles.modalTitle}>Chọn đơn đặt phòng</AppText>
               <TouchableOpacity onPress={handleCloseRedeemModal} disabled={redeemingId != null}>
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
@@ -835,10 +823,10 @@ export default function ProfileScreen() {
 
             {redeemBenefit && (
               <View style={styles.modalBenefitInfo}>
-                <Ionicons name="ribbon" size={16} color={COLORS.secondary} style={{ marginRight: 6 }} />
-                <Text style={styles.modalBenefitName} numberOfLines={1}>
+                <Ionicons name="ribbon" size={16} color={COLORS.primary} style={{ marginRight: 6 }} />
+                <AppText style={styles.modalBenefitName} numberOfLines={1}>
                   {redeemBenefit.benefitName}
-                </Text>
+                </AppText>
               </View>
             )}
 
@@ -846,14 +834,14 @@ export default function ProfileScreen() {
             {redeemBookingsLoading ? (
               <View style={styles.modalLoadingWrap}>
                 <ActivityIndicator size="small" color={COLORS.primary} />
-                <Text style={styles.modalLoadingText}>Đang tải đơn đặt phòng...</Text>
+                <AppText style={styles.modalLoadingText}>Đang tải đơn đặt phòng...</AppText>
               </View>
             ) : redeemBookings.length === 0 ? (
               <View style={styles.modalEmptyWrap}>
                 <Ionicons name="bed-outline" size={40} color={COLORS.textMuted} />
-                <Text style={styles.modalEmptyText}>
+                <AppText style={styles.modalEmptyText}>
                   Chỉ dùng được khi bạn đang lưu trú (đã nhận phòng)
-                </Text>
+                </AppText>
               </View>
             ) : (
               <FlatList
@@ -869,23 +857,23 @@ export default function ProfileScreen() {
                   >
                     <View style={styles.bookingItemLeft}>
                       <View style={styles.bookingCodeRow}>
-                        <Text style={styles.bookingCode}>{item.bookingCode || item.id}</Text>
+                        <AppText style={styles.bookingCode}>{item.bookingCode || item.id}</AppText>
                         <View style={[
                           styles.bookingStatusBadge,
-                          { backgroundColor: '#ECFDF5' },
+                          { backgroundColor: COLORS.successBackground },
                         ]}>
-                          <Text style={[
+                          <AppText style={[
                             styles.bookingStatusText,
                             { color: '#065F46' },
                           ]}>
                             Đang ở
-                          </Text>
+                          </AppText>
                         </View>
                       </View>
-                      <Text style={styles.bookingRoom}>{item.roomName || item.roomType}</Text>
-                      <Text style={styles.bookingDate}>
+                      <AppText style={styles.bookingRoom}>{item.roomName || item.roomType}</AppText>
+                      <AppText style={styles.bookingDate}>
                         {formatDateTime(item.checkInDate)} – {formatDateTime(item.checkOutDate)}
-                      </Text>
+                      </AppText>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={COLORS.textMuted} />
                   </TouchableOpacity>
@@ -944,7 +932,7 @@ const styles = StyleSheet.create({
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.errorBackground,
     padding: SPACING.sm,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
@@ -971,7 +959,7 @@ const styles = StyleSheet.create({
     borderRadius: 42,
     backgroundColor: COLORS.primary,
     borderWidth: 3,
-    borderColor: COLORS.secondary,
+    borderColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
@@ -1018,7 +1006,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: RADIUS.md,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: COLORS.infoBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -1045,7 +1033,7 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
+    backgroundColor: COLORS.successBackground,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
     borderRadius: RADIUS.full,
@@ -1097,9 +1085,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.errorBackground,
     borderWidth: 1,
-    borderColor: '#FCA5A5',
+    borderColor: COLORS.error,
     borderRadius: RADIUS.lg,
     paddingVertical: 14,
   },
@@ -1168,8 +1156,8 @@ const styles = StyleSheet.create({
   },
   sectionErrorCard: {
     padding: SPACING.md,
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    backgroundColor: COLORS.errorBackground,
+    borderColor: COLORS.error,
     borderWidth: 1,
     alignItems: 'center',
   },
@@ -1236,9 +1224,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: COLORS.successBackground,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: COLORS.successBackground,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: RADIUS.sm,
@@ -1261,7 +1249,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.warningBackground,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -1279,7 +1267,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   discountBadge: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: COLORS.successBackground,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
@@ -1298,7 +1286,7 @@ const styles = StyleSheet.create({
   },
   benefitQuota: {
     fontSize: FONTS.sizes.xs - 1,
-    color: COLORS.secondary,
+    color: COLORS.primary,
     fontWeight: FONTS.weights.medium,
     marginTop: 4,
   },
@@ -1349,7 +1337,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.md,
     paddingVertical: 6,
     borderRadius: RADIUS.sm,
@@ -1359,7 +1347,7 @@ const styles = StyleSheet.create({
   redeemBtnText: {
     fontSize: FONTS.sizes.xs,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.surface,
+    color: COLORS.textOnPrimary,
   },
   // ── Modal styles ──
   modalOverlay: {
@@ -1397,7 +1385,7 @@ const styles = StyleSheet.create({
   modalBenefitInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.warningBackground,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 6,
     borderRadius: RADIUS.sm,
@@ -1494,7 +1482,7 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
   },
   modalConfirmBtn: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
@@ -1503,7 +1491,7 @@ const styles = StyleSheet.create({
   modalConfirmBtnText: {
     fontSize: FONTS.sizes.sm,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.surface,
+    color: COLORS.textOnPrimary,
   },
   backToBookingsBtn: {
     flexDirection: 'row',

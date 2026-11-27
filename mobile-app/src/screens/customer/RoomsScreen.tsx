@@ -1,10 +1,6 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, FlatList, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -41,8 +37,8 @@ export default function RoomsScreen() {
       <View style={[styles.safeArea, { paddingTop: insets.top }]}>
         <StatusBar style="dark" />
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Không thể tải danh sách phòng</Text>
-          <Text style={styles.errorDetail}>{error}</Text>
+          <AppText style={styles.errorText}>Không thể tải danh sách phòng</AppText>
+          <AppText style={styles.errorDetail}>{error}</AppText>
         </View>
       </View>
     );
@@ -55,8 +51,8 @@ export default function RoomsScreen() {
         <View style={styles.headerRow}>
           <HeaderBackButton style={styles.backBtn} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Các loại phòng</Text>
-            <Text style={styles.subtitle}>{rooms.length} loại phòng có sẵn</Text>
+            <AppText style={styles.title}>Các loại phòng</AppText>
+            <AppText style={styles.subtitle}>{rooms.length} loại phòng có sẵn</AppText>
           </View>
         </View>
       </View>

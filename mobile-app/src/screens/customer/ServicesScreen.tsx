@@ -1,19 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Modal,
-  TextInput,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  TouchableWithoutFeedback,
-  Keyboard,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Alert, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -146,13 +133,13 @@ export default function ServicesScreen({ route, navigation }: Props) {
     return (
       <View style={styles.serviceCard} key={item.serviceId}>
         <View style={styles.serviceIcon}>
-          <Ionicons name={iconName} size={22} color={COLORS.secondary} />
+          <Ionicons name={iconName} size={22} color={COLORS.primary} />
         </View>
         <View style={styles.serviceInfo}>
-          <Text style={styles.serviceName}>{item.serviceName}</Text>
-          <Text style={styles.servicePrice}>
+          <AppText style={styles.serviceName}>{item.serviceName}</AppText>
+          <AppText style={styles.servicePrice}>
             {item.unitPrice === 0 ? 'Miễn phí' : `${formatCurrency(item.unitPrice)} / ${item.unit}`}
-          </Text>
+          </AppText>
         </View>
         <TouchableOpacity
           style={styles.orderBtn}
@@ -160,7 +147,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
           activeOpacity={0.8}
         >
           <Ionicons name="cart-outline" size={16} color={COLORS.surface} style={{ marginRight: 4 }} />
-          <Text style={styles.orderBtnText}>Gọi dịch vụ</Text>
+          <AppText style={styles.orderBtnText}>Gọi dịch vụ</AppText>
         </TouchableOpacity>
       </View>
     );
@@ -170,7 +157,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
     return (
       <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Đang tải danh sách dịch vụ...</Text>
+        <AppText style={styles.loadingText}>Đang tải danh sách dịch vụ...</AppText>
       </SafeAreaView>
     );
   }
@@ -188,14 +175,14 @@ export default function ServicesScreen({ route, navigation }: Props) {
           color={bookingCode ? COLORS.primary : COLORS.warning}
         />
         <View style={{ flex: 1, marginLeft: SPACING.sm }}>
-          <Text style={styles.bannerTitle}>
+          <AppText style={styles.bannerTitle}>
             {bookingCode ? `Đơn đặt phòng: ${bookingCode}` : 'Chưa chọn đơn đặt phòng'}
-          </Text>
-          <Text style={styles.bannerSubtitle}>
+          </AppText>
+          <AppText style={styles.bannerSubtitle}>
             {bookingCode
               ? 'Dịch vụ sẽ được tính trực tiếp vào hóa đơn của phòng này.'
               : 'Hãy vào "Đặt phòng của tôi" để gọi dịch vụ theo phòng.'}
-          </Text>
+          </AppText>
         </View>
       </View>
 
@@ -209,7 +196,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
             <View style={styles.categoryBlock}>
               <View style={styles.categoryHeader}>
                 <Ionicons name={icon} size={18} color={COLORS.primary} />
-                <Text style={styles.categoryLabel}>{cat}</Text>
+                <AppText style={styles.categoryLabel}>{cat}</AppText>
               </View>
               {grouped[cat].map(renderServiceItem)}
             </View>
@@ -218,7 +205,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Ionicons name="sparkles-outline" size={48} color={COLORS.textMuted} />
-            <Text style={styles.emptyText}>Hiện chưa có dịch vụ nào đang mở</Text>
+            <AppText style={styles.emptyText}>Hiện chưa có dịch vụ nào đang mở</AppText>
           </View>
         }
       />
@@ -241,7 +228,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
               {selectedService && (
                 <>
                   <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Gọi dịch vụ phòng</Text>
+                    <AppText style={styles.modalTitle}>Gọi dịch vụ phòng</AppText>
                     <TouchableOpacity
                       onPress={() => setModalVisible(false)}
                       disabled={isSubmitting}
@@ -251,16 +238,16 @@ export default function ServicesScreen({ route, navigation }: Props) {
                   </View>
 
                   <View style={styles.serviceDetailBox}>
-                    <Text style={styles.modalServiceName}>{selectedService.serviceName}</Text>
-                    <Text style={styles.modalCategoryName}>{selectedService.categoryName}</Text>
-                    <Text style={styles.modalServicePrice}>
+                    <AppText style={styles.modalServiceName}>{selectedService.serviceName}</AppText>
+                    <AppText style={styles.modalCategoryName}>{selectedService.categoryName}</AppText>
+                    <AppText style={styles.modalServicePrice}>
                       Đơn giá: {selectedService.unitPrice === 0 ? 'Miễn phí' : `${formatCurrency(selectedService.unitPrice)} / ${selectedService.unit}`}
-                    </Text>
+                    </AppText>
                   </View>
 
                   {/* Chọn số lượng */}
                   <View style={styles.quantitySection}>
-                    <Text style={styles.qtySectionLabel}>Số lượng ({selectedService.unit}):</Text>
+                    <AppText style={styles.qtySectionLabel}>Số lượng ({selectedService.unit}):</AppText>
                     <View style={styles.qtyControlRow}>
                       <TouchableOpacity
                         style={[styles.qtyBtn, orderQuantity <= 1 && styles.qtyBtnDisabled]}
@@ -269,7 +256,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
                       >
                         <Ionicons name="remove" size={18} color={orderQuantity <= 1 ? COLORS.textMuted : COLORS.primary} />
                       </TouchableOpacity>
-                      <Text style={styles.qtyValueText}>{orderQuantity}</Text>
+                      <AppText style={styles.qtyValueText}>{orderQuantity}</AppText>
                       <TouchableOpacity
                         style={styles.qtyBtn}
                         disabled={isSubmitting}
@@ -282,15 +269,15 @@ export default function ServicesScreen({ route, navigation }: Props) {
 
                   {/* Tổng tạm tính */}
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalRowLabel}>Tổng cộng:</Text>
-                    <Text style={styles.totalRowValue}>
+                    <AppText style={styles.totalRowLabel}>Tổng cộng:</AppText>
+                    <AppText style={styles.totalRowValue}>
                       {formatCurrency(selectedService.unitPrice * orderQuantity)}
-                    </Text>
+                    </AppText>
                   </View>
 
                   {/* Ghi chú */}
-                  <Text style={styles.noteLabel}>Ghi chú thêm (tùy chọn):</Text>
-                  <TextInput
+                  <AppText style={styles.noteLabel}>Ghi chú thêm (tùy chọn):</AppText>
+                  <AppTextInput
                     style={styles.noteInput}
                     placeholder="Vd: Giao lúc 19:30, mang thêm đá..."
                     placeholderTextColor={COLORS.textMuted}
@@ -308,7 +295,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
                       disabled={isSubmitting}
                       onPress={() => setModalVisible(false)}
                     >
-                      <Text style={styles.cancelBtnText}>Hủy</Text>
+                      <AppText style={styles.cancelBtnText}>Hủy</AppText>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.confirmBtn, isSubmitting && { opacity: 0.7 }]}
@@ -318,7 +305,7 @@ export default function ServicesScreen({ route, navigation }: Props) {
                       {isSubmitting ? (
                         <ActivityIndicator color={COLORS.surface} size="small" />
                       ) : (
-                        <Text style={styles.confirmBtnText}>Xác nhận gọi</Text>
+                        <AppText style={styles.confirmBtnText}>Xác nhận gọi</AppText>
                       )}
                     </TouchableOpacity>
                   </View>
@@ -398,7 +385,7 @@ const styles = StyleSheet.create({
   },
   servicePrice: {
     fontSize: FONTS.sizes.sm,
-    color: COLORS.secondary,
+    color: COLORS.primary,
     fontWeight: FONTS.weights.bold,
   },
   orderBtn: {
@@ -467,7 +454,7 @@ const styles = StyleSheet.create({
   },
   modalServicePrice: {
     fontSize: FONTS.sizes.sm,
-    color: COLORS.secondary,
+    color: COLORS.primary,
     fontWeight: FONTS.weights.semiBold,
   },
   quantitySection: {
@@ -524,7 +511,7 @@ const styles = StyleSheet.create({
   totalRowValue: {
     fontSize: FONTS.sizes.lg,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.secondary,
+    color: COLORS.primary,
   },
   noteLabel: {
     fontSize: FONTS.sizes.xs,

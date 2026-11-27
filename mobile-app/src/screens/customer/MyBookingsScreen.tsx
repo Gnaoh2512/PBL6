@@ -1,18 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  StyleSheet,
-  Alert,
-  RefreshControl,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  Modal,
-  ScrollView,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, FlatList, StyleSheet, Alert, RefreshControl, TouchableOpacity, KeyboardAvoidingView, Platform, Modal, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -243,7 +231,7 @@ export default function MyBookingsScreen() {
         <View style={[styles.header, { paddingTop: insets.top + SPACING.sm }]}>
           <View style={styles.headerRow}>
             <HeaderBackButton style={styles.backBtn} />
-            <Text style={styles.title}>Tra cứu đặt phòng</Text>
+            <AppText style={styles.title}>Tra cứu đặt phòng</AppText>
           </View>
         </View>
 
@@ -253,12 +241,12 @@ export default function MyBookingsScreen() {
         >
           <View style={styles.lookupBox}>
             <Ionicons name="search-outline" size={36} color={COLORS.primary} style={{ marginBottom: SPACING.sm }} />
-            <Text style={styles.lookupTitle}>Nhập SĐT để tra cứu</Text>
-            <Text style={styles.lookupSubtitle}>
+            <AppText style={styles.lookupTitle}>Nhập SĐT để tra cứu</AppText>
+            <AppText style={styles.lookupSubtitle}>
               Bạn chưa đăng nhập. Nhập số điện thoại đã dùng khi đặt phòng để xem lịch sử.
-            </Text>
+            </AppText>
             <View style={styles.lookupRow}>
-              <TextInput
+              <AppTextInput
                 style={[styles.input, { flex: 1, marginRight: SPACING.sm }]}
                 placeholder="0901234567"
                 placeholderTextColor={COLORS.textMuted}
@@ -319,8 +307,8 @@ export default function MyBookingsScreen() {
         <View style={styles.headerRow}>
           <HeaderBackButton style={styles.backBtn} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Đặt phòng của tôi</Text>
-            <Text style={styles.subtitle}>{bookings.length} đơn</Text>
+            <AppText style={styles.title}>Đặt phòng của tôi</AppText>
+            <AppText style={styles.subtitle}>{bookings.length} đơn</AppText>
           </View>
         </View>
       </View>
@@ -373,10 +361,10 @@ export default function MyBookingsScreen() {
             {/* Modal Header */}
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Hủy đặt phòng</Text>
-                <Text style={styles.modalSubtitle}>
+                <AppText style={styles.modalTitle}>Hủy đặt phòng</AppText>
+                <AppText style={styles.modalSubtitle}>
                   #{selectedBookingForCancel?.bookingCode || selectedBookingForCancel?.id} - {selectedBookingForCancel?.roomName}
-                </Text>
+                </AppText>
               </View>
               <TouchableOpacity
                 onPress={() => setCancelModalVisible(false)}
@@ -395,16 +383,16 @@ export default function MyBookingsScreen() {
               <View style={styles.depositInfoBanner}>
                 <Ionicons name="shield-checkmark-outline" size={20} color={COLORS.primary} />
                 <View style={{ flex: 1, marginLeft: SPACING.sm }}>
-                  <Text style={styles.depositInfoLabel}>Tiền cọc đã thanh toán:</Text>
-                  <Text style={styles.depositInfoValue}>
+                  <AppText style={styles.depositInfoLabel}>Tiền cọc đã thanh toán:</AppText>
+                  <AppText style={styles.depositInfoValue}>
                     {formatPrice(selectedBookingForCancel?.depositPaid || selectedBookingForCancel?.depositRequired || 0)}
-                  </Text>
+                  </AppText>
                 </View>
               </View>
 
               {/* Ô lý do hủy (tùy chọn) */}
-              <Text style={styles.fieldLabel}>Lý do hủy (không bắt buộc):</Text>
-              <TextInput
+              <AppText style={styles.fieldLabel}>Lý do hủy (không bắt buộc):</AppText>
+              <AppTextInput
                 style={styles.reasonInput}
                 placeholder="Nhập lý do bạn muốn hủy phòng..."
                 placeholderTextColor={COLORS.textMuted}
@@ -416,7 +404,7 @@ export default function MyBookingsScreen() {
               />
 
               {/* Lựa chọn xử lý tiền cọc */}
-              <Text style={styles.fieldLabel}>Lựa chọn xử lý tiền cọc:</Text>
+              <AppText style={styles.fieldLabel}>Lựa chọn xử lý tiền cọc:</AppText>
 
               {/* 1. CASH_REFUND */}
               <TouchableOpacity
@@ -437,11 +425,11 @@ export default function MyBookingsScreen() {
                     size={20}
                     color={selectedRefundOption === 'CASH_REFUND' ? COLORS.primary : COLORS.textMuted}
                   />
-                  <Text style={styles.optionTitle}>Hoàn tiền</Text>
+                  <AppText style={styles.optionTitle}>Hoàn tiền</AppText>
                 </View>
-                <Text style={styles.optionNote}>
+                <AppText style={styles.optionNote}>
                   Ghi chú: từ 3 ngày trở lên hoàn 100%, 1-2 ngày hoàn 50%, trong ngày 0%.
-                </Text>
+                </AppText>
               </TouchableOpacity>
 
               {/* 2. CREDIT_VOUCHER */}
@@ -463,14 +451,14 @@ export default function MyBookingsScreen() {
                     size={20}
                     color={selectedRefundOption === 'CREDIT_VOUCHER' ? COLORS.primary : COLORS.textMuted}
                   />
-                  <Text style={styles.optionTitle}>Bảo lưu thành voucher hạn 6 tháng</Text>
+                  <AppText style={styles.optionTitle}>Bảo lưu thành voucher hạn 6 tháng</AppText>
                   <View style={styles.badge100}>
-                    <Text style={styles.badge100Text}>100% cọc</Text>
+                    <AppText style={styles.badge100Text}>100% cọc</AppText>
                   </View>
                 </View>
-                <Text style={styles.optionNote}>
+                <AppText style={styles.optionNote}>
                   Nhận mã voucher có giá trị tương đương 100% số tiền cọc, hạn sử dụng trong vòng 6 tháng.
-                </Text>
+                </AppText>
               </TouchableOpacity>
 
               {/* 3. LOYALTY_POINTS */}
@@ -492,14 +480,14 @@ export default function MyBookingsScreen() {
                     size={20}
                     color={selectedRefundOption === 'LOYALTY_POINTS' ? COLORS.primary : COLORS.textMuted}
                   />
-                  <Text style={styles.optionTitle}>Đổi sang điểm thưởng</Text>
+                  <AppText style={styles.optionTitle}>Đổi sang điểm thưởng</AppText>
                   <View style={styles.badge100}>
-                    <Text style={styles.badge100Text}>100% cọc</Text>
+                    <AppText style={styles.badge100Text}>100% cọc</AppText>
                   </View>
                 </View>
-                <Text style={styles.optionNote}>
+                <AppText style={styles.optionNote}>
                   Quy đổi 100% số tiền cọc thành điểm thưởng tích lũy vào tài khoản khách hàng.
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </ScrollView>
 
@@ -512,9 +500,9 @@ export default function MyBookingsScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons name="trash-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
-                <Text style={styles.submitCancelBtnText}>
+                <AppText style={styles.submitCancelBtnText}>
                   {isCancelling ? 'Đang xử lý...' : 'Xác nhận hủy đặt phòng'}
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
           </View>
@@ -536,53 +524,53 @@ export default function MyBookingsScreen() {
               <Ionicons name="checkmark-circle" size={54} color={COLORS.success} />
             </View>
 
-            <Text style={styles.resultTitle}>Hủy phòng thành công</Text>
-            <Text style={styles.resultMessage}>{cancelResult?.message}</Text>
+            <AppText style={styles.resultTitle}>Hủy phòng thành công</AppText>
+            <AppText style={styles.resultMessage}>{cancelResult?.message}</AppText>
 
             {/* Bảng chi tiết hoàn cọc */}
             <View style={styles.resultDetailsBox}>
               {cancelResult?.depositPaid !== undefined && (
                 <View style={styles.resultDetailRow}>
-                  <Text style={styles.resultDetailLabel}>Tiền cọc ban đầu:</Text>
-                  <Text style={styles.resultDetailVal}>
+                  <AppText style={styles.resultDetailLabel}>Tiền cọc ban đầu:</AppText>
+                  <AppText style={styles.resultDetailVal}>
                     {formatPrice(cancelResult.depositPaid)}
-                  </Text>
+                  </AppText>
                 </View>
               )}
 
               {cancelResult?.refundPercentage !== undefined && (
                 <View style={styles.resultDetailRow}>
-                  <Text style={styles.resultDetailLabel}>Tỷ lệ hoàn cọc:</Text>
-                  <Text style={[styles.resultDetailVal, { color: COLORS.primary }]}>
+                  <AppText style={styles.resultDetailLabel}>Tỷ lệ hoàn cọc:</AppText>
+                  <AppText style={[styles.resultDetailVal, { color: COLORS.primary }]}>
                     {cancelResult.refundPercentage}%
-                  </Text>
+                  </AppText>
                 </View>
               )}
 
               {cancelResult?.refundAmount !== undefined && (
                 <View style={styles.resultDetailRow}>
-                  <Text style={styles.resultDetailLabel}>Số tiền hoàn lại:</Text>
-                  <Text style={[styles.resultDetailVal, { color: COLORS.success, fontWeight: FONTS.weights.bold }]}>
+                  <AppText style={styles.resultDetailLabel}>Số tiền hoàn lại:</AppText>
+                  <AppText style={[styles.resultDetailVal, { color: COLORS.success, fontWeight: FONTS.weights.bold }]}>
                     {formatPrice(cancelResult.refundAmount)}
-                  </Text>
+                  </AppText>
                 </View>
               )}
 
               {cancelResult?.penaltyFee !== undefined && cancelResult.penaltyFee > 0 && (
                 <View style={styles.resultDetailRow}>
-                  <Text style={styles.resultDetailLabel}>Phí hủy:</Text>
-                  <Text style={[styles.resultDetailVal, { color: COLORS.error }]}>
+                  <AppText style={styles.resultDetailLabel}>Phí hủy:</AppText>
+                  <AppText style={[styles.resultDetailVal, { color: COLORS.error }]}>
                     {formatPrice(cancelResult.penaltyFee)}
-                  </Text>
+                  </AppText>
                 </View>
               )}
 
               {/* Nếu có mã voucher */}
               {cancelResult?.creditVoucherCode && (
                 <View style={styles.voucherBox}>
-                  <Text style={styles.voucherBoxTitle}>Mã voucher bảo lưu tiền cọc:</Text>
+                  <AppText style={styles.voucherBoxTitle}>Mã voucher bảo lưu tiền cọc:</AppText>
                   <View style={styles.voucherCodeRow}>
-                    <Text style={styles.voucherCodeText}>{cancelResult.creditVoucherCode}</Text>
+                    <AppText style={styles.voucherCodeText}>{cancelResult.creditVoucherCode}</AppText>
                     <TouchableOpacity
                       style={styles.copyVoucherBtn}
                       onPress={() => handleCopyVoucher(cancelResult.creditVoucherCode!)}
@@ -594,25 +582,25 @@ export default function MyBookingsScreen() {
                         color={COLORS.primary}
                         style={{ marginRight: 4 }}
                       />
-                      <Text style={styles.copyVoucherBtnText}>
+                      <AppText style={styles.copyVoucherBtnText}>
                         {copiedVoucher ? 'Đã chép' : 'Sao chép'}
-                      </Text>
+                      </AppText>
                     </TouchableOpacity>
                   </View>
-                  <Text style={styles.voucherExpiryNote}>Hạn sử dụng: 6 tháng kể từ ngày cấp</Text>
+                  <AppText style={styles.voucherExpiryNote}>Hạn sử dụng: 6 tháng kể từ ngày cấp</AppText>
                 </View>
               )}
 
               {/* Nếu có điểm thưởng */}
               {cancelResult?.loyaltyPointsCredited !== undefined && cancelResult.loyaltyPointsCredited > 0 && (
                 <View style={styles.pointsBox}>
-                  <Ionicons name="gift-outline" size={20} color={COLORS.secondary} />
-                  <Text style={styles.pointsText}>
+                  <Ionicons name="gift-outline" size={20} color={COLORS.primary} />
+                  <AppText style={styles.pointsText}>
                     Điểm thưởng được cộng:{' '}
-                    <Text style={{ fontWeight: FONTS.weights.bold, color: COLORS.secondary }}>
+                    <AppText style={{ fontWeight: FONTS.weights.bold, color: COLORS.primary }}>
                       +{cancelResult.loyaltyPointsCredited} điểm
-                    </Text>
-                  </Text>
+                    </AppText>
+                  </AppText>
                 </View>
               )}
             </View>
@@ -622,7 +610,7 @@ export default function MyBookingsScreen() {
               onPress={handleCloseResultModal}
               activeOpacity={0.8}
             >
-              <Text style={styles.resultCloseBtnText}>Đóng</Text>
+              <AppText style={styles.resultCloseBtnText}>Đóng</AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -707,7 +695,7 @@ const styles = StyleSheet.create({
   depositInfoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: COLORS.infoBackground,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
@@ -751,7 +739,7 @@ const styles = StyleSheet.create({
   },
   optionCardActive: {
     borderColor: COLORS.primary,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.surfaceHover,
   },
   radioRow: {
     flexDirection: 'row',
@@ -766,17 +754,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   badge100: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.warningBackground,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: RADIUS.sm,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: COLORS.secondaryLight,
   },
   badge100Text: {
     fontSize: 10,
     fontWeight: FONTS.weights.bold,
-    color: '#D97706',
+    color: COLORS.warning,
   },
   optionNote: {
     fontSize: FONTS.sizes.xs,
@@ -894,7 +882,7 @@ const styles = StyleSheet.create({
   copyVoucherBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: COLORS.infoBackground,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: RADIUS.sm,
@@ -913,7 +901,7 @@ const styles = StyleSheet.create({
   pointsBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.warningBackground,
     padding: SPACING.sm,
     borderRadius: RADIUS.md,
     marginTop: SPACING.xs,

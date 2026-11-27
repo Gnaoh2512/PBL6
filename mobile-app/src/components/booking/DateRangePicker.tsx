@@ -1,13 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Modal,
-  TouchableOpacity,
-  Platform,
-  LayoutChangeEvent,
-} from 'react-native';
+import { AppText, AppTextInput } from '../common/AppText';
+import { View, StyleSheet, Modal, TouchableOpacity, Platform, LayoutChangeEvent } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,7 +25,7 @@ LocaleConfig.locales['vi'] = {
 LocaleConfig.defaultLocale = 'vi';
 
 const PRIMARY = COLORS.primary;
-const PRIMARY_LIGHT = '#D1E3F4';
+const PRIMARY_LIGHT = COLORS.primarySubtle;
 
 export interface DateRangeValue {
   checkIn: string | null;   // "YYYY-MM-DD"
@@ -162,29 +155,29 @@ function PickerBody({
         <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
           <Ionicons name="close" size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <AppText style={styles.headerTitle}>
           {hasSelection ? 'Sửa ngày' : 'Chọn ngày'}
-        </Text>
+        </AppText>
         <View style={{ width: 40 }} />
       </View>
 
       {/* 2. Hai ô Nhận phòng / Trả phòng (cố định) */}
       <View style={styles.summaryRow}>
         <View style={[styles.summaryBox, !tempOut && tempIn && styles.summaryBoxActive]}>
-          <Text style={styles.summaryLabel}>Nhận phòng</Text>
-          <Text style={styles.summaryValue}>{inLabel}</Text>
+          <AppText style={styles.summaryLabel}>Nhận phòng</AppText>
+          <AppText style={styles.summaryValue}>{inLabel}</AppText>
         </View>
         <Ionicons name="arrow-forward" size={20} color={COLORS.textMuted} />
         <View style={[styles.summaryBox, tempIn && !tempOut && styles.summaryBoxHint]}>
-          <Text style={styles.summaryLabel}>Trả phòng</Text>
-          <Text style={[styles.summaryValue, !tempOut && styles.summaryValueEmpty]}>{outLabel}</Text>
+          <AppText style={styles.summaryLabel}>Trả phòng</AppText>
+          <AppText style={[styles.summaryValue, !tempOut && styles.summaryValueEmpty]}>{outLabel}</AppText>
         </View>
       </View>
 
       {/* 3. Hàng thứ Th 2..CN (cố định) */}
       <View style={styles.dayNamesRow}>
         {DAY_LABELS.map((d) => (
-          <Text key={d} style={styles.dayNameText}>{d}</Text>
+          <AppText key={d} style={styles.dayNameText}>{d}</AppText>
         ))}
       </View>
 
@@ -210,7 +203,7 @@ function PickerBody({
               monthTextColor: PRIMARY,
               textMonthFontWeight: 'bold' as const,
               textMonthFontSize: 15,
-              todayTextColor: COLORS.secondary,
+              todayTextColor: COLORS.primary,
               dayTextColor: COLORS.text,
               textDisabledColor: '#ccc',
               textDayFontSize: 14,
@@ -234,7 +227,7 @@ function PickerBody({
               ];
               return (
                 <View style={styles.monthHeader}>
-                  <Text style={styles.monthHeaderText}>{monthNames[month]} {year}</Text>
+                  <AppText style={styles.monthHeaderText}>{monthNames[month]} {year}</AppText>
                 </View>
               );
             }}
@@ -250,9 +243,9 @@ function PickerBody({
           disabled={!canConfirm}
           activeOpacity={0.8}
         >
-          <Text style={styles.okBtnText}>
+          <AppText style={styles.okBtnText}>
             {canConfirm ? `OK (${nights} đêm)` : 'Chọn đủ 2 ngày'}
-          </Text>
+          </AppText>
         </TouchableOpacity>
       </View>
     </View>
@@ -279,10 +272,10 @@ export default function DateRangePicker({ value, onChange }: Props) {
         <TouchableOpacity style={[styles.triggerBtn, value.checkIn && styles.triggerBtnFilled]} onPress={openModal}>
           <Ionicons name="enter-outline" size={16} color={value.checkIn ? PRIMARY : COLORS.textMuted} />
           <View>
-            <Text style={styles.triggerLabel}>Nhận phòng</Text>
-            <Text style={[styles.triggerValue, value.checkIn && styles.triggerValueFilled]}>
+            <AppText style={styles.triggerLabel}>Nhận phòng</AppText>
+            <AppText style={[styles.triggerValue, value.checkIn && styles.triggerValueFilled]}>
               {value.checkIn ? toShortDisplay(value.checkIn) : 'Chọn ngày'}
-            </Text>
+            </AppText>
           </View>
         </TouchableOpacity>
 
@@ -291,10 +284,10 @@ export default function DateRangePicker({ value, onChange }: Props) {
         <TouchableOpacity style={[styles.triggerBtn, value.checkOut && styles.triggerBtnFilled]} onPress={openModal}>
           <Ionicons name="exit-outline" size={16} color={value.checkOut ? PRIMARY : COLORS.textMuted} />
           <View>
-            <Text style={styles.triggerLabel}>Trả phòng</Text>
-            <Text style={[styles.triggerValue, value.checkOut && styles.triggerValueFilled]}>
+            <AppText style={styles.triggerLabel}>Trả phòng</AppText>
+            <AppText style={[styles.triggerValue, value.checkOut && styles.triggerValueFilled]}>
               {value.checkOut ? toShortDisplay(value.checkOut) : 'Chọn ngày'}
-            </Text>
+            </AppText>
           </View>
         </TouchableOpacity>
       </View>
@@ -340,7 +333,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
   triggerBtnFilled: {
-    borderColor: COLORS.secondary,
+    borderColor: COLORS.primary,
   },
   triggerLabel: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted },
   triggerValue: { fontSize: FONTS.sizes.sm, fontWeight: FONTS.weights.semiBold as any, color: COLORS.textMuted },

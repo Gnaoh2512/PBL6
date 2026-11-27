@@ -1,16 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, TouchableOpacity, FlatList, ScrollView, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -187,21 +177,21 @@ export default function ChatScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>{card.typeName || 'Phòng trống'}</Text>
+            <AppText style={styles.cardTitle}>{card.typeName || 'Phòng trống'}</AppText>
             {card.capacity ? (
-              <Text style={styles.cardBadge}>Tối đa {card.capacity} khách</Text>
+              <AppText style={styles.cardBadge}>Tối đa {card.capacity} khách</AppText>
             ) : null}
           </View>
-          <Text style={styles.cardPrice}>
+          <AppText style={styles.cardPrice}>
             {formatVnd(card.pricePerNight)}/đêm
             {card.totalRoomCharge ? ` · Dự kiến ${formatVnd(card.totalRoomCharge)}` : ''}
-          </Text>
+          </AppText>
           {card.estimatedDeposit ? (
-            <Text style={styles.cardMeta}>
+            <AppText style={styles.cardMeta}>
               Cọc {card.depositPercentage ?? 30}%: {formatVnd(card.estimatedDeposit)}
-            </Text>
+            </AppText>
           ) : null}
-          <Text style={styles.cardLink}>Xem & đặt phòng →</Text>
+          <AppText style={styles.cardLink}>Xem & đặt phòng →</AppText>
         </TouchableOpacity>
       );
     }
@@ -214,11 +204,11 @@ export default function ChatScreen() {
           onPress={() => navigation.navigate('Services')}
           activeOpacity={0.8}
         >
-          <Text style={styles.cardTitle}>{card.serviceName}</Text>
-          <Text style={styles.cardPrice}>
+          <AppText style={styles.cardTitle}>{card.serviceName}</AppText>
+          <AppText style={styles.cardPrice}>
             {formatVnd(card.unitPrice)} / {card.unit}
-          </Text>
-          {card.categoryName ? <Text style={styles.cardMeta}>{card.categoryName}</Text> : null}
+          </AppText>
+          {card.categoryName ? <AppText style={styles.cardMeta}>{card.categoryName}</AppText> : null}
         </TouchableOpacity>
       );
     }
@@ -232,27 +222,27 @@ export default function ChatScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.cardTitle}>{card.bookingCode}</Text>
+            <AppText style={styles.cardTitle}>{card.bookingCode}</AppText>
             {card.status ? (
-              <Text style={styles.cardBadge}>
+              <AppText style={styles.cardBadge}>
                 {BOOKING_STATUS_LABELS[card.status] || card.status}
-              </Text>
+              </AppText>
             ) : null}
           </View>
-          {card.roomTypeName ? <Text style={styles.cardMeta}>{card.roomTypeName}</Text> : null}
+          {card.roomTypeName ? <AppText style={styles.cardMeta}>{card.roomTypeName}</AppText> : null}
           {card.checkInDate && card.checkOutDate ? (
-            <Text style={styles.cardMeta}>
+            <AppText style={styles.cardMeta}>
               {card.checkInDate} → {card.checkOutDate}
               {card.nights ? ` (${card.nights} đêm)` : ''}
-            </Text>
+            </AppText>
           ) : null}
           {card.totalAmount !== undefined ? (
-            <Text style={styles.cardPrice}>
+            <AppText style={styles.cardPrice}>
               Tổng: {formatVnd(card.totalAmount)}
               {card.remainingAmount !== undefined
                 ? ` · Còn lại: ${formatVnd(card.remainingAmount)}`
                 : ''}
-            </Text>
+            </AppText>
           ) : null}
         </TouchableOpacity>
       );
@@ -277,11 +267,11 @@ export default function ChatScreen() {
               isUser ? styles.messageBubbleUser : styles.messageBubbleBot,
             ]}
           >
-            <Text
+            <AppText
               style={[styles.messageText, isUser ? styles.messageTextUser : styles.messageTextBot]}
             >
               {item.text}
-            </Text>
+            </AppText>
           </View>
 
           {item.cards && item.cards.length > 0 && (
@@ -298,7 +288,7 @@ export default function ChatScreen() {
                   style={styles.actionBtn}
                   onPress={() => handleActionPress(act)}
                 >
-                  <Text style={styles.actionBtnText}>{act.label}</Text>
+                  <AppText style={styles.actionBtnText}>{act.label}</AppText>
                 </TouchableOpacity>
               ))}
             </View>
@@ -317,12 +307,12 @@ export default function ChatScreen() {
       >
         <View style={styles.topUtilityBar}>
           <View style={styles.statusRow}>
-            <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.secondary} />
-            <Text style={styles.statusLabel}>Azure Bay AI Concierge</Text>
+            <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.primary} />
+            <AppText style={styles.statusLabel}>Azure Bay AI Concierge</AppText>
           </View>
           <TouchableOpacity onPress={handleReset} style={styles.resetBtn}>
             <Ionicons name="refresh-outline" size={15} color={COLORS.primary} />
-            <Text style={styles.resetBtnText}>Mới</Text>
+            <AppText style={styles.resetBtnText}>Mới</AppText>
           </TouchableOpacity>
         </View>
 
@@ -337,15 +327,15 @@ export default function ChatScreen() {
 
         {isTyping && (
           <View style={styles.typingIndicator}>
-            <ActivityIndicator size="small" color={COLORS.secondary} />
-            <Text style={styles.typingText}>Trợ lý AI đang kiểm tra thông tin...</Text>
+            <ActivityIndicator size="small" color={COLORS.primary} />
+            <AppText style={styles.typingText}>Trợ lý AI đang kiểm tra thông tin...</AppText>
           </View>
         )}
 
         {errorText && (
           <View style={styles.errorBanner}>
             <Ionicons name="alert-circle-outline" size={16} color={COLORS.error} />
-            <Text style={styles.errorText}>{errorText}</Text>
+            <AppText style={styles.errorText}>{errorText}</AppText>
           </View>
         )}
 
@@ -362,13 +352,13 @@ export default function ChatScreen() {
               onPress={() => sendPrompt(item.prompt)}
               disabled={isTyping}
             >
-              <Text style={styles.pillText}>{item.label}</Text>
+              <AppText style={styles.pillText}>{item.label}</AppText>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
         <View style={styles.inputContainer}>
-          <TextInput
+          <AppTextInput
             style={styles.input}
             value={inputText}
             onChangeText={setInputText}
@@ -489,7 +479,7 @@ const styles = StyleSheet.create({
   cardPrice: {
     fontSize: FONTS.sizes.sm,
     fontWeight: '600',
-    color: COLORS.secondary,
+    color: COLORS.primary,
     marginTop: 4,
   },
   cardMeta: { fontSize: FONTS.sizes.xs, color: COLORS.textLight, marginTop: 2 },
@@ -523,9 +513,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
     padding: SPACING.sm,
     borderRadius: RADIUS.md,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.errorBackground,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: COLORS.error,
   },
   errorText: { fontSize: FONTS.sizes.xs, color: COLORS.error, flex: 1 },
   pillsBar: { maxHeight: 42, borderTopWidth: 1, borderTopColor: COLORS.border, backgroundColor: COLORS.surface },

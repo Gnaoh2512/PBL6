@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavigationContainer, NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { COLORS } from '../utils/constants';
+import { COLORS, FONTS } from '../utils/constants';
 import { Room } from '../models/Room';
 import { QRInfo } from '../models/Booking';
 
@@ -62,7 +62,7 @@ export default function AppNavigator() {
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.primary },
           headerTintColor: COLORS.surface,
-          headerTitleStyle: { fontWeight: '600' },
+          headerTitleStyle: { fontWeight: '600', fontFamily: FONTS.family.headingSemiBold },
           contentStyle: { backgroundColor: COLORS.background },
         }}
       >
