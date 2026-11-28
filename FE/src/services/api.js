@@ -2,7 +2,7 @@
  * Azure Bay — API Client Service
  */
 
-const API_BASE = ""; // Vite proxy handles /api -> localhost:9090
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || "").trim().replace(/\/+$/, "");
 
 export function getAuthToken() {
   return localStorage.getItem("auth_token") || "";
@@ -82,7 +82,7 @@ export async function apiCall(endpoint, options = {}) {
     if (!options.silentError) {
       console.warn("Network fetch error:", err);
     }
-    throw new Error("Không thể kết nối đến máy chủ Backend (http://localhost:9090)");
+    throw new Error("Không thể kết nối đến máy chủ Backend.");
   }
 
   let result = null;

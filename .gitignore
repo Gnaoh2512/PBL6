@@ -1,6 +1,11 @@
 # Environment variables
 .env
 BE/.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
 
 # Build outputs
 BE/target/
