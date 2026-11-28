@@ -25,6 +25,7 @@ export interface GuestInfo {
 }
 
 export interface QRInfo {
+  qrImageUrl?: string;
   qrDataUrl?: string;
   bankId: string;
   accountNo: string;

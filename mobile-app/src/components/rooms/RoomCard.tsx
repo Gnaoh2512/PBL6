@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { AppText, AppTextInput } from '../common/AppText';
+import { View, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Room } from '../../models/Room';
 import { formatPrice } from '../../utils/priceUtils';
@@ -34,36 +35,36 @@ export default function RoomCard({ room, onPress }: RoomCardProps) {
         resizeMode="cover"
       />
       <View style={[styles.badge, { backgroundColor: room.isAvailable ? COLORS.success : COLORS.error }]}>
-        <Text style={styles.badgeText}>
+        <AppText style={styles.badgeText}>
           {room.isAvailable ? 'Còn phòng' : 'Hết phòng'}
-        </Text>
+        </AppText>
       </View>
       <View style={styles.content}>
-        <Text style={styles.name}>{room.name}</Text>
-        <Text style={styles.description} numberOfLines={2}>
+        <AppText style={styles.name}>{room.name}</AppText>
+        <AppText style={styles.description} numberOfLines={2}>
           {room.description}
-        </Text>
+        </AppText>
         <View style={styles.meta}>
           <View style={styles.metaItem}>
             <Ionicons name="people-outline" size={14} color={COLORS.textLight} />
-            <Text style={styles.metaText}>Tối đa {room.maxGuests} khách</Text>
+            <AppText style={styles.metaText}>Tối đa {room.maxGuests} khách</AppText>
           </View>
           <View style={styles.metaItem}>
             <Ionicons name="expand-outline" size={14} color={COLORS.textLight} />
-            <Text style={styles.metaText}>{area} m²</Text>
+            <AppText style={styles.metaText}>{area} m²</AppText>
           </View>
           <View style={styles.metaItem}>
             <Ionicons name="bed-outline" size={14} color={COLORS.textLight} />
-            <Text style={styles.metaText} numberOfLines={1}>{bedType}</Text>
+            <AppText style={styles.metaText} numberOfLines={1}>{bedType}</AppText>
           </View>
         </View>
         <View style={styles.footer}>
           <View>
-            <Text style={styles.price}>{formatPrice(room.pricePerNight)}</Text>
-            <Text style={styles.perNight}>/đêm</Text>
+            <AppText style={styles.price}>{formatPrice(room.pricePerNight)}</AppText>
+            <AppText style={styles.perNight}>/đêm</AppText>
           </View>
           <View style={styles.bookBtn}>
-            <Text style={styles.bookBtnText}>Xem phòng</Text>
+            <AppText style={styles.bookBtnText}>Xem phòng</AppText>
             <Ionicons name="chevron-forward" size={14} color={COLORS.surface} />
           </View>
         </View>
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: FONTS.sizes.xl,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.secondary,
+    color: COLORS.primary,
   },
   perNight: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted },
   bookBtn: {

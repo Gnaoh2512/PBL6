@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation } from '@react-navigation/native';
@@ -64,7 +54,7 @@ export default function BookingFormScreen() {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.errorContainer}>
           <Ionicons name="warning-outline" size={48} color={COLORS.error} />
-          <Text style={styles.errorText}>Dữ liệu đặt phòng không hợp lệ. Vui lòng thử lại.</Text>
+          <AppText style={styles.errorText}>Dữ liệu đặt phòng không hợp lệ. Vui lòng thử lại.</AppText>
           <Button title="Quay lại" onPress={() => navigation.goBack()} variant="outline" />
         </View>
       </SafeAreaView>
@@ -194,7 +184,7 @@ export default function BookingFormScreen() {
         >
           {/* Tóm tắt đặt phòng */}
           <Card style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Tóm tắt đặt phòng</Text>
+            <AppText style={styles.summaryTitle}>Tóm tắt đặt phòng</AppText>
             <SummaryRow label="Loại phòng" value={room.name} />
             <SummaryRow label="Check-in" value={formatDate(checkIn)} />
             <SummaryRow label="Check-out" value={formatDate(checkOut)} />
@@ -202,19 +192,19 @@ export default function BookingFormScreen() {
             <SummaryRow label="Tiền phòng" value={formatPrice(roomCharge)} />
             {discount > 0 && <SummaryRow label="Giảm giá" value={`- ${formatPrice(discount)}`} />}
             <View style={[styles.summaryRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>Tổng tiền</Text>
-              <Text style={styles.totalValue}>{formatPrice(totalPrice)}</Text>
+              <AppText style={styles.totalLabel}>Tổng tiền</AppText>
+              <AppText style={styles.totalValue}>{formatPrice(totalPrice)}</AppText>
             </View>
           </Card>
 
           {/* Form thông tin khách */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Thông tin khách hàng</Text>
+            <AppText style={styles.sectionTitle}>Thông tin khách hàng</AppText>
 
             {/* Họ và tên (gộp 1 ô) */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Họ và tên *</Text>
-              <TextInput
+              <AppText style={styles.label}>Họ và tên *</AppText>
+              <AppTextInput
                 style={[styles.input, fieldErrors.fullName && styles.inputError]}
                 value={fullName}
                 onChangeText={(t) => {
@@ -227,14 +217,14 @@ export default function BookingFormScreen() {
                 placeholderTextColor={COLORS.textMuted}
               />
               {fieldErrors.fullName ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.fullName}</Text>
+                <AppText style={styles.fieldErrorText}>{fieldErrors.fullName}</AppText>
               ) : null}
             </View>
 
             {/* Số điện thoại */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Số điện thoại *</Text>
-              <TextInput
+              <AppText style={styles.label}>Số điện thoại *</AppText>
+              <AppTextInput
                 style={[styles.input, fieldErrors.phone && styles.inputError]}
                 value={phone}
                 onChangeText={(t) => {
@@ -248,14 +238,14 @@ export default function BookingFormScreen() {
                 placeholderTextColor={COLORS.textMuted}
               />
               {fieldErrors.phone ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.phone}</Text>
+                <AppText style={styles.fieldErrorText}>{fieldErrors.phone}</AppText>
               ) : null}
             </View>
 
             {/* Email (tùy chọn) */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Email (tùy chọn)</Text>
-              <TextInput
+              <AppText style={styles.label}>Email (tùy chọn)</AppText>
+              <AppTextInput
                 style={[styles.input, fieldErrors.email && styles.inputError]}
                 value={email}
                 onChangeText={(t) => {
@@ -270,13 +260,13 @@ export default function BookingFormScreen() {
                 placeholderTextColor={COLORS.textMuted}
               />
               {fieldErrors.email ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.email}</Text>
+                <AppText style={styles.fieldErrorText}>{fieldErrors.email}</AppText>
               ) : null}
             </View>
 
             {/* Loại giấy tờ: CCCD, PASSPORT, CMND */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Loại giấy tờ (tùy chọn)</Text>
+              <AppText style={styles.label}>Loại giấy tờ (tùy chọn)</AppText>
               <View style={styles.toggleRow}>
                 {(['CCCD', 'PASSPORT', 'CMND'] as const).map((t) => (
                   <TouchableOpacity
@@ -284,14 +274,14 @@ export default function BookingFormScreen() {
                     style={[styles.toggleBtn, idType === t && styles.toggleBtnActive]}
                     onPress={() => setIdType(t)}
                   >
-                    <Text
+                    <AppText
                       style={[
                         styles.toggleBtnText,
                         idType === t && styles.toggleBtnTextActive,
                       ]}
                     >
                       {t === 'CCCD' ? '🪪 CCCD' : t === 'PASSPORT' ? '🛂 Hộ chiếu' : '📄 CMND'}
-                    </Text>
+                    </AppText>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -299,10 +289,10 @@ export default function BookingFormScreen() {
 
             {/* Số giấy tờ (tùy chọn) */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>
+              <AppText style={styles.label}>
                 Số {idType === 'CCCD' ? 'CCCD' : idType === 'PASSPORT' ? 'Hộ chiếu' : 'CMND'} (tùy chọn)
-              </Text>
-              <TextInput
+              </AppText>
+              <AppTextInput
                 style={styles.input}
                 value={idNumber}
                 onChangeText={setIdNumber}
@@ -314,8 +304,8 @@ export default function BookingFormScreen() {
 
             {/* Quốc tịch (tùy chọn) */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Quốc tịch</Text>
-              <TextInput
+              <AppText style={styles.label}>Quốc tịch</AppText>
+              <AppTextInput
                 style={styles.input}
                 value={nationality}
                 onChangeText={setNationality}
@@ -326,7 +316,7 @@ export default function BookingFormScreen() {
 
             {/* Số khách */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Số khách (tối đa {room.maxGuests})</Text>
+              <AppText style={styles.label}>Số khách (tối đa {room.maxGuests})</AppText>
               <View style={styles.counterRow}>
                 <TouchableOpacity
                   style={styles.counterBtn}
@@ -335,7 +325,7 @@ export default function BookingFormScreen() {
                 >
                   <Ionicons name="remove" size={20} color={COLORS.primary} />
                 </TouchableOpacity>
-                <Text style={styles.counterValue}>{guests}</Text>
+                <AppText style={styles.counterValue}>{guests}</AppText>
                 <TouchableOpacity
                   style={styles.counterBtn}
                   onPress={() => setGuests(Math.min(room.maxGuests, guests + 1))}
@@ -345,14 +335,14 @@ export default function BookingFormScreen() {
                 </TouchableOpacity>
               </View>
               {fieldErrors.guests ? (
-                <Text style={styles.fieldErrorText}>{fieldErrors.guests}</Text>
+                <AppText style={styles.fieldErrorText}>{fieldErrors.guests}</AppText>
               ) : null}
             </View>
 
             {/* Yêu cầu đặc biệt (tùy chọn) */}
             <View style={styles.inputWrap}>
-              <Text style={styles.label}>Yêu cầu đặc biệt</Text>
-              <TextInput
+              <AppText style={styles.label}>Yêu cầu đặc biệt</AppText>
+              <AppTextInput
                 style={[styles.input, styles.textArea]}
                 value={specialRequests}
                 onChangeText={setSpecialRequests}
@@ -366,9 +356,9 @@ export default function BookingFormScreen() {
 
           {/* Voucher */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionTitle}>Mã giảm giá</Text>
+            <AppText style={styles.sectionTitle}>Mã giảm giá</AppText>
             <View style={styles.voucherRow}>
-              <TextInput
+              <AppTextInput
                 style={[
                   styles.input,
                   { flex: 1, marginRight: SPACING.sm },
@@ -393,7 +383,7 @@ export default function BookingFormScreen() {
                 {voucherLoading ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.voucherBtnText}>{voucherResult ? 'Gỡ mã' : 'Áp dụng'}</Text>
+                  <AppText style={styles.voucherBtnText}>{voucherResult ? 'Gỡ mã' : 'Áp dụng'}</AppText>
                 )}
               </TouchableOpacity>
             </View>
@@ -402,22 +392,22 @@ export default function BookingFormScreen() {
             {voucherError ? (
               <View style={styles.voucherErrorRow}>
                 <Ionicons name="alert-circle-outline" size={16} color={COLORS.error} />
-                <Text style={styles.voucherErrorText}>{voucherError}</Text>
+                <AppText style={styles.voucherErrorText}>{voucherError}</AppText>
               </View>
             ) : null}
 
             {/* Hiển thị kết quả khi áp dụng thành công */}
             {voucherResult && (
               <View style={styles.voucherSuccessRow}>
-                <Text style={styles.voucherSuccess}>
+                <AppText style={styles.voucherSuccess}>
                   ✅ {voucherResult.voucherName} — Giảm {formatPrice(voucherResult.discountAmount)}
-                </Text>
+                </AppText>
                 <TouchableOpacity
                   onPress={handleRemoveVoucher}
                   disabled={submitting}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.voucherRemoveText}>Gỡ</Text>
+                  <AppText style={styles.voucherRemoveText}>Gỡ</AppText>
                 </TouchableOpacity>
               </View>
             )}
@@ -428,7 +418,7 @@ export default function BookingFormScreen() {
             {formError ? (
               <View style={styles.formErrorBox}>
                 <Ionicons name="alert-circle" size={18} color={COLORS.error} />
-                <Text style={styles.formErrorText}>{formError}</Text>
+                <AppText style={styles.formErrorText}>{formError}</AppText>
               </View>
             ) : null}
             <Button
@@ -450,8 +440,8 @@ export default function BookingFormScreen() {
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.summaryRow}>
-      <Text style={styles.summaryLabel}>{label}</Text>
-      <Text style={styles.summaryValue}>{value}</Text>
+      <AppText style={styles.summaryLabel}>{label}</AppText>
+      <AppText style={styles.summaryValue}>{value}</AppText>
     </View>
   );
 }
@@ -485,7 +475,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: FONTS.sizes.sm, fontWeight: FONTS.weights.medium, color: COLORS.text },
   totalRow: { borderBottomWidth: 0, marginTop: SPACING.sm, paddingVertical: SPACING.sm },
   totalLabel: { fontSize: FONTS.sizes.lg, fontWeight: FONTS.weights.bold, color: COLORS.text },
-  totalValue: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.secondary },
+  totalValue: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.primary },
   formSection: {
     backgroundColor: COLORS.surface,
     borderRadius: RADIUS.xl,
@@ -522,7 +512,7 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: COLORS.error,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.errorBackground,
   },
   fieldErrorText: {
     color: COLORS.error,
@@ -541,7 +531,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     backgroundColor: COLORS.background,
   },
-  toggleBtnActive: { borderColor: COLORS.primary, backgroundColor: '#EEF4FA' },
+  toggleBtnActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primarySubtle },
   toggleBtnText: {
     fontSize: FONTS.sizes.xs,
     color: COLORS.textLight,
@@ -563,7 +553,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: RADIUS.md,
-    backgroundColor: '#EEF4FA',
+    backgroundColor: COLORS.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -602,12 +592,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: SPACING.sm,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: COLORS.successBackground,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: COLORS.successBackground,
   },
   voucherSuccess: {
     fontSize: FONTS.sizes.sm,
@@ -627,11 +617,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: COLORS.errorBackground,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: COLORS.error,
   },
   formErrorText: {
     flex: 1,

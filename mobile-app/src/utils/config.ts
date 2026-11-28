@@ -11,7 +11,7 @@ const MANUAL_OVERRIDE: string | null = null;
 const getApiBaseUrl = (): string => {
   // 1. Ưu tiên cao nhất: biến môi trường EXPO_PUBLIC_API_URL
   if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+    return process.env.EXPO_PUBLIC_API_URL.trim().replace(/\/+$/, '');
   }
 
   // 2. Gán cứng thủ công nếu có
@@ -23,6 +23,11 @@ const getApiBaseUrl = (): string => {
       return `http://${window.location.hostname}:${BACKEND_PORT}`;
     }
     return `http://localhost:${BACKEND_PORT}`;
+  }
+
+  // Android Emulator routes host-machine services through 10.0.2.2.
+  if (Platform.OS === 'android' && Constants.isDevice === false) {
+    return `http://10.0.2.2:${BACKEND_PORT}`;
   }
 
   // Chạy trên điện thoại thật qua ứng dụng Expo Go (kết nối cùng LAN)

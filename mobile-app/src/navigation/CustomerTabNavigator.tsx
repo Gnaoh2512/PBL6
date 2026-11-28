@@ -11,8 +11,8 @@ import ContactScreen from '../screens/customer/ContactScreen';
 import ProfileScreen from '../screens/customer/ProfileScreen';
 
 export type CustomerTabParamList = {
-  Home: undefined;
-  Rooms: undefined;
+  Home: { section?: string; ts?: number } | undefined;
+  Rooms: { checkIn?: string; checkOut?: string; guests?: string; roomTypeId?: string; roomId?: string; ts?: number } | undefined;
   MyBookings: undefined;
   Contact: undefined;
   Profile: undefined;
@@ -28,7 +28,7 @@ export default function CustomerTabNavigator() {
       backBehavior="history"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: COLORS.secondary,
+        tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarStyle: {
           backgroundColor: COLORS.surface,
@@ -40,6 +40,7 @@ export default function CustomerTabNavigator() {
         tabBarLabelStyle: {
           fontSize: FONTS.sizes.xs,
           fontWeight: FONTS.weights.medium,
+          fontFamily: FONTS.family.bodyMedium,
         },
         tabBarIcon: ({ color, size }) => {
           const icons: Record<string, keyof typeof Ionicons.glyphMap> = {

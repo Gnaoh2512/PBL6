@@ -1,30 +1,25 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, StyleSheet, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useNavigation } from '@react-navigation/native';
 import { authService } from '../../services/authService';
 import Button from '../../components/common/Button';
 import { validateEmail, validatePhone } from '../../utils/validationUtils';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 export default function AuthScreen() {
+  const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<'login' | 'register'>('login');
 
   // Form fields
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -68,6 +63,7 @@ export default function AuthScreen() {
     try {
       const user = await authService.login(username.trim(), password);
       setUser(user);
+      navigation.goBack();
     } catch (e: any) {
       const msg =
         e.response?.data?.message || e.message || 'Lỗi đăng nhập. Vui lòng kiểm tra lại.';
@@ -88,14 +84,10 @@ export default function AuthScreen() {
     if (!fullName.trim()) {
       errors.fullName = 'Vui lòng nhập họ và tên';
     }
-    if (!email.trim()) {
-      errors.email = 'Vui lòng nhập email';
-    } else if (!validateEmail(email.trim())) {
+    if (email.trim() && !validateEmail(email.trim())) {
       errors.email = 'Email không đúng định dạng (VD: example@email.com)';
     }
-    if (!phone.trim()) {
-      errors.phone = 'Vui lòng nhập số điện thoại';
-    } else if (!validatePhone(phone.trim())) {
+    if (phone.trim() && !validatePhone(phone.trim())) {
       errors.phone = 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 0)';
     }
     if (!password) {
@@ -119,11 +111,9 @@ export default function AuthScreen() {
         email.trim(),
         phone.trim()
       );
-      setSuccessMessage('Đăng ký thành công! Đang tự động đăng nhập...');
-
-      // Tự động đăng nhập
-      const loggedInUser = await authService.login(username.trim(), password);
-      setUser(loggedInUser);
+      setSuccessMessage('Đăng ký tài khoản thành công! Vui lòng đăng nhập.');
+      setPassword('');
+      setMode('login');
     } catch (e: any) {
       const msg =
         e.response?.data?.message || e.message || 'Lỗi đăng ký. Vui lòng thử lại.';
@@ -153,43 +143,46 @@ export default function AuthScreen() {
         >
           <View style={styles.header}>
             <View style={styles.logoBox}>
-              <Ionicons name="business" size={40} color={COLORS.surface} />
+              <Ionicons name="business" size={22} color={COLORS.primary} />
             </View>
-            <Text style={styles.title}>Azure Bay Hotel</Text>
-            <Text style={styles.subtitle}>Where Luxury Meets the Sea</Text>
+            <View>
+              <AppText style={styles.title}>AZURE BAY</AppText>
+              <AppText style={styles.subtitle}>HOTEL & RESORT</AppText>
+            </View>
           </View>
 
           <View style={styles.formCard}>
+            <AppText style={styles.formTitle}>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</AppText>
             <View style={styles.tabContainer}>
               <TouchableOpacity
                 style={[styles.tab, mode === 'login' && styles.activeTab]}
                 onPress={() => switchMode('login')}
               >
-                <Text style={[styles.tabText, mode === 'login' && styles.activeTabText]}>
+                <AppText style={[styles.tabText, mode === 'login' && styles.activeTabText]}>
                   Đăng nhập
-                </Text>
+                </AppText>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, mode === 'register' && styles.activeTab]}
                 onPress={() => switchMode('register')}
               >
-                <Text style={[styles.tabText, mode === 'register' && styles.activeTabText]}>
+                <AppText style={[styles.tabText, mode === 'register' && styles.activeTabText]}>
                   Đăng ký
-                </Text>
+                </AppText>
               </TouchableOpacity>
             </View>
 
             {errorMessage ? (
               <View style={styles.errorBox}>
                 <Ionicons name="alert-circle" size={20} color={COLORS.error} />
-                <Text style={styles.errorText}>{errorMessage}</Text>
+                <AppText style={styles.errorText}>{errorMessage}</AppText>
               </View>
             ) : null}
 
             {successMessage ? (
               <View style={styles.successBox}>
                 <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-                <Text style={styles.successText}>{successMessage}</Text>
+                <AppText style={styles.successText}>{successMessage}</AppText>
               </View>
             ) : null}
 
@@ -201,7 +194,7 @@ export default function AuthScreen() {
                 color={fieldErrors.username ? COLORS.error : COLORS.textLight}
                 style={styles.inputIcon}
               />
-              <TextInput
+              <AppTextInput
                 style={styles.input}
                 placeholder={mode === 'login' ? 'Tên đăng nhập hoặc email' : 'Tên đăng nhập'}
                 value={username}
@@ -213,7 +206,7 @@ export default function AuthScreen() {
               />
             </View>
             {fieldErrors.username ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.username}</Text>
+              <AppText style={styles.fieldErrorText}>{fieldErrors.username}</AppText>
             ) : null}
 
             {mode === 'register' && (
@@ -226,7 +219,7 @@ export default function AuthScreen() {
                     color={fieldErrors.fullName ? COLORS.error : COLORS.textLight}
                     style={styles.inputIcon}
                   />
-                  <TextInput
+                  <AppTextInput
                     style={styles.input}
                     placeholder="Họ và tên"
                     value={fullName}
@@ -237,7 +230,7 @@ export default function AuthScreen() {
                   />
                 </View>
                 {fieldErrors.fullName ? (
-                  <Text style={styles.fieldErrorText}>{fieldErrors.fullName}</Text>
+                  <AppText style={styles.fieldErrorText}>{fieldErrors.fullName}</AppText>
                 ) : null}
 
                 {/* Email */}
@@ -248,7 +241,7 @@ export default function AuthScreen() {
                     color={fieldErrors.email ? COLORS.error : COLORS.textLight}
                     style={styles.inputIcon}
                   />
-                  <TextInput
+                  <AppTextInput
                     style={styles.input}
                     placeholder="Email"
                     value={email}
@@ -261,7 +254,7 @@ export default function AuthScreen() {
                   />
                 </View>
                 {fieldErrors.email ? (
-                  <Text style={styles.fieldErrorText}>{fieldErrors.email}</Text>
+                  <AppText style={styles.fieldErrorText}>{fieldErrors.email}</AppText>
                 ) : null}
 
                 {/* Phone */}
@@ -272,7 +265,7 @@ export default function AuthScreen() {
                     color={fieldErrors.phone ? COLORS.error : COLORS.textLight}
                     style={styles.inputIcon}
                   />
-                  <TextInput
+                  <AppTextInput
                     style={styles.input}
                     placeholder="Số điện thoại"
                     value={phone}
@@ -284,7 +277,7 @@ export default function AuthScreen() {
                   />
                 </View>
                 {fieldErrors.phone ? (
-                  <Text style={styles.fieldErrorText}>{fieldErrors.phone}</Text>
+                  <AppText style={styles.fieldErrorText}>{fieldErrors.phone}</AppText>
                 ) : null}
               </>
             )}
@@ -297,7 +290,7 @@ export default function AuthScreen() {
                 color={fieldErrors.password ? COLORS.error : COLORS.textLight}
                 style={styles.inputIcon}
               />
-              <TextInput
+              <AppTextInput
                 style={styles.input}
                 placeholder="Mật khẩu"
                 value={password}
@@ -305,18 +298,15 @@ export default function AuthScreen() {
                   setPassword(t);
                   clearFieldError('password');
                 }}
-                secureTextEntry
+                secureTextEntry={!showPassword}
               />
+              <TouchableOpacity onPress={() => setShowPassword((visible) => !visible)} accessibilityLabel={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'} hitSlop={8}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.textMuted} />
+              </TouchableOpacity>
             </View>
             {fieldErrors.password ? (
-              <Text style={styles.fieldErrorText}>{fieldErrors.password}</Text>
+              <AppText style={styles.fieldErrorText}>{fieldErrors.password}</AppText>
             ) : null}
-
-            {mode === 'login' && (
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-              </TouchableOpacity>
-            )}
 
             <Button
               title={mode === 'login' ? 'Đăng Nhập' : 'Đăng Ký'}
@@ -335,9 +325,9 @@ export default function AuthScreen() {
                   color="#B45309"
                   style={{ marginRight: 6, marginTop: 1 }}
                 />
-                <Text style={styles.receptionHintText}>
+                <AppText style={styles.receptionHintText}>
                   Khách đã đăng ký tại quầy lễ tân: dùng email làm tên đăng nhập, số điện thoại làm mật khẩu (nhập đúng như đã đăng ký).
-                </Text>
+                </AppText>
               </View>
             )}
           </View>
@@ -350,27 +340,28 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: COLORS.background },
   scroll: { padding: SPACING.lg, flexGrow: 1 },
-  header: { alignItems: 'center', marginTop: SPACING.xl, marginBottom: SPACING.xl },
+  header: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, marginTop: SPACING.md, marginBottom: SPACING.xl },
   logoBox: {
-    width: 80,
-    height: 80,
+    width: 44,
+    height: 44,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.md,
   },
-  title: { fontSize: 28, fontWeight: 'bold', color: COLORS.primary, marginBottom: 4 },
-  subtitle: { fontSize: FONTS.sizes.sm, color: COLORS.textLight, fontStyle: 'italic' },
+  title: { fontSize: FONTS.sizes.sm, fontWeight: FONTS.weights.bold, color: COLORS.primaryDark, letterSpacing: 2 },
+  subtitle: { fontSize: 9, color: COLORS.textMuted, letterSpacing: 2, marginTop: 3 },
   formCard: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
+    backgroundColor: 'transparent',
+    padding: 0,
+  },
+  formTitle: {
+    fontSize: FONTS.sizes.xxxl,
+    fontWeight: FONTS.weights.medium,
+    color: COLORS.primaryDark,
+    marginBottom: SPACING.md,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -389,7 +380,7 @@ const styles = StyleSheet.create({
   errorBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.errorBackground,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
@@ -399,7 +390,7 @@ const styles = StyleSheet.create({
   successBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: COLORS.successBackground,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.md,
@@ -414,11 +405,11 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
     marginTop: SPACING.sm,
     paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   inputError: {
     borderColor: COLORS.error,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: COLORS.errorBackground,
   },
   fieldErrorText: {
     color: COLORS.error,
@@ -435,15 +426,13 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     outlineStyle: 'none',
   } as any,
-  forgotPassword: { alignSelf: 'flex-end', marginTop: SPACING.xs, marginBottom: SPACING.lg },
-  forgotPasswordText: { color: COLORS.primary, fontSize: FONTS.sizes.sm, fontWeight: '500' },
   submitBtn: { marginTop: SPACING.md },
   receptionHintBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: COLORS.warningBackground,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: COLORS.secondaryLight,
     borderRadius: RADIUS.md,
     padding: SPACING.sm + 2,
     marginTop: SPACING.md,

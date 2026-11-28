@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Image,
-  StyleSheet,
-  Dimensions,
-  TouchableOpacity,
-  Alert,
-} from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, ScrollView, Image, StyleSheet, Dimensions, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -20,7 +12,7 @@ import { roomService } from '../../services/roomService';
 import Button from '../../components/common/Button';
 import DateRangePicker, { DateRangeValue } from '../../components/booking/DateRangePicker';
 import { formatPrice } from '../../utils/priceUtils';
-import { countNights } from '../../utils/dateUtils';
+import { countNights, toApiDate } from '../../utils/dateUtils';
 import { getRoomExtras } from '../../data/roomTypeExtras';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
@@ -40,7 +32,11 @@ export default function RoomDetailScreen() {
   const roomBedType = room.bedType || extras.bedType;
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [dateRange, setDateRange] = useState<DateRangeValue>({ checkIn: null, checkOut: null });
+  const draft = useBookingStore((state) => state.draft);
+  const [dateRange, setDateRange] = useState<DateRangeValue>({
+    checkIn: draft.checkIn ? toApiDate(draft.checkIn) : null,
+    checkOut: draft.checkOut ? toApiDate(draft.checkOut) : null,
+  });
   const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [availabilityMsg, setAvailabilityMsg] = useState('');
@@ -48,7 +44,7 @@ export default function RoomDetailScreen() {
   const [totalCharge, setTotalCharge] = useState<number | null>(null);
   const [deposit, setDeposit] = useState<number | null>(null);
 
-  const { setDraftRoom, setDraftDates } = useBookingStore();
+  const { setDraftRoom, setDraftDates, setDraftGuests } = useBookingStore();
 
   const handleDateChange = (v: DateRangeValue) => {
     setDateRange(v);
@@ -63,6 +59,10 @@ export default function RoomDetailScreen() {
       Alert.alert('Chưa chọn ngày', 'Vui lòng chọn ngày nhận phòng và trả phòng');
       return;
     }
+    if ((draft.guests || 1) > room.maxGuests) {
+      Alert.alert('Số khách vượt quá sức chứa', `Hạng phòng này nhận tối đa ${room.maxGuests} khách.`);
+      return;
+    }
     setChecking(true);
     try {
       // room.id = roomTypeId.toString() (set bởi roomTypeToRoom)
@@ -71,7 +71,7 @@ export default function RoomDetailScreen() {
       const result = await roomService.getAvailableRooms(
         dateRange.checkIn,
         dateRange.checkOut,
-        1,
+        draft.guests || 1,
         roomTypeId
       );
 
@@ -112,6 +112,7 @@ export default function RoomDetailScreen() {
     const [y1, m1, d1] = dateRange.checkIn.split('-').map(Number);
     const [y2, m2, d2] = dateRange.checkOut.split('-').map(Number);
     setDraftDates(new Date(y1, m1 - 1, d1), new Date(y2, m2 - 1, d2));
+    setDraftGuests(draft.guests || 1);
     navigation.navigate('BookingForm');
   };
 
@@ -162,10 +163,10 @@ export default function RoomDetailScreen() {
         <View style={styles.content}>
           {/* Title row */}
           <View style={styles.titleRow}>
-            <Text style={styles.roomName}>{room.name}</Text>
+            <AppText style={styles.roomName}>{room.name}</AppText>
             <View>
-              <Text style={styles.price}>{formatPrice(room.pricePerNight)}</Text>
-              <Text style={styles.perNight}>/đêm</Text>
+              <AppText style={styles.price}>{formatPrice(room.pricePerNight)}</AppText>
+              <AppText style={styles.perNight}>/đêm</AppText>
             </View>
           </View>
 
@@ -173,34 +174,34 @@ export default function RoomDetailScreen() {
           <View style={styles.metaRow}>
             <View style={styles.metaItem}>
               <Ionicons name="people-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{room.maxGuests} khách</Text>
+              <AppText style={styles.metaText}>{room.maxGuests} khách</AppText>
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="expand-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{roomArea} m²</Text>
+              <AppText style={styles.metaText}>{roomArea} m²</AppText>
             </View>
             <View style={styles.metaItem}>
               <Ionicons name="bed-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.metaText}>{roomBedType}</Text>
+              <AppText style={styles.metaText}>{roomBedType}</AppText>
             </View>
           </View>
 
           {/* Description */}
-          <Text style={styles.description}>{room.description}</Text>
+          <AppText style={styles.description}>{room.description}</AppText>
 
           {/* Amenities */}
-          <Text style={styles.sectionTitle}>Tiện nghi phòng</Text>
+          <AppText style={styles.sectionTitle}>Tiện nghi phòng</AppText>
           <View style={styles.amenitiesWrap}>
             {room.amenities.map((a) => (
               <View key={a.id} style={styles.amenityBadge}>
                 <Ionicons name="checkmark-circle-outline" size={13} color={COLORS.primary} />
-                <Text style={styles.amenityText}>{a.name}</Text>
+                <AppText style={styles.amenityText}>{a.name}</AppText>
               </View>
             ))}
           </View>
 
           {/* Date selection */}
-          <Text style={styles.sectionTitle}>Chọn ngày</Text>
+          <AppText style={styles.sectionTitle}>Chọn ngày</AppText>
           <DateRangePicker value={dateRange} onChange={handleDateChange} />
 
           {/* Summary box — dùng totalRoomCharge nếu API đã trả, fallback tính tay */}
@@ -208,24 +209,24 @@ export default function RoomDetailScreen() {
             <View style={styles.summaryBox}>
               {totalCharge !== null ? (
                 <>
-                  <Text style={styles.summaryText}>
+                  <AppText style={styles.summaryText}>
                     Tổng tiền phòng:{' '}
-                    <Text style={styles.summaryTotal}>{formatPrice(totalCharge)}</Text>
-                  </Text>
+                    <AppText style={styles.summaryTotal}>{formatPrice(totalCharge)}</AppText>
+                  </AppText>
                   {deposit !== null && (
-                    <Text style={styles.summaryText}>
+                    <AppText style={styles.summaryText}>
                       Đặt cọc:{' '}
-                      <Text style={styles.summaryTotal}>{formatPrice(deposit)}</Text>
-                    </Text>
+                      <AppText style={styles.summaryTotal}>{formatPrice(deposit)}</AppText>
+                    </AppText>
                   )}
                 </>
               ) : (
-                <Text style={styles.summaryText}>
+                <AppText style={styles.summaryText}>
                   {nights} đêm × {formatPrice(room.pricePerNight)} ={' '}
-                  <Text style={styles.summaryTotal}>
+                  <AppText style={styles.summaryTotal}>
                     {formatPrice(room.pricePerNight * nights)}
-                  </Text>
-                </Text>
+                  </AppText>
+                </AppText>
               )}
             </View>
           )}
@@ -235,7 +236,7 @@ export default function RoomDetailScreen() {
             <View
               style={[
                 styles.availabilityBox,
-                { backgroundColor: available ? '#D1FAE5' : '#FEE2E2' },
+                { backgroundColor: available ? COLORS.successBackground : COLORS.errorBackground },
               ]}
             >
               <Ionicons
@@ -243,14 +244,14 @@ export default function RoomDetailScreen() {
                 size={20}
                 color={available ? COLORS.success : COLORS.error}
               />
-              <Text
+              <AppText
                 style={[
                   styles.availabilityText,
                   { color: available ? COLORS.success : COLORS.error },
                 ]}
               >
                 {availabilityMsg}
-              </Text>
+              </AppText>
             </View>
           )}
         </View>
@@ -321,7 +322,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: SPACING.sm,
   },
-  price: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.secondary, textAlign: 'right' },
+  price: { fontSize: FONTS.sizes.xl, fontWeight: FONTS.weights.bold, color: COLORS.primary, textAlign: 'right' },
   perNight: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted, textAlign: 'right' },
   metaRow: { flexDirection: 'row', gap: SPACING.md, flexWrap: 'wrap', marginBottom: SPACING.md },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -343,23 +344,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#EEF4FA',
+    backgroundColor: COLORS.primarySubtle,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 5,
     borderRadius: RADIUS.full,
   },
   amenityText: { fontSize: FONTS.sizes.xs, color: COLORS.primary },
   summaryBox: {
-    backgroundColor: '#FEF9EC',
+    backgroundColor: COLORS.warningBackground,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderColor: '#F0D58C',
+    borderColor: COLORS.secondary,
     gap: 4,
   },
   summaryText: { fontSize: FONTS.sizes.md, color: COLORS.text, textAlign: 'center' },
-  summaryTotal: { fontWeight: FONTS.weights.bold, color: COLORS.secondary },
+  summaryTotal: { fontWeight: FONTS.weights.bold, color: COLORS.primary },
   availabilityBox: {
     flexDirection: 'row',
     alignItems: 'center',

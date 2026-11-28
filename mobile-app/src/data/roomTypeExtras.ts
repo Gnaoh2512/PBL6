@@ -9,8 +9,8 @@ export interface RoomTypeExtras {
 
 export const STANDARD_EXTRAS: RoomTypeExtras = {
   images: [
-    'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800',
-    'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800',
+    'https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1597126729864-51740ac05236?auto=format&fit=crop&w=1200&q=85',
   ],
   area: '22 m²',
   bedType: '1 giường đơn',
@@ -18,8 +18,8 @@ export const STANDARD_EXTRAS: RoomTypeExtras = {
 
 export const DELUXE_EXTRAS: RoomTypeExtras = {
   images: [
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800',
-    'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800',
+    'https://images.unsplash.com/photo-1646974400439-321c4a9240b9?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1666433638132-16f0185d2fdf?auto=format&fit=crop&w=1200&q=85',
   ],
   area: '35 m²',
   bedType: '1 giường đôi (King)',
@@ -27,8 +27,8 @@ export const DELUXE_EXTRAS: RoomTypeExtras = {
 
 export const SUITE_EXTRAS: RoomTypeExtras = {
   images: [
-    'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800',
-    'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800',
+    'https://images.unsplash.com/photo-1713843841925-6af6ed0df472?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1739066500258-2c131cdf9852?auto=format&fit=crop&w=1200&q=85',
   ],
   area: '52 m²',
   bedType: '1 giường King + 2 giường đơn',
@@ -36,16 +36,16 @@ export const SUITE_EXTRAS: RoomTypeExtras = {
 
 export const VIP_EXTRAS: RoomTypeExtras = {
   images: [
-    'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800',
-    'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800',
-    'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800',
+    'https://images.unsplash.com/photo-1611920629515-3f76f8c36b37?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1597126729864-51740ac05236?auto=format&fit=crop&w=1200&q=85',
+    'https://images.unsplash.com/photo-1713843841925-6af6ed0df472?auto=format&fit=crop&w=1200&q=85',
   ],
   area: '65 m²',
   bedType: '1 giường King cao cấp',
 };
 
 export const DEFAULT_EXTRAS: RoomTypeExtras = {
-  images: ['https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=800'],
+  images: ['https://images.unsplash.com/photo-1718942899965-4fc10607d805?auto=format&fit=crop&w=1200&q=85'],
   area: '30 m²',
   bedType: 'Giường đôi',
 };

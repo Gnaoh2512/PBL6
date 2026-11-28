@@ -1,8 +1,8 @@
 import React from 'react';
+import ToastHost from '../components/common/Toast';
 import { NavigationContainer, NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { COLORS } from '../utils/constants';
-import { useAuthStore } from '../store/useAuthStore';
+import { COLORS, FONTS } from '../utils/constants';
 import { Room } from '../models/Room';
 import { QRInfo } from '../models/Booking';
 
@@ -39,7 +39,7 @@ export type BookingDataParam = {
 };
 
 export type RootStackParamList = {
-  Auth: undefined;
+  Auth: { mode?: 'login' | 'register' } | undefined;
   CustomerTabs: NavigatorScreenParams<CustomerTabParamList> | undefined;
   RoomDetail: { room: Room };
   BookingForm: undefined;
@@ -57,37 +57,29 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-
   return (
     <NavigationContainer>
+      <>
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.primary },
           headerTintColor: COLORS.surface,
-          headerTitleStyle: { fontWeight: '600' },
+          headerTitleStyle: { fontWeight: '600', fontFamily: FONTS.family.headingSemiBold },
           contentStyle: { backgroundColor: COLORS.background },
         }}
       >
-        {!isAuthenticated ? (
-          <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
-        ) : (
-          <>
-            <Stack.Screen name="CustomerTabs" component={CustomerTabNavigator} options={{ headerShown: false }} />
-            <Stack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Chi tiết phòng' }} />
-            <Stack.Screen name="BookingForm" component={BookingFormScreen} options={{ title: 'Thông tin đặt phòng' }} />
-            <Stack.Screen
-              name="Services"
-              component={ServicesScreen}
-              options={{ title: 'Dịch vụ phòng' }}
-            />
-            <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Thanh toán' }} />
-            <Stack.Screen name="BookingSuccess" component={BookingSuccessScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Trợ lý ảo hỗ trợ' }} />
-            <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Chi tiết hóa đơn' }} />
-          </>
-        )}
+        <Stack.Screen name="CustomerTabs" component={CustomerTabNavigator} options={{ headerShown: false }} />
+        <Stack.Screen name="Auth" component={AuthScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="RoomDetail" component={RoomDetailScreen} options={{ title: 'Chi tiết phòng' }} />
+        <Stack.Screen name="BookingForm" component={BookingFormScreen} options={{ title: 'Thông tin đặt phòng' }} />
+        <Stack.Screen name="Services" component={ServicesScreen} options={{ title: 'Dịch vụ phòng' }} />
+        <Stack.Screen name="Payment" component={PaymentScreen} options={{ title: 'Thanh toán' }} />
+        <Stack.Screen name="BookingSuccess" component={BookingSuccessScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Trợ lý ảo hỗ trợ' }} />
+        <Stack.Screen name="Invoice" component={InvoiceScreen} options={{ title: 'Chi tiết hóa đơn' }} />
       </Stack.Navigator>
+      <ToastHost />
+      </>
     </NavigationContainer>
   );
 }

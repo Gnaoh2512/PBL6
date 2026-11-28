@@ -1,12 +1,6 @@
 import React from 'react';
-import {
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ViewStyle,
-  TextStyle,
-} from 'react-native';
+import { AppText, AppTextInput } from './AppText';
+import { TouchableOpacity, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS } from '../../utils/constants';
 
 interface ButtonProps {
@@ -61,7 +55,7 @@ export default function Button({
           size="small"
         />
       ) : (
-        <Text style={labelStyle}>{title}</Text>
+        <AppText style={labelStyle}>{title}</AppText>
       )}
     </TouchableOpacity>
   );
@@ -111,12 +105,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontWeight: FONTS.weights.semiBold,
+    fontFamily: FONTS.family.bodySemiBold,
   },
   label_primary: {
     color: COLORS.surface,
   },
   label_secondary: {
-    color: COLORS.surface,
+    color: COLORS.textOnSecondary,
   },
   label_outline: {
     color: COLORS.primary,

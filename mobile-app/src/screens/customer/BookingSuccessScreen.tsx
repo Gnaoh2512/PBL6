@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { AppText, AppTextInput } from '../../components/common/AppText';
+import { View, StyleSheet, Animated, Easing } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -37,28 +38,28 @@ export default function BookingSuccessScreen() {
           <Ionicons name="checkmark" size={64} color={COLORS.surface} />
         </Animated.View>
 
-        <Text style={styles.title}>Đặt phòng thành công!</Text>
-        <Text style={styles.subtitle}>
+        <AppText style={styles.title}>Đặt phòng thành công!</AppText>
+        <AppText style={styles.subtitle}>
           Yêu cầu đặt phòng của bạn đã được ghi nhận và đang chờ xác nhận từ khách sạn.
-        </Text>
+        </AppText>
 
         <View style={styles.bookingIdBox}>
-          <Text style={styles.bookingIdLabel}>Mã đặt phòng</Text>
-          <Text style={styles.bookingId}>{bookingId.toUpperCase()}</Text>
+          <AppText style={styles.bookingIdLabel}>Mã đặt phòng</AppText>
+          <AppText style={styles.bookingId}>{bookingId.toUpperCase()}</AppText>
         </View>
 
         <View style={styles.infoBox}>
           <View style={styles.infoRow}>
             <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
-            <Text style={styles.infoText}>
+            <AppText style={styles.infoText}>
               Xác nhận sẽ được gửi qua email trong vòng 2 giờ.
-            </Text>
+            </AppText>
           </View>
           <View style={styles.infoRow}>
             <Ionicons name="call-outline" size={16} color={COLORS.primary} />
-            <Text style={styles.infoText}>
+            <AppText style={styles.infoText}>
               Khách sạn có thể liên hệ để xác nhận thêm thông tin.
-            </Text>
+            </AppText>
           </View>
         </View>
 
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   bookingId: {
     fontSize: FONTS.sizes.xxl,
     fontWeight: FONTS.weights.bold,
-    color: COLORS.secondary,
+    color: COLORS.primary,
     letterSpacing: 2,
   },
   infoBox: {
